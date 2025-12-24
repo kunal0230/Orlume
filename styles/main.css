@@ -1,5 +1,4 @@
-/* ===============================================
-   Kilonova Photo Editor - Design System
+/* ===============================================\n   Orlume Vision Labs - Design System
    =============================================== */
 
 /* CSS Variables */
@@ -144,12 +143,10 @@ body {
   gap: var(--space-xs);
 }
 
-.logo-icon {
-  font-size: 1.5rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
 }
 
 .logo-text {

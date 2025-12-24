@@ -1,5 +1,5 @@
 /**
- * Kilonova Photo Editor - Main Entry Point
+ * Orlume Vision Labs - Main Entry Point
  */
 
 import { ImageUploader } from './components/ImageUploader.js';
@@ -19,7 +19,7 @@ import { Histogram } from './components/Histogram.js';
 import { ImageDevelopment } from './core/ImageDevelopment.js';
 import { ToneCurve } from './components/ToneCurve.js';
 
-class KilonovaApp {
+class OrlumeApp {
     constructor() {
         this.state = {
             image: null,
@@ -62,7 +62,7 @@ class KilonovaApp {
 
         this.bindEvents();
 
-        console.log('🌟 Kilonova Photo Editor initialized');
+        console.log('🌟 Orlume Vision Labs initialized');
     }
 
     async checkGPUSupport() {
@@ -354,7 +354,7 @@ class KilonovaApp {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `kilonova-export-${Date.now()}.png`;
+            link.download = `orlume-export-${Date.now()}.png`;
 
             // Append to body, click, then remove (more reliable)
             document.body.appendChild(link);
@@ -606,5 +606,5 @@ class KilonovaApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.kilonova = new KilonovaApp();
+    window.orlume = new OrlumeApp();
 });
