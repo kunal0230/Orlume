@@ -75,8 +75,7 @@ export class CanvasManager {
         this.depthMap = depthMap;
         this.originalDepthData = depthMap.data.slice();
         this.renderDepth();
-        this.depthCanvas.classList.add('visible');
-        document.getElementById('depth-canvas').style.opacity = this.depthOpacity;
+        // Visibility is now controlled by main.js via setDepthVisible
     }
 
     render() {
@@ -234,5 +233,15 @@ export class CanvasManager {
     // Get depth data for effects processing
     getDepthData() {
         return this.depthMap;
+    }
+
+    setDepthVisible(visible) {
+        this.depthCanvas.style.display = visible ? 'block' : 'none';
+        if (visible) {
+            this.depthCanvas.classList.add('visible');
+            this.depthCanvas.style.opacity = this.depthOpacity;
+        } else {
+            this.depthCanvas.classList.remove('visible');
+        }
     }
 }

@@ -99,7 +99,11 @@ class KilonovaApp {
         this.components.canvas.setImage(state.image);
         if (state.depthMap) {
             this.components.canvas.setDepthMap(state.depthMap);
-            // Don't auto-show depth section if we are in 3D mode
+
+            // Respect tool visibility rules
+            const showDepthOverlay = ['depth', 'relight', 'parallax'].includes(this.state.currentTool);
+            this.components.canvas.setDepthVisible(showDepthOverlay);
+
             if (this.state.currentTool === 'depth') {
                 document.getElementById('depth-section').hidden = false;
             }
@@ -211,6 +215,14 @@ class KilonovaApp {
             if (section.id !== 'info-section') section.hidden = true;
         });
 
+        // Manage Depth Overlay Visibility
+        const showDepthOverlay = ['depth', 'relight'].includes(tool);
+        if (showDepthOverlay && this.state.depthMap) {
+            this.components.canvas.setDepthVisible(true);
+        } else {
+            this.components.canvas.setDepthVisible(false);
+        }
+
         switch (tool) {
             case 'depth':
                 document.getElementById('depth-section').hidden = false;
@@ -279,53 +291,104 @@ class KilonovaApp {
     async exportImage() {
         const info = this.imageProcessor.getInfo();
 
-        // If not using proxy, just export current canvas (fast path)
-        if (!info.isProxy || this.state.is3DMode) {
-            const canvas = this.state.is3DMode
-                ? document.getElementById('three-canvas')
-                : document.getElementById('main-canvas');
+        // Strict WYSIWYG Export
+        // We export exactly what is on the canvas to avoid alignment issues with the proxy/full-res mismatch.
 
-            const link = document.createElement('a');
-            link.download = `kilonova-export-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            this.setStatus('Image exported');
-            return;
+        let canvasToExport = document.getElementById('main-canvas');
+
+        if (this.state.is3DMode) {
+            canvasToExport = document.getElementById('three-canvas');
+        } else if (this.components.relighting && this.components.relighting.enabled) {
+            // Relighting effect is active
+            // Get clean canvas without UI indicators
+            canvasToExport = this.components.relighting.getExportCanvas();
+
+            // Re-render immediately after to restore indicators
+            setTimeout(() => {
+                this.components.relighting.render();
+            }, 50);
         }
 
-        // Full-resolution export with edits applied
-        this.showLoading('Exporting at full resolution...');
+        const link = document.createElement('a');
+        link.download = `kilonova-export-${Date.now()}.png`;
+        link.href = canvasToExport.toDataURL('image/png');
+        link.click();
+        this.setStatus('Image exported');
+    }
+
+    async applyRelighting() {
+        if (!this.components.relighting.enabled) return;
+
+        this.showLoading('Applying lighting...');
 
         try {
-            const result = await this.imageProcessor.exportFullResolution(
-                // Apply edits function
-                (imageData, depthData, onProgress) => {
-                    return this.components.relighting.applyEditsToImageData(
-                        imageData,
-                        depthData,
-                        onProgress
-                    );
-                },
-                this.state.depthMap,
-                { format: 'image/png', quality: 1.0 },
-                (percent, text) => {
-                    document.getElementById('loading-text').textContent = `${text} (${Math.round(percent)}%)`;
+            // 1. Get the relit canvas
+            const relitCanvas = this.components.relighting.getExportCanvas();
+
+            if (!relitCanvas) {
+                console.warn('No relit canvas available');
+                this.hideLoading();
+                return;
+            }
+
+            // 2. Push history state BEFORE modifying the image
+            this.pushHistory();
+
+            // 3. Create a new image from the canvas content
+            const newDataUrl = relitCanvas.toDataURL('image/png');
+            const newImage = new Image();
+
+            newImage.onload = () => {
+                try {
+                    // 3b. Generate ImageData (Critical for effects like Relighting/Parallax)
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = newImage.width;
+                    tempCanvas.height = newImage.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(newImage, 0, 0);
+                    const newImageData = tempCtx.getImageData(0, 0, newImage.width, newImage.height);
+
+                    // 4. Update Application State - Create a proxy-like object for consistency
+                    const newProxy = {
+                        width: newImage.width,
+                        height: newImage.height,
+                        canvas: newImage,
+                        imageData: newImageData, // Added missing ImageData
+                        ctx: tempCtx, // Store context just in case
+                        isProxy: this.state.image.isProxy,
+                        originalWidth: this.state.image.originalWidth,
+                        originalHeight: this.state.image.originalHeight
+                    };
+
+                    this.state.image = newProxy;
+
+                    // 5. Update Visuals
+                    this.components.canvas.setImage(newProxy);
+
+                    // 6. Reset Relighting Effect (clear lights)
+                    this.components.relighting.resetLights();
+
+                    this.setStatus('Relighting applied');
+                } catch (err) {
+                    console.error('Error applying relighting state:', err);
+                    this.setStatus('Error applying lighting');
+                } finally {
+                    this.hideLoading();
                 }
-            );
+            };
 
-            // Download the result
-            const link = document.createElement('a');
-            link.download = `kilonova-export-${result.width}x${result.height}-${Date.now()}.png`;
-            link.href = result.dataURL;
-            link.click();
+            newImage.onerror = (err) => {
+                console.error('Failed to load relit image:', err);
+                this.setStatus('Error processing lighting result');
+                this.hideLoading();
+            };
 
-            this.hideLoading();
-            this.setStatus(`Exported at full resolution: ${result.width}×${result.height}`);
+            newImage.src = newDataUrl;
 
         } catch (error) {
-            console.error('Export failed:', error);
+            console.error('applyRelighting error:', error);
+            this.setStatus('Error applying lighting');
             this.hideLoading();
-            this.setStatus('Export failed');
         }
     }
 

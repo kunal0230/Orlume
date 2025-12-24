@@ -93,7 +93,11 @@ export class ControlPanel {
             this.app.components.relighting.setFlatStrength(e.target.value / 100);
         });
 
-        document.getElementById('btn-reset-lights').addEventListener('click', () => {
+        document.getElementById('btn-apply-relight').addEventListener('click', () => {
+            this.app.applyRelighting();
+        });
+
+        document.getElementById('btn-cancel-relight').addEventListener('click', () => {
             this.app.components.relighting.resetLights();
         });
 
@@ -137,8 +141,13 @@ export class ControlPanel {
             this.app.components.transformTool?.setAspectRatio(e.target.value);
         });
 
-        document.getElementById('rotate-slider').addEventListener('input', (e) => {
+        const rotateSlider = document.getElementById('rotate-slider');
+        rotateSlider.addEventListener('input', (e) => {
             this.app.components.transformTool?.rotate(e.target.value);
+        });
+        rotateSlider.addEventListener('dblclick', () => {
+            rotateSlider.value = 0;
+            this.app.components.transformTool?.rotate(0);
         });
 
         document.getElementById('rotate-left').addEventListener('click', () => {

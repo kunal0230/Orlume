@@ -138,6 +138,12 @@ body {
   gap: var(--space-sm);
 }
 
+.history-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 .logo-icon {
   font-size: 1.5rem;
   background: var(--gradient-primary);
@@ -154,7 +160,8 @@ body {
 
 .header-nav {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
+  /* Reduced gap */
 }
 
 .nav-btn {
@@ -162,6 +169,7 @@ body {
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
+  /* Standard size for New/Export */
   background: var(--surface-glass);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -170,6 +178,15 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+
+.nav-btn.icon-only {
+  padding: var(--space-xs);
+  /* Smaller padding for icon-only */
+  width: 32px;
+  /* Fixed width for square aspect */
+  height: 32px;
+  justify-content: center;
 }
 
 .nav-btn:hover:not(:disabled) {

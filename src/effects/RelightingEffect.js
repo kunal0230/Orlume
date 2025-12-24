@@ -80,16 +80,24 @@ export class RelightingEffect {
             this.renderPending = true;
             setTimeout(() => {
                 this.renderPending = false;
-                this.actualRender(forceFullQuality);
+                this.actualRender({ forceFullQuality });
             }, interval - timeSinceLastRender);
         } else {
             // Immediate render with RAF
             this.renderPending = true;
             requestAnimationFrame(() => {
                 this.renderPending = false;
-                this.actualRender(forceFullQuality);
+                this.actualRender({ forceFullQuality });
             });
         }
+    }
+
+    getExportCanvas() {
+        if (!this.enabled || !this.ctx) return null;
+
+        // Synchronously render full quality without indicators
+        this.actualRender({ forceFullQuality: true, skipIndicators: true });
+        return this.canvas;
     }
 
     enable() {
@@ -493,7 +501,7 @@ export class RelightingEffect {
         return blurred;
     }
 
-    actualRender() {
+    actualRender(options = {}) {
         if (!this.enabled || !this.ctx) return;
 
         this.lastRenderTime = performance.now();
@@ -501,8 +509,19 @@ export class RelightingEffect {
         const { image, depthMap } = this.app.state;
         const { width, height } = image;
 
+        // Handle options (legacy support for boolean)
+        let forceFullQuality = false;
+        let skipIndicators = false;
+
+        if (typeof options === 'boolean') {
+            forceFullQuality = options;
+        } else {
+            forceFullQuality = options.forceFullQuality || false;
+            skipIndicators = options.skipIndicators || false;
+        }
+
         // Performance: Use half-resolution during interaction
-        const usePreview = this.isInteracting && !arguments[0]; // forceFullQuality
+        const usePreview = this.isInteracting && !forceFullQuality;
         const scale = usePreview ? this.previewScale : 1.0;
         const renderWidth = Math.floor(width * scale);
         const renderHeight = Math.floor(height * scale);
@@ -526,13 +545,15 @@ export class RelightingEffect {
             const imageData = new ImageData(outputData, width, height);
             this.ctx.putImageData(imageData, 0, 0);
 
-            this.ctx.font = 'bold 16px Inter, sans-serif';
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            this.ctx.textAlign = 'center';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            this.ctx.shadowBlur = 4;
-            this.ctx.fillText('Click anywhere to place a light', width / 2, 40);
-            this.ctx.shadowBlur = 0;
+            if (!skipIndicators) {
+                this.ctx.font = 'bold 16px Inter, sans-serif';
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                this.ctx.textAlign = 'center';
+                this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                this.ctx.shadowBlur = 4;
+                this.ctx.fillText('Click anywhere to place a light', width / 2, 40);
+                this.ctx.shadowBlur = 0;
+            }
             return;
         }
 
@@ -733,7 +754,9 @@ export class RelightingEffect {
         this.ctx.putImageData(imageData, 0, 0);
 
         // Draw light indicators
-        this.drawLightIndicators();
+        if (!skipIndicators) {
+            this.drawLightIndicators();
+        }
     }
 
     drawLightIndicators() {

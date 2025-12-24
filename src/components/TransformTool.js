@@ -145,6 +145,8 @@ export class TransformTool {
 
     rotate(angle) {
         this.rotation = parseFloat(angle);
+        const rotateValue = document.getElementById('rotate-value');
+        if (rotateValue) rotateValue.textContent = `${Math.round(this.rotation)}°`;
         this.canvasManager.requestRender();
     }
 
