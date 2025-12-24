@@ -35,6 +35,20 @@ export class ControlPanel {
 
         document.getElementById('light-color').addEventListener('input', (e) => {
             this.app.components.relighting.setColor(e.target.value);
+            // Remove active from all WB buttons when using custom color
+            document.querySelectorAll('.wb-btn').forEach(btn => btn.classList.remove('active'));
+        });
+
+        // White balance presets
+        document.querySelectorAll('.wb-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.dataset.color;
+                this.app.components.relighting.setColor(color);
+                document.getElementById('light-color').value = color;
+                // Update active state
+                document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
         });
 
         document.getElementById('ambient-intensity').addEventListener('input', (e) => {
@@ -60,6 +74,25 @@ export class ControlPanel {
             document.getElementById('mode-point').classList.remove('active');
             document.getElementById('hint-directional').style.display = '';
             document.getElementById('hint-point').style.display = 'none';
+        });
+
+        // Flat profile controls
+        document.getElementById('flat-off').addEventListener('click', () => {
+            this.app.components.relighting.setFlatProfile(false);
+            document.getElementById('flat-off').classList.add('active');
+            document.getElementById('flat-on').classList.remove('active');
+            document.getElementById('flat-strength-group').style.display = 'none';
+        });
+
+        document.getElementById('flat-on').addEventListener('click', () => {
+            this.app.components.relighting.setFlatProfile(true);
+            document.getElementById('flat-on').classList.add('active');
+            document.getElementById('flat-off').classList.remove('active');
+            document.getElementById('flat-strength-group').style.display = '';
+        });
+
+        document.getElementById('flat-strength').addEventListener('input', (e) => {
+            this.app.components.relighting.setFlatStrength(e.target.value / 100);
         });
 
         document.getElementById('btn-reset-lights').addEventListener('click', () => {

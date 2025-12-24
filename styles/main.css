@@ -655,6 +655,35 @@ body {
   color: white;
 }
 
+/* White Balance Presets */
+.wb-presets {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.wb-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.wb-btn:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+.wb-btn.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+}
+
 /* ===============================================
    Buttons
    =============================================== */

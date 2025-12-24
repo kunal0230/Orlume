@@ -16,6 +16,10 @@ export class RelightingEffect {
         this.shadowSoftness = 3;
         this.brightness = 1.0;
 
+        // Flat profile settings
+        this.flatProfileEnabled = false;
+        this.flatStrength = 0.5;
+
         // Light mode: 'point' or 'directional'
         this.mode = 'point';
 
@@ -433,9 +437,17 @@ export class RelightingEffect {
         const normalData = this.normalMap.data;
         const depthData = depthMap.data;
 
-        // If no lights, show original with hint
+        // If no lights, show image with flat profile applied (if enabled)
         if (this.lights.length === 0) {
-            outputData.set(originalData);
+            // Apply flat profile to base image
+            for (let i = 0; i < originalData.length; i += 4) {
+                const flat = this.applyFlatProfile(originalData[i], originalData[i + 1], originalData[i + 2]);
+                outputData[i] = Math.min(255, flat.r * this.brightness);
+                outputData[i + 1] = Math.min(255, flat.g * this.brightness);
+                outputData[i + 2] = Math.min(255, flat.b * this.brightness);
+                outputData[i + 3] = originalData[i + 3];
+            }
+
             const imageData = new ImageData(outputData, width, height);
             this.ctx.putImageData(imageData, 0, 0);
 
@@ -528,31 +540,56 @@ export class RelightingEffect {
             }
 
             // NATURAL LIGHTING WITH SHADOWS
-            // - Original image at 100% (no global dimming)
-            // - Light adds natural brightness based on normals
-            // - Shadows ONLY darken occluded areas (not everywhere)
+            // - Light enhances original colors (not just white overlay)
+            // - Uses light color for tinting
+            // - Shadows darken occluded areas
 
             const bright = this.brightness;
 
-            // Light contribution: more natural scaling
-            const lightContrib = (diffuseLight * 0.7 + specularLight * 0.5) * 200;
-
             // Shadow: only apply where there's actual occlusion
-            // Use max shadow from all lights (darkest shadow wins)
             let maxShadow = 0;
             for (let li = 0; li < this.lights.length; li++) {
                 maxShadow = Math.max(maxShadow, shadowMaps[li][pixelIndex]);
             }
-
-            // Shadow only darkens, it doesn't affect lit areas
-            // shadowStrength controls how dark shadows get (0-1)
             const shadowDarken = maxShadow * this.shadowStrength * 0.6;
 
-            // Final: original - shadow + light
-            // Shadow subtracts from dark areas, light adds to lit areas
-            const r = originalData[i] * (1 - shadowDarken) + lightContrib;
-            const g = originalData[i + 1] * (1 - shadowDarken) + lightContrib;
-            const b = originalData[i + 2] * (1 - shadowDarken) + lightContrib;
+            // Apply flat profile to original pixel values
+            const flat = this.applyFlatProfile(originalData[i], originalData[i + 1], originalData[i + 2]);
+
+            // Calculate colored light contribution from all lights
+            let lightR = 0, lightG = 0, lightB = 0;
+            for (let li = 0; li < this.lights.length; li++) {
+                const light = this.lights[li];
+                const shadow = 1 - shadowMaps[li][pixelIndex] * this.shadowStrength;
+
+                // Get light direction and attenuation
+                let attenuation = 1.0;
+                let NdotL = 0;
+
+                if (light.type === 'directional') {
+                    const ldx = light.dirX, ldy = light.dirY, ldz = 0.5;
+                    const len = Math.sqrt(ldx * ldx + ldy * ldy + ldz * ldz);
+                    NdotL = Math.max(0, nx * ldx / len + ny * ldy / len + nz * ldz / len);
+                } else {
+                    const lx = light.x - pxNorm, ly = light.y - pyNorm, lz = 0.5;
+                    const dist = Math.sqrt(lx * lx + ly * ly + lz * lz);
+                    const ldx = lx / dist, ldy = ly / dist, ldz = lz / dist;
+                    NdotL = Math.max(0, nx * ldx + ny * ldy + nz * ldz);
+                    attenuation = 1 / (1 + dist * dist * 3);
+                }
+
+                // Natural light contribution with color
+                const intensity = NdotL * attenuation * light.intensity * shadow * 0.4;
+                lightR += intensity * (light.color.r / 255);
+                lightG += intensity * (light.color.g / 255);
+                lightB += intensity * (light.color.b / 255);
+            }
+
+            // Final: enhance original colors with colored light
+            // Instead of adding white, we brighten the original colors proportionally
+            const r = flat.r * (1 - shadowDarken) * (1 + lightR) + lightR * 30;
+            const g = flat.g * (1 - shadowDarken) * (1 + lightG) + lightG * 30;
+            const b = flat.b * (1 - shadowDarken) * (1 + lightB) + lightB * 30;
 
             outputData[i] = Math.min(255, r * bright);
             outputData[i + 1] = Math.min(255, g * bright);
@@ -712,5 +749,42 @@ export class RelightingEffect {
                 b: parseInt(result[3], 16),
             }
             : { r: 255, g: 255, b: 255 };
+    }
+
+    setFlatProfile(enabled) {
+        this.flatProfileEnabled = enabled;
+        if (this.enabled) this.render();
+    }
+
+    setFlatStrength(strength) {
+        this.flatStrength = strength;
+        if (this.enabled) this.render();
+    }
+
+    // Apply flat profile to reduce brightness contrast (highlights/shadows) without affecting saturation
+    applyFlatProfile(r, g, b) {
+        if (!this.flatProfileEnabled) return { r, g, b };
+
+        const s = this.flatStrength;
+
+        // Calculate luminance (perceived brightness)
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        // Target luminance: middle gray (128) - reduces highlights, lifts shadows
+        const targetLum = 128;
+        const newLum = lum + (targetLum - lum) * s;
+
+        // Scale RGB to match new luminance while preserving color ratios (saturation)
+        if (lum > 0) {
+            const scale = newLum / lum;
+            return {
+                r: Math.min(255, r * scale),
+                g: Math.min(255, g * scale),
+                b: Math.min(255, b * scale)
+            };
+        } else {
+            // If original is black, just brighten uniformly
+            return { r: newLum, g: newLum, b: newLum };
+        }
     }
 }

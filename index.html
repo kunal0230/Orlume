@@ -190,6 +190,17 @@
                         <input type="color" class="color-picker" id="light-color" value="#ffffff">
                     </div>
                     <div class="control-group">
+                        <label class="control-label">White Balance</label>
+                        <div class="wb-presets">
+                            <button class="wb-btn" data-color="#fff5e6" title="Tungsten (2700K)">🔶</button>
+                            <button class="wb-btn" data-color="#fff8f0" title="Warm (3200K)">🟠</button>
+                            <button class="wb-btn active" data-color="#ffffff" title="Daylight (5500K)">☀️</button>
+                            <button class="wb-btn" data-color="#e6f0ff" title="Cloudy (6500K)">☁️</button>
+                            <button class="wb-btn" data-color="#cce0ff" title="Shade (7500K)">🌤️</button>
+                            <button class="wb-btn" data-color="#f0fff0" title="Fluorescent">💡</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
                         <label class="control-label">Ambient Light</label>
                         <input type="range" class="slider" id="ambient-intensity" min="0" max="100" value="30">
                     </div>
@@ -197,6 +208,19 @@
                         <label class="control-label">Image Brightness</label>
                         <input type="range" class="slider" id="brightness" min="50" max="200" value="100">
                     </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Flat Profile</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" id="flat-off">Off</button>
+                            <button class="toggle-btn" id="flat-on">On</button>
+                        </div>
+                    </div>
+                    <div class="control-group" id="flat-strength-group" style="display:none">
+                        <label class="control-label">Flatten Strength</label>
+                        <input type="range" class="slider" id="flat-strength" min="0" max="100" value="50">
+                    </div>
+
                     <button class="btn btn-secondary btn-full" id="btn-reset-lights">
                         Reset All Lights
                     </button>
