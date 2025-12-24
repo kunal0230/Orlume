@@ -41,6 +41,27 @@ export class ControlPanel {
             this.app.components.relighting.setAmbient(e.target.value / 100);
         });
 
+        document.getElementById('brightness').addEventListener('input', (e) => {
+            this.app.components.relighting.setBrightness(e.target.value / 100);
+        });
+
+        // Light mode toggle
+        document.getElementById('mode-point').addEventListener('click', () => {
+            this.app.components.relighting.setMode('point');
+            document.getElementById('mode-point').classList.add('active');
+            document.getElementById('mode-directional').classList.remove('active');
+            document.getElementById('hint-point').style.display = '';
+            document.getElementById('hint-directional').style.display = 'none';
+        });
+
+        document.getElementById('mode-directional').addEventListener('click', () => {
+            this.app.components.relighting.setMode('directional');
+            document.getElementById('mode-directional').classList.add('active');
+            document.getElementById('mode-point').classList.remove('active');
+            document.getElementById('hint-directional').style.display = '';
+            document.getElementById('hint-point').style.display = 'none';
+        });
+
         document.getElementById('btn-reset-lights').addEventListener('click', () => {
             this.app.components.relighting.resetLights();
         });

@@ -166,8 +166,21 @@
                 <!-- Relight Controls -->
                 <div class="panel-section" id="relight-section" hidden>
                     <h3 class="panel-title">Relighting</h3>
-                    <p class="panel-hint">Click on image to place lights</p>
-                    <p class="panel-hint">Drag to move, right-click to delete</p>
+
+                    <div class="control-group">
+                        <label class="control-label">Light Mode</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" id="mode-point" data-mode="point">Point Light</button>
+                            <button class="toggle-btn" id="mode-directional"
+                                data-mode="directional">Directional</button>
+                        </div>
+                    </div>
+
+                    <p class="panel-hint" id="hint-point">Click to place point lights</p>
+                    <p class="panel-hint" id="hint-directional" style="display:none">Drag to set light direction
+                        (start→end)</p>
+                    <p class="panel-hint">Right-click to delete lights</p>
+
                     <div class="control-group">
                         <label class="control-label">Light Intensity</label>
                         <input type="range" class="slider" id="light-intensity" min="0" max="200" value="100">
@@ -179,6 +192,10 @@
                     <div class="control-group">
                         <label class="control-label">Ambient Light</label>
                         <input type="range" class="slider" id="ambient-intensity" min="0" max="100" value="30">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Image Brightness</label>
+                        <input type="range" class="slider" id="brightness" min="50" max="200" value="100">
                     </div>
                     <button class="btn btn-secondary btn-full" id="btn-reset-lights">
                         Reset All Lights
