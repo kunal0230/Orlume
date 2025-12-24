@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kilonova | AI Photo Editor</title>
+    <meta name="description"
+        content="Transform your photos with AI-powered depth estimation, dynamic relighting, and pseudo-3D effects">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">Kilonova</span>
+            </div>
+            <nav class="header-nav">
+                <button class="nav-btn" id="btn-new">
+                    <span class="icon">+</span>
+                    New
+                </button>
+                <button class="nav-btn" id="btn-export" disabled>
+                    <span class="icon">↓</span>
+                    Export
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Toolbar -->
+            <aside class="toolbar">
+                <div class="tool-group">
+                    <button class="tool-btn active" data-tool="select" title="Select">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" data-tool="depth" title="Depth Map">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3v18m-9-9h18M5.64 5.64l12.73 12.73M18.36 5.64L5.64 18.36" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" data-tool="relight" title="Relight">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5" />
+                            <line x1="12" y1="1" x2="12" y2="3" />
+                            <line x1="12" y1="21" x2="12" y2="23" />
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                            <line x1="1" y1="12" x2="3" y2="12" />
+                            <line x1="21" y1="12" x2="23" y2="12" />
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" data-tool="3d" title="3D View">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="tool-divider"></div>
+                <div class="tool-group">
+                    <button class="tool-btn" data-tool="parallax" title="Parallax Effect">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <rect x="7" y="7" width="10" height="10" rx="1" />
+                        </svg>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <section class="canvas-container">
+                <!-- Upload Screen -->
+                <div class="upload-screen" id="upload-screen">
+                    <div class="upload-dropzone" id="dropzone">
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" width="64" height="64">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                            </svg>
+                        </div>
+                        <h2 class="upload-title">Drop your image here</h2>
+                        <p class="upload-subtitle">or click to browse</p>
+                        <input type="file" id="file-input" accept="image/*" hidden>
+                        <button class="btn btn-primary" id="btn-browse">
+                            Choose Image
+                        </button>
+                        <p class="upload-hint">Supports JPG, PNG, WebP (max 10MB)</p>
+                    </div>
+                </div>
+
+                <!-- Editor Canvas -->
+                <div class="editor-canvas" id="editor-canvas" hidden>
+                    <canvas id="main-canvas"></canvas>
+                    <canvas id="depth-canvas"></canvas>
+                    <canvas id="three-canvas"></canvas>
+
+                    <div class="canvas-overlay">
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+                            <span class="zoom-level" id="zoom-level">100%</span>
+                            <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+                            <button class="zoom-btn" id="zoom-fit" title="Fit to View">⊙</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Panel -->
+            <aside class="control-panel">
+                <!-- Image Info -->
+                <div class="panel-section" id="info-section">
+                    <h3 class="panel-title">Image Info</h3>
+                    <div class="info-grid">
+                        <span class="info-label">Size</span>
+                        <span class="info-value" id="info-size">—</span>
+                        <span class="info-label">Format</span>
+                        <span class="info-value" id="info-format">—</span>
+                    </div>
+                </div>
+
+                <!-- Depth Controls -->
+                <div class="panel-section" id="depth-section" hidden>
+                    <h3 class="panel-title">Depth Estimation</h3>
+                    <button class="btn btn-primary btn-full" id="btn-estimate-depth">
+                        <span class="btn-icon">◎</span>
+                        Estimate Depth
+                    </button>
+                    <div class="progress-container" id="depth-progress" hidden>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="depth-progress-fill"></div>
+                        </div>
+                        <span class="progress-text" id="depth-progress-text">Loading model...</span>
+                    </div>
+                    <div class="control-group" id="depth-controls" hidden>
+                        <label class="control-label">Depth Overlay</label>
+                        <input type="range" class="slider" id="depth-opacity" min="0" max="100" value="50">
+                        <div class="control-row">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="depth-invert">
+                                Invert
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="depth-colorize">
+                                Colorize
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relight Controls -->
+                <div class="panel-section" id="relight-section" hidden>
+                    <h3 class="panel-title">Relighting</h3>
+                    <p class="panel-hint">Click on image to place lights</p>
+                    <p class="panel-hint">Drag to move, right-click to delete</p>
+                    <div class="control-group">
+                        <label class="control-label">Light Intensity</label>
+                        <input type="range" class="slider" id="light-intensity" min="0" max="200" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Light Color</label>
+                        <input type="color" class="color-picker" id="light-color" value="#ffffff">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Ambient Light</label>
+                        <input type="range" class="slider" id="ambient-intensity" min="0" max="100" value="30">
+                    </div>
+                    <button class="btn btn-secondary btn-full" id="btn-reset-lights">
+                        Reset All Lights
+                    </button>
+                </div>
+
+                <!-- 3D View Controls -->
+                <div class="panel-section" id="view3d-section" hidden>
+                    <h3 class="panel-title">3D View</h3>
+                    <div class="control-group">
+                        <label class="control-label">Depth Exaggeration</label>
+                        <input type="range" class="slider" id="depth-scale" min="10" max="300" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Mesh Quality</label>
+                        <select class="select" id="mesh-quality">
+                            <option value="low">Low (Fast)</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High (Detailed)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-full" id="btn-reset-camera">
+                        Reset Camera
+                    </button>
+                </div>
+
+                <!-- Parallax Controls -->
+                <div class="panel-section" id="parallax-section" hidden>
+                    <h3 class="panel-title">Parallax Effect</h3>
+                    <p class="panel-hint">Move mouse over image to see effect</p>
+                    <div class="control-group">
+                        <label class="control-label">Effect Strength</label>
+                        <input type="range" class="slider" id="parallax-strength" min="0" max="100" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Depth Layers</label>
+                        <input type="range" class="slider" id="parallax-layers" min="3" max="10" value="5">
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span class="status-item" id="status-tool">Select Tool</span>
+            </div>
+            <div class="status-center">
+                <span class="status-item" id="status-message"></span>
+            </div>
+            <div class="status-right">
+                <span class="status-item" id="status-gpu">
+                    <span class="gpu-indicator"></span>
+                    Checking GPU...
+                </span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" hidden>
+        <div class="loading-spinner"></div>
+        <p class="loading-text" id="loading-text">Processing...</p>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
