@@ -527,26 +527,36 @@ export class RelightingEffect {
                 specularLight += specular * contribution;
             }
 
-            // ADDITIVE LIGHTING WITH SHADOWS
-            // Original image stays bright
-            // Lights ADD brightness on top
-            // Shadows DARKEN specific areas (based on shadow map)
+            // NATURAL LIGHTING WITH SHADOWS
+            // - Original image at 100% (no global dimming)
+            // - Light adds natural brightness based on normals
+            // - Shadows ONLY darken occluded areas (not everywhere)
 
-            const lightBoost = (diffuseLight * 0.5 + specularLight * 0.3) * 255;
             const bright = this.brightness;
 
-            // Calculate shadow darkening from all lights
-            let totalShadow = 0;
-            for (let li = 0; li < this.lights.length; li++) {
-                totalShadow += shadowMaps[li][pixelIndex];
-            }
-            // Average and apply strength
-            const shadowFactor = 1 - (totalShadow / Math.max(1, this.lights.length)) * this.shadowStrength * 0.5;
+            // Light contribution: more natural scaling
+            const lightContrib = (diffuseLight * 0.7 + specularLight * 0.5) * 200;
 
-            // Apply: original * shadow + light boost
-            outputData[i] = Math.min(255, (originalData[i] * shadowFactor + lightBoost) * bright);
-            outputData[i + 1] = Math.min(255, (originalData[i + 1] * shadowFactor + lightBoost) * bright);
-            outputData[i + 2] = Math.min(255, (originalData[i + 2] * shadowFactor + lightBoost) * bright);
+            // Shadow: only apply where there's actual occlusion
+            // Use max shadow from all lights (darkest shadow wins)
+            let maxShadow = 0;
+            for (let li = 0; li < this.lights.length; li++) {
+                maxShadow = Math.max(maxShadow, shadowMaps[li][pixelIndex]);
+            }
+
+            // Shadow only darkens, it doesn't affect lit areas
+            // shadowStrength controls how dark shadows get (0-1)
+            const shadowDarken = maxShadow * this.shadowStrength * 0.6;
+
+            // Final: original - shadow + light
+            // Shadow subtracts from dark areas, light adds to lit areas
+            const r = originalData[i] * (1 - shadowDarken) + lightContrib;
+            const g = originalData[i + 1] * (1 - shadowDarken) + lightContrib;
+            const b = originalData[i + 2] * (1 - shadowDarken) + lightContrib;
+
+            outputData[i] = Math.min(255, r * bright);
+            outputData[i + 1] = Math.min(255, g * bright);
+            outputData[i + 2] = Math.min(255, b * bright);
             outputData[i + 3] = originalData[i + 3];
         }
 
