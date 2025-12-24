@@ -10,6 +10,7 @@ import { DepthEstimator } from './ml/DepthEstimator.js';
 import { SceneManager } from './renderer/SceneManager.js';
 import { ParallaxEffect } from './effects/ParallaxEffect.js';
 import { RelightingEffect } from './effects/RelightingEffect.js';
+import { ImageProcessor } from './core/ImageProcessor.js';
 
 class KilonovaApp {
     constructor() {
@@ -22,6 +23,7 @@ class KilonovaApp {
         };
 
         this.components = {};
+        this.imageProcessor = new ImageProcessor();
         this.init();
     }
 
@@ -79,20 +81,31 @@ class KilonovaApp {
         this.showLoading('Loading image...');
 
         try {
-            const image = await this.components.uploader.processFile(file);
-            this.setState({ image, depthMap: null });
+            // Use ImageProcessor for proxy-based loading
+            const proxy = await this.imageProcessor.processFile(file);
+            this.setState({ image: proxy, depthMap: null });
 
             document.getElementById('upload-screen').hidden = true;
             document.getElementById('editor-canvas').hidden = false;
             document.getElementById('btn-export').disabled = false;
 
-            this.components.canvas.setImage(image);
+            this.components.canvas.setImage(proxy);
 
-            document.getElementById('info-size').textContent = `${image.width} × ${image.height}`;
+            // Show image info with proxy indicator
+            const info = this.imageProcessor.getInfo();
+            const sizeText = info.isProxy
+                ? `${info.originalWidth} × ${info.originalHeight} (editing at ${info.proxyWidth}×${info.proxyHeight})`
+                : `${info.originalWidth} × ${info.originalHeight}`;
+            document.getElementById('info-size').textContent = sizeText;
             document.getElementById('info-format').textContent = file.type.split('/')[1].toUpperCase();
 
             this.hideLoading();
-            this.setStatus(`Loaded: ${file.name}`);
+
+            if (info.isProxy) {
+                this.setStatus(`Loaded: ${file.name} (using optimized proxy for editing)`);
+            } else {
+                this.setStatus(`Loaded: ${file.name}`);
+            }
 
             document.getElementById('depth-section').hidden = false;
 
@@ -191,16 +204,56 @@ class KilonovaApp {
     }
 
     async exportImage() {
-        const canvas = this.state.is3DMode
-            ? document.getElementById('three-canvas')
-            : document.getElementById('main-canvas');
+        const info = this.imageProcessor.getInfo();
 
-        const link = document.createElement('a');
-        link.download = `kilonova-export-${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        // If not using proxy, just export current canvas (fast path)
+        if (!info.isProxy || this.state.is3DMode) {
+            const canvas = this.state.is3DMode
+                ? document.getElementById('three-canvas')
+                : document.getElementById('main-canvas');
 
-        this.setStatus('Image exported');
+            const link = document.createElement('a');
+            link.download = `kilonova-export-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            this.setStatus('Image exported');
+            return;
+        }
+
+        // Full-resolution export with edits applied
+        this.showLoading('Exporting at full resolution...');
+
+        try {
+            const result = await this.imageProcessor.exportFullResolution(
+                // Apply edits function
+                (imageData, depthData, onProgress) => {
+                    return this.components.relighting.applyEditsToImageData(
+                        imageData,
+                        depthData,
+                        onProgress
+                    );
+                },
+                this.state.depthMap,
+                { format: 'image/png', quality: 1.0 },
+                (percent, text) => {
+                    document.getElementById('loading-text').textContent = `${text} (${Math.round(percent)}%)`;
+                }
+            );
+
+            // Download the result
+            const link = document.createElement('a');
+            link.download = `kilonova-export-${result.width}x${result.height}-${Date.now()}.png`;
+            link.href = result.dataURL;
+            link.click();
+
+            this.hideLoading();
+            this.setStatus(`Exported at full resolution: ${result.width}×${result.height}`);
+
+        } catch (error) {
+            console.error('Export failed:', error);
+            this.hideLoading();
+            this.setStatus('Export failed');
+        }
     }
 
     reset() {
