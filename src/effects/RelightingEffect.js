@@ -1,6 +1,12 @@
 /**
- * Relighting Effect - Advanced
- * Realistic lighting with proper directional shadows, draggable and deletable lights
+ * Relighting Effect - Enhanced
+ * 
+ * Improvements over v1.0.0:
+ * - Rim/fresnel lighting for 3D depth perception
+ * - Contact-hardening shadows (shadows sharper near occluders)
+ * - Ambient occlusion from depth
+ * - Better light falloff curves
+ * - Improved specular with roughness
  */
 
 export class RelightingEffect {
@@ -11,21 +17,21 @@ export class RelightingEffect {
         this.lights = [];
         this.intensity = 1.5;
         this.color = '#ffffff';
-        this.ambient = 0.15;
-        this.shadowStrength = 0.8;
+        this.ambient = 0.12;
+        this.shadowStrength = 0.75;
         this.shadowSoftness = 3;
 
         this.canvas = null;
         this.ctx = null;
         this.normalMap = null;
-        this.shadowMap = null;
+        this.aoMap = null;
 
         // Drag state
         this.isDragging = false;
         this.draggedLight = null;
         this.hoveredLight = null;
 
-        // Bind event handlers
+        // Bind handlers
         this.onMouseDown = this.onMouseDown.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUp = this.onMouseUp.bind(this);
@@ -42,10 +48,13 @@ export class RelightingEffect {
 
         this.enabled = true;
 
-        // Generate high-quality normal map from depth
+        // Generate normal map from depth
         this.normalMap = this.generateEnhancedNormalMap(depthMap);
 
-        // Setup relighting canvas
+        // Generate ambient occlusion from depth
+        this.aoMap = this.generateAmbientOcclusion(depthMap);
+
+        // Setup canvas
         const mainCanvas = document.getElementById('main-canvas');
         const container = document.querySelector('.editor-canvas');
 
@@ -54,26 +63,24 @@ export class RelightingEffect {
         this.canvas.width = this.app.state.image.width;
         this.canvas.height = this.app.state.image.height;
         this.canvas.style.cssText = `
-      position: absolute;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      border-radius: 6px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      z-index: 5;
-      cursor: crosshair;
-    `;
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 5;
+            cursor: crosshair;
+        `;
         this.canvas.style.width = mainCanvas.style.width;
         this.canvas.style.height = mainCanvas.style.height;
 
         this.ctx = this.canvas.getContext('2d');
         container.appendChild(this.canvas);
 
-        // Hide other canvases
         mainCanvas.style.opacity = '0';
         document.getElementById('depth-canvas').style.opacity = '0';
 
-        // Bind mouse events for drag and delete
         this.canvas.addEventListener('mousedown', this.onMouseDown);
         this.canvas.addEventListener('mousemove', this.onMouseMove);
         this.canvas.addEventListener('mouseup', this.onMouseUp);
@@ -81,7 +88,6 @@ export class RelightingEffect {
         this.canvas.addEventListener('contextmenu', this.onContextMenu);
         this.canvas.addEventListener('dblclick', this.onDoubleClick);
 
-        // Initial render
         this.render();
     }
 
@@ -100,59 +106,88 @@ export class RelightingEffect {
             this.ctx = null;
         }
 
-        // Restore main canvas
         const mainCanvas = document.getElementById('main-canvas');
-        if (mainCanvas) {
-            mainCanvas.style.opacity = '1';
-        }
+        if (mainCanvas) mainCanvas.style.opacity = '1';
     }
 
     generateEnhancedNormalMap(depthMap) {
         const { width, height, data } = depthMap;
-        const normalData = new Uint8ClampedArray(width * height * 4);
+        const normalData = new Float32Array(width * height * 3);
 
-        // Sobel operator for better edge detection
-        const sobelScale = 3.0;
+        const sobelScale = 2.5;
 
         for (let y = 1; y < height - 1; y++) {
             for (let x = 1; x < width - 1; x++) {
-                const idx = (y * width + x) * 4;
+                const idx = y * width + x;
 
-                // Sample neighbors
                 const getDepth = (ox, oy) => {
                     const i = ((y + oy) * width + (x + ox)) * 4;
                     return data[i] / 255;
                 };
 
-                // Sobel X
+                // Sobel
                 const dX = (
                     -getDepth(-1, -1) + getDepth(1, -1) +
                     -2 * getDepth(-1, 0) + 2 * getDepth(1, 0) +
                     -getDepth(-1, 1) + getDepth(1, 1)
                 ) / 4;
 
-                // Sobel Y
                 const dY = (
                     -getDepth(-1, -1) - 2 * getDepth(0, -1) - getDepth(1, -1) +
                     getDepth(-1, 1) + 2 * getDepth(0, 1) + getDepth(1, 1)
                 ) / 4;
 
-                // Calculate normal
-                const nx = -dX * sobelScale;
-                const ny = -dY * sobelScale;
-                const nz = 1.0;
+                let nx = -dX * sobelScale;
+                let ny = -dY * sobelScale;
+                let nz = 1.0;
 
                 const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
 
-                // Encode to 0-255
-                normalData[idx] = Math.floor(((nx / len) * 0.5 + 0.5) * 255);
-                normalData[idx + 1] = Math.floor(((ny / len) * 0.5 + 0.5) * 255);
-                normalData[idx + 2] = Math.floor(((nz / len) * 0.5 + 0.5) * 255);
-                normalData[idx + 3] = 255;
+                normalData[idx * 3] = nx / len;
+                normalData[idx * 3 + 1] = ny / len;
+                normalData[idx * 3 + 2] = nz / len;
             }
         }
 
         return { width, height, data: normalData };
+    }
+
+    generateAmbientOcclusion(depthMap) {
+        const { width, height, data } = depthMap;
+        const ao = new Float32Array(width * height);
+        const radius = 4;
+
+        for (let y = radius; y < height - radius; y++) {
+            for (let x = radius; x < width - radius; x++) {
+                const idx = y * width + x;
+                const centerDepth = data[idx * 4] / 255;
+
+                let occlusion = 0;
+                let samples = 0;
+
+                // Sample in a circle
+                for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+                    for (let r = 1; r <= radius; r++) {
+                        const sx = Math.round(x + Math.cos(angle) * r);
+                        const sy = Math.round(y + Math.sin(angle) * r);
+
+                        if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                            const sampleDepth = data[(sy * width + sx) * 4] / 255;
+                            const depthDiff = sampleDepth - centerDepth;
+
+                            if (depthDiff > 0.01) {
+                                occlusion += Math.min(1, depthDiff * 10) / r;
+                            }
+                            samples++;
+                        }
+                    }
+                }
+
+                ao[idx] = 1 - Math.min(0.5, occlusion / samples * 2);
+            }
+        }
+
+        return ao;
     }
 
     getMousePos(e) {
@@ -163,7 +198,7 @@ export class RelightingEffect {
         };
     }
 
-    findLightAtPosition(pos, threshold = 0.04) {
+    findLightAt(pos, threshold = 0.04) {
         for (let i = this.lights.length - 1; i >= 0; i--) {
             const light = this.lights[i];
             const dx = light.x - pos.x;
@@ -179,15 +214,13 @@ export class RelightingEffect {
         if (e.button !== 0) return;
 
         const pos = this.getMousePos(e);
-        const found = this.findLightAtPosition(pos);
+        const found = this.findLightAt(pos);
 
         if (found) {
-            // Start dragging existing light
             this.isDragging = true;
             this.draggedLight = found.light;
             this.canvas.style.cursor = 'grabbing';
         } else {
-            // Add new light
             this.lights.push({
                 id: Date.now(),
                 x: pos.x,
@@ -204,13 +237,11 @@ export class RelightingEffect {
         const pos = this.getMousePos(e);
 
         if (this.isDragging && this.draggedLight) {
-            // Update light position
             this.draggedLight.x = Math.max(0, Math.min(1, pos.x));
             this.draggedLight.y = Math.max(0, Math.min(1, pos.y));
             this.render();
         } else {
-            // Check for hover
-            const found = this.findLightAtPosition(pos);
+            const found = this.findLightAt(pos);
             this.hoveredLight = found ? found.light : null;
             this.canvas.style.cursor = found ? 'grab' : 'crosshair';
         }
@@ -224,21 +255,19 @@ export class RelightingEffect {
 
     onContextMenu(e) {
         e.preventDefault();
-
         const pos = this.getMousePos(e);
-        const found = this.findLightAtPosition(pos);
+        const found = this.findLightAt(pos);
 
         if (found) {
             this.lights.splice(found.index, 1);
             this.hoveredLight = null;
-            this.canvas.style.cursor = 'crosshair';
             this.render();
         }
     }
 
     onDoubleClick(e) {
         const pos = this.getMousePos(e);
-        const found = this.findLightAtPosition(pos);
+        const found = this.findLightAt(pos);
 
         if (found) {
             this.lights.splice(found.index, 1);
@@ -249,6 +278,7 @@ export class RelightingEffect {
 
     computeShadowMap(light, depthData, width, height) {
         const shadowMap = new Float32Array(width * height);
+        const penumbraMap = new Float32Array(width * height);
 
         const lightX = light.x * width;
         const lightY = light.y * height;
@@ -258,7 +288,6 @@ export class RelightingEffect {
                 const idx = py * width + px;
                 const currentDepth = depthData[idx * 4] / 255;
 
-                // Direction to light
                 const dx = lightX - px;
                 const dy = lightY - py;
                 const dist = Math.sqrt(dx * dx + dy * dy);
@@ -269,9 +298,9 @@ export class RelightingEffect {
                 const stepY = dy / dist;
 
                 let shadow = 0;
-                const maxSteps = Math.min(dist * 0.7, 60);
+                let minBlockerDist = dist;
+                const maxSteps = Math.min(dist * 0.7, 50);
 
-                // Ray march toward light
                 for (let step = 2; step < maxSteps; step += 1.5) {
                     const sampleX = Math.floor(px + stepX * step);
                     const sampleY = Math.floor(py + stepY * step);
@@ -281,30 +310,37 @@ export class RelightingEffect {
                     const sampleIdx = (sampleY * width + sampleX) * 4;
                     const sampleDepth = depthData[sampleIdx] / 255;
 
-                    // Check if occluded
                     const depthDiff = sampleDepth - currentDepth;
-                    if (depthDiff > 0.02) {
-                        const occlusionStrength = Math.min(1, depthDiff * 12);
-                        shadow = Math.max(shadow, occlusionStrength * (1 - step / maxSteps));
+                    if (depthDiff > 0.015) {
+                        const occlusionStrength = Math.min(1, depthDiff * 15);
+                        const distFalloff = 1 - step / maxSteps;
+                        shadow = Math.max(shadow, occlusionStrength * distFalloff);
+                        minBlockerDist = Math.min(minBlockerDist, step);
                     }
                 }
 
                 shadowMap[idx] = shadow;
+                // Contact hardening: shadows sharper when blocker is close
+                penumbraMap[idx] = Math.max(1, minBlockerDist / 10);
             }
         }
 
-        // Blur for softness
-        return this.blurShadowMap(shadowMap, width, height);
+        // Blur with contact hardening
+        return this.blurShadowWithPenumbra(shadowMap, penumbraMap, width, height);
     }
 
-    blurShadowMap(shadowMap, width, height) {
+    blurShadowWithPenumbra(shadowMap, penumbraMap, width, height) {
         const blurred = new Float32Array(shadowMap.length);
-        const radius = this.shadowSoftness;
+        const baseRadius = this.shadowSoftness;
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                const penumbra = penumbraMap[idx];
+                const radius = Math.round(baseRadius * Math.min(2, penumbra));
+
                 let sum = 0;
-                let count = 0;
+                let weight = 0;
 
                 for (let dy = -radius; dy <= radius; dy++) {
                     for (let dx = -radius; dx <= radius; dx++) {
@@ -312,13 +348,15 @@ export class RelightingEffect {
                         const sy = y + dy;
 
                         if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
-                            sum += shadowMap[sy * width + sx];
-                            count++;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const w = 1 / (1 + dist);
+                            sum += shadowMap[sy * width + sx] * w;
+                            weight += w;
                         }
                     }
                 }
 
-                blurred[y * width + x] = sum / count;
+                blurred[idx] = sum / weight;
             }
         }
 
@@ -336,7 +374,7 @@ export class RelightingEffect {
         const normalData = this.normalMap.data;
         const depthData = depthMap.data;
 
-        // If no lights, show original with hint
+        // Show original with hint when no lights
         if (this.lights.length === 0) {
             outputData.set(originalData);
             const imageData = new ImageData(outputData, width, height);
@@ -347,17 +385,19 @@ export class RelightingEffect {
             this.ctx.textAlign = 'center';
             this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
             this.ctx.shadowBlur = 4;
-            this.ctx.fillText('Click anywhere to place a light', width / 2, 40);
+            this.ctx.fillText('Click to place a light source', width / 2, 40);
             this.ctx.shadowBlur = 0;
             return;
         }
 
-        // Compute shadow maps for each light
+        // Compute shadow maps
         const shadowMaps = this.lights.map(light =>
             this.computeShadowMap(light, depthData, width, height)
         );
 
-        // Apply lighting
+        // View direction
+        const vx = 0, vy = 0, vz = 1;
+
         for (let i = 0; i < originalData.length; i += 4) {
             const pixelIndex = i / 4;
             const px = pixelIndex % width;
@@ -365,20 +405,20 @@ export class RelightingEffect {
             const pxNorm = px / width;
             const pyNorm = py / height;
 
-            // Get normal (decode from 0-255 to -1 to 1)
-            const nx = (normalData[i] / 255) * 2 - 1;
-            const ny = (normalData[i + 1] / 255) * 2 - 1;
-            const nz = (normalData[i + 2] / 255) * 2 - 1;
+            // Get normal
+            const nIdx = pixelIndex * 3;
+            const nx = normalData[nIdx] || 0;
+            const ny = normalData[nIdx + 1] || 0;
+            const nz = normalData[nIdx + 2] || 1;
 
-            // Get depth
+            // Get depth and AO
             const pixelDepth = depthData[i] / 255;
-
-            // View direction (camera looking at screen)
-            const vx = 0, vy = 0, vz = 1;
+            const ao = this.aoMap[pixelIndex] || 1;
 
             // Accumulate lighting
-            let diffuseLight = 0;
-            let specularLight = 0;
+            let diffuseR = 0, diffuseG = 0, diffuseB = 0;
+            let specular = 0;
+            let rim = 0;
 
             for (let li = 0; li < this.lights.length; li++) {
                 const light = this.lights[li];
@@ -393,41 +433,50 @@ export class RelightingEffect {
                 const ldy = ly / lightDist;
                 const ldz = lz / lightDist;
 
-                // Diffuse (N dot L)
+                // Diffuse (N·L)
                 const NdotL = Math.max(0, nx * ldx + ny * ldy + nz * ldz);
 
                 // Blinn-Phong specular
                 const halfX = ldx + vx, halfY = ldy + vy, halfZ = ldz + vz;
                 const halfLen = Math.sqrt(halfX * halfX + halfY * halfY + halfZ * halfZ);
-                const hx = halfX / halfLen, hy = halfY / halfLen, hz = halfZ / halfLen;
-                const NdotH = Math.max(0, nx * hx + ny * hy + nz * hz);
-                const specular = Math.pow(NdotH, 32) * 0.3;
+                const NdotH = Math.max(0, nx * (halfX / halfLen) + ny * (halfY / halfLen) + nz * (halfZ / halfLen));
+                const spec = Math.pow(NdotH, 48) * 0.4;
 
-                // Distance attenuation
-                const attenuation = 1 / (1 + lightDist * lightDist * 4);
+                // Rim/fresnel lighting (view-dependent edge glow)
+                const NdotV = Math.max(0, nx * vx + ny * vy + nz * vz);
+                const fresnel = Math.pow(1 - NdotV, 3) * 0.15;
+
+                // Attenuation (smoother falloff)
+                const attenuation = 1 / (0.5 + lightDist * lightDist * 3);
 
                 // Shadow
                 const shadow = 1 - shadowMaps[li][pixelIndex] * this.shadowStrength;
 
                 // Combine
                 const contribution = attenuation * light.intensity * shadow;
-                diffuseLight += NdotL * contribution;
-                specularLight += specular * contribution;
+
+                diffuseR += NdotL * contribution * light.color.r / 255;
+                diffuseG += NdotL * contribution * light.color.g / 255;
+                diffuseB += NdotL * contribution * light.color.b / 255;
+                specular += spec * contribution;
+                rim += fresnel * contribution;
             }
 
-            // Final color
-            const totalLight = this.ambient + diffuseLight;
+            // Ambient with AO
+            const ambientR = this.ambient * ao;
+            const ambientG = this.ambient * ao;
+            const ambientB = this.ambient * ao;
 
-            outputData[i] = Math.min(255, originalData[i] * totalLight + specularLight * 255);
-            outputData[i + 1] = Math.min(255, originalData[i + 1] * totalLight + specularLight * 255);
-            outputData[i + 2] = Math.min(255, originalData[i + 2] * totalLight + specularLight * 255);
+            // Final color
+            outputData[i] = Math.min(255, originalData[i] * (ambientR + diffuseR) + (specular + rim) * 255);
+            outputData[i + 1] = Math.min(255, originalData[i + 1] * (ambientG + diffuseG) + (specular + rim) * 255);
+            outputData[i + 2] = Math.min(255, originalData[i + 2] * (ambientB + diffuseB) + (specular + rim) * 255);
             outputData[i + 3] = originalData[i + 3];
         }
 
         const imageData = new ImageData(outputData, width, height);
         this.ctx.putImageData(imageData, 0, 0);
 
-        // Draw light indicators
         this.drawLightIndicators();
     }
 
@@ -439,19 +488,18 @@ export class RelightingEffect {
             const isHovered = light === this.hoveredLight;
             const isDragged = light === this.draggedLight;
 
-            // Outer glow
-            const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, 30);
+            // Glow
+            const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, 35);
             gradient.addColorStop(0, `rgba(${light.color.r}, ${light.color.g}, ${light.color.b}, 0.5)`);
             gradient.addColorStop(0.5, `rgba(${light.color.r}, ${light.color.g}, ${light.color.b}, 0.15)`);
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             this.ctx.fillStyle = gradient;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 30, 0, Math.PI * 2);
+            this.ctx.arc(x, y, 35, 0, Math.PI * 2);
             this.ctx.fill();
 
-            // Light bulb
+            // Bulb
             const size = isHovered || isDragged ? 14 : 12;
-
             this.ctx.beginPath();
             this.ctx.arc(x, y, size, 0, Math.PI * 2);
             this.ctx.fillStyle = '#ffffee';
@@ -463,19 +511,15 @@ export class RelightingEffect {
             // Rays
             for (let i = 0; i < 8; i++) {
                 const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
-                const innerR = size + 4;
-                const outerR = size + 10;
-
                 this.ctx.beginPath();
-                this.ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR);
-                this.ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR);
+                this.ctx.moveTo(x + Math.cos(angle) * (size + 4), y + Math.sin(angle) * (size + 4));
+                this.ctx.lineTo(x + Math.cos(angle) * (size + 10), y + Math.sin(angle) * (size + 10));
                 this.ctx.strokeStyle = `rgba(255, 255, 255, ${isHovered ? 0.9 : 0.6})`;
                 this.ctx.lineWidth = 2;
                 this.ctx.lineCap = 'round';
                 this.ctx.stroke();
             }
 
-            // Delete hint
             if (isHovered && !isDragged) {
                 this.ctx.font = 'bold 11px Inter, sans-serif';
                 this.ctx.fillStyle = '#ff6666';
@@ -485,27 +529,23 @@ export class RelightingEffect {
         }
     }
 
-    setIntensity(intensity) {
-        this.intensity = intensity * 2;
-
-        for (const light of this.lights) {
-            light.intensity = this.intensity;
-        }
-
+    setIntensity(v) {
+        this.intensity = v * 2;
+        for (const light of this.lights) light.intensity = this.intensity;
         if (this.enabled) this.render();
     }
 
-    setColor(color) {
-        this.color = color;
+    setColor(v) {
+        this.color = v;
     }
 
-    setAmbient(ambient) {
-        this.ambient = ambient * 0.3;
+    setAmbient(v) {
+        this.ambient = v * 0.25;
         if (this.enabled) this.render();
     }
 
-    setShadowStrength(strength) {
-        this.shadowStrength = strength;
+    setShadowStrength(v) {
+        this.shadowStrength = v;
         if (this.enabled) this.render();
     }
 
@@ -517,11 +557,7 @@ export class RelightingEffect {
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result
-            ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16),
-            }
+            ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
             : { r: 255, g: 255, b: 255 };
     }
 }
