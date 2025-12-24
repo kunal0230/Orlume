@@ -403,7 +403,8 @@ body {
   bottom: var(--space-md);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 20;
+  pointer-events: auto;
 }
 
 .zoom-controls {
@@ -655,33 +656,36 @@ body {
   color: white;
 }
 
-/* White Balance Presets */
-.wb-presets {
+/* Temperature Slider */
+.temp-slider-container {
   display: flex;
+  align-items: center;
   gap: var(--space-xs);
-  flex-wrap: wrap;
 }
 
-.wb-btn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background: var(--bg-tertiary);
-  border: 2px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  font-size: 16px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.temp-slider {
+  flex: 1;
+  background: linear-gradient(to right, #ff9933, #ffffff, #6699ff) !important;
 }
 
-.wb-btn:hover {
-  border-color: var(--accent-primary);
-  transform: scale(1.1);
+.temp-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
-.wb-btn.active {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 8px var(--accent-primary-glow);
+.temp-label.warm {
+  color: #ff9933;
+}
+
+.temp-label.cool {
+  color: #6699ff;
+}
+
+.temp-value {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
 }
 
 /* ===============================================

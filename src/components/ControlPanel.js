@@ -35,24 +35,22 @@ export class ControlPanel {
 
         document.getElementById('light-color').addEventListener('input', (e) => {
             this.app.components.relighting.setColor(e.target.value);
-            // Remove active from all WB buttons when using custom color
-            document.querySelectorAll('.wb-btn').forEach(btn => btn.classList.remove('active'));
         });
 
-        // White balance presets
-        document.querySelectorAll('.wb-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const color = btn.dataset.color;
-                this.app.components.relighting.setColor(color);
-                document.getElementById('light-color').value = color;
-                // Update active state
-                document.querySelectorAll('.wb-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
+        // Color temperature slider
+        document.getElementById('color-temp').addEventListener('input', (e) => {
+            const kelvin = parseInt(e.target.value);
+            this.app.components.relighting.setColorTemperature(kelvin);
+            document.getElementById('temp-value').textContent = kelvin + 'K';
         });
 
         document.getElementById('ambient-intensity').addEventListener('input', (e) => {
             this.app.components.relighting.setAmbient(e.target.value / 100);
+        });
+
+        // Light softness slider
+        document.getElementById('light-softness').addEventListener('input', (e) => {
+            this.app.components.relighting.setLightSoftness(e.target.value / 100);
         });
 
         document.getElementById('brightness').addEventListener('input', (e) => {

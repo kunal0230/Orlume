@@ -190,19 +190,22 @@
                         <input type="color" class="color-picker" id="light-color" value="#ffffff">
                     </div>
                     <div class="control-group">
-                        <label class="control-label">White Balance</label>
-                        <div class="wb-presets">
-                            <button class="wb-btn" data-color="#fff5e6" title="Tungsten (2700K)">🔶</button>
-                            <button class="wb-btn" data-color="#fff8f0" title="Warm (3200K)">🟠</button>
-                            <button class="wb-btn active" data-color="#ffffff" title="Daylight (5500K)">☀️</button>
-                            <button class="wb-btn" data-color="#e6f0ff" title="Cloudy (6500K)">☁️</button>
-                            <button class="wb-btn" data-color="#cce0ff" title="Shade (7500K)">🌤️</button>
-                            <button class="wb-btn" data-color="#f0fff0" title="Fluorescent">💡</button>
+                        <label class="control-label">Color Temperature</label>
+                        <div class="temp-slider-container">
+                            <span class="temp-label warm">Warm</span>
+                            <input type="range" class="slider temp-slider" id="color-temp" min="2700" max="10000"
+                                value="5500">
+                            <span class="temp-label cool">Cool</span>
                         </div>
+                        <div class="temp-value" id="temp-value">5500K</div>
                     </div>
                     <div class="control-group">
                         <label class="control-label">Ambient Light</label>
                         <input type="range" class="slider" id="ambient-intensity" min="0" max="100" value="30">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Light Softness</label>
+                        <input type="range" class="slider" id="light-softness" min="0" max="100" value="30">
                     </div>
                     <div class="control-group">
                         <label class="control-label">Image Brightness</label>

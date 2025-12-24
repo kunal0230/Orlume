@@ -32,8 +32,8 @@ class KilonovaApp {
 
         this.components.uploader = new ImageUploader(this);
         this.components.toolbar = new Toolbar(this);
+        this.components.canvas = new CanvasManager(this);  // Must be before ControlPanel
         this.components.controlPanel = new ControlPanel(this);
-        this.components.canvas = new CanvasManager(this);
         this.components.depthEstimator = new DepthEstimator(this);
         this.components.scene = new SceneManager(this);
         this.components.parallax = new ParallaxEffect(this);

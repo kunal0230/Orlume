@@ -15,6 +15,8 @@ export class RelightingEffect {
         this.shadowStrength = 0.5;  // Softer shadows
         this.shadowSoftness = 3;
         this.brightness = 1.0;
+        this.lightSoftness = 0.3;  // Softens light falloff and shadows
+        this.colorTemperature = 5500;  // Kelvin (2700 warm - 10000 cool)
 
         // Flat profile settings
         this.flatProfileEnabled = false;
@@ -139,6 +141,16 @@ export class RelightingEffect {
 
         // Initial render
         this.render();
+    }
+
+    updateCanvasSize() {
+        if (!this.canvas) return;
+
+        const mainCanvas = document.getElementById('main-canvas');
+        if (mainCanvas) {
+            this.canvas.style.width = mainCanvas.style.width;
+            this.canvas.style.height = mainCanvas.style.height;
+        }
     }
 
     disable() {
@@ -853,6 +865,69 @@ export class RelightingEffect {
 
     setMode(mode) {
         this.mode = mode;
+    }
+
+    setLightSoftness(softness) {
+        this.lightSoftness = softness;
+        // Softness affects both light falloff and shadow strength
+        this.shadowStrength = Math.max(0.1, 0.6 - softness * 0.5);
+        if (this.enabled) this.render();
+    }
+
+    setColorTemperature(kelvin) {
+        this.colorTemperature = kelvin;
+        // Convert temperature to color and apply to current light color
+        const rgb = this.kelvinToRgb(kelvin);
+        this.color = this.rgbToHex(rgb.r, rgb.g, rgb.b);
+
+        // Update color picker UI
+        const picker = document.getElementById('light-color');
+        if (picker) picker.value = this.color;
+
+        if (this.enabled) this.render();
+    }
+
+    // Convert color temperature (Kelvin) to RGB
+    // Based on Tanner Helland's algorithm
+    kelvinToRgb(kelvin) {
+        const temp = kelvin / 100;
+        let r, g, b;
+
+        // Red
+        if (temp <= 66) {
+            r = 255;
+        } else {
+            r = temp - 60;
+            r = 329.698727446 * Math.pow(r, -0.1332047592);
+            r = Math.max(0, Math.min(255, r));
+        }
+
+        // Green
+        if (temp <= 66) {
+            g = temp;
+            g = 99.4708025861 * Math.log(g) - 161.1195681661;
+        } else {
+            g = temp - 60;
+            g = 288.1221695283 * Math.pow(g, -0.0755148492);
+        }
+        g = Math.max(0, Math.min(255, g));
+
+        // Blue
+        if (temp >= 66) {
+            b = 255;
+        } else if (temp <= 19) {
+            b = 0;
+        } else {
+            b = temp - 10;
+            b = 138.5177312231 * Math.log(b) - 305.0447927307;
+            b = Math.max(0, Math.min(255, b));
+        }
+
+        return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+    }
+
+    rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
     }
 
     resetLights() {

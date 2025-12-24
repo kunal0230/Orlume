@@ -149,12 +149,33 @@ export class CanvasManager {
         this.zoom = Math.max(0.25, Math.min(4, this.zoom * factor));
         document.getElementById('zoom-level').textContent = `${Math.round(this.zoom * 100)}%`;
         this.updateCanvasSize();
+        this.syncEffectCanvases();
     }
 
     fitToView() {
         this.zoom = 1;
         document.getElementById('zoom-level').textContent = '100%';
         this.updateCanvasSize();
+        this.syncEffectCanvases();
+    }
+
+    // Sync all effect canvases with main canvas size
+    syncEffectCanvases() {
+        const mainCanvas = this.mainCanvas;
+        const displayWidth = mainCanvas.style.width;
+        const displayHeight = mainCanvas.style.height;
+
+        // Sync relighting canvas
+        if (this.app.components.relighting?.enabled && this.app.components.relighting.canvas) {
+            this.app.components.relighting.canvas.style.width = displayWidth;
+            this.app.components.relighting.canvas.style.height = displayHeight;
+        }
+
+        // Sync parallax canvas if active
+        if (this.app.components.parallax?.enabled && this.app.components.parallax.canvas) {
+            this.app.components.parallax.canvas.style.width = displayWidth;
+            this.app.components.parallax.canvas.style.height = displayHeight;
+        }
     }
 
     clear() {
