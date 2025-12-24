@@ -206,5 +206,159 @@ export class ControlPanel {
         document.getElementById('btn-reset-transform').addEventListener('click', () => {
             this.app.components.transformTool?.activate(); // Re-activating resets state
         });
+
+        // Develop Accordion
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('expanded');
+            });
+        });
+
+        // Initialize Tone Curve controls
+        this.initToneCurveControls();
+
+        // ========================================
+        // Develop Basics Controls
+        // ========================================
+        this._developDebounceTimer = null;
+
+        // Profile selector
+        document.querySelectorAll('.profile-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const profile = e.target.dataset.profile;
+                this.app.components.develop?.set('profile', profile);
+                this._triggerDevelopPreview();
+            });
+        });
+
+        // All develop sliders
+        document.querySelectorAll('.develop-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const setting = slider.dataset.setting;
+                const scale = parseFloat(slider.dataset.scale) || 1;
+                const rawValue = parseFloat(e.target.value);
+                const value = rawValue * scale;
+
+                // Update value display
+                const valueEl = document.getElementById(`dev-${setting}-val`);
+                if (valueEl) {
+                    valueEl.textContent = scale < 1 ? value.toFixed(2) : Math.round(value);
+                }
+
+                // Update develop component
+                this.app.components.develop?.set(setting, value);
+                this._triggerDevelopPreview();
+            });
+
+            // Double-click to reset
+            slider.addEventListener('dblclick', () => {
+                slider.value = 0;
+                const setting = slider.dataset.setting;
+                const valueEl = document.getElementById(`dev-${setting}-val`);
+                if (valueEl) valueEl.textContent = '0';
+                this.app.components.develop?.set(setting, 0);
+                this._triggerDevelopPreview();
+            });
+        });
+
+        // Apply Develop
+        document.getElementById('btn-apply-develop')?.addEventListener('click', () => {
+            this.app.applyDevelopSettings();
+        });
+
+        // Reset Develop
+        document.getElementById('btn-reset-develop')?.addEventListener('click', () => {
+            this._resetDevelopSliders();
+            this.app.components.develop?.reset();
+            this._triggerDevelopPreview();
+        });
+    }
+
+    /**
+     * Trigger debounced develop preview
+     */
+    _triggerDevelopPreview() {
+        clearTimeout(this._developDebounceTimer);
+        this._developDebounceTimer = setTimeout(() => {
+            this.app.updateDevelopPreview();
+        }, 16); // ~60fps max
+    }
+
+    /**
+     * Reset all develop sliders to 0
+     */
+    _resetDevelopSliders() {
+        document.querySelectorAll('.develop-slider').forEach(slider => {
+            slider.value = 0;
+            const setting = slider.dataset.setting;
+            const valueEl = document.getElementById(`dev-${setting}-val`);
+            if (valueEl) valueEl.textContent = '0';
+        });
+
+        // Reset profile
+        document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.profile-btn[data-profile="color"]')?.classList.add('active');
+    }
+
+    /**
+     * Initialize Tone Curve controls
+     */
+    initToneCurveControls() {
+        // Channel selector
+        document.querySelectorAll('.curve-channel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.curve-channel-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.app.components.toneCurve?.setChannel(btn.dataset.channel);
+            });
+        });
+
+        // Region sliders
+        document.querySelectorAll('.region-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const region = slider.dataset.region;
+                const value = parseInt(e.target.value);
+
+                // Update value display
+                const valueEl = document.getElementById(`curve-${region}-val`);
+                if (valueEl) valueEl.textContent = value;
+
+                // Update tone curve
+                this.app.components.toneCurve?.setRegion(region, value);
+            });
+
+            // Double-click to reset
+            slider.addEventListener('dblclick', () => {
+                slider.value = 0;
+                const region = slider.dataset.region;
+                const valueEl = document.getElementById(`curve-${region}-val`);
+                if (valueEl) valueEl.textContent = '0';
+                this.app.components.toneCurve?.setRegion(region, 0);
+            });
+        });
+
+        // Reset curve button
+        document.getElementById('btn-reset-curve')?.addEventListener('click', () => {
+            this.app.components.toneCurve?.resetAll();
+            this._resetCurveSliders();
+        });
+    }
+
+    /**
+     * Reset all curve region sliders
+     */
+    _resetCurveSliders() {
+        document.querySelectorAll('.region-slider').forEach(slider => {
+            slider.value = 0;
+            const region = slider.dataset.region;
+            const valueEl = document.getElementById(`curve-${region}-val`);
+            if (valueEl) valueEl.textContent = '0';
+        });
+
+        // Reset channel selector
+        document.querySelectorAll('.curve-channel-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.curve-channel-btn[data-channel="rgb"]')?.classList.add('active');
     }
 }

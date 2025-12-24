@@ -64,6 +64,12 @@
                                 d="M7 17V3a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H9a2 2 0 01-2-2zm0 0H3a2 2 0 01-2-2V3m4 4v14a2 2 0 002 2h14" />
                         </svg>
                     </button>
+                    <button class="tool-btn" data-tool="develop" title="Develop">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                        </svg>
+                    </button>
 
                     <div class="tool-group-wrapper">
                         <button class="tool-btn" data-group="3d-relight" title="3D Relighting">
@@ -359,6 +365,318 @@
                     <div class="control-group">
                         <label class="control-label">Depth Layers</label>
                         <input type="range" class="slider" id="parallax-layers" min="3" max="10" value="5">
+                    </div>
+                </div>
+
+                <!-- Develop Section -->
+                <div class="panel-section" id="develop-section" hidden>
+                    <h3 class="panel-title">Develop</h3>
+
+                    <div class="accordion" id="develop-accordion">
+                        <!-- Histogram -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="histogram-content">
+                                <span class="accordion-label">Histogram</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="histogram-content">
+                                <canvas id="histogram-canvas" width="256" height="150"></canvas>
+                                <div class="histogram-controls">
+                                    <div class="channel-selector" id="hist-channels">
+                                        <button class="channel-btn active" data-channel="rgb" title="RGB">RGB</button>
+                                        <button class="channel-btn" data-channel="red" title="Red">R</button>
+                                        <button class="channel-btn" data-channel="green" title="Green">G</button>
+                                        <button class="channel-btn" data-channel="blue" title="Blue">B</button>
+                                        <button class="channel-btn" data-channel="lum" title="Luminance">L</button>
+                                    </div>
+                                    <div class="hist-stats" hidden>
+                                        <!-- Future: Hover stats -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Basics -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="basics-content">
+                                <span class="accordion-label">Basics</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="basics-content">
+                                <!-- Profile -->
+                                <div class="develop-subsection">
+                                    <div class="subsection-header">
+                                        <span class="subsection-label">Profile</span>
+                                    </div>
+                                    <div class="profile-selector">
+                                        <button class="profile-btn active" data-profile="color">Color</button>
+                                        <button class="profile-btn" data-profile="bw">B&W</button>
+                                        <button class="profile-btn" data-profile="hdr">HDR</button>
+                                    </div>
+                                </div>
+
+                                <!-- White Balance -->
+                                <div class="develop-subsection">
+                                    <div class="subsection-header">
+                                        <span class="subsection-label">WB</span>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Temp</label>
+                                            <input type="range" class="slider develop-slider" id="dev-temperature"
+                                                min="-100" max="100" value="0" data-setting="temperature">
+                                            <span class="slider-value" id="dev-temperature-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Tint</label>
+                                            <input type="range" class="slider develop-slider" id="dev-tint" min="-100"
+                                                max="100" value="0" data-setting="tint">
+                                            <span class="slider-value" id="dev-tint-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tone -->
+                                <div class="develop-subsection">
+                                    <div class="subsection-header">
+                                        <span class="subsection-label">Tone</span>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Exposure</label>
+                                            <input type="range" class="slider develop-slider" id="dev-exposure"
+                                                min="-500" max="500" value="0" data-setting="exposure"
+                                                data-scale="0.01">
+                                            <span class="slider-value" id="dev-exposure-val">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Contrast</label>
+                                            <input type="range" class="slider develop-slider" id="dev-contrast"
+                                                min="-100" max="100" value="0" data-setting="contrast">
+                                            <span class="slider-value" id="dev-contrast-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Highlights</label>
+                                            <input type="range" class="slider develop-slider" id="dev-highlights"
+                                                min="-100" max="100" value="0" data-setting="highlights">
+                                            <span class="slider-value" id="dev-highlights-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Shadows</label>
+                                            <input type="range" class="slider develop-slider" id="dev-shadows"
+                                                min="-100" max="100" value="0" data-setting="shadows">
+                                            <span class="slider-value" id="dev-shadows-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Whites</label>
+                                            <input type="range" class="slider develop-slider" id="dev-whites" min="-100"
+                                                max="100" value="0" data-setting="whites">
+                                            <span class="slider-value" id="dev-whites-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Blacks</label>
+                                            <input type="range" class="slider develop-slider" id="dev-blacks" min="-100"
+                                                max="100" value="0" data-setting="blacks">
+                                            <span class="slider-value" id="dev-blacks-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Presence -->
+                                <div class="develop-subsection">
+                                    <div class="subsection-header">
+                                        <span class="subsection-label">Presence</span>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Texture</label>
+                                            <input type="range" class="slider develop-slider" id="dev-texture"
+                                                min="-100" max="100" value="0" data-setting="texture">
+                                            <span class="slider-value" id="dev-texture-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Clarity</label>
+                                            <input type="range" class="slider develop-slider" id="dev-clarity"
+                                                min="-100" max="100" value="0" data-setting="clarity">
+                                            <span class="slider-value" id="dev-clarity-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Dehaze</label>
+                                            <input type="range" class="slider develop-slider" id="dev-dehaze" min="-100"
+                                                max="100" value="0" data-setting="dehaze">
+                                            <span class="slider-value" id="dev-dehaze-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Color -->
+                                <div class="develop-subsection">
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Vibrance</label>
+                                            <input type="range" class="slider develop-slider" id="dev-vibrance"
+                                                min="-100" max="100" value="0" data-setting="vibrance">
+                                            <span class="slider-value" id="dev-vibrance-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Saturation</label>
+                                            <input type="range" class="slider develop-slider" id="dev-saturation"
+                                                min="-100" max="100" value="0" data-setting="saturation">
+                                            <span class="slider-value" id="dev-saturation-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="develop-actions">
+                                    <button class="btn btn-primary btn-full" id="btn-apply-develop">
+                                        <span class="btn-icon">✓</span> Apply
+                                    </button>
+                                    <button class="btn btn-secondary btn-full" id="btn-reset-develop">
+                                        Reset
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tone Curve -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="tone-content">
+                                <span class="accordion-label">Tone Curve</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="tone-content">
+                                <!-- Channel Selector -->
+                                <div class="curve-channel-selector">
+                                    <button class="curve-channel-btn active" data-channel="rgb">RGB</button>
+                                    <button class="curve-channel-btn" data-channel="r">R</button>
+                                    <button class="curve-channel-btn" data-channel="g">G</button>
+                                    <button class="curve-channel-btn" data-channel="b">B</button>
+                                </div>
+
+                                <!-- Curve Canvas -->
+                                <div class="curve-container">
+                                    <canvas id="tone-curve-canvas" width="256" height="256"></canvas>
+                                    <p class="curve-hint">Click to add points • Double-click to remove</p>
+                                </div>
+
+                                <!-- Region Sliders -->
+                                <div class="develop-subsection">
+                                    <div class="subsection-header">
+                                        <span class="subsection-label">Region</span>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Highlights</label>
+                                            <input type="range" class="slider region-slider" id="curve-highlights"
+                                                min="-100" max="100" value="0" data-region="highlights">
+                                            <span class="slider-value" id="curve-highlights-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Lights</label>
+                                            <input type="range" class="slider region-slider" id="curve-lights"
+                                                min="-100" max="100" value="0" data-region="lights">
+                                            <span class="slider-value" id="curve-lights-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Darks</label>
+                                            <input type="range" class="slider region-slider" id="curve-darks" min="-100"
+                                                max="100" value="0" data-region="darks">
+                                            <span class="slider-value" id="curve-darks-val">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <div class="slider-row">
+                                            <label class="control-label">Shadows</label>
+                                            <input type="range" class="slider region-slider" id="curve-shadows"
+                                                min="-100" max="100" value="0" data-region="shadows">
+                                            <span class="slider-value" id="curve-shadows-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <button class="btn btn-secondary btn-full" id="btn-reset-curve">
+                                    Reset Curve
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Color Mixer -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="mixer-content">
+                                <span class="accordion-label">Color Mixer</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="mixer-content">
+                                <p class="panel-hint">HSL Adjustment</p>
+                            </div>
+                        </div>
+
+                        <!-- Color Grading -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="grading-content">
+                                <span class="accordion-label">Color Grading</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="grading-content">
+                                <p class="panel-hint">Shadows, Midtones, Highlights</p>
+                            </div>
+                        </div>
+
+                        <!-- Detail -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="detail-content">
+                                <span class="accordion-label">Detail</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="detail-content">
+                                <div class="control-group">
+                                    <label class="control-label">Sharpening</label>
+                                    <input type="range" class="slider" disabled value="0">
+                                </div>
+                                <div class="control-group">
+                                    <label class="control-label">Noise Reduction</label>
+                                    <input type="range" class="slider" disabled value="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vignette -->
+                        <div class="accordion-item">
+                            <div class="accordion-header" data-target="vignette-content">
+                                <span class="accordion-label">Vignette</span>
+                                <span class="accordion-icon">▸</span>
+                            </div>
+                            <div class="accordion-content" id="vignette-content">
+                                <div class="control-group">
+                                    <label class="control-label">Amount</label>
+                                    <input type="range" class="slider" disabled value="0">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>

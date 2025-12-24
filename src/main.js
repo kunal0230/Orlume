@@ -15,6 +15,9 @@ import { ImageProcessor } from './core/ImageProcessor.js';
 import { TransformTool } from './components/TransformTool.js';
 
 import { HistoryManager } from './core/HistoryManager.js';
+import { Histogram } from './components/Histogram.js';
+import { ImageDevelopment } from './core/ImageDevelopment.js';
+import { ToneCurve } from './components/ToneCurve.js';
 
 class KilonovaApp {
     constructor() {
@@ -25,6 +28,9 @@ class KilonovaApp {
             isProcessing: false,
             is3DMode: false,
         };
+
+        // Cache original image data for non-destructive develop adjustments
+        this.originalImageData = null;
 
         this.components = {};
         this.imageProcessor = new ImageProcessor();
@@ -44,6 +50,15 @@ class KilonovaApp {
         this.components.parallax = new ParallaxEffect(this);
         this.components.relighting = new RelightingEffect(this);
         this.components.controlPanel = new ControlPanel(this);
+        this.components.histogram = new Histogram('histogram-canvas');
+        this.components.develop = new ImageDevelopment();
+        this.components.toneCurve = new ToneCurve('tone-curve-canvas');
+
+        // Connect tone curve to develop pipeline
+        this.components.toneCurve.onChange = (luts) => {
+            this.components.develop.setCurveLUTs(luts);
+            this.updateDevelopPreview();
+        };
 
         this.bindEvents();
 
@@ -136,8 +151,23 @@ class KilonovaApp {
         });
     }
 
-    setState(updates) {
-        Object.assign(this.state, updates);
+    setState(newState) {
+        this.state = { ...this.state, ...newState };
+
+        // Update Histogram if image changed
+        if (newState.image) {
+            console.log('[App] Image state changed, updating histogram...');
+            if (this.components.histogram) {
+                this.components.histogram.update(newState.image);
+            } else {
+                console.warn('[App] Histogram component not active');
+            }
+        }
+
+        // Notify components of state change if needed
+        if (newState.image) {
+            // ...
+        }
     }
 
     async loadImage(file) {
@@ -146,6 +176,7 @@ class KilonovaApp {
         try {
             // Use ImageProcessor for proxy-based loading
             const proxy = await this.imageProcessor.processFile(file);
+            this.originalImageData = null; // Clear develop cache for new image
             this.setState({ image: proxy, depthMap: null });
 
             // Initial History Push
@@ -257,6 +288,9 @@ class KilonovaApp {
                     this.components.transformTool.activate();
                 }
                 break;
+            case 'develop':
+                document.getElementById('develop-section').hidden = false;
+                break;
         }
     }
 
@@ -267,7 +301,8 @@ class KilonovaApp {
             relight: 'Relighting',
             '3d': '3D View',
             parallax: 'Parallax Effect',
-            transform: 'Crop & Transform' // Added better name
+            transform: 'Crop & Transform',
+            develop: 'Develop'
         };
         return names[tool] || 'Unknown';
     }
@@ -309,11 +344,28 @@ class KilonovaApp {
             }, 50);
         }
 
-        const link = document.createElement('a');
-        link.download = `kilonova-export-${Date.now()}.png`;
-        link.href = canvasToExport.toDataURL('image/png');
-        link.click();
-        this.setStatus('Image exported');
+        // Use blob-based approach for reliable downloads
+        canvasToExport.toBlob((blob) => {
+            if (!blob) {
+                this.setStatus('Export failed - could not create image');
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `kilonova-export-${Date.now()}.png`;
+
+            // Append to body, click, then remove (more reliable)
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up blob URL after download starts
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            this.setStatus('Image exported');
+        }, 'image/png');
     }
 
     async applyRelighting() {
@@ -388,6 +440,121 @@ class KilonovaApp {
         } catch (error) {
             console.error('applyRelighting error:', error);
             this.setStatus('Error applying lighting');
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Update develop preview (non-destructive, real-time)
+     */
+    updateDevelopPreview() {
+        if (!this.state.image || !this.components.develop) return;
+
+        // Cache original if not already
+        if (!this.originalImageData) {
+            const img = this.state.image;
+            if (img.imageData) {
+                // Clone the ImageData to preserve original
+                this.originalImageData = new ImageData(
+                    new Uint8ClampedArray(img.imageData.data),
+                    img.imageData.width,
+                    img.imageData.height
+                );
+            } else {
+                // Extract from canvas
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(img.canvas || img, 0, 0);
+                this.originalImageData = ctx.getImageData(0, 0, img.width, img.height);
+            }
+        }
+
+        // Apply develop adjustments
+        const processedData = this.components.develop.apply(this.originalImageData);
+
+        // Update preview canvas
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = processedData.width;
+        previewCanvas.height = processedData.height;
+        const ctx = previewCanvas.getContext('2d');
+        ctx.putImageData(processedData, 0, 0);
+
+        // Create temp proxy for preview
+        const previewProxy = {
+            width: previewCanvas.width,
+            height: previewCanvas.height,
+            canvas: previewCanvas,
+            imageData: processedData,
+            isProxy: this.state.image.isProxy,
+            originalWidth: this.state.image.originalWidth,
+            originalHeight: this.state.image.originalHeight
+        };
+
+        // Update canvas display (don't update state)
+        this.components.canvas.setImage(previewProxy);
+
+        // Update histogram
+        this.components.histogram?.update(previewProxy);
+    }
+
+    /**
+     * Apply develop settings permanently
+     */
+    applyDevelopSettings() {
+        if (!this.originalImageData || !this.components.develop) return;
+        if (!this.components.develop.hasChanges()) {
+            this.setStatus('No changes to apply');
+            return;
+        }
+
+        this.showLoading('Applying adjustments...');
+
+        try {
+            // Apply final adjustments
+            const processedData = this.components.develop.apply(this.originalImageData);
+
+            // Create permanent canvas
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = processedData.width;
+            finalCanvas.height = processedData.height;
+            const ctx = finalCanvas.getContext('2d');
+            ctx.putImageData(processedData, 0, 0);
+
+            // Push history BEFORE applying
+            this.pushHistory();
+
+            // Create new proxy
+            const newProxy = {
+                width: finalCanvas.width,
+                height: finalCanvas.height,
+                canvas: finalCanvas,
+                imageData: processedData,
+                isProxy: this.state.image.isProxy,
+                originalWidth: this.state.image.originalWidth,
+                originalHeight: this.state.image.originalHeight
+            };
+
+            // Update state
+            this.state.image = newProxy;
+            this.originalImageData = null; // Clear cache to use new image as base
+
+            // Update canvas
+            this.components.canvas.setImage(newProxy);
+
+            // Reset develop sliders and component
+            this.components.develop.reset();
+            this.components.controlPanel._resetDevelopSliders();
+
+            // Update histogram
+            this.components.histogram?.update(newProxy);
+
+            this.setStatus('Adjustments applied');
+        } catch (error) {
+            console.error('Apply develop error:', error);
+            this.setStatus('Error applying adjustments');
+        } finally {
             this.hideLoading();
         }
     }
