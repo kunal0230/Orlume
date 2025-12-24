@@ -11,7 +11,7 @@ export class CanvasManager {
         this.mainCtx = this.mainCanvas.getContext('2d');
         this.depthCtx = this.depthCanvas.getContext('2d');
 
-        this.zoom = 1;
+        this.zoomLevel = 1;
         this.pan = { x: 0, y: 0 };
 
         this.depthOpacity = 0.5;
@@ -43,8 +43,8 @@ export class CanvasManager {
             1
         );
 
-        const displayWidth = Math.floor(this.image.width * scale * this.zoom);
-        const displayHeight = Math.floor(this.image.height * scale * this.zoom);
+        const displayWidth = Math.floor(this.image.width * scale * this.zoomLevel);
+        const displayHeight = Math.floor(this.image.height * scale * this.zoomLevel);
 
         // Update canvases
         this.mainCanvas.width = this.image.width;
@@ -59,6 +59,10 @@ export class CanvasManager {
 
         // Redraw
         this.render();
+    }
+
+    requestRender() {
+        requestAnimationFrame(() => this.render());
     }
 
     setImage(image) {
@@ -78,13 +82,41 @@ export class CanvasManager {
     render() {
         if (!this.image) return;
 
-        // Draw main image
+        // Clear canvas
         this.mainCtx.clearRect(0, 0, this.mainCanvas.width, this.mainCanvas.height);
+
+        // Save context
+        this.mainCtx.save();
+
+        // Apply Transform Tool Visuals (Rotation/Flip)
+        const transformTool = this.app.components.transformTool;
+        if (transformTool && transformTool.active) {
+            // Apply visual rotation/flip to the image drawing
+            // We rotate around the center of the image
+            const cx = this.mainCanvas.width / 2;
+            const cy = this.mainCanvas.height / 2;
+
+            this.mainCtx.translate(cx, cy);
+            this.mainCtx.rotate(transformTool.rotation * Math.PI / 180);
+            this.mainCtx.scale(transformTool.flipX ? -1 : 1, transformTool.flipY ? -1 : 1);
+            this.mainCtx.translate(-cx, -cy);
+        }
+
+        // Draw main image
         this.mainCtx.drawImage(this.image.canvas, 0, 0);
+
+        // Restore context (remove coordinate transforms for overlay)
+        this.mainCtx.restore();
 
         // Apply any active effects
         if (this.depthMap) {
             this.renderDepth();
+        }
+
+        // Draw Transform Overlay (Handles, Crop Box)
+        if (transformTool && transformTool.active) {
+            // Pass scale=1 because context is 1:1 with image pixels
+            transformTool.render(this.mainCtx, 1, 0, 0);
         }
     }
 
@@ -146,14 +178,14 @@ export class CanvasManager {
     }
 
     zoom(factor) {
-        this.zoom = Math.max(0.25, Math.min(4, this.zoom * factor));
-        document.getElementById('zoom-level').textContent = `${Math.round(this.zoom * 100)}%`;
+        this.zoomLevel = Math.max(0.25, Math.min(4, this.zoomLevel * factor));
+        document.getElementById('zoom-level').textContent = `${Math.round(this.zoomLevel * 100)}%`;
         this.updateCanvasSize();
         this.syncEffectCanvases();
     }
 
     fitToView() {
-        this.zoom = 1;
+        this.zoomLevel = 1;
         document.getElementById('zoom-level').textContent = '100%';
         this.updateCanvasSize();
         this.syncEffectCanvases();
@@ -183,6 +215,13 @@ export class CanvasManager {
         this.depthMap = null;
         this.originalDepthData = null;
         this.mainCtx.clearRect(0, 0, this.mainCanvas.width, this.mainCanvas.height);
+        this.depthCtx.clearRect(0, 0, this.depthCanvas.width, this.depthCanvas.height);
+        this.depthCanvas.classList.remove('visible');
+    }
+
+    clearDepth() {
+        this.depthMap = null;
+        this.originalDepthData = null;
         this.depthCtx.clearRect(0, 0, this.depthCanvas.width, this.depthCanvas.height);
         this.depthCanvas.classList.remove('visible');
     }

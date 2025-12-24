@@ -12,6 +12,10 @@ import { ParallaxEffect } from './effects/ParallaxEffect.js';
 import { RelightingEffect } from './effects/RelightingEffect.js';
 import { ImageProcessor } from './core/ImageProcessor.js';
 
+import { TransformTool } from './components/TransformTool.js';
+
+import { HistoryManager } from './core/HistoryManager.js';
+
 class KilonovaApp {
     constructor() {
         this.state = {
@@ -30,14 +34,16 @@ class KilonovaApp {
     async init() {
         await this.checkGPUSupport();
 
+        this.history = new HistoryManager(this);
         this.components.uploader = new ImageUploader(this);
         this.components.toolbar = new Toolbar(this);
-        this.components.canvas = new CanvasManager(this);  // Must be before ControlPanel
-        this.components.controlPanel = new ControlPanel(this);
+        this.components.canvas = new CanvasManager(this);
+        this.components.transformTool = new TransformTool(this, this.components.canvas);
         this.components.depthEstimator = new DepthEstimator(this);
         this.components.scene = new SceneManager(this);
         this.components.parallax = new ParallaxEffect(this);
         this.components.relighting = new RelightingEffect(this);
+        this.components.controlPanel = new ControlPanel(this);
 
         this.bindEvents();
 
@@ -71,6 +77,59 @@ class KilonovaApp {
     bindEvents() {
         document.getElementById('btn-new').addEventListener('click', () => this.reset());
         document.getElementById('btn-export').addEventListener('click', () => this.exportImage());
+        document.getElementById('btn-undo').addEventListener('click', () => this.handleUndo());
+        document.getElementById('btn-redo').addEventListener('click', () => this.handleRedo());
+    }
+
+    handleUndo() {
+        const state = this.history.undo();
+        if (state) this.restoreState(state);
+    }
+
+    handleRedo() {
+        const state = this.history.redo();
+        if (state) this.restoreState(state);
+    }
+
+    restoreState(state) {
+        this.state.image = state.image;
+        this.state.depthMap = state.depthMap;
+
+        // Restore canvas
+        this.components.canvas.setImage(state.image);
+        if (state.depthMap) {
+            this.components.canvas.setDepthMap(state.depthMap);
+            // Don't auto-show depth section if we are in 3D mode
+            if (this.state.currentTool === 'depth') {
+                document.getElementById('depth-section').hidden = false;
+            }
+        } else {
+            document.getElementById('depth-section').hidden = true;
+            this.components.canvas.clearDepth();
+        }
+
+        // Refresh active views
+        if (this.state.is3DMode) {
+            this.components.scene.createMesh();
+        }
+
+        // If relighting is active
+        if (this.components.relighting && this.components.relighting.enabled) {
+            this.components.relighting.updateCanvasSize();
+            this.components.relighting.render(true);
+        }
+
+        // If Transform tool is active, re-initialize it
+        if (this.state.currentTool === 'transform') {
+            this.components.transformTool.activate();
+        }
+    }
+
+    pushHistory() {
+        this.history.push({
+            image: this.state.image,
+            depthMap: this.state.depthMap
+        });
     }
 
     setState(updates) {
@@ -84,6 +143,9 @@ class KilonovaApp {
             // Use ImageProcessor for proxy-based loading
             const proxy = await this.imageProcessor.processFile(file);
             this.setState({ image: proxy, depthMap: null });
+
+            // Initial History Push
+            this.pushHistory();
 
             document.getElementById('upload-screen').hidden = true;
             document.getElementById('editor-canvas').hidden = false;
@@ -107,7 +169,8 @@ class KilonovaApp {
                 this.setStatus(`Loaded: ${file.name}`);
             }
 
-            document.getElementById('depth-section').hidden = false;
+            // Start with Select tool (default)
+            this.setTool('select');
 
         } catch (error) {
             console.error('Failed to load image:', error);
@@ -124,6 +187,9 @@ class KilonovaApp {
         try {
             const depthMap = await this.components.depthEstimator.estimate(this.state.image);
             this.setState({ depthMap, isProcessing: false });
+
+            // Push history after depth estimation
+            this.pushHistory();
 
             document.getElementById('depth-controls').hidden = false;
             this.components.canvas.setDepthMap(depthMap);
@@ -173,6 +239,12 @@ class KilonovaApp {
                     this.setStatus('Estimate depth first');
                 }
                 break;
+            case 'transform':
+                if (this.state.image) {
+                    document.getElementById('transform-section').hidden = false;
+                    this.components.transformTool.activate();
+                }
+                break;
         }
     }
 
@@ -183,6 +255,7 @@ class KilonovaApp {
             relight: 'Relighting',
             '3d': '3D View',
             parallax: 'Parallax Effect',
+            transform: 'Crop & Transform' // Added better name
         };
         return names[tool] || 'Unknown';
     }
@@ -257,6 +330,10 @@ class KilonovaApp {
     }
 
     reset() {
+        this.history.undoStack = []; // Clear history
+        this.history.redoStack = [];
+        this.history.updateUI();
+
         this.setState({
             image: null,
             depthMap: null,

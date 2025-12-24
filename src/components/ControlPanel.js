@@ -121,15 +121,81 @@ export class ControlPanel {
 
         // Zoom controls
         document.getElementById('zoom-in').addEventListener('click', () => {
-            this.app.components.canvas.zoom(1.25);
+            if (this.app.components.canvas) this.app.components.canvas.zoom(1.25);
         });
 
         document.getElementById('zoom-out').addEventListener('click', () => {
-            this.app.components.canvas.zoom(0.8);
+            if (this.app.components.canvas) this.app.components.canvas.zoom(0.8);
         });
 
         document.getElementById('zoom-fit').addEventListener('click', () => {
-            this.app.components.canvas.fitToView();
+            if (this.app.components.canvas) this.app.components.canvas.fitToView();
+        });
+
+        // Transform Controls
+        document.getElementById('crop-aspect').addEventListener('change', (e) => {
+            this.app.components.transformTool?.setAspectRatio(e.target.value);
+        });
+
+        document.getElementById('rotate-slider').addEventListener('input', (e) => {
+            this.app.components.transformTool?.rotate(e.target.value);
+        });
+
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            this.app.components.transformTool?.rotateStep(-90);
+        });
+
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            this.app.components.transformTool?.rotateStep(90);
+        });
+
+        document.getElementById('flip-horizontal').addEventListener('click', () => {
+            this.app.components.transformTool?.flip('horizontal');
+        });
+
+        document.getElementById('flip-vertical').addEventListener('click', () => {
+            this.app.components.transformTool?.flip('vertical');
+        });
+
+        document.getElementById('btn-apply-transform').addEventListener('click', async () => {
+            if (this.app.components.transformTool) {
+                // Show loading
+                document.getElementById('loading-overlay').hidden = false;
+
+                try {
+                    const { image: newImage, depthMap: newDepthMap } = await this.app.components.transformTool.apply();
+
+                    // Update App State
+                    this.app.setState({
+                        image: newImage,
+                        depthMap: newDepthMap
+                    });
+
+                    this.app.components.canvas.setImage(newImage);
+                    if (newDepthMap) {
+                        this.app.components.canvas.setDepthMap(newDepthMap);
+                    }
+
+                    // Push to history
+                    this.app.pushHistory();
+
+                    // Keep transform tool active and reset for next edit
+                    this.app.components.transformTool.activate();
+                } catch (err) {
+                    console.error('Transform failed:', err);
+                } finally {
+                    document.getElementById('loading-overlay').hidden = true;
+                }
+            }
+        });
+
+        document.getElementById('btn-cancel-transform').addEventListener('click', () => {
+            // Reset and stay in tool
+            this.app.components.transformTool?.activate();
+        });
+
+        document.getElementById('btn-reset-transform').addEventListener('click', () => {
+            this.app.components.transformTool?.activate(); // Re-activating resets state
         });
     }
 }

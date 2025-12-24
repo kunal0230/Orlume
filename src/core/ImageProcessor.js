@@ -249,6 +249,160 @@ export class ImageProcessor {
     }
 
     /**
+     * Apply geometric transform (crop, rotate, flip)
+     * Returns the transformed PROXY image for UI display
+     * Also updates the original blob in background
+     */
+    async applyTransform(image, { crop, rotation, flipX, flipY }, depthMap = null) {
+        // 1. Transform the proxy (what the user sees)
+        // Note: The 'image' passed here is usually the current proxy
+
+        console.log('Applying transform:', { crop, rotation, flipX, flipY });
+
+        const transformedProxyCanvas = this._performTransform(image, { crop, rotation, flipX, flipY });
+
+        // Update our local proxy reference
+        // We need to create a new Image element from the canvas result
+        const newProxyImage = new Image();
+        const proxyUrl = transformedProxyCanvas.toDataURL(this.originalMimeType);
+        newProxyImage.src = proxyUrl;
+        await new Promise(r => newProxyImage.onload = r);
+
+        // Update internal state
+        const newProxy = {
+            element: newProxyImage,
+            width: newProxyImage.naturalWidth, // 278
+            height: newProxyImage.naturalHeight,
+            canvas: transformedProxyCanvas,
+            imageData: transformedProxyCanvas.getContext('2d').getImageData(0, 0, newProxyImage.naturalWidth, newProxyImage.naturalHeight),
+            dataURL: proxyUrl
+        };
+
+        this.proxy = newProxy;
+
+        // 2. Transform Depth Map if provided
+        let newDepthMap = null;
+        if (depthMap) {
+            newDepthMap = this._transformDepthMap(depthMap, { crop, rotation, flipX, flipY });
+        }
+
+        // 3. Update the Original Blob (Scale up the transform)
+        await this.updateOriginalWithTransform({ crop, rotation, flipX, flipY });
+
+        return { image: newProxy, depthMap: newDepthMap };
+    }
+
+    /**
+     * Transform depth map using canvas operations
+     */
+    _transformDepthMap(depthMap, transform) {
+        // 1. Convert depth data to temporary canvas
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = depthMap.width;
+        tempCanvas.height = depthMap.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Put depth data
+        const imageData = new ImageData(depthMap.data, depthMap.width, depthMap.height);
+        tempCtx.putImageData(imageData, 0, 0);
+
+        // 2. Apply generic transform
+        // Note: We use scale=1 because image and depth map are currently 1:1 in our pipeline (at proxy resolution)
+        const newCanvas = this._performTransform(tempCanvas, transform, 1.0);
+
+        // 3. Extract new data
+        const newCtx = newCanvas.getContext('2d');
+        const newData = newCtx.getImageData(0, 0, newCanvas.width, newCanvas.height);
+
+        return {
+            width: newCanvas.width,
+            height: newCanvas.height,
+            data: newData.data // Uint8ClampedArray
+        };
+    }
+
+    /**
+     * Helper to perform canvas transformation
+     */
+    _performTransform(sourceImage, { crop, rotation, flipX, flipY }, sourceScale = 1.0) {
+        const canvas = document.createElement('canvas');
+        canvas.width = crop.width * sourceScale;
+        canvas.height = crop.height * sourceScale;
+        const ctx = canvas.getContext('2d');
+
+        // We want to project the Source Image -> Destination Canvas
+        // such that the 'crop' rect (in Visual Space) fills the Canvas.
+
+        // 1. Transform coordinate system to be relative to the Crop Rect Top-Left
+        // The crop rect is defined in Visual Space (where the image is already rotated/centered)
+        ctx.translate(-crop.x * sourceScale, -crop.y * sourceScale);
+
+        // 2. Apply the Visual Transformations to the Source Image to recreate Visual Space
+        // Center of the source image
+        const srcW = (sourceImage.naturalWidth || sourceImage.width) * sourceScale;
+        const srcH = (sourceImage.naturalHeight || sourceImage.height) * sourceScale;
+        const cx = srcW / 2;
+        const cy = srcH / 2;
+
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+        ctx.translate(-cx, -cy);
+
+        // 3. Draw Source
+        const drawable = sourceImage.canvas || sourceImage.element || sourceImage;
+        try {
+            ctx.drawImage(drawable, 0, 0, srcW, srcH);
+        } catch (e) {
+            console.error('Draw error in transform:', e, sourceImage);
+        }
+
+        return canvas;
+    }
+
+    /**
+     * Process the original full-res image with the transform
+     */
+    async updateOriginalWithTransform({ crop, rotation, flipX, flipY }) {
+        // Load full res
+        const fullResImg = await this.loadImageFromURL(this.originalBlobURL);
+
+        // Calculate scale factor between Proxy (where crop was defined) and Original
+        // crop is in Proxy coordinates!
+        // this.proxyScale = Proxy / Original
+        // So Original = Proxy / this.proxyScale
+
+        const scale = 1 / Math.max(0.001, this.proxyScale);
+
+        // Transform
+        const newCanvas = this._performTransform(fullResImg, { crop, rotation, flipX, flipY }, scale);
+
+        // Update Original Blob
+        return new Promise(resolve => {
+            newCanvas.toBlob(blob => {
+                // Revoke old URL
+                if (this.originalBlobURL) URL.revokeObjectURL(this.originalBlobURL);
+
+                this.originalBlob = blob;
+                this.originalBlobURL = URL.createObjectURL(blob);
+                this.originalWidth = newCanvas.width;
+                this.originalHeight = newCanvas.height;
+
+                // Recalculate proxy scale based on new original dimensions vs new proxy dimensions
+                // New proxy width is crop.width
+                // New original width is crop.width * scale
+                // So scale shouldn't change significantly, but good to be precise.
+                this.proxyScale = this.proxy.width / this.originalWidth;
+
+                console.log(`✅ Original updated: ${this.originalWidth}×${this.originalHeight}`);
+                console.log(`   New Proxy Scale: ${this.proxyScale}`);
+
+                resolve();
+            }, this.originalMimeType, 0.95);
+        });
+    }
+
+    /**
      * Cleanup resources
      */
     dispose() {
