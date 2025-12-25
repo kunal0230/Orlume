@@ -134,6 +134,88 @@ export class ImageDevelopment {
         return t * t * (3 - 2 * t);
     }
 
+    // ============================================================
+    // PERCEPTUAL ZONE WEIGHTS (Lightroom-style)
+    // Every adjustment scales by tonal zone, not globally
+    // ============================================================
+
+    /**
+     * Shadow zone weight: strongest in deep shadows, fades by 0.3
+     */
+    shadowWeight(luminance) {
+        return 1 - this.smoothstep(0, 0.3, luminance);
+    }
+
+    /**
+     * Midtone zone weight: peaks at 0.5, fades at extremes
+     */
+    midtoneWeight(luminance) {
+        // Gaussian-like: peak at 0.5, width ~0.4
+        const center = 0.5;
+        const sigma = 0.25;
+        const d = luminance - center;
+        return Math.exp(-(d * d) / (2 * sigma * sigma));
+    }
+
+    /**
+     * Highlight zone weight: strongest in bright areas, fades by 0.7
+     */
+    highlightWeight(luminance) {
+        return this.smoothstep(0.7, 1.0, luminance);
+    }
+
+    /**
+     * Combined zone weights for any luminance (normalized to sum ~1)
+     */
+    getZoneWeights(luminance) {
+        const s = this.shadowWeight(luminance);
+        const m = this.midtoneWeight(luminance);
+        const h = this.highlightWeight(luminance);
+        const sum = s + m + h + 0.001; // avoid division by zero
+        return { shadow: s / sum, midtone: m / sum, highlight: h / sum };
+    }
+
+    // ============================================================
+    // NON-LINEAR SLIDER CURVES (perceptual remapping)
+    // Small movements near zero matter most, extremes compress
+    // ============================================================
+
+    /**
+     * Signed power curve: preserves sign, applies power
+     * Used for contrast, clarity, texture
+     */
+    signedPow(x, power) {
+        return Math.sign(x) * Math.pow(Math.abs(x), power);
+    }
+
+    /**
+     * Ease-in-out cubic for smooth slider response
+     */
+    easeInOut(t) {
+        return t < 0.5
+            ? 4 * t * t * t
+            : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    /**
+     * Soft shoulder for highlight protection
+     * Compresses values approaching 1.0
+     */
+    softShoulder(x, knee = 0.8) {
+        if (x <= knee) return x;
+        const over = x - knee;
+        const compressed = over / (1 + over * 2);
+        return knee + compressed;
+    }
+
+    /**
+     * Logarithmic curve for saturation/vibrance
+     * Gentle at low values, compressed at high
+     */
+    logCurve(x, scale = 25) {
+        return Math.sign(x) * Math.log1p(Math.abs(x) / scale) * scale;
+    }
+
     /**
      * Set curve LUTs from ToneCurve component
      */
@@ -649,74 +731,113 @@ export class ImageDevelopment {
             alpha[i] = srcData[idx + 3];
         }
 
-        // Precompute adjustment factors
-        const exposureGain = Math.pow(2, exposure);
-        const highlightAmount = highlights / 100;
-        const shadowAmount = shadows / 100;
-        const whiteAmount = whites / 200;
-        const blackAmount = blacks / 200;
-        const dehazeAmount = dehaze / 100;
-        const vibranceAmount = vibrance / 100;
-        const saturationFactor = 1 + saturation / 100;
+        // Precompute adjustment factors with NON-LINEAR SLIDER CURVES
+        // Small movements near zero matter most, extremes compress
+
+        // Exposure: handle separately with zone-weighting (see STEP 3)
+        const exposureGain = Math.pow(2, exposure); // Keep for reference
+
+        // Highlights/Shadows: power curve for precision near zero
+        const highlightAmount = this.signedPow(highlights / 100, 0.8);
+        const shadowAmount = this.signedPow(shadows / 100, 0.8);
+
+        // Whites/Blacks: linear but scaled for perceptual feel
+        const whiteAmount = this.signedPow(whites / 200, 0.9);
+        const blackAmount = this.signedPow(blacks / 200, 0.9);
+
+        // Dehaze: power curve
+        const dehazeAmount = this.signedPow(dehaze / 100, 0.8);
+
+        // Vibrance: logarithmic curve - gentle at low, compressed at high
+        const vibranceNorm = vibrance / 100;
+        const vibranceAmount = Math.sign(vibranceNorm) * Math.log1p(Math.abs(vibranceNorm) * 2) / Math.log(3);
+
+        // Saturation: logarithmic - same principle
+        const satNorm = saturation / 100;
+        const saturationFactor = 1 + Math.sign(satNorm) * Math.log1p(Math.abs(satNorm) * 1.5) / Math.log(2.5);
 
         // ============================================================
-        // STEP 2: White Balance (True Bradford Chromatic Adaptation)
-        // RGB → LMS → scale by source/target white → LMS → RGB
+        // STEP 2: White Balance (Perceptual Zone-Aware)
+        // - Zone-aware: stronger in highlights, gentler in shadows
+        // - Skin hue line protection (OKLab hue 25-45°)
+        // - Bradford chromatic adaptation per-pixel
         // ============================================================
         if (temperature !== 0 || tint !== 0) {
-            // Temperature/tint to illuminant shift
-            // D65 (6500K) as reference, temperature shifts toward blue/yellow
-            const tempNorm = temperature / 100; // -1 to +1
-            const tintNorm = tint / 100;
+            // Non-linear slider response for WB
+            const tempNorm = this.signedPow(temperature / 100, 0.8);
+            const tintNorm = this.signedPow(tint / 100, 0.8);
 
-            // Target white point relative to D65 (approximation)
-            // Positive temp = warmer = more red/yellow = simulate cooler source
-            // This is the ratio: target_white / source_white
-            const targetR = 1 + tempNorm * 0.15;
-            const targetG = 1 - tintNorm * 0.10;
-            const targetB = 1 - tempNorm * 0.25;
-
-            // Bradford matrix: RGB to LMS (cone response)
-            // Standard Bradford coefficients
+            // Bradford matrices
             const M_RGB_to_LMS = [
                 [0.8951, 0.2664, -0.1614],
                 [-0.7502, 1.7135, 0.0367],
                 [0.0389, -0.0685, 1.0296]
             ];
-
-            // Inverse Bradford matrix: LMS to RGB
             const M_LMS_to_RGB = [
                 [0.9870, -0.1471, 0.1600],
                 [0.4323, 0.5184, 0.0493],
                 [-0.0085, 0.0400, 0.9685]
             ];
 
-            // Compute D65 white point in LMS
+            // D65 white point in LMS
             const D65_L = M_RGB_to_LMS[0][0] + M_RGB_to_LMS[0][1] + M_RGB_to_LMS[0][2];
             const D65_M = M_RGB_to_LMS[1][0] + M_RGB_to_LMS[1][1] + M_RGB_to_LMS[1][2];
             const D65_S = M_RGB_to_LMS[2][0] + M_RGB_to_LMS[2][1] + M_RGB_to_LMS[2][2];
-
-            // Compute target white point in LMS
-            const TGT_L = M_RGB_to_LMS[0][0] * targetR + M_RGB_to_LMS[0][1] * targetG + M_RGB_to_LMS[0][2] * targetB;
-            const TGT_M = M_RGB_to_LMS[1][0] * targetR + M_RGB_to_LMS[1][1] * targetG + M_RGB_to_LMS[1][2] * targetB;
-            const TGT_S = M_RGB_to_LMS[2][0] * targetR + M_RGB_to_LMS[2][1] * targetG + M_RGB_to_LMS[2][2] * targetB;
-
-            // Diagonal scaling matrix: D65 / Target (to adapt from target illuminant to D65)
-            const scaleL = D65_L / TGT_L;
-            const scaleM = D65_M / TGT_M;
-            const scaleS = D65_S / TGT_S;
 
             for (let i = 0; i < pixelCount; i++) {
                 const r = linearR[i];
                 const g = linearG[i];
                 const b = linearB[i];
 
+                const lum = this.luminance(r, g, b);
+
+                // Zone-aware WB strength: stronger in highlights, gentler in shadows
+                const highlightW = this.highlightWeight(lum);
+                const shadowW = this.shadowWeight(lum);
+                const zoneStrength = 0.6 + highlightW * 0.4 - shadowW * 0.3;
+
+                // Effective temperature/tint for this pixel
+                const effectiveTemp = tempNorm * zoneStrength;
+                const effectiveTint = tintNorm * zoneStrength;
+
+                // Skin hue line protection (compute in OKLab)
+                const [okL, okA, okB] = this.linearRGBtoOKLab(r, g, b);
+                const hue = Math.atan2(okB, okA) * 180 / Math.PI;
+                const hueDeg = (hue + 360) % 360;
+
+                // Skin tone range: 25-45° in OKLab
+                let skinProtect = 1.0;
+                if (hueDeg >= 15 && hueDeg <= 55) {
+                    const skinCenter = 35;
+                    const dist = Math.abs(hueDeg - skinCenter) / 20;
+                    skinProtect = 0.4 + 0.6 * dist; // 60% reduction at center
+                }
+
+                // Final WB intensity for this pixel
+                const finalTemp = effectiveTemp * skinProtect;
+                const finalTint = effectiveTint * skinProtect;
+
+                // Target white point
+                const targetR = 1 + finalTemp * 0.15;
+                const targetG = 1 - finalTint * 0.10;
+                const targetB = 1 - finalTemp * 0.25;
+
+                // Target in LMS
+                const TGT_L = M_RGB_to_LMS[0][0] * targetR + M_RGB_to_LMS[0][1] * targetG + M_RGB_to_LMS[0][2] * targetB;
+                const TGT_M = M_RGB_to_LMS[1][0] * targetR + M_RGB_to_LMS[1][1] * targetG + M_RGB_to_LMS[1][2] * targetB;
+                const TGT_S = M_RGB_to_LMS[2][0] * targetR + M_RGB_to_LMS[2][1] * targetG + M_RGB_to_LMS[2][2] * targetB;
+
+                // Scaling factors
+                const scaleL = D65_L / TGT_L;
+                const scaleM = D65_M / TGT_M;
+                const scaleS = D65_S / TGT_S;
+
                 // RGB to LMS
                 const L = M_RGB_to_LMS[0][0] * r + M_RGB_to_LMS[0][1] * g + M_RGB_to_LMS[0][2] * b;
                 const M = M_RGB_to_LMS[1][0] * r + M_RGB_to_LMS[1][1] * g + M_RGB_to_LMS[1][2] * b;
                 const S = M_RGB_to_LMS[2][0] * r + M_RGB_to_LMS[2][1] * g + M_RGB_to_LMS[2][2] * b;
 
-                // Scale LMS (chromatic adaptation)
+                // Scale LMS
                 const L_adapted = L * scaleL;
                 const M_adapted = M * scaleM;
                 const S_adapted = S * scaleS;
@@ -729,27 +850,66 @@ export class ImageDevelopment {
         }
 
         // ============================================================
-        // STEP 3: Exposure (EV gain)
+        // STEP 3: Exposure (Perceptual with soft shoulder)
+        // - Non-linear response: exponential with shoulder protection
+        // - Highlight protection: soft shoulder prevents blow-out
+        // - Midtone focus: most gain in midtones, less at extremes
         // ============================================================
-        for (let i = 0; i < pixelCount; i++) {
-            linearR[i] *= exposureGain;
-            linearG[i] *= exposureGain;
-            linearB[i] *= exposureGain;
+        if (exposure !== 0) {
+            // Non-linear exposure mapping: more precise near zero
+            const exposureNorm = exposure / 5; // -1 to +1
+            const shapedExposure = this.signedPow(exposureNorm, 0.7) * 5;
+            const gain = Math.pow(2, shapedExposure);
+
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+                const lum = this.luminance(r, g, b);
+
+                // Zone-aware gain: stronger in midtones, softer at extremes
+                const midWeight = this.midtoneWeight(lum);
+                const effectiveGain = 1 + (gain - 1) * (0.5 + midWeight * 0.5);
+
+                let newR = r * effectiveGain;
+                let newG = g * effectiveGain;
+                let newB = b * effectiveGain;
+
+                // Soft shoulder for highlight protection (exposure > 0)
+                if (exposure > 0) {
+                    const newLum = this.luminance(newR, newG, newB);
+                    if (newLum > 0.7) {
+                        const protectedLum = this.softShoulder(newLum, 0.7);
+                        const scale = newLum > 0.001 ? protectedLum / newLum : 1;
+                        newR *= scale;
+                        newG *= scale;
+                        newB *= scale;
+                    }
+                }
+
+                linearR[i] = newR;
+                linearG[i] = newG;
+                linearB[i] = newB;
+            }
         }
 
         // ============================================================
-        // STEP 4: Contrast (True Sigmoid / Logistic curve)
-        // Y' = (Y - 0.18) / (1 + |Y - 0.18| * k) + 0.18
-        // Compresses extremes naturally, prevents clipping
+        // STEP 4: Contrast (Perceptual Zone-Weighted)
+        // - Midtone focus: strongest effect in midtones
+        // - Shadow/highlight protection: extremes preserved
+        // - Non-linear slider: cubic ease for precision near zero
         // ============================================================
         if (contrast !== 0) {
             const MIDDLE_GRAY = 0.18;
-            // k controls the steepness: 0 = linear, higher = more S-curve
-            // contrast = 100 → k ≈ 3 (strong S)
-            // contrast = -100 → k ≈ -0.5 (flatten toward gray)
-            const k = contrast > 0
-                ? (contrast / 100) * 3.0
-                : (contrast / 100) * 0.5;
+
+            // Non-linear slider curve: more precise near zero, compressed at extremes
+            const contrastNorm = contrast / 100; // -1 to +1
+            const shapedContrast = this.signedPow(contrastNorm, 0.7);
+
+            // k for sigmoid: shaped by perceptual curve
+            const k = shapedContrast > 0
+                ? shapedContrast * 3.5
+                : shapedContrast * 0.6;
 
             for (let i = 0; i < pixelCount; i++) {
                 const r = linearR[i];
@@ -758,23 +918,36 @@ export class ImageDevelopment {
 
                 const lum = this.luminance(r, g, b);
 
+                // Zone weights: contrast mainly affects midtones
+                const midWeight = this.midtoneWeight(lum);
+                const shadowProtect = this.shadowWeight(lum);
+                const highlightProtect = this.highlightWeight(lum);
+
+                // Effective strength: full in midtones, reduced at extremes
+                const effectiveK = k * (0.3 + midWeight * 0.7);
+
                 let newLum;
                 if (contrast > 0) {
-                    // Increase contrast: sigmoid curve
-                    // Y' = (Y - 0.18) / (1 + |Y - 0.18| * k) + 0.18
-                    // But scaled to create an S-curve that preserves extremes
+                    // S-curve centered on middle gray
                     const delta = lum - MIDDLE_GRAY;
-                    const compressed = delta / (1 + Math.abs(delta) * k);
-                    // Scale back to full range (sigmoid naturally compresses)
-                    const scale = 1 + k * 0.5;
+                    const compressed = delta / (1 + Math.abs(delta) * Math.abs(effectiveK));
+                    const scale = 1 + Math.abs(effectiveK) * 0.5;
                     newLum = MIDDLE_GRAY + compressed * scale;
+
+                    // Extra shadow protection: don't crush blacks
+                    if (shadowProtect > 0.3) {
+                        newLum = lum + (newLum - lum) * (1 - shadowProtect * 0.5);
+                    }
+
+                    // Extra highlight protection: don't blow whites
+                    if (highlightProtect > 0.3) {
+                        newLum = lum + (newLum - lum) * (1 - highlightProtect * 0.4);
+                    }
                 } else {
-                    // Decrease contrast: pull toward middle gray
-                    const blend = -k; // k is negative, so -k is positive
-                    newLum = lum + (MIDDLE_GRAY - lum) * blend;
+                    // Reduce contrast: pull toward middle gray
+                    newLum = lum + (MIDDLE_GRAY - lum) * Math.abs(effectiveK);
                 }
 
-                // Clamp and apply luminance-ratio scaling
                 newLum = Math.max(0, newLum);
                 [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(r, g, b, newLum);
             }

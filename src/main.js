@@ -24,6 +24,7 @@ import { GeometryPanel } from './components/GeometryPanel.js';
 import { TextManager } from './core/TextManager.js';
 import { TextTool } from './components/TextTool.js';
 import { TextPanel } from './components/TextPanel.js';
+import { FilterPanel } from './components/FilterPanel.js';
 
 class OrlumeApp {
     constructor() {
@@ -77,6 +78,10 @@ class OrlumeApp {
         this.components.textTool = new TextTool(this);
         this.components.textPanel = new TextPanel(this);
         this.components.textPanel.init();
+
+        // Filters System
+        this.components.filterPanel = new FilterPanel(this);
+        this.components.filterPanel.init();
 
         // Connect tone curve to develop pipeline
         this.components.toneCurve.onChange = (luts) => {
@@ -341,6 +346,12 @@ class OrlumeApp {
                     this.components.textPanel.activate();
                 }
                 break;
+            case 'filters':
+                if (this.state.image) {
+                    document.getElementById('filters-section').hidden = false;
+                    this.components.filterPanel.activate();
+                }
+                break;
         }
     }
 
@@ -354,6 +365,7 @@ class OrlumeApp {
             transform: 'Crop & Transform',
             geometry: 'Geometry',
             text: 'Text',
+            filters: 'Filters',
             develop: 'Develop'
         };
         return names[tool] || 'Unknown';
