@@ -791,34 +791,55 @@ export class ImageDevelopment {
             const { shadows, midtones, highlights, blending, balance } = this.colorGrading;
 
             // Pre-compute wheel chroma offsets (angle → a,b)
-            const shadowDa = shadows.strength * Math.cos(shadows.angle * Math.PI / 180) * 0.15;
-            const shadowDb = shadows.strength * Math.sin(shadows.angle * Math.PI / 180) * 0.15;
-            const midDa = midtones.strength * Math.cos(midtones.angle * Math.PI / 180) * 0.15;
-            const midDb = midtones.strength * Math.sin(midtones.angle * Math.PI / 180) * 0.15;
-            const highDa = highlights.strength * Math.cos(highlights.angle * Math.PI / 180) * 0.15;
-            const highDb = highlights.strength * Math.sin(highlights.angle * Math.PI / 180) * 0.15;
+            // Pre-compute wheel chroma offsets (angle → a,b)
+            // Scaling factors tuned for perceived balance: Midtones are most expressive
+            const SHADOW_SCALE = 0.12;
+            const MID_SCALE = 0.18;
+            const HIGH_SCALE = 0.15;
+
+            const shadowDa = shadows.strength * Math.cos(shadows.angle * Math.PI / 180) * SHADOW_SCALE;
+            const shadowDb = shadows.strength * Math.sin(shadows.angle * Math.PI / 180) * SHADOW_SCALE;
+            const midDa = midtones.strength * Math.cos(midtones.angle * Math.PI / 180) * MID_SCALE;
+            const midDb = midtones.strength * Math.sin(midtones.angle * Math.PI / 180) * MID_SCALE;
+            const highDa = highlights.strength * Math.cos(highlights.angle * Math.PI / 180) * HIGH_SCALE;
+            const highDb = highlights.strength * Math.sin(highlights.angle * Math.PI / 180) * HIGH_SCALE;
 
             // Balance factor: shift toward shadows (-1) or highlights (+1)
             const balanceFactor = balance / 100;
 
             // Blending factor: how much midtones inherit edge colors
-            const blendFactor = blending / 100;
+            const blend = blending / 100;
 
             for (let i = 0; i < pixelCount; i++) {
                 // Convert to OKLab
                 const [L, a, b] = this.linearRGBtoOKLab(linearR[i], linearG[i], linearB[i]);
 
+                // Log-weighted luminance for more natural tonal separation
+                // Matches human perception better than linear L
+                const Lp = Math.log(1 + 6 * L) / Math.log(7);
+
                 // Compute tonal weights with smooth transitions
-                let shadowW = this.smoothstep(0.35, 0.0, L);
-                let highlightW = this.smoothstep(0.65, 1.0, L);
+                let shadowW = this.smoothstep(0.35, 0.0, Lp);
+                let highlightW = this.smoothstep(0.65, 1.0, Lp);
                 let midW = Math.max(0, 1 - shadowW - highlightW);
 
                 // Apply balance shift
                 shadowW *= (1 - balanceFactor);
                 highlightW *= (1 + balanceFactor);
 
-                // Blending: midtones inherit some edge color
-                midW += blendFactor * (shadowW + highlightW) * 0.5;
+                // Blending: midtones inherit edge color, edges recede
+                midW += blend * (shadowW + highlightW) * 0.5;
+                shadowW *= (1 - blend * 0.3);
+                highlightW *= (1 - blend * 0.3);
+
+                // Normalize weights for energy conservation
+                const sum = shadowW + midW + highlightW;
+                if (sum > 0) {
+                    const invSum = 1 / sum;
+                    shadowW *= invSum;
+                    midW *= invSum;
+                    highlightW *= invSum;
+                }
 
                 // Apply weighted chroma bias (preserve L!)
                 let newA = a;

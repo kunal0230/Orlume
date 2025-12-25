@@ -92,17 +92,36 @@ export class ColorGrading {
 
         const distance = Math.sqrt(x * x + y * y);
         const maxDistance = cx - this.handleRadius;
-        const strength = Math.min(1, distance / maxDistance);
+
+        // Dead zone near center to prevent jitter (4px)
+        const DEAD_ZONE = 4;
+        let strength = 0;
+        if (distance >= DEAD_ZONE) {
+            strength = Math.min(1, distance / maxDistance);
+        }
 
         // Update handle position
         const clampedDist = Math.min(distance, maxDistance);
-        const hx = (clampedDist / maxDistance) * maxDistance * Math.sin(angle * Math.PI / 180);
-        const hy = -(clampedDist / maxDistance) * maxDistance * Math.cos(angle * Math.PI / 180);
+        // Stick to center if in dead zone
+        const effectiveDist = distance < DEAD_ZONE ? 0 : clampedDist;
+
+        const hx = (effectiveDist / maxDistance) * maxDistance * Math.sin(angle * Math.PI / 180);
+        const hy = -(effectiveDist / maxDistance) * maxDistance * Math.cos(angle * Math.PI / 180);
 
         handle.style.transform = `translate(${hx}px, ${hy}px)`;
 
-        // Update handle color based on angle
-        handle.style.background = `hsl(${angle}, 70%, 50%)`;
+        // Update handle color based on angle using OKLCh for perceptual accuracy
+        // We use a fixed lightness (0.7) and chroma (0.14) to show the hue clearly
+        if (this.app.components.develop) {
+            const [r, g, b] = this.app.components.develop.OKLChToLinearRGB(0.7, 0.14, angle);
+            const sr = this.app.components.develop.linearToSRGB(r);
+            const sg = this.app.components.develop.linearToSRGB(g);
+            const sb = this.app.components.develop.linearToSRGB(b);
+            handle.style.background = `rgb(${sr}, ${sg}, ${sb})`;
+        } else {
+            // Fallback
+            handle.style.background = `hsl(${angle}, 70%, 50%)`;
+        }
 
         // Update value display (Angle° / Strength)
         const valueDisplay = document.getElementById(`${wheelName}-values`);
