@@ -538,6 +538,7 @@
             <div class="panel-tabs">
                 <button class="panel-tab active" data-panel="develop">Develop</button>
                 <button class="panel-tab" data-panel="masks">Masks</button>
+                <button class="panel-tab" data-panel="relight">3D</button>
             </div>
 
             <div class="panel-content">
@@ -770,6 +771,87 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 3D Relighting Panel -->
+                <div class="panel-section" id="panel-relight">
+                    <div class="section">
+                        <div class="section-header">Depth Estimation</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Generate depth map using AI to enable 3D relighting effects.
+                        </p>
+                        <button class="btn btn-primary" id="btn-estimate-depth" style="width: 100%;">
+                            Estimate Depth
+                        </button>
+                        <div id="depth-progress" hidden style="margin-top: 12px;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                                <span id="depth-progress-text">Loading model...</span>
+                                <span id="depth-progress-percent">0%</span>
+                            </div>
+                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
+                                <div id="depth-progress-bar"
+                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="relight-controls" style="display: none;">
+                        <div class="section-header">Lighting</div>
+
+                        <div
+                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
+                            Click on image to add lights<br>
+                            Drag to reposition • Double-click to remove
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Intensity</span>
+                                <span id="val-light-intensity">1.5</span>
+                            </div>
+                            <input type="range" id="slider-light-intensity" min="0" max="5" step="0.1" value="1.5">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Ambient</span>
+                                <span id="val-light-ambient">30</span>
+                            </div>
+                            <input type="range" id="slider-light-ambient" min="0" max="100" step="1" value="30">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow</span>
+                                <span id="val-light-shadow">50</span>
+                            </div>
+                            <input type="range" id="slider-light-shadow" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-light-temperature">5500K</span>
+                            </div>
+                            <input type="range" id="slider-light-temperature" min="2000" max="10000" step="100"
+                                value="5500">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Brightness</span>
+                                <span id="val-light-brightness">0</span>
+                            </div>
+                            <input type="range" id="slider-light-brightness" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="btn-row" style="margin-top: 16px;">
+                            <button class="btn" id="btn-reset-lights">Reset Lights</button>
+                            <button class="btn" id="btn-disable-relight">Disable</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="keyboard-hint">
@@ -782,549 +864,12 @@
     <input type="file" id="file-input" accept="image/*">
 
     <script type="module">
-        import { GPUProcessor } from './src/gpu/GPUProcessor.js';
-        import { MaskSystem } from './src/gpu/MaskSystem.js';
+        import { initApp } from './src/app/EditorApp.js';
 
-        // Initialize
-        const canvas = document.getElementById('gpu-canvas');
-        const gpu = new GPUProcessor(canvas);
-        const masks = new MaskSystem(gpu);
-
-        let originalImage = null;
-        let currentTool = 'develop';
-        let isPainting = false;
-        let lastPaintPos = null;
-
-        // UI elements
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const perfIndicator = document.getElementById('perf');
-        const beforeIndicator = document.getElementById('before-indicator');
-        const histogramCanvas = document.getElementById('histogram-canvas');
-        const histogramCtx = histogramCanvas.getContext('2d');
-        const brushCursor = document.getElementById('brush-cursor');
-
-        // Global sliders
-        const globalSliders = [
-            'exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks',
-            'temperature', 'tint', 'vibrance', 'saturation'
-        ];
-
-        // Panel tabs
-        document.querySelectorAll('.panel-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(`panel-${tab.dataset.panel}`).classList.add('active');
-            });
+        // Initialize the editor
+        initApp().then(app => {
+            console.log('🚀 Orlume GPU Editor v3.2.0 - Modular Architecture');
         });
-
-        // Tool buttons
-        document.querySelectorAll('.tool-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const toolId = btn.id.replace('tool-', '');
-                setTool(toolId);
-            });
-        });
-
-        function setTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`tool-${tool}`)?.classList.add('active');
-
-            // Show/hide brush settings
-            const brushSettings = document.getElementById('brush-settings');
-            const maskAdjustments = document.getElementById('mask-adjustments');
-
-            if (tool === 'brush') {
-                brushSettings.style.display = 'block';
-                maskAdjustments.style.display = 'block';
-                document.querySelector('[data-panel="masks"]').click();
-                brushCursor.style.display = 'block';
-            } else {
-                brushSettings.style.display = 'none';
-                brushCursor.style.display = 'none';
-                if (tool === 'develop') {
-                    document.querySelector('[data-panel="develop"]').click();
-                }
-            }
-        }
-
-        // Histogram
-        function renderHistogram() {
-            if (!gpu.inputTexture) return;
-
-            const w = histogramCanvas.width = histogramCanvas.offsetWidth * 2;
-            const h = histogramCanvas.height = 160;
-
-            const imageData = gpu.toImageData();
-            const data = imageData.data;
-
-            const r = new Uint32Array(256);
-            const g = new Uint32Array(256);
-            const b = new Uint32Array(256);
-            const lum = new Uint32Array(256);
-
-            for (let i = 0; i < data.length; i += 4) {
-                r[data[i]]++;
-                g[data[i + 1]]++;
-                b[data[i + 2]]++;
-                const L = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-                lum[L]++;
-            }
-
-            let maxVal = 0;
-            for (let i = 5; i < 250; i++) {
-                maxVal = Math.max(maxVal, r[i], g[i], b[i], lum[i]);
-            }
-
-            histogramCtx.fillStyle = '#0a0a0a';
-            histogramCtx.fillRect(0, 0, w, h);
-
-            const barWidth = w / 256;
-
-            histogramCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            histogramCtx.beginPath();
-            histogramCtx.moveTo(0, h);
-            for (let i = 0; i < 256; i++) {
-                const barHeight = (lum[i] / maxVal) * h * 0.9;
-                histogramCtx.lineTo(i * barWidth, h - barHeight);
-            }
-            histogramCtx.lineTo(w, h);
-            histogramCtx.closePath();
-            histogramCtx.fill();
-
-            function drawChannel(bins, color) {
-                histogramCtx.strokeStyle = color;
-                histogramCtx.lineWidth = 1;
-                histogramCtx.beginPath();
-                for (let i = 0; i < 256; i++) {
-                    const barHeight = (bins[i] / maxVal) * h * 0.9;
-                    if (i === 0) histogramCtx.moveTo(i * barWidth, h - barHeight);
-                    else histogramCtx.lineTo(i * barWidth, h - barHeight);
-                }
-                histogramCtx.stroke();
-            }
-
-            drawChannel(r, 'rgba(239, 68, 68, 0.6)');
-            drawChannel(g, 'rgba(34, 197, 94, 0.6)');
-            drawChannel(b, 'rgba(59, 130, 246, 0.6)');
-        }
-
-        // Global sliders
-        globalSliders.forEach(name => {
-            const slider = document.getElementById(`slider-${name}`);
-            const valueDisplay = document.getElementById(`val-${name}`);
-
-            slider.addEventListener('input', () => {
-                const value = parseFloat(slider.value);
-                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-
-                const start = performance.now();
-                gpu.setParam(name, value);
-                const elapsed = performance.now() - start;
-                perfIndicator.textContent = `${elapsed.toFixed(1)}ms`;
-
-                requestAnimationFrame(renderHistogram);
-            });
-
-            slider.addEventListener('dblclick', () => {
-                slider.value = 0;
-                valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
-                gpu.setParam(name, 0);
-                requestAnimationFrame(renderHistogram);
-            });
-        });
-
-        // Brush size slider
-        const brushSizeSlider = document.getElementById('slider-brush-size');
-        brushSizeSlider.addEventListener('input', () => {
-            const size = parseInt(brushSizeSlider.value);
-            document.getElementById('val-brush-size').textContent = size;
-            masks.brushSettings.size = size;
-            updateBrushCursor();
-            updateBrushSizeIndicator(size);
-        });
-
-        const brushHardnessSlider = document.getElementById('slider-brush-hardness');
-        brushHardnessSlider.addEventListener('input', () => {
-            const hardness = parseInt(brushHardnessSlider.value);
-            document.getElementById('val-brush-hardness').textContent = hardness;
-            masks.brushSettings.hardness = hardness;
-            updateBrushPreview();
-        });
-
-        const brushFlowSlider = document.getElementById('slider-brush-flow');
-        brushFlowSlider.addEventListener('input', () => {
-            const flow = parseInt(brushFlowSlider.value);
-            document.getElementById('val-brush-flow').textContent = flow;
-            masks.brushSettings.flow = flow;
-        });
-
-        // Mask adjustment sliders
-        const maskSliders = ['exposure', 'contrast', 'shadows', 'temperature', 'saturation'];
-        maskSliders.forEach(name => {
-            const slider = document.getElementById(`slider-mask-${name}`);
-            const valueDisplay = document.getElementById(`val-mask-${name}`);
-
-            slider.addEventListener('input', () => {
-                const value = parseFloat(slider.value);
-                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-
-                // Update active layer adjustment
-                if (masks.activeLayerIndex >= 0) {
-                    masks.setAdjustment(name, value);
-                    renderWithMask(false);
-                }
-            });
-
-            slider.addEventListener('dblclick', () => {
-                slider.value = 0;
-                valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
-                if (masks.activeLayerIndex >= 0) {
-                    masks.setAdjustment(name, 0);
-                    renderWithMask(false);
-                }
-            });
-        });
-
-        function updateBrushCursor() {
-            const size = masks.brushSettings.size;
-            brushCursor.style.width = `${size}px`;
-            brushCursor.style.height = `${size}px`;
-        }
-
-        function updateBrushPreview() {
-            const hardness = masks.brushSettings.hardness / 100;
-            const circle = document.getElementById('brush-preview-circle');
-            const innerStop = Math.round(hardness * 50);
-            circle.style.background = `radial-gradient(circle, rgba(255,255,255,1) ${innerStop}%, rgba(255,255,255,0) 70%)`;
-        }
-
-        // Brush Add/Erase toggle
-        function setBrushMode(erase) {
-            masks.brushSettings.erase = erase;
-            const addBtn = document.getElementById('btn-brush-add');
-            const eraseBtn = document.getElementById('btn-brush-erase');
-            addBtn.classList.toggle('active', !erase);
-            eraseBtn.classList.toggle('active', erase);
-        }
-
-        document.getElementById('btn-brush-add').addEventListener('click', () => setBrushMode(false));
-        document.getElementById('btn-brush-erase').addEventListener('click', () => setBrushMode(true));
-
-        // Update brush size indicator
-        function updateBrushSizeIndicator(size) {
-            const indicator = document.getElementById('brush-size-indicator');
-            if (indicator) indicator.textContent = `${Math.round(size)}px`;
-        }
-
-        // Sync mask adjustment sliders with active layer
-        function syncLayerUI() {
-            const adj = masks.getActiveAdjustments();
-            maskSliders.forEach(name => {
-                const slider = document.getElementById(`slider-mask-${name}`);
-                const valueDisplay = document.getElementById(`val-mask-${name}`);
-                const value = adj ? (adj[name] || 0) : 0;
-                slider.value = value;
-                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-            });
-        }
-
-        // New layer button
-        document.getElementById('btn-new-layer').addEventListener('click', () => {
-            const layer = masks.createLayer('brush');
-            updateLayersList();
-            syncLayerUI();  // Sync UI to new layer's default values
-            setTool('brush');
-        });
-
-        function updateLayersList() {
-            const container = document.getElementById('mask-layers');
-            if (masks.layers.length === 0) {
-                container.innerHTML = `
-                    <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
-                        No adjustment layers yet.<br>Select a tool to create one.
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = masks.layers.map((layer, i) => `
-                <div class="mask-layer ${i === masks.activeLayerIndex ? 'active' : ''}" data-index="${i}">
-                    <div class="mask-layer-icon">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                        </svg>
-                    </div>
-                    <div class="mask-layer-name" data-layer-index="${i}">${layer.name}</div>
-                    <span class="mask-layer-delete" data-delete="${i}" title="Delete layer">×</span>
-                </div>
-            `).join('');
-
-            // Layer selection
-            container.querySelectorAll('.mask-layer').forEach(el => {
-                el.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('mask-layer-delete') &&
-                        !e.target.classList.contains('mask-layer-name') &&
-                        e.target.tagName !== 'INPUT') {
-                        masks.activeLayerIndex = parseInt(el.dataset.index);
-                        updateLayersList();
-                        syncLayerUI();
-                    }
-                });
-            });
-
-            // Single click on name selects layer (only if different layer)
-            container.querySelectorAll('.mask-layer-name').forEach(el => {
-                el.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'INPUT') return;
-                    const index = parseInt(el.dataset.layerIndex);
-                    // Only re-render if switching to a different layer
-                    if (masks.activeLayerIndex !== index) {
-                        masks.activeLayerIndex = index;
-                        updateLayersList();
-                        syncLayerUI();
-                    }
-                });
-
-                // Double-click for inline rename
-                el.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const index = parseInt(el.dataset.layerIndex);
-                    const layer = masks.layers[index];
-
-                    // Create inline input
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = layer.name;
-                    input.style.cssText = `
-                        width: 100%;
-                        background: var(--bg-tertiary);
-                        border: 1px solid var(--accent-primary);
-                        border-radius: 4px;
-                        color: var(--text-primary);
-                        font-size: 12px;
-                        padding: 2px 6px;
-                        outline: none;
-                        box-sizing: border-box;
-                    `;
-
-                    el.textContent = '';
-                    el.appendChild(input);
-                    input.focus();
-                    input.select();
-
-                    let saved = false;
-                    const saveRename = () => {
-                        if (saved) return;
-                        saved = true;
-                        const newName = input.value.trim();
-                        if (newName) {
-                            layer.name = newName;
-                        }
-                        updateLayersList();
-                    };
-
-                    input.addEventListener('blur', saveRename);
-                    input.addEventListener('keydown', (ev) => {
-                        if (ev.key === 'Enter') {
-                            ev.preventDefault();
-                            input.blur();
-                        } else if (ev.key === 'Escape') {
-                            saved = true;
-                            updateLayersList(); // Cancel
-                        }
-                    });
-                });
-            });
-
-            // Delete layer with confirmation
-            container.querySelectorAll('.mask-layer-delete').forEach(el => {
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const index = parseInt(el.dataset.delete);
-                    const layer = masks.layers[index];
-                    if (confirm(`Delete "${layer.name}"?`)) {
-                        masks.deleteLayer(index);
-                        updateLayersList();
-                        syncLayerUI();
-                        renderWithMask(false);
-                    }
-                });
-            });
-        }
-
-        // Canvas painting
-        const canvasArea = document.querySelector('.canvas-area');
-
-        function renderWithMask(showOverlay = false) {
-            // Render global adjustments to texture
-            let resultTexture = gpu.renderToTexture();
-
-            // Apply masked adjustments from all layers (returns final texture)
-            resultTexture = masks.applyMaskedAdjustments(resultTexture);
-
-            // Blit result to canvas
-            gpu.blitToCanvas(resultTexture);
-
-            // Then render mask overlay on top (for visual feedback during painting)
-            if (showOverlay && masks.activeLayerIndex >= 0) {
-                masks.renderMaskOverlay();
-            }
-        }
-
-        canvasArea.addEventListener('mousemove', (e) => {
-            if (currentTool === 'brush') {
-                brushCursor.style.left = `${e.clientX}px`;
-                brushCursor.style.top = `${e.clientY}px`;
-
-                if (isPainting) {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left) * (gpu.width / rect.width);
-                    const y = (e.clientY - rect.top) * (gpu.height / rect.height);
-
-                    // Use stroke interpolation for smooth natural strokes
-                    if (lastPaintPos) {
-                        masks.paintStroke(lastPaintPos.x, lastPaintPos.y, x, y);
-                    } else {
-                        masks.paintBrush(x, y);
-                    }
-                    lastPaintPos = { x, y };
-                    renderWithMask(true); // Show overlay while painting
-                }
-            }
-        });
-
-        canvasArea.addEventListener('mousedown', (e) => {
-            if (currentTool === 'brush' && masks.activeLayerIndex >= 0) {
-                isPainting = true;
-                const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) * (gpu.width / rect.width);
-                const y = (e.clientY - rect.top) * (gpu.height / rect.height);
-                lastPaintPos = { x, y };  // Initialize last position
-                masks.paintBrush(x, y);
-                renderWithMask(true); // Show overlay while painting
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            if (isPainting) {
-                isPainting = false;
-                lastPaintPos = null;  // Reset last position
-                // Re-render without mask overlay when done painting
-                renderWithMask(false); // Apply adjustments but hide overlay
-            }
-        });
-
-        // Reset and Export
-        document.getElementById('btn-reset').addEventListener('click', () => {
-            globalSliders.forEach(name => {
-                document.getElementById(`slider-${name}`).value = 0;
-                document.getElementById(`val-${name}`).textContent = name === 'exposure' ? '0.00' : '0';
-            });
-            gpu.reset();
-            requestAnimationFrame(renderHistogram);
-        });
-
-        document.getElementById('btn-export').addEventListener('click', async () => {
-            if (!gpu.inputTexture) return;
-            const blob = await gpu.toBlob('image/jpeg', 0.95);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `orlume-edit-${Date.now()}.jpg`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        // Before/After
-        let showingBefore = false;
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !showingBefore && originalImage) {
-                e.preventDefault();
-                showingBefore = true;
-                beforeIndicator.classList.add('visible');
-                gpu.renderOriginal();
-            }
-            if (e.code === 'KeyD') setTool('develop');
-            if (e.code === 'KeyB') setTool('brush');
-            if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) setTool('radial');
-            if (e.code === 'KeyG') setTool('gradient');
-            if (e.code === 'KeyX' && currentTool === 'brush') {
-                setBrushMode(!masks.brushSettings.erase);
-            }
-            if (e.code === 'BracketLeft') {
-                masks.brushSettings.size = Math.max(1, masks.brushSettings.size - 10);
-                brushSizeSlider.value = masks.brushSettings.size;
-                document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
-                updateBrushCursor();
-                updateBrushSizeIndicator(masks.brushSettings.size);
-            }
-            if (e.code === 'BracketRight') {
-                masks.brushSettings.size = Math.min(500, masks.brushSettings.size + 10);
-                brushSizeSlider.value = masks.brushSettings.size;
-                document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
-                updateBrushCursor();
-                updateBrushSizeIndicator(masks.brushSettings.size);
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && showingBefore) {
-                showingBefore = false;
-                beforeIndicator.classList.remove('visible');
-                gpu.render();
-            }
-        });
-
-        // File handling
-        function loadImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    originalImage = img;
-                    gpu.loadImage(img);
-                    dropZone.classList.add('hidden');
-                    perfIndicator.textContent = `${img.width}×${img.height}`;
-                    setTimeout(renderHistogram, 100);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        dropZone.addEventListener('click', () => fileInput.click());
-        document.getElementById('btn-browse').addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) loadImage(e.target.files[0]);
-        });
-
-        document.body.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        document.body.addEventListener('dragleave', (e) => {
-            if (!e.relatedTarget) dropZone.classList.remove('dragover');
-        });
-
-        document.body.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
-        });
-
-        // Init
-        updateBrushCursor();
-        updateBrushPreview();
-        console.log('🚀 GPU Editor v3.0 with Local Adjustments initialized');
     </script>
 </body>
 
