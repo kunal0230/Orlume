@@ -1,10 +1,27 @@
 /**
  * ImageDevelopment - Professional Image Development Pipeline
+ * Orlume Vision Labs
  * 
- * Implements a proper color science pipeline:
- * sRGB→Linear → WB → Exposure → Tone → Presence → Color → Linear→sRGB
+ * Pipeline Order (color-science correct):
  * 
- * All adjustments are non-destructive (stored as parameters).
+ *   sRGB → Linear (Float32)
+ *   → White Balance
+ *   → Exposure (EV gain)
+ *   → Contrast (sigmoid, Y'/Y luminance-ratio)
+ *   → Tone Curve (before H/S/W/B!)
+ *   → Highlights / Shadows / Whites / Blacks (Y'/Y)
+ *   → Dehaze (Y'/Y)
+ *   → Texture / Clarity (separable Gaussian, Y'/Y)
+ *   → Profile (B&W, HDR)
+ *   → Vibrance / Saturation
+ *   → Linear → sRGB (single pass)
+ * 
+ * Key principles:
+ * - All processing in Float32 linear space until final output
+ * - Luminance-ratio scaling (Y'/Y) for color-preserving adjustments
+ * - Tone curve BEFORE highlights/shadows (curve = global, sliders = refine)
+ * - Single gamma conversion at the end
+ * - Separable Gaussian blur for O(n·r) local contrast
  */
 
 export class ImageDevelopment {
@@ -109,6 +126,21 @@ export class ImageDevelopment {
     }
 
     /**
+     * Apply luminance-ratio scaling (color-preserving brightness change)
+     * newRGB = RGB * (Y' / Y)
+     */
+    applyLuminanceRatio(r, g, b, newLum) {
+        const oldLum = this.luminance(r, g, b);
+        if (oldLum > 0.0001) {
+            const ratio = newLum / oldLum;
+            return [r * ratio, g * ratio, b * ratio];
+        }
+        // For very dark pixels, add uniformly
+        const delta = newLum - oldLum;
+        return [r + delta, g + delta, b + delta];
+    }
+
+    /**
      * Update a single setting
      */
     set(key, value) {
@@ -153,6 +185,7 @@ export class ImageDevelopment {
      */
     apply(sourceImageData) {
         const { width, height, data: srcData } = sourceImageData;
+        const pixelCount = width * height;
 
         const {
             profile,
@@ -163,15 +196,27 @@ export class ImageDevelopment {
             vibrance, saturation
         } = this.settings;
 
-        // Step 1: Apply per-pixel adjustments first
-        const tempResult = new ImageData(width, height);
-        const tempData = tempResult.data;
+        // ============================================================
+        // STEP 1: Convert to Float32 Linear RGB buffer
+        // All processing happens in this buffer until final output
+        // ============================================================
+        const linearR = new Float32Array(pixelCount);
+        const linearG = new Float32Array(pixelCount);
+        const linearB = new Float32Array(pixelCount);
+        const alpha = new Uint8Array(pixelCount);
+
+        for (let i = 0; i < pixelCount; i++) {
+            const idx = i * 4;
+            linearR[i] = this.sRGBtoLinear(srcData[idx]);
+            linearG[i] = this.sRGBtoLinear(srcData[idx + 1]);
+            linearB[i] = this.sRGBtoLinear(srcData[idx + 2]);
+            alpha[i] = srcData[idx + 3];
+        }
 
         // Precompute adjustment factors
         const tempFactor = 1 + (temperature / 100) * 0.3;
         const tintFactor = 1 + (tint / 100) * 0.2;
         const exposureGain = Math.pow(2, exposure);
-        const contrastFactor = 1 + contrast / 100;
         const highlightAmount = highlights / 100;
         const shadowAmount = shadows / 100;
         const whiteAmount = whites / 200;
@@ -180,260 +225,338 @@ export class ImageDevelopment {
         const vibranceAmount = vibrance / 100;
         const saturationFactor = 1 + saturation / 100;
 
-        // Process each pixel (per-pixel operations)
-        for (let i = 0; i < srcData.length; i += 4) {
-            let r = this.sRGBtoLinear(srcData[i]);
-            let g = this.sRGBtoLinear(srcData[i + 1]);
-            let b = this.sRGBtoLinear(srcData[i + 2]);
-            const a = srcData[i + 3];
+        // ============================================================
+        // STEP 2: White Balance (in linear space)
+        // ============================================================
+        for (let i = 0; i < pixelCount; i++) {
+            linearR[i] *= tempFactor;
+            linearB[i] *= 1 / tempFactor;
+            linearG[i] *= tintFactor;
+        }
 
-            // White Balance
-            r *= tempFactor;
-            b *= 1 / tempFactor;
-            g *= tintFactor;
+        // ============================================================
+        // STEP 3: Exposure (EV gain)
+        // ============================================================
+        for (let i = 0; i < pixelCount; i++) {
+            linearR[i] *= exposureGain;
+            linearG[i] *= exposureGain;
+            linearB[i] *= exposureGain;
+        }
 
-            // Exposure
-            r *= exposureGain;
-            g *= exposureGain;
-            b *= exposureGain;
-
-            // Tone adjustments
-            let lum = this.luminance(r, g, b);
-
-            if (highlightAmount !== 0 && lum > 0.5) {
-                const factor = this.smoothstep(0.5, 1.0, lum);
-                const adjustment = 1 - highlightAmount * factor * 0.5;
-                r *= adjustment;
-                g *= adjustment;
-                b *= adjustment;
-            }
-
-            if (shadowAmount !== 0 && lum < 0.5) {
-                const factor = this.smoothstep(0.5, 0.0, lum);
-                const lift = shadowAmount * factor * 0.3;
-                r += lift;
-                g += lift;
-                b += lift;
-            }
-
-            if (whiteAmount !== 0) {
-                const factor = this.smoothstep(0.7, 1.0, lum);
-                r += whiteAmount * factor;
-                g += whiteAmount * factor;
-                b += whiteAmount * factor;
-            }
-
-            if (blackAmount !== 0) {
-                const factor = this.smoothstep(0.3, 0.0, lum);
-                r += blackAmount * factor;
-                g += blackAmount * factor;
-                b += blackAmount * factor;
-            }
-
-            // Contrast
+        // ============================================================
+        // STEP 4: Contrast (sigmoid-based, centered at middle gray)
+        // Better than linear: preserves highlights/shadows better
+        // ============================================================
+        if (contrast !== 0) {
             const MIDDLE_GRAY = 0.18;
-            r = (r - MIDDLE_GRAY) * contrastFactor + MIDDLE_GRAY;
-            g = (g - MIDDLE_GRAY) * contrastFactor + MIDDLE_GRAY;
-            b = (b - MIDDLE_GRAY) * contrastFactor + MIDDLE_GRAY;
+            // Convert contrast to sigmoid steepness
+            // contrast = 0 → factor = 1 (no change)
+            // contrast = 100 → factor ≈ 2 (strong S-curve)
+            const contrastFactor = 1 + Math.abs(contrast) / 100;
 
-            // Dehaze
-            if (dehazeAmount !== 0) {
-                const dehazeContrast = 1 + dehazeAmount * 0.3;
-                r = (r - MIDDLE_GRAY) * dehazeContrast + MIDDLE_GRAY;
-                g = (g - MIDDLE_GRAY) * dehazeContrast + MIDDLE_GRAY;
-                b = (b - MIDDLE_GRAY) * dehazeContrast + MIDDLE_GRAY - dehazeAmount * 0.05;
+            for (let i = 0; i < pixelCount; i++) {
+                let r = linearR[i];
+                let g = linearG[i];
+                let b = linearB[i];
+
+                const lum = this.luminance(r, g, b);
+
+                // Apply soft sigmoid contrast to luminance
+                let newLum;
+                if (contrast > 0) {
+                    // Increase contrast: push away from middle gray
+                    const x = (lum - MIDDLE_GRAY) * contrastFactor + MIDDLE_GRAY;
+                    newLum = x;
+                } else {
+                    // Decrease contrast: pull toward middle gray
+                    newLum = lum + (MIDDLE_GRAY - lum) * (-contrast / 100) * 0.5;
+                }
+
+                // Apply luminance-ratio scaling to preserve color
+                [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(r, g, b, newLum);
             }
+        }
 
-            // Apply Tone Curve LUTs
-            if (this.curveLUTs) {
-                // Clamp to 0-1 for LUT lookup
-                r = Math.max(0, Math.min(1, r));
-                g = Math.max(0, Math.min(1, g));
-                b = Math.max(0, Math.min(1, b));
+        // ============================================================
+        // STEP 5: Tone Curve (BEFORE highlights/shadows)
+        // Curve defines global contrast, sliders refine it
+        // ============================================================
+        if (this.curveLUTs) {
+            for (let i = 0; i < pixelCount; i++) {
+                let r = Math.max(0, Math.min(1, linearR[i]));
+                let g = Math.max(0, Math.min(1, linearG[i]));
+                let b = Math.max(0, Math.min(1, linearB[i]));
 
-                // Apply RGB curve in a COLOR-PRESERVING way
-                // Instead of applying the curve to each channel independently,
-                // we apply it to the luminance and scale all channels proportionally
+                // Apply RGB curve using luminance-ratio method (color-preserving)
                 const rgbLUT = this.curveLUTs.rgb;
                 const lumBefore = this.luminance(r, g, b);
 
                 if (lumBefore > 0.001) {
-                    // Get the curve adjustment for this luminance value
                     const lumAfter = rgbLUT[Math.round(lumBefore * 255)];
-                    // Scale factor to preserve color ratios
                     const scale = lumAfter / lumBefore;
                     r *= scale;
                     g *= scale;
                     b *= scale;
                 } else {
-                    // For very dark pixels, apply directly
-                    const lumIdx = Math.round(lumBefore * 255);
-                    const adjustment = rgbLUT[lumIdx] - lumBefore;
+                    const adjustment = rgbLUT[Math.round(lumBefore * 255)] - lumBefore;
                     r += adjustment;
                     g += adjustment;
                     b += adjustment;
                 }
 
-                // Apply per-channel curves (for color grading - these DO work independently)
+                // Apply per-channel curves (for color grading)
                 r = Math.max(0, Math.min(1, r));
                 g = Math.max(0, Math.min(1, g));
                 b = Math.max(0, Math.min(1, b));
 
-                const rLUT = this.curveLUTs.r;
-                const gLUT = this.curveLUTs.g;
-                const bLUT = this.curveLUTs.b;
-                r = rLUT[Math.round(r * 255)];
-                g = gLUT[Math.round(g * 255)];
-                b = bLUT[Math.round(b * 255)];
+                linearR[i] = this.curveLUTs.r[Math.round(r * 255)];
+                linearG[i] = this.curveLUTs.g[Math.round(g * 255)];
+                linearB[i] = this.curveLUTs.b[Math.round(b * 255)];
             }
-
-            // Store intermediate result (still in linear space as 0-255 for simplicity)
-            tempData[i] = Math.max(0, Math.min(255, r * 255));
-            tempData[i + 1] = Math.max(0, Math.min(255, g * 255));
-            tempData[i + 2] = Math.max(0, Math.min(255, b * 255));
-            tempData[i + 3] = a;
         }
 
-        // Step 2: Apply Texture and Clarity (local contrast operations)
-        let processedData = tempData;
+        // ============================================================
+        // STEP 6: Highlights / Shadows / Whites / Blacks
+        // Using luminance-ratio scaling (color-preserving)
+        // ============================================================
+        const hasHighlights = highlightAmount !== 0;
+        const hasShadows = shadowAmount !== 0;
+        const hasWhites = whiteAmount !== 0;
+        const hasBlacks = blackAmount !== 0;
 
+        if (hasHighlights || hasShadows || hasWhites || hasBlacks) {
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+
+                let lum = this.luminance(r, g, b);
+                let newLum = lum;
+
+                // Highlights: compress bright areas
+                if (hasHighlights && lum > 0.5) {
+                    const factor = this.smoothstep(0.5, 1.0, lum);
+                    newLum -= highlightAmount * factor * lum * 0.4;
+                }
+
+                // Shadows: lift dark areas
+                if (hasShadows && lum < 0.5) {
+                    const factor = this.smoothstep(0.5, 0.0, lum);
+                    newLum += shadowAmount * factor * (1 - lum) * 0.3;
+                }
+
+                // Whites: adjust white point
+                if (hasWhites) {
+                    const factor = this.smoothstep(0.7, 1.0, lum);
+                    newLum += whiteAmount * factor * (1 - lum);
+                }
+
+                // Blacks: adjust black point
+                if (hasBlacks) {
+                    const factor = this.smoothstep(0.3, 0.0, lum);
+                    newLum += blackAmount * factor * lum;
+                }
+
+                // Clamp and apply luminance-ratio scaling
+                newLum = Math.max(0, newLum);
+                [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(r, g, b, newLum);
+            }
+        }
+
+        // ============================================================
+        // STEP 7: Dehaze (contrast + slight blue reduction)
+        // ============================================================
+        if (dehazeAmount !== 0) {
+            const MIDDLE_GRAY = 0.18;
+            const dehazeContrast = 1 + dehazeAmount * 0.25;
+
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+
+                const lum = this.luminance(r, g, b);
+                const newLum = (lum - MIDDLE_GRAY) * dehazeContrast + MIDDLE_GRAY - dehazeAmount * 0.03;
+
+                [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(r, g, b, Math.max(0, newLum));
+            }
+        }
+
+        // ============================================================
+        // STEP 8: Texture & Clarity (local contrast in Float32 space)
+        // Separable Gaussian for O(n·r) performance
+        // ============================================================
         if (texture !== 0 || clarity !== 0) {
-            processedData = this._applyLocalContrast(tempData, width, height, texture, clarity);
-        }
-
-        // Step 3: Final pass - Profile, Vibrance, Saturation, and gamma
-        const result = new ImageData(width, height);
-        const destData = result.data;
-
-        for (let i = 0; i < processedData.length; i += 4) {
-            // Convert back to linear 0-1
-            let r = processedData[i] / 255;
-            let g = processedData[i + 1] / 255;
-            let b = processedData[i + 2] / 255;
-            const a = processedData[i + 3];
-
-            // Profile
-            if (profile === 'bw') {
-                const gray = this.luminance(r, g, b);
-                r = g = b = gray;
-            } else if (profile === 'hdr') {
-                r = r / (1 + r);
-                g = g / (1 + g);
-                b = b / (1 + b);
+            // Extract luminance for local contrast operations
+            const lum = new Float32Array(pixelCount);
+            for (let i = 0; i < pixelCount; i++) {
+                lum[i] = this.luminance(linearR[i], linearG[i], linearB[i]);
             }
 
-            // Vibrance
-            if (vibranceAmount !== 0 && profile !== 'bw') {
-                const avg = (r + g + b) / 3;
+            // Texture: high-frequency (small radius ~3px)
+            if (texture !== 0) {
+                const blurred = this._separableGaussian(lum, width, height, 3);
+                const textureAmount = texture / 100 * 0.4;
+
+                for (let i = 0; i < pixelCount; i++) {
+                    const highPass = lum[i] - blurred[i];
+                    const newLum = Math.max(0, lum[i] + highPass * textureAmount);
+                    [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
+                        linearR[i], linearG[i], linearB[i], newLum
+                    );
+                }
+            }
+
+            // Clarity: mid-frequency (larger radius ~12px)
+            if (clarity !== 0) {
+                // Re-extract luminance after texture
+                for (let i = 0; i < pixelCount; i++) {
+                    lum[i] = this.luminance(linearR[i], linearG[i], linearB[i]);
+                }
+
+                const blurred = this._separableGaussian(lum, width, height, 12);
+                const clarityAmount = clarity / 100 * 0.5;
+
+                for (let i = 0; i < pixelCount; i++) {
+                    const highPass = lum[i] - blurred[i];
+                    const newLum = Math.max(0, lum[i] + highPass * clarityAmount);
+                    [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
+                        linearR[i], linearG[i], linearB[i], newLum
+                    );
+                }
+            }
+        }
+
+        // ============================================================
+        // STEP 9: Profile (B&W, HDR tone mapping)
+        // ============================================================
+        if (profile === 'bw') {
+            for (let i = 0; i < pixelCount; i++) {
+                const gray = this.luminance(linearR[i], linearG[i], linearB[i]);
+                linearR[i] = linearG[i] = linearB[i] = gray;
+            }
+        } else if (profile === 'hdr') {
+            // Reinhard tone mapping
+            for (let i = 0; i < pixelCount; i++) {
+                linearR[i] = linearR[i] / (1 + linearR[i]);
+                linearG[i] = linearG[i] / (1 + linearG[i]);
+                linearB[i] = linearB[i] / (1 + linearB[i]);
+            }
+        }
+
+        // ============================================================
+        // STEP 10: Vibrance (selective saturation, protects saturated colors)
+        // ============================================================
+        if (vibranceAmount !== 0 && profile !== 'bw') {
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+
                 const maxC = Math.max(r, g, b);
                 const minC = Math.min(r, g, b);
                 const currentSat = maxC > 0 ? (maxC - minC) / maxC : 0;
-                const boost = vibranceAmount * (1 - currentSat) * 0.5;
-                r = avg + (r - avg) * (1 + boost);
-                g = avg + (g - avg) * (1 + boost);
-                b = avg + (b - avg) * (1 + boost);
-            }
 
-            // Saturation
-            if (saturationFactor !== 1 && profile !== 'bw') {
-                const gray = this.luminance(r, g, b);
-                r = gray + (r - gray) * saturationFactor;
-                g = gray + (g - gray) * saturationFactor;
-                b = gray + (b - gray) * saturationFactor;
-            }
+                // Boost inversely proportional to current saturation
+                const boost = vibranceAmount * (1 - currentSat) * 0.4;
 
-            // Convert to sRGB
-            destData[i] = this.linearToSRGB(Math.max(0, r));
-            destData[i + 1] = this.linearToSRGB(Math.max(0, g));
-            destData[i + 2] = this.linearToSRGB(Math.max(0, b));
-            destData[i + 3] = a;
+                const lum = this.luminance(r, g, b);
+                linearR[i] = lum + (r - lum) * (1 + boost);
+                linearG[i] = lum + (g - lum) * (1 + boost);
+                linearB[i] = lum + (b - lum) * (1 + boost);
+            }
         }
 
-        return result;
-    }
+        // ============================================================
+        // STEP 11: Saturation (global)
+        // ============================================================
+        if (saturationFactor !== 1 && profile !== 'bw') {
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
 
-    /**
-     * Apply local contrast (Texture & Clarity) using high-pass filter approach
-     */
-    _applyLocalContrast(data, width, height, texture, clarity) {
-        const result = new Uint8ClampedArray(data);
+                const lum = this.luminance(r, g, b);
+                linearR[i] = lum + (r - lum) * saturationFactor;
+                linearG[i] = lum + (g - lum) * saturationFactor;
+                linearB[i] = lum + (b - lum) * saturationFactor;
+            }
+        }
 
-        // Extract luminance channel
-        const lum = new Float32Array(width * height);
-        for (let i = 0; i < width * height; i++) {
+        // ============================================================
+        // STEP 12: Final conversion - Linear Float32 → sRGB Uint8
+        // Single gamma conversion at the very end
+        // ============================================================
+        const result = new ImageData(width, height);
+        const destData = result.data;
+
+        for (let i = 0; i < pixelCount; i++) {
             const idx = i * 4;
-            lum[i] = 0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
-        }
-
-        // Apply Texture (high-frequency: small radius ~3px)
-        if (texture !== 0) {
-            const blurredSmall = this._boxBlur(lum, width, height, 3);
-            const textureAmount = texture / 100 * 0.5;
-
-            for (let i = 0; i < width * height; i++) {
-                const highPass = lum[i] - blurredSmall[i];
-                const boost = highPass * textureAmount;
-                const idx = i * 4;
-                result[idx] = Math.max(0, Math.min(255, data[idx] + boost));
-                result[idx + 1] = Math.max(0, Math.min(255, data[idx + 1] + boost));
-                result[idx + 2] = Math.max(0, Math.min(255, data[idx + 2] + boost));
-            }
-        }
-
-        // Apply Clarity (mid-frequency: larger radius ~15px)
-        if (clarity !== 0) {
-            // Re-extract lum from current result
-            const lumCurrent = new Float32Array(width * height);
-            for (let i = 0; i < width * height; i++) {
-                const idx = i * 4;
-                lumCurrent[i] = 0.2126 * result[idx] + 0.7152 * result[idx + 1] + 0.0722 * result[idx + 2];
-            }
-
-            const blurredLarge = this._boxBlur(lumCurrent, width, height, 15);
-            const clarityAmount = clarity / 100 * 0.7;
-
-            for (let i = 0; i < width * height; i++) {
-                const highPass = lumCurrent[i] - blurredLarge[i];
-                const boost = highPass * clarityAmount;
-                const idx = i * 4;
-                result[idx] = Math.max(0, Math.min(255, result[idx] + boost));
-                result[idx + 1] = Math.max(0, Math.min(255, result[idx + 1] + boost));
-                result[idx + 2] = Math.max(0, Math.min(255, result[idx + 2] + boost));
-            }
+            destData[idx] = this.linearToSRGB(Math.max(0, linearR[i]));
+            destData[idx + 1] = this.linearToSRGB(Math.max(0, linearG[i]));
+            destData[idx + 2] = this.linearToSRGB(Math.max(0, linearB[i]));
+            destData[idx + 3] = alpha[i];
         }
 
         return result;
     }
 
     /**
-     * Simple box blur for local contrast operations
+     * Separable Gaussian blur - O(n·r) instead of O(n·r²)
+     * Uses box blur approximation (3 passes ≈ Gaussian)
      */
-    _boxBlur(data, width, height, radius) {
-        const result = new Float32Array(width * height);
+    _separableGaussian(data, width, height, radius) {
+        // 3 box blur passes approximate a Gaussian
+        let result = this._separableBoxBlur(data, width, height, radius);
+        result = this._separableBoxBlur(result, width, height, radius);
+        result = this._separableBoxBlur(result, width, height, radius);
+        return result;
+    }
+
+    /**
+     * Single-pass separable box blur
+     */
+    _separableBoxBlur(data, width, height, radius) {
         const size = radius * 2 + 1;
-        const div = size * size;
+        const result = new Float32Array(width * height);
+        const temp = new Float32Array(width * height);
 
         // Horizontal pass
-        const temp = new Float32Array(width * height);
         for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let sum = 0;
-                for (let dx = -radius; dx <= radius; dx++) {
-                    const sx = Math.max(0, Math.min(width - 1, x + dx));
-                    sum += data[y * width + sx];
-                }
+            let sum = 0;
+            // Initialize window
+            for (let x = -radius; x <= radius; x++) {
+                const sx = Math.max(0, Math.min(width - 1, x));
+                sum += data[y * width + sx];
+            }
+            temp[y * width] = sum / size;
+
+            // Slide window
+            for (let x = 1; x < width; x++) {
+                const removeX = Math.max(0, x - radius - 1);
+                const addX = Math.min(width - 1, x + radius);
+                sum -= data[y * width + removeX];
+                sum += data[y * width + addX];
                 temp[y * width + x] = sum / size;
             }
         }
 
         // Vertical pass
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let sum = 0;
-                for (let dy = -radius; dy <= radius; dy++) {
-                    const sy = Math.max(0, Math.min(height - 1, y + dy));
-                    sum += temp[sy * width + x];
-                }
+        for (let x = 0; x < width; x++) {
+            let sum = 0;
+            // Initialize window
+            for (let y = -radius; y <= radius; y++) {
+                const sy = Math.max(0, Math.min(height - 1, y));
+                sum += temp[sy * width + x];
+            }
+            result[x] = sum / size;
+
+            // Slide window
+            for (let y = 1; y < height; y++) {
+                const removeY = Math.max(0, y - radius - 1);
+                const addY = Math.min(height - 1, y + radius);
+                sum -= temp[removeY * width + x];
+                sum += temp[addY * width + x];
                 result[y * width + x] = sum / size;
             }
         }
