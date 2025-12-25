@@ -33,6 +33,11 @@ class OrlumeApp {
         // Cache original image data for non-destructive develop adjustments
         this.originalImageData = null;
 
+        // Preview resolution system for fast live edits
+        this.previewImageData = null;  // Downscaled for instant response
+        this.previewScale = 1;          // Scale factor for preview
+        this.previewPending = false;    // RAF flag for smooth updates
+
         this.components = {};
         this.imageProcessor = new ImageProcessor();
         this.init();
@@ -179,6 +184,7 @@ class OrlumeApp {
             // Use ImageProcessor for proxy-based loading
             const proxy = await this.imageProcessor.processFile(file);
             this.originalImageData = null; // Clear develop cache for new image
+            this.previewImageData = null;  // Clear preview cache
             this.setState({ image: proxy, depthMap: null });
 
             // Initial History Push
@@ -448,22 +454,73 @@ class OrlumeApp {
 
     /**
      * Update develop preview (non-destructive, real-time)
+     * Uses preview resolution for instant response
      */
     updateDevelopPreview() {
         if (!this.state.image || !this.components.develop) return;
 
-        // Cache original if not already
+        // Use RAF to prevent frame drops
+        if (this.previewPending) return;
+        this.previewPending = true;
+
+        requestAnimationFrame(() => {
+            this._doPreviewUpdate();
+            this.previewPending = false;
+        });
+    }
+
+    /**
+     * Internal preview update - processes at preview resolution
+     */
+    _doPreviewUpdate() {
+        const img = this.state.image;
+
+        // Create/cache preview resolution image (max 600px for instant response)
+        if (!this.previewImageData) {
+            const MAX_PREVIEW_SIZE = 600;
+            const maxDim = Math.max(img.width, img.height);
+
+            if (maxDim > MAX_PREVIEW_SIZE) {
+                this.previewScale = MAX_PREVIEW_SIZE / maxDim;
+                const pw = Math.round(img.width * this.previewScale);
+                const ph = Math.round(img.height * this.previewScale);
+
+                // Downscale for preview
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = pw;
+                tempCanvas.height = ph;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(img.canvas || img, 0, 0, pw, ph);
+                this.previewImageData = ctx.getImageData(0, 0, pw, ph);
+            } else {
+                this.previewScale = 1;
+                // Use original resolution
+                if (img.imageData) {
+                    this.previewImageData = new ImageData(
+                        new Uint8ClampedArray(img.imageData.data),
+                        img.imageData.width,
+                        img.imageData.height
+                    );
+                } else {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    const ctx = tempCanvas.getContext('2d');
+                    ctx.drawImage(img.canvas || img, 0, 0);
+                    this.previewImageData = ctx.getImageData(0, 0, img.width, img.height);
+                }
+            }
+        }
+
+        // Cache full-res original for Apply (lazy load)
         if (!this.originalImageData) {
-            const img = this.state.image;
             if (img.imageData) {
-                // Clone the ImageData to preserve original
                 this.originalImageData = new ImageData(
                     new Uint8ClampedArray(img.imageData.data),
                     img.imageData.width,
                     img.imageData.height
                 );
             } else {
-                // Extract from canvas
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = img.width;
                 tempCanvas.height = img.height;
@@ -473,28 +530,38 @@ class OrlumeApp {
             }
         }
 
-        // Apply develop adjustments
-        const processedData = this.components.develop.apply(this.originalImageData);
+        // Process at preview resolution (fast!)
+        const processedData = this.components.develop.apply(this.previewImageData);
 
-        // Update preview canvas
+        // Scale up for display
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = img.width;
+        displayCanvas.height = img.height;
+        const ctx = displayCanvas.getContext('2d');
+
+        // Draw processed preview, scaled up
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = processedData.width;
         previewCanvas.height = processedData.height;
-        const ctx = previewCanvas.getContext('2d');
-        ctx.putImageData(processedData, 0, 0);
+        previewCanvas.getContext('2d').putImageData(processedData, 0, 0);
 
-        // Create temp proxy for preview
+        // Scale up with smooth interpolation
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(previewCanvas, 0, 0, img.width, img.height);
+
+        // Create proxy for display
         const previewProxy = {
-            width: previewCanvas.width,
-            height: previewCanvas.height,
-            canvas: previewCanvas,
-            imageData: processedData,
-            isProxy: this.state.image.isProxy,
-            originalWidth: this.state.image.originalWidth,
-            originalHeight: this.state.image.originalHeight
+            width: img.width,
+            height: img.height,
+            canvas: displayCanvas,
+            imageData: ctx.getImageData(0, 0, img.width, img.height),
+            isProxy: img.isProxy,
+            originalWidth: img.originalWidth,
+            originalHeight: img.originalHeight
         };
 
-        // Update canvas display (don't update state)
+        // Update canvas display
         this.components.canvas.setImage(previewProxy);
 
         // Update histogram
@@ -541,6 +608,7 @@ class OrlumeApp {
             // Update state
             this.state.image = newProxy;
             this.originalImageData = null; // Clear cache to use new image as base
+            this.previewImageData = null;  // Clear preview cache
 
             // Update canvas
             this.components.canvas.setImage(newProxy);

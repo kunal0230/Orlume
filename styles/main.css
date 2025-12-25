@@ -472,6 +472,9 @@ body {
   object-fit: contain;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
+  /* Smooth transitions for real-time preview updates */
+  transition: filter 0.05s ease-out;
+  will-change: transform;
 }
 
 #main-canvas {
@@ -1210,6 +1213,7 @@ body {
   color: var(--text-primary);
   text-align: right;
   min-width: 40px;
+  transition: color var(--transition-fast);
 }
 
 /* Develop sliders with colored gradient tracks */
@@ -1329,8 +1333,35 @@ body {
 
 .color-band-btn.active {
   border-color: white;
-  box-shadow: 0 0 0 1px var(--accent-primary), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 3px 10px rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
+  z-index: 1;
+}
+
+/* Color Mixer Gradient Sliders */
+#mixer-hue {
+  background: linear-gradient(to right,
+      hsl(0, 80%, 50%),
+      hsl(60, 80%, 50%),
+      hsl(120, 80%, 50%),
+      hsl(180, 80%, 50%),
+      hsl(240, 80%, 50%),
+      hsl(300, 80%, 50%),
+      hsl(360, 80%, 50%)) !important;
+}
+
+#mixer-sat {
+  background: linear-gradient(to right,
+      #555555,
+      #777777 50%,
+      #ff6b6b) !important;
+}
+
+#mixer-lum {
+  background: linear-gradient(to right,
+      #1a1a1a,
+      #555555 50%,
+      #f0f0f0) !important;
 }
 
 /* Develop Actions */
