@@ -116,6 +116,28 @@ export class TextPanel {
                     </div>
                 </div>
 
+                <div class="control-group">
+                    <label class="control-label">Rotation</label>
+                    <div class="slider-row">
+                        <input type="range" class="slider" id="text-rotation" min="-180" max="180" value="0">
+                        <span class="slider-value" id="text-rotation-val">0°</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Scale</label>
+                    <div class="slider-row">
+                        <input type="range" class="slider" id="text-scale" min="10" max="300" value="100">
+                        <span class="slider-value" id="text-scale-val">100%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn btn-secondary btn-full" id="btn-text-reset-transform">
+                        Reset Transform
+                    </button>
+                </div>
+
                 <div class="divider"></div>
 
                 <div class="control-group">
@@ -211,6 +233,26 @@ export class TextPanel {
             this.app.textManager?.updateSelected({ opacity: val / 100 });
         });
 
+        // Rotation slider
+        document.getElementById('text-rotation')?.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('text-rotation-val').textContent = `${val}°`;
+            this.app.textManager?.updateSelected({ rotation: val });
+        });
+
+        // Scale slider
+        document.getElementById('text-scale')?.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('text-scale-val').textContent = `${val}%`;
+            this.app.textManager?.updateSelected({ scale: val / 100 });
+        });
+
+        // Reset Transform
+        document.getElementById('btn-text-reset-transform')?.addEventListener('click', () => {
+            this.app.textManager?.updateSelected({ rotation: 0, scale: 1 });
+            this.updateUI();
+        });
+
         // Layer ordering
         document.getElementById('btn-text-forward')?.addEventListener('click', () => {
             const id = this.app.textManager?.selectedId;
@@ -239,6 +281,7 @@ export class TextPanel {
 
         document.getElementById('btn-text-delete')?.addEventListener('click', () => {
             this.app.textManager?.removeSelected();
+            this.updateUI();
         });
     }
 
@@ -271,6 +314,15 @@ export class TextPanel {
             document.getElementById('text-color').value = selected.color;
             document.getElementById('text-opacity').value = selected.opacity * 100;
             document.getElementById('text-opacity-val').textContent = `${Math.round(selected.opacity * 100)}%`;
+
+            // Rotation & Scale
+            const rotation = Math.round(selected.rotation);
+            document.getElementById('text-rotation').value = rotation;
+            document.getElementById('text-rotation-val').textContent = `${rotation}°`;
+
+            const scale = Math.round(selected.scale * 100);
+            document.getElementById('text-scale').value = scale;
+            document.getElementById('text-scale-val').textContent = `${scale}%`;
 
             // Style
             document.querySelectorAll('[data-style]').forEach(b => {
