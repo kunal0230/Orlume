@@ -251,13 +251,34 @@ export class ImageDevelopment {
                 g = Math.max(0, Math.min(1, g));
                 b = Math.max(0, Math.min(1, b));
 
-                // Apply RGB curve (affects all channels equally)
+                // Apply RGB curve in a COLOR-PRESERVING way
+                // Instead of applying the curve to each channel independently,
+                // we apply it to the luminance and scale all channels proportionally
                 const rgbLUT = this.curveLUTs.rgb;
-                r = rgbLUT[Math.round(r * 255)];
-                g = rgbLUT[Math.round(g * 255)];
-                b = rgbLUT[Math.round(b * 255)];
+                const lumBefore = this.luminance(r, g, b);
 
-                // Apply per-channel curves
+                if (lumBefore > 0.001) {
+                    // Get the curve adjustment for this luminance value
+                    const lumAfter = rgbLUT[Math.round(lumBefore * 255)];
+                    // Scale factor to preserve color ratios
+                    const scale = lumAfter / lumBefore;
+                    r *= scale;
+                    g *= scale;
+                    b *= scale;
+                } else {
+                    // For very dark pixels, apply directly
+                    const lumIdx = Math.round(lumBefore * 255);
+                    const adjustment = rgbLUT[lumIdx] - lumBefore;
+                    r += adjustment;
+                    g += adjustment;
+                    b += adjustment;
+                }
+
+                // Apply per-channel curves (for color grading - these DO work independently)
+                r = Math.max(0, Math.min(1, r));
+                g = Math.max(0, Math.min(1, g));
+                b = Math.max(0, Math.min(1, b));
+
                 const rLUT = this.curveLUTs.r;
                 const gLUT = this.curveLUTs.g;
                 const bLUT = this.curveLUTs.b;
