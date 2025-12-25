@@ -518,6 +518,121 @@ export class GPUProcessor {
     }
 
     /**
+     * Creates or updates the offscreen processing framebuffer
+     */
+    _ensureProcessingBuffer() {
+        const gl = this.gl;
+        const width = this.width;
+        const height = this.height;
+
+        if (this._processedTexture && this._processedWidth === width && this._processedHeight === height) {
+            return;
+        }
+
+        // Clean up old resources
+        if (this._processedTexture) gl.deleteTexture(this._processedTexture);
+        if (this._processedFBO) gl.deleteFramebuffer(this._processedFBO);
+
+        // Create texture for processed result
+        this._processedTexture = gl.createTexture();
+        this._processedWidth = width;
+        this._processedHeight = height;
+        gl.bindTexture(gl.TEXTURE_2D, this._processedTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        // Create framebuffer
+        this._processedFBO = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._processedFBO);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._processedTexture, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    /**
+     * Render with current adjustments to internal texture (for mask compositing)
+     * Returns the processed texture
+     */
+    renderToTexture() {
+        if (!this.inputTexture) return null;
+
+        const gl = this.gl;
+        const program = this.programs.get('develop');
+        if (!program) return null;
+
+        this._ensureProcessingBuffer();
+
+        // Use develop program
+        gl.useProgram(program);
+
+        // Set uniforms
+        gl.uniform1f(program.u_exposure, this.params.exposure);
+        gl.uniform1f(program.u_contrast, this.params.contrast / 100);
+        gl.uniform1f(program.u_highlights, this.params.highlights / 100);
+        gl.uniform1f(program.u_shadows, this.params.shadows / 100);
+        gl.uniform1f(program.u_whites, this.params.whites / 100);
+        gl.uniform1f(program.u_blacks, this.params.blacks / 100);
+        gl.uniform1f(program.u_temperature, this.params.temperature / 100);
+        gl.uniform1f(program.u_tint, this.params.tint / 100);
+        gl.uniform1f(program.u_vibrance, this.params.vibrance / 100);
+        gl.uniform1f(program.u_saturation, this.params.saturation / 100);
+        gl.uniform1f(program.u_clarity, this.params.clarity / 100);
+
+        // Bind input texture
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.inputTexture);
+        gl.uniform1i(program.u_texture, 0);
+
+        // Set up vertex attributes
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        // Render to offscreen framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._processedFBO);
+        gl.viewport(0, 0, this.width, this.height);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, this.width, this.height);
+
+        return this._processedTexture;
+    }
+
+    /**
+     * Blit a texture to canvas using passthrough shader
+     */
+    blitToCanvas(texture) {
+        if (!texture) return;
+
+        const gl = this.gl;
+        const program = this.programs.get('passthrough');
+        if (!program) return;
+
+        gl.useProgram(program);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.uniform1i(program.u_texture, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    /**
      * Render with current adjustments
      */
     render() {

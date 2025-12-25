@@ -153,11 +153,83 @@ export class MaskSystem {
             }
         `;
 
+        // Mask overlay shader - shows mask as red overlay for visual feedback
+        const maskOverlayFragment = `#version 300 es
+            precision highp float;
+            in vec2 v_texCoord;
+            out vec4 fragColor;
+            
+            uniform sampler2D u_mask;
+            
+            void main() {
+                float maskValue = texture(u_mask, v_texCoord).a;
+                // Red overlay with mask alpha
+                fragColor = vec4(1.0, 0.3, 0.3, maskValue * 0.5);
+            }
+        `;
+
+        // Masked adjustment shader - applies adjustments only in masked areas
+        const maskedAdjustmentFragment = `#version 300 es
+            precision highp float;
+            in vec2 v_texCoord;
+            out vec4 fragColor;
+            
+            uniform sampler2D u_base;       // Current image
+            uniform sampler2D u_mask;       // Mask texture
+            
+            // Local adjustments
+            uniform float u_exposure;
+            uniform float u_contrast;
+            uniform float u_shadows;
+            uniform float u_temperature;
+            uniform float u_saturation;
+            
+            void main() {
+                vec4 base = texture(u_base, v_texCoord);
+                float maskValue = texture(u_mask, v_texCoord).a;
+                
+                if (maskValue < 0.001) {
+                    fragColor = base;
+                    return;
+                }
+                
+                vec3 color = base.rgb;
+                
+                // Exposure
+                float expMult = pow(2.0, u_exposure);
+                color *= expMult;
+                
+                // Contrast
+                color = (color - 0.5) * (1.0 + u_contrast) + 0.5;
+                
+                // Shadows lift
+                float lum = dot(color, vec3(0.299, 0.587, 0.114));
+                float shadowWeight = 1.0 - smoothstep(0.0, 0.3, lum);
+                color += u_shadows * shadowWeight * 0.3;
+                
+                // Temperature
+                color.r += u_temperature * 0.1;
+                color.b -= u_temperature * 0.1;
+                
+                // Saturation
+                float gray = dot(color, vec3(0.299, 0.587, 0.114));
+                color = mix(vec3(gray), color, 1.0 + u_saturation);
+                
+                // Clamp
+                color = clamp(color, 0.0, 1.0);
+                
+                // Blend based on mask
+                fragColor = vec4(mix(base.rgb, color, maskValue), base.a);
+            }
+        `;
+
         // Compile programs
         this.programs.set('brushStamp', this._createProgram(vertexShader, brushStampFragment));
         this.programs.set('radialGradient', this._createProgram(vertexShader, radialGradientFragment));
         this.programs.set('linearGradient', this._createProgram(vertexShader, linearGradientFragment));
         this.programs.set('maskComposite', this._createProgram(vertexShader, maskCompositeFragment));
+        this.programs.set('maskOverlay', this._createProgram(vertexShader, maskOverlayFragment));
+        this.programs.set('maskedAdjustment', this._createProgram(vertexShader, maskedAdjustmentFragment));
 
         console.log('✅ Mask shaders compiled');
     }
@@ -410,5 +482,136 @@ export class MaskSystem {
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    /**
+     * Render the active mask as a red overlay for visual feedback during painting
+     */
+    renderMaskOverlay() {
+        if (this.activeLayerIndex < 0) return;
+
+        const layer = this.layers[this.activeLayerIndex];
+        const gl = this.gl;
+        const program = this.programs.get('maskOverlay');
+        if (!program) return;
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+
+        // Enable blending to overlay on existing canvas content
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        gl.useProgram(program);
+
+        // Bind mask texture
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
+        gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 0);
+
+        // Draw full-screen quad
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.disable(gl.BLEND);
+    }
+
+    /**
+     * Apply all layer adjustments composited with masks.
+     * Call this after gpu.render() to apply local adjustments.
+     * @param {WebGLTexture} baseTexture - The base processed image texture
+     */
+    applyMaskedAdjustments(baseTexture) {
+        if (this.layers.length === 0 || !baseTexture) return baseTexture;
+
+        const gl = this.gl;
+        const program = this.programs.get('maskedAdjustment');
+        if (!program) return baseTexture;
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+
+        let currentTexture = baseTexture;
+
+        // For each layer with adjustments, apply them
+        for (const layer of this.layers) {
+            if (!layer.visible) continue;
+
+            // Check if any adjustments are non-zero
+            const adj = layer.adjustments;
+            if (adj.exposure === 0 && adj.contrast === 0 && adj.shadows === 0 &&
+                adj.temperature === 0 && adj.saturation === 0) {
+                continue;
+            }
+
+            // We need an output texture + FBO for each pass
+            if (!this._outputTexture || this._outputWidth !== width || this._outputHeight !== height) {
+                if (this._outputTexture) gl.deleteTexture(this._outputTexture);
+                if (this._outputFBO) gl.deleteFramebuffer(this._outputFBO);
+
+                this._outputTexture = gl.createTexture();
+                this._outputWidth = width;
+                this._outputHeight = height;
+                gl.bindTexture(gl.TEXTURE_2D, this._outputTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+                this._outputFBO = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, this._outputFBO);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._outputTexture, 0);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            }
+
+            // Apply masked adjustments
+            gl.useProgram(program);
+
+            // Bind base texture (current state)
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, currentTexture);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_base'), 0);
+
+            // Bind mask texture
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
+
+            // Set adjustment uniforms
+            gl.uniform1f(gl.getUniformLocation(program, 'u_exposure'), adj.exposure || 0);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), (adj.contrast || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_shadows'), (adj.shadows || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_temperature'), (adj.temperature || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), (adj.saturation || 0) / 100);
+
+            // Draw full-screen quad to output FBO
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
+            gl.enableVertexAttribArray(program.a_position);
+            gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+            gl.enableVertexAttribArray(program.a_texCoord);
+            gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+            // Render to output framebuffer
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._outputFBO);
+            gl.viewport(0, 0, width, height);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, width, height);
+
+            // Swap - output becomes input for next layer
+            currentTexture = this._outputTexture;
+        }
+
+        return currentTexture;
     }
 }

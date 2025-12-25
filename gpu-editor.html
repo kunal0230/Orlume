@@ -918,6 +918,33 @@
             masks.brushSettings.flow = flow;
         });
 
+        // Mask adjustment sliders
+        const maskSliders = ['exposure', 'contrast', 'shadows', 'temperature', 'saturation'];
+        maskSliders.forEach(name => {
+            const slider = document.getElementById(`slider-mask-${name}`);
+            const valueDisplay = document.getElementById(`val-mask-${name}`);
+
+            slider.addEventListener('input', () => {
+                const value = parseFloat(slider.value);
+                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+
+                // Update active layer adjustment
+                if (masks.activeLayerIndex >= 0) {
+                    masks.setAdjustment(name, value);
+                    renderWithMask();
+                }
+            });
+
+            slider.addEventListener('dblclick', () => {
+                slider.value = 0;
+                valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
+                if (masks.activeLayerIndex >= 0) {
+                    masks.setAdjustment(name, 0);
+                    renderWithMask();
+                }
+            });
+        });
+
         function updateBrushCursor() {
             const size = masks.brushSettings.size;
             brushCursor.style.width = `${size}px`;
@@ -992,6 +1019,23 @@
 
         // Canvas painting
         const canvasArea = document.querySelector('.canvas-area');
+
+        function renderWithMask() {
+            // Render global adjustments to texture
+            let resultTexture = gpu.renderToTexture();
+
+            // Apply masked adjustments from all layers (returns final texture)
+            resultTexture = masks.applyMaskedAdjustments(resultTexture);
+
+            // Blit result to canvas
+            gpu.blitToCanvas(resultTexture);
+
+            // Then render mask overlay on top (for visual feedback during painting)
+            if (masks.activeLayerIndex >= 0 && currentTool === 'brush') {
+                masks.renderMaskOverlay();
+            }
+        }
+
         canvasArea.addEventListener('mousemove', (e) => {
             if (currentTool === 'brush') {
                 brushCursor.style.left = `${e.clientX}px`;
@@ -1002,6 +1046,7 @@
                     const x = (e.clientX - rect.left) * (gpu.width / rect.width);
                     const y = (e.clientY - rect.top) * (gpu.height / rect.height);
                     masks.paintBrush(x, y);
+                    renderWithMask();
                 }
             }
         });
@@ -1013,11 +1058,16 @@
                 const x = (e.clientX - rect.left) * (gpu.width / rect.width);
                 const y = (e.clientY - rect.top) * (gpu.height / rect.height);
                 masks.paintBrush(x, y);
+                renderWithMask();
             }
         });
 
         window.addEventListener('mouseup', () => {
-            isPainting = false;
+            if (isPainting) {
+                isPainting = false;
+                // Re-render without mask overlay when done painting
+                gpu.render();
+            }
         });
 
         // Reset and Export
