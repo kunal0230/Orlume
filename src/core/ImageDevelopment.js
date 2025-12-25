@@ -87,6 +87,17 @@ export class ImageDevelopment {
             magenta: { center: 335, width: 35 }
         };
 
+        // Color Grading - Shadows/Midtones/Highlights color wheels
+        // Each wheel: angle (0-360° hue direction), strength (0-1 intensity)
+        // Applied as OKLab chroma offsets per tonal range
+        this.colorGrading = {
+            shadows: { angle: 0, strength: 0 },
+            midtones: { angle: 0, strength: 0 },
+            highlights: { angle: 0, strength: 0 },
+            blending: 50,  // 0-100: how much midtones inherit edge colors
+            balance: 0     // -100 to +100: shift toward shadows/highlights
+        };
+
         // Precomputed LUTs for gamma conversion (sRGB ↔ Linear)
         this._sRGBtoLinearLUT = new Float32Array(256);
         this._linearToSRGBLUT = new Uint8Array(4096); // 12-bit precision
@@ -362,6 +373,48 @@ export class ImageDevelopment {
     }
 
     /**
+     * Set Color Grading value
+     * @param {string} wheel - 'shadows', 'midtones', 'highlights'
+     * @param {string} property - 'angle', 'strength' OR 'blending', 'balance'
+     * @param {number} value - angle: 0-360, strength: 0-100, blending: 0-100, balance: -100 to +100
+     */
+    setColorGrading(wheel, property, value) {
+        if (wheel === 'blending') {
+            this.colorGrading.blending = Math.max(0, Math.min(100, value));
+        } else if (wheel === 'balance') {
+            this.colorGrading.balance = Math.max(-100, Math.min(100, value));
+        } else if (this.colorGrading[wheel]) {
+            if (property === 'angle') {
+                this.colorGrading[wheel].angle = ((value % 360) + 360) % 360;
+            } else if (property === 'strength') {
+                // UI uses 0-100, internally store 0-1
+                this.colorGrading[wheel].strength = Math.max(0, Math.min(1, value / 100));
+            }
+        }
+    }
+
+    /**
+     * Get Color Grading value (returns UI scale)
+     */
+    getColorGrading(wheel, property) {
+        if (wheel === 'blending') return this.colorGrading.blending;
+        if (wheel === 'balance') return this.colorGrading.balance;
+        if (!this.colorGrading[wheel]) return 0;
+
+        if (property === 'angle') return this.colorGrading[wheel].angle;
+        if (property === 'strength') return Math.round(this.colorGrading[wheel].strength * 100);
+        return 0;
+    }
+
+    /**
+     * Check if any color grading has non-zero values
+     */
+    _hasColorGradingChanges() {
+        const { shadows, midtones, highlights } = this.colorGrading;
+        return shadows.strength > 0 || midtones.strength > 0 || highlights.strength > 0;
+    }
+
+    /**
      * Reset all settings to defaults
      */
     reset() {
@@ -386,6 +439,15 @@ export class ImageDevelopment {
         for (const band of Object.keys(this.colorMixer)) {
             this.colorMixer[band] = { h: 0, s: 0, l: 0 };
         }
+
+        // Reset color grading
+        this.colorGrading = {
+            shadows: { angle: 0, strength: 0 },
+            midtones: { angle: 0, strength: 0 },
+            highlights: { angle: 0, strength: 0 },
+            blending: 50,
+            balance: 0
+        };
     }
 
     /**
@@ -718,6 +780,74 @@ export class ImageDevelopment {
                 linearR[i] = linearR[i] / (1 + linearR[i]);
                 linearG[i] = linearG[i] / (1 + linearG[i]);
                 linearB[i] = linearB[i] / (1 + linearB[i]);
+            }
+        }
+
+        // ============================================================
+        // STEP 9.5: Color Grading (OKLab - Shadows/Midtones/Highlights)
+        // Chromatic bias per tonal range, preserves luminance
+        // ============================================================
+        if (profile !== 'bw' && this._hasColorGradingChanges()) {
+            const { shadows, midtones, highlights, blending, balance } = this.colorGrading;
+
+            // Pre-compute wheel chroma offsets (angle → a,b)
+            const shadowDa = shadows.strength * Math.cos(shadows.angle * Math.PI / 180) * 0.15;
+            const shadowDb = shadows.strength * Math.sin(shadows.angle * Math.PI / 180) * 0.15;
+            const midDa = midtones.strength * Math.cos(midtones.angle * Math.PI / 180) * 0.15;
+            const midDb = midtones.strength * Math.sin(midtones.angle * Math.PI / 180) * 0.15;
+            const highDa = highlights.strength * Math.cos(highlights.angle * Math.PI / 180) * 0.15;
+            const highDb = highlights.strength * Math.sin(highlights.angle * Math.PI / 180) * 0.15;
+
+            // Balance factor: shift toward shadows (-1) or highlights (+1)
+            const balanceFactor = balance / 100;
+
+            // Blending factor: how much midtones inherit edge colors
+            const blendFactor = blending / 100;
+
+            for (let i = 0; i < pixelCount; i++) {
+                // Convert to OKLab
+                const [L, a, b] = this.linearRGBtoOKLab(linearR[i], linearG[i], linearB[i]);
+
+                // Compute tonal weights with smooth transitions
+                let shadowW = this.smoothstep(0.35, 0.0, L);
+                let highlightW = this.smoothstep(0.65, 1.0, L);
+                let midW = Math.max(0, 1 - shadowW - highlightW);
+
+                // Apply balance shift
+                shadowW *= (1 - balanceFactor);
+                highlightW *= (1 + balanceFactor);
+
+                // Blending: midtones inherit some edge color
+                midW += blendFactor * (shadowW + highlightW) * 0.5;
+
+                // Apply weighted chroma bias (preserve L!)
+                let newA = a;
+                let newB = b;
+
+                newA += shadowW * shadowDa;
+                newB += shadowW * shadowDb;
+                newA += midW * midDa;
+                newB += midW * midDb;
+                newA += highlightW * highDa;
+                newB += highlightW * highDb;
+
+                // Gamut safety
+                const C = Math.sqrt(newA * newA + newB * newB);
+                const h = Math.atan2(newB, newA) * 180 / Math.PI;
+                const maxC = this.approxMaxChroma(L, (h + 360) % 360);
+                if (C > maxC && C > 0.001) {
+                    const scale = maxC / C;
+                    newA *= scale;
+                    newB *= scale;
+                }
+
+                // Convert back to RGB
+                [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(L, newA, newB);
+
+                // Clamp negatives
+                linearR[i] = Math.max(0, linearR[i]);
+                linearG[i] = Math.max(0, linearG[i]);
+                linearB[i] = Math.max(0, linearB[i]);
             }
         }
 

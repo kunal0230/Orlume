@@ -697,7 +697,48 @@
                                     <span class="accordion-icon">▸</span>
                                 </div>
                                 <div class="accordion-content" id="grading-content">
-                                    <p class="panel-hint">Shadows, Midtones, Highlights</p>
+                                    <!-- Main Wheel: Midtones (larger, top center) -->
+                                    <div class="grading-main-wheel">
+                                        <span class="wheel-label">Midtones</span>
+                                        <div class="color-wheel wheel-large" id="wheel-midtones">
+                                            <div class="wheel-handle" data-wheel="midtones"></div>
+                                        </div>
+                                        <div class="wheel-values" id="midtones-values">0° / 0</div>
+                                    </div>
+
+                                    <!-- Bottom Row: Shadows and Highlights -->
+                                    <div class="grading-wheels-row">
+                                        <!-- Shadows -->
+                                        <div class="grading-wheel-container">
+                                            <span class="wheel-label">Shadows</span>
+                                            <div class="color-wheel" id="wheel-shadows">
+                                                <div class="wheel-handle" data-wheel="shadows"></div>
+                                            </div>
+                                            <div class="wheel-values" id="shadows-values">0° / 0</div>
+                                        </div>
+                                        <!-- Highlights -->
+                                        <div class="grading-wheel-container">
+                                            <span class="wheel-label">Highlights</span>
+                                            <div class="color-wheel" id="wheel-highlights">
+                                                <div class="wheel-handle" data-wheel="highlights"></div>
+                                            </div>
+                                            <div class="wheel-values" id="highlights-values">0° / 0</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sliders -->
+                                    <div class="slider-row">
+                                        <span class="slider-label">Blending</span>
+                                        <input type="range" class="slider" id="grading-blending" min="0" max="100"
+                                            value="50">
+                                        <span class="slider-value" id="grading-blending-val">50</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Balance</span>
+                                        <input type="range" class="slider" id="grading-balance" min="-100" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="grading-balance-val">0</span>
+                                    </div>
                                 </div>
                             </div>
 
