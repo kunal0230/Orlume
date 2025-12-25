@@ -415,6 +415,23 @@
             border-radius: 50%;
         }
 
+        .brush-mode-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+
+        .brush-mode-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .brush-mode-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
         /* Keyboard hint */
         .keyboard-hint {
             font-size: 10px;
@@ -646,11 +663,37 @@
                     </div>
 
                     <div class="section" id="brush-settings" style="display: none;">
-                        <div class="section-header">Brush</div>
+                        <div class="section-header">Brush Tool</div>
 
-                        <div class="brush-preview">
+                        <!-- Brush Preview with size indicator -->
+                        <div class="brush-preview" style="position: relative;">
                             <div class="brush-preview-circle" id="brush-preview-circle"
                                 style="width: 40px; height: 40px;"></div>
+                            <div id="brush-size-indicator"
+                                style="position: absolute; bottom: 4px; right: 4px; font-size: 10px; color: var(--text-secondary);">
+                                100px</div>
+                        </div>
+
+                        <!-- Mode Toggle - Segmented Control -->
+                        <div
+                            style="display: flex; margin-bottom: 16px; background: var(--bg-dark); border-radius: 8px; padding: 4px;">
+                            <button class="btn brush-mode-btn active" id="btn-brush-add"
+                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add
+                            </button>
+                            <button class="btn brush-mode-btn" id="btn-brush-erase"
+                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Erase
+                            </button>
                         </div>
 
                         <div class="control-group">
@@ -663,7 +706,7 @@
 
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Hardness</span>
+                                <span>Feather</span>
                                 <span id="val-brush-hardness">50</span>
                             </div>
                             <input type="range" id="slider-brush-hardness" min="0" max="100" step="1" value="50">
@@ -677,9 +720,9 @@
                             <input type="range" id="slider-brush-flow" min="1" max="100" step="1" value="50">
                         </div>
 
-                        <div class="btn-row" style="margin-top: 12px;">
-                            <button class="btn" id="btn-brush-add">Add</button>
-                            <button class="btn" id="btn-brush-erase">Erase</button>
+                        <div
+                            style="font-size: 10px; color: var(--text-secondary); margin-top: 12px; text-align: center;">
+                            <kbd>[</kbd> / <kbd>]</kbd> = resize &nbsp; <kbd>X</kbd> = toggle mode
                         </div>
                     </div>
 
@@ -901,6 +944,7 @@
             document.getElementById('val-brush-size').textContent = size;
             masks.brushSettings.size = size;
             updateBrushCursor();
+            updateBrushSizeIndicator(size);
         });
 
         const brushHardnessSlider = document.getElementById('slider-brush-hardness');
@@ -931,7 +975,7 @@
                 // Update active layer adjustment
                 if (masks.activeLayerIndex >= 0) {
                     masks.setAdjustment(name, value);
-                    renderWithMask();
+                    renderWithMask(false);
                 }
             });
 
@@ -940,7 +984,7 @@
                 valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
                 if (masks.activeLayerIndex >= 0) {
                     masks.setAdjustment(name, 0);
-                    renderWithMask();
+                    renderWithMask(false);
                 }
             });
         });
@@ -959,22 +1003,40 @@
         }
 
         // Brush Add/Erase toggle
-        document.getElementById('btn-brush-add').addEventListener('click', () => {
-            masks.brushSettings.erase = false;
-            document.getElementById('btn-brush-add').classList.add('btn-primary');
-            document.getElementById('btn-brush-erase').classList.remove('btn-primary');
-        });
+        function setBrushMode(erase) {
+            masks.brushSettings.erase = erase;
+            const addBtn = document.getElementById('btn-brush-add');
+            const eraseBtn = document.getElementById('btn-brush-erase');
+            addBtn.classList.toggle('active', !erase);
+            eraseBtn.classList.toggle('active', erase);
+        }
 
-        document.getElementById('btn-brush-erase').addEventListener('click', () => {
-            masks.brushSettings.erase = true;
-            document.getElementById('btn-brush-erase').classList.add('btn-primary');
-            document.getElementById('btn-brush-add').classList.remove('btn-primary');
-        });
+        document.getElementById('btn-brush-add').addEventListener('click', () => setBrushMode(false));
+        document.getElementById('btn-brush-erase').addEventListener('click', () => setBrushMode(true));
+
+        // Update brush size indicator
+        function updateBrushSizeIndicator(size) {
+            const indicator = document.getElementById('brush-size-indicator');
+            if (indicator) indicator.textContent = `${Math.round(size)}px`;
+        }
+
+        // Sync mask adjustment sliders with active layer
+        function syncLayerUI() {
+            const adj = masks.getActiveAdjustments();
+            maskSliders.forEach(name => {
+                const slider = document.getElementById(`slider-mask-${name}`);
+                const valueDisplay = document.getElementById(`val-mask-${name}`);
+                const value = adj ? (adj[name] || 0) : 0;
+                slider.value = value;
+                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+            });
+        }
 
         // New layer button
         document.getElementById('btn-new-layer').addEventListener('click', () => {
             const layer = masks.createLayer('brush');
             updateLayersList();
+            syncLayerUI();  // Sync UI to new layer's default values
             setTool('brush');
         });
 
@@ -995,24 +1057,101 @@
                             <circle cx="12" cy="12" r="10"/>
                         </svg>
                     </div>
-                    <div class="mask-layer-name">${layer.type} #${layer.id.toString().slice(-4)}</div>
-                    <span class="mask-layer-delete" data-delete="${i}">×</span>
+                    <div class="mask-layer-name" data-layer-index="${i}">${layer.name}</div>
+                    <span class="mask-layer-delete" data-delete="${i}" title="Delete layer">×</span>
                 </div>
             `).join('');
 
+            // Layer selection
             container.querySelectorAll('.mask-layer').forEach(el => {
                 el.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('mask-layer-delete')) {
+                    if (!e.target.classList.contains('mask-layer-delete') &&
+                        !e.target.classList.contains('mask-layer-name') &&
+                        e.target.tagName !== 'INPUT') {
                         masks.activeLayerIndex = parseInt(el.dataset.index);
                         updateLayersList();
+                        syncLayerUI();
                     }
                 });
             });
 
+            // Single click on name selects layer (only if different layer)
+            container.querySelectorAll('.mask-layer-name').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    const index = parseInt(el.dataset.layerIndex);
+                    // Only re-render if switching to a different layer
+                    if (masks.activeLayerIndex !== index) {
+                        masks.activeLayerIndex = index;
+                        updateLayersList();
+                        syncLayerUI();
+                    }
+                });
+
+                // Double-click for inline rename
+                el.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const index = parseInt(el.dataset.layerIndex);
+                    const layer = masks.layers[index];
+
+                    // Create inline input
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = layer.name;
+                    input.style.cssText = `
+                        width: 100%;
+                        background: var(--bg-tertiary);
+                        border: 1px solid var(--accent-primary);
+                        border-radius: 4px;
+                        color: var(--text-primary);
+                        font-size: 12px;
+                        padding: 2px 6px;
+                        outline: none;
+                        box-sizing: border-box;
+                    `;
+
+                    el.textContent = '';
+                    el.appendChild(input);
+                    input.focus();
+                    input.select();
+
+                    let saved = false;
+                    const saveRename = () => {
+                        if (saved) return;
+                        saved = true;
+                        const newName = input.value.trim();
+                        if (newName) {
+                            layer.name = newName;
+                        }
+                        updateLayersList();
+                    };
+
+                    input.addEventListener('blur', saveRename);
+                    input.addEventListener('keydown', (ev) => {
+                        if (ev.key === 'Enter') {
+                            ev.preventDefault();
+                            input.blur();
+                        } else if (ev.key === 'Escape') {
+                            saved = true;
+                            updateLayersList(); // Cancel
+                        }
+                    });
+                });
+            });
+
+            // Delete layer with confirmation
             container.querySelectorAll('.mask-layer-delete').forEach(el => {
-                el.addEventListener('click', () => {
-                    masks.deleteLayer(parseInt(el.dataset.delete));
-                    updateLayersList();
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(el.dataset.delete);
+                    const layer = masks.layers[index];
+                    if (confirm(`Delete "${layer.name}"?`)) {
+                        masks.deleteLayer(index);
+                        updateLayersList();
+                        syncLayerUI();
+                        renderWithMask(false);
+                    }
                 });
             });
         }
@@ -1020,7 +1159,7 @@
         // Canvas painting
         const canvasArea = document.querySelector('.canvas-area');
 
-        function renderWithMask() {
+        function renderWithMask(showOverlay = false) {
             // Render global adjustments to texture
             let resultTexture = gpu.renderToTexture();
 
@@ -1031,7 +1170,7 @@
             gpu.blitToCanvas(resultTexture);
 
             // Then render mask overlay on top (for visual feedback during painting)
-            if (masks.activeLayerIndex >= 0 && currentTool === 'brush') {
+            if (showOverlay && masks.activeLayerIndex >= 0) {
                 masks.renderMaskOverlay();
             }
         }
@@ -1045,8 +1184,15 @@
                     const rect = canvas.getBoundingClientRect();
                     const x = (e.clientX - rect.left) * (gpu.width / rect.width);
                     const y = (e.clientY - rect.top) * (gpu.height / rect.height);
-                    masks.paintBrush(x, y);
-                    renderWithMask();
+
+                    // Use stroke interpolation for smooth natural strokes
+                    if (lastPaintPos) {
+                        masks.paintStroke(lastPaintPos.x, lastPaintPos.y, x, y);
+                    } else {
+                        masks.paintBrush(x, y);
+                    }
+                    lastPaintPos = { x, y };
+                    renderWithMask(true); // Show overlay while painting
                 }
             }
         });
@@ -1057,16 +1203,18 @@
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.clientX - rect.left) * (gpu.width / rect.width);
                 const y = (e.clientY - rect.top) * (gpu.height / rect.height);
+                lastPaintPos = { x, y };  // Initialize last position
                 masks.paintBrush(x, y);
-                renderWithMask();
+                renderWithMask(true); // Show overlay while painting
             }
         });
 
         window.addEventListener('mouseup', () => {
             if (isPainting) {
                 isPainting = false;
+                lastPaintPos = null;  // Reset last position
                 // Re-render without mask overlay when done painting
-                gpu.render();
+                renderWithMask(false); // Apply adjustments but hide overlay
             }
         });
 
@@ -1104,17 +1252,22 @@
             if (e.code === 'KeyB') setTool('brush');
             if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) setTool('radial');
             if (e.code === 'KeyG') setTool('gradient');
+            if (e.code === 'KeyX' && currentTool === 'brush') {
+                setBrushMode(!masks.brushSettings.erase);
+            }
             if (e.code === 'BracketLeft') {
                 masks.brushSettings.size = Math.max(1, masks.brushSettings.size - 10);
                 brushSizeSlider.value = masks.brushSettings.size;
                 document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
                 updateBrushCursor();
+                updateBrushSizeIndicator(masks.brushSettings.size);
             }
             if (e.code === 'BracketRight') {
                 masks.brushSettings.size = Math.min(500, masks.brushSettings.size + 10);
                 brushSizeSlider.value = masks.brushSettings.size;
                 document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
                 updateBrushCursor();
+                updateBrushSizeIndicator(masks.brushSettings.size);
             }
         });
 

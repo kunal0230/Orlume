@@ -99,15 +99,29 @@ export class GPUProcessor {
             1, 0    // top-right vertex → bottom of texture
         ]);
 
+        // Non-flipped texture coordinates for FBO blitting
+        // FBO textures are already in correct orientation
+        const texCoordsFBO = new Float32Array([
+            0, 0,   // bottom-left
+            1, 0,   // bottom-right
+            0, 1,   // top-left
+            1, 1    // top-right
+        ]);
+
         // Position buffer
         this.positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-        // Texture coordinate buffer
+        // Texture coordinate buffer (for image textures - flipped)
         this.texCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
+
+        // FBO texture coordinate buffer (non-flipped)
+        this.texCoordBufferFBO = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBufferFBO);
+        gl.bufferData(gl.ARRAY_BUFFER, texCoordsFBO, gl.STATIC_DRAW);
     }
 
     _compileShader(type, source) {
@@ -606,6 +620,7 @@ export class GPUProcessor {
 
     /**
      * Blit a texture to canvas using passthrough shader
+     * Uses FBO texture coords (non-flipped) for correct orientation
      */
     blitToCanvas(texture) {
         if (!texture) return;
@@ -624,7 +639,8 @@ export class GPUProcessor {
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+        // Use FBO texture coords (non-flipped) for correct orientation
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 

@@ -1,6 +1,6 @@
 {
   "name": "orlume",
-  "version": "2.5.0",
+  "version": "3.2.0",
   "type": "module",
   "description": "Photo editing web app with AI depth estimation, relighting, and pseudo-3D rendering",
   "scripts": {

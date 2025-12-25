@@ -61,7 +61,6 @@ export class MaskSystem {
             uniform float u_radius;     // Brush radius in UV coords
             uniform float u_hardness;   // 0-1 (soft to hard)
             uniform float u_opacity;    // 0-1
-            uniform float u_erase;      // 0 or 1
             
             void main() {
                 float dist = distance(v_texCoord, u_center);
@@ -71,12 +70,8 @@ export class MaskSystem {
                 float alpha = 1.0 - smoothstep(inner, u_radius, dist);
                 alpha *= u_opacity;
                 
-                if (u_erase > 0.5) {
-                    // Eraser mode: output negative alpha to subtract
-                    fragColor = vec4(0.0, 0.0, 0.0, -alpha);
-                } else {
-                    fragColor = vec4(1.0, 1.0, 1.0, alpha);
-                }
+                // Output white with alpha - blending handles add/erase
+                fragColor = vec4(1.0, 1.0, 1.0, alpha);
             }
         `;
 
@@ -301,9 +296,14 @@ export class MaskSystem {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+        // Generate sequential layer name
+        this._layerCounter = (this._layerCounter || 0) + 1;
+        const defaultName = `${type}_${this._layerCounter}`;
+
         const layer = {
             id: Date.now(),
             type: type,  // 'brush', 'radial', 'gradient'
+            name: defaultName,  // Editable layer name
             maskTexture: maskTexture,
             maskFramebuffer: maskFramebuffer,
             adjustments: {
@@ -346,9 +346,12 @@ export class MaskSystem {
         const width = this.gpu.width;
         const height = this.gpu.height;
 
-        // Convert to UV coordinates
+        // Convert to UV coordinates for FBO rendering
+        // Screen coords: y=0 at top, y=height at bottom
+        // FBO coords (texCoordBufferFBO): y=0 at bottom, y=1 at top
+        // So we flip Y: when user clicks at top (y≈0), centerY should be ≈1
         const centerX = x / width;
-        const centerY = 1.0 - (y / height); // Flip Y for WebGL
+        const centerY = 1.0 - (y / height);  // Flip Y for FBO coordinate system
         const radiusX = this.brushSettings.size / width;
         const radiusY = this.brushSettings.size / height;
         const radius = Math.max(radiusX, radiusY);
@@ -357,33 +360,75 @@ export class MaskSystem {
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
 
-        // Enable blending for additive brush strokes
+        // Set up blending based on add/erase mode
         gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        if (this.brushSettings.erase) {
+            // Erase mode: subtract source alpha from destination
+            gl.blendEquation(gl.FUNC_REVERSE_SUBTRACT);
+            gl.blendFunc(gl.ONE, gl.ONE);
+        } else {
+            // Add mode: blend source onto destination
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        }
 
         gl.useProgram(program);
 
-        // Set uniforms
+        // Set uniforms (no u_erase - blending handles it)
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), centerX, centerY);
         gl.uniform1f(gl.getUniformLocation(program, 'u_radius'), radius);
         gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
         gl.uniform1f(gl.getUniformLocation(program, 'u_opacity'), (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100));
-        gl.uniform1f(gl.getUniformLocation(program, 'u_erase'), this.brushSettings.erase ? 1.0 : 0.0);
 
         // Draw full-screen quad
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+        // Use FBO texture coords - consistent with WebGL FBO orientation
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+        // Reset blend state
+        gl.blendEquation(gl.FUNC_ADD);
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, width, height);
+    }
+
+    /**
+     * Paint a stroke from one point to another with interpolation
+     * This creates smooth, natural strokes by placing dabs at regular intervals
+     * @param {number} x1 - Start X in image pixels
+     * @param {number} y1 - Start Y in image pixels
+     * @param {number} x2 - End X in image pixels
+     * @param {number} y2 - End Y in image pixels
+     */
+    paintStroke(x1, y1, x2, y2) {
+        if (this.activeLayerIndex < 0) return;
+
+        // Spacing as percentage of brush size (15-25% gives natural results)
+        const spacing = Math.max(2, this.brushSettings.size * 0.18);
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 1) {
+            // Points are essentially the same, just paint one dab
+            this.paintBrush(x2, y2);
+            return;
+        }
+
+        const steps = Math.ceil(dist / spacing);
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = x1 + dx * t;
+            const y = y1 + dy * t;
+            this.paintBrush(x, y);
+        }
     }
 
     /**
@@ -403,9 +448,10 @@ export class MaskSystem {
         // Store shape for editing
         layer.shape = { centerX, centerY, innerRadius, outerRadius, invert };
 
-        // Convert to UV
+        // Convert to UV with Y-flip for FBO coordinate system
+        // Screen coords: y=0 at top; FBO coords: y=0 at bottom
         const cx = centerX / width;
-        const cy = 1.0 - (centerY / height);
+        const cy = 1.0 - (centerY / height);  // Flip Y for FBO coords
         const ir = innerRadius / Math.max(width, height);
         const or = outerRadius / Math.max(width, height);
 
@@ -425,7 +471,8 @@ export class MaskSystem {
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+        // Use FBO texture coords for consistency
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
@@ -514,7 +561,8 @@ export class MaskSystem {
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+        // Use FBO texture coords to match mask coordinate system
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
@@ -525,7 +573,7 @@ export class MaskSystem {
 
     /**
      * Apply all layer adjustments composited with masks.
-     * Call this after gpu.render() to apply local adjustments.
+     * Uses ping-pong buffers to properly chain multiple layer effects.
      * @param {WebGLTexture} baseTexture - The base processed image texture
      */
     applyMaskedAdjustments(baseTexture) {
@@ -538,7 +586,50 @@ export class MaskSystem {
         const width = this.gpu.width;
         const height = this.gpu.height;
 
-        let currentTexture = baseTexture;
+        // Initialize ping-pong buffers if needed
+        if (!this._pingPongA || this._pingPongWidth !== width || this._pingPongHeight !== height) {
+            // Clean up old resources
+            if (this._pingPongA) gl.deleteTexture(this._pingPongA);
+            if (this._pingPongB) gl.deleteTexture(this._pingPongB);
+            if (this._pingPongFboA) gl.deleteFramebuffer(this._pingPongFboA);
+            if (this._pingPongFboB) gl.deleteFramebuffer(this._pingPongFboB);
+
+            this._pingPongWidth = width;
+            this._pingPongHeight = height;
+
+            // Create texture A
+            this._pingPongA = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this._pingPongA);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            this._pingPongFboA = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._pingPongFboA);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._pingPongA, 0);
+
+            // Create texture B
+            this._pingPongB = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this._pingPongB);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            this._pingPongFboB = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._pingPongFboB);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._pingPongB, 0);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+
+        let readTexture = baseTexture;
+        let writeTexture = this._pingPongA;
+        let writeFbo = this._pingPongFboA;
+        let useA = true;
 
         // For each layer with adjustments, apply them
         for (const layer of this.layers) {
@@ -551,33 +642,12 @@ export class MaskSystem {
                 continue;
             }
 
-            // We need an output texture + FBO for each pass
-            if (!this._outputTexture || this._outputWidth !== width || this._outputHeight !== height) {
-                if (this._outputTexture) gl.deleteTexture(this._outputTexture);
-                if (this._outputFBO) gl.deleteFramebuffer(this._outputFBO);
-
-                this._outputTexture = gl.createTexture();
-                this._outputWidth = width;
-                this._outputHeight = height;
-                gl.bindTexture(gl.TEXTURE_2D, this._outputTexture);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-                this._outputFBO = gl.createFramebuffer();
-                gl.bindFramebuffer(gl.FRAMEBUFFER, this._outputFBO);
-                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._outputTexture, 0);
-                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            }
-
             // Apply masked adjustments
             gl.useProgram(program);
 
             // Bind base texture (current state)
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, currentTexture);
+            gl.bindTexture(gl.TEXTURE_2D, readTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_base'), 0);
 
             // Bind mask texture
@@ -592,26 +662,35 @@ export class MaskSystem {
             gl.uniform1f(gl.getUniformLocation(program, 'u_temperature'), (adj.temperature || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), (adj.saturation || 0) / 100);
 
-            // Draw full-screen quad to output FBO
+            // Draw full-screen quad
             gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
             gl.enableVertexAttribArray(program.a_position);
             gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBuffer);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
             gl.enableVertexAttribArray(program.a_texCoord);
             gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
             // Render to output framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._outputFBO);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, writeFbo);
             gl.viewport(0, 0, width, height);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.viewport(0, 0, width, height);
 
-            // Swap - output becomes input for next layer
-            currentTexture = this._outputTexture;
+            // Swap ping-pong buffers
+            readTexture = writeTexture;
+            if (useA) {
+                writeTexture = this._pingPongB;
+                writeFbo = this._pingPongFboB;
+            } else {
+                writeTexture = this._pingPongA;
+                writeFbo = this._pingPongFboA;
+            }
+            useA = !useA;
         }
 
-        return currentTexture;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, width, height);
+
+        return readTexture;
     }
 }
