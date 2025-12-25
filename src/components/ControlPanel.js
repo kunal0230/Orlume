@@ -408,10 +408,83 @@ export class ControlPanel {
             });
         });
 
+
+
         // Reset curve button
         document.getElementById('btn-reset-curve')?.addEventListener('click', () => {
             this.app.components.toneCurve?.resetAll();
             this._resetCurveSliders();
+        });
+
+        this._bindDetailControls();
+    }
+
+    /**
+     * Bind Detail (Sharpening & Noise) sliders
+     */
+    _bindDetailControls() {
+        // Track Alt key for Masking view
+        let isAltDown = false;
+        document.addEventListener('keydown', (e) => {
+            if (e.altKey) isAltDown = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if (!e.altKey) {
+                isAltDown = false;
+                if (this.app.components.develop?.previewMode) {
+                    this.app.components.develop.setPreviewMode(null);
+                    this.app.updateDevelopPreview();
+                }
+            }
+        });
+
+        const detailControls = [
+            { id: 'detail-sharp-amount', type: 'sharpening', prop: 'amount' },
+            { id: 'detail-sharp-radius', type: 'sharpening', prop: 'radius' },
+            { id: 'detail-sharp-detail', type: 'sharpening', prop: 'detail' },
+            { id: 'detail-sharp-masking', type: 'sharpening', prop: 'masking' },
+            { id: 'detail-noise-lum', type: 'noise', prop: 'luminance' },
+            { id: 'detail-noise-color', type: 'noise', prop: 'color' }
+        ];
+
+        detailControls.forEach(ctrl => {
+            const input = document.getElementById(ctrl.id);
+            if (!input) return;
+
+            input.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+
+                // Update label
+                const label = document.getElementById(`${ctrl.id}-val`);
+                if (label) label.textContent = val;
+
+                // Handle Preview Mode (Alt key)
+                if (ctrl.type === "sharpening" && isAltDown) {
+                     this.app.components.develop?.setPreviewMode("sharpenMask");
+                } else if (this.app.components.develop?.previewMode) {
+                    this.app.components.develop.setPreviewMode(null);
+                }
+                // Update engine
+                this.app.components.develop?.setDetail(ctrl.type, ctrl.prop, val);
+
+                // Trigger preview
+                this.app.updateDevelopPreview();
+            });
+
+            // Double click reset
+            input.addEventListener('dblclick', () => {
+                // Defaults
+                let def = 0;
+                if (ctrl.prop === 'radius') def = 1.0;
+                if (ctrl.prop === 'detail' && ctrl.type === 'sharpening') def = 25;
+
+                input.value = def;
+                const label = document.getElementById(`${ctrl.id}-val`);
+                if (label) label.textContent = def;
+
+                this.app.components.develop?.setDetail(ctrl.type, ctrl.prop, def);
+                this.app.updateDevelopPreview();
+            });
         });
     }
 

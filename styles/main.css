@@ -1491,6 +1491,42 @@ body {
   border-top: 1px solid var(--border-subtle);
 }
 
+/* Detail Panel */
+.control-group-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.slider-row .slider-label {
+  width: 60px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.slider-row .slider {
+  flex: 1;
+}
+
+.slider-row .slider-value {
+  width: 30px;
+  text-align: right;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
 /* ===============================================
    Tone Curve
    =============================================== */

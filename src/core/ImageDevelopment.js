@@ -98,6 +98,24 @@ export class ImageDevelopment {
             balance: 0     // -100 to +100: shift toward shadows/highlights
         };
 
+        // Detail (Sharpening & Noise Reduction)
+        this.detail = {
+            sharpening: {
+                amount: 0,      // 0-100
+                radius: 1.0,    // 0.5-3.0
+                detail: 25,     // 0-100
+                masking: 0      // 0-100
+            },
+            noise: {
+                luminance: 0,           // 0-100
+                luminanceDetail: 50,    // 0-100
+                luminanceContrast: 0,   // 0-100
+                color: 0,               // 0-100
+                colorDetail: 50,        // 0-100
+                colorSmoothness: 50     // 0-100
+            }
+        };
+
         // Precomputed LUTs for gamma conversion (sRGB ↔ Linear)
         this._sRGBtoLinearLUT = new Float32Array(256);
         this._linearToSRGBLUT = new Uint8Array(4096); // 12-bit precision
@@ -163,6 +181,63 @@ export class ImageDevelopment {
     linearToSRGB(value) {
         const idx = Math.round(Math.max(0, Math.min(1, value)) * 4095);
         return this._linearToSRGBLUT[idx];
+    }
+
+    /**
+     * Efficient Separable Gaussian Blur
+     * Used for frequency separation in Sharpening and Denoise
+     */
+    applyGaussianSeparable(width, height, inputChannel, outputChannel, radius) {
+        if (radius < 0.1) {
+            outputChannel.set(inputChannel);
+            return;
+        }
+
+        // 1. Compute kernel
+        const sigma = radius; // typically radius maps well to sigma
+        const kSize = Math.ceil(radius * 3) * 2 + 1; // 3 sigma rule
+        const kernel = new Float32Array(kSize);
+        const center = Math.floor(kSize / 2);
+        let sum = 0;
+
+        for (let i = 0; i < kSize; i++) {
+            const x = i - center;
+            const g = Math.exp(-(x * x) / (2 * sigma * sigma));
+            kernel[i] = g;
+            sum += g;
+        }
+        // Normalize
+        for (let i = 0; i < kSize; i++) kernel[i] /= sum;
+
+        // Temp buffer for horizontal pass
+        const temp = new Float32Array(inputChannel.length);
+
+        // 2. Horizontal Pass
+        for (let y = 0; y < height; y++) {
+            const rowOffset = y * width;
+            for (let x = 0; x < width; x++) {
+                let val = 0;
+                for (let k = 0; k < kSize; k++) {
+                    const offset = k - center;
+                    const sampleX = Math.min(width - 1, Math.max(0, x + offset));
+                    val += inputChannel[rowOffset + sampleX] * kernel[k];
+                }
+                temp[rowOffset + x] = val;
+            }
+        }
+
+        // 3. Vertical Pass
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                let val = 0;
+                for (let k = 0; k < kSize; k++) {
+                    const offset = k - center;
+                    const sampleY = Math.min(height - 1, Math.max(0, y + offset));
+                    val += temp[sampleY * width + x] * kernel[k];
+                }
+                outputChannel[y * width + x] = val;
+            }
+        }
     }
 
     /**
@@ -415,6 +490,45 @@ export class ImageDevelopment {
     }
 
     /**
+     * Set Detail (Sharpening/Noise) value
+     * @param {string} type - 'sharpening' or 'noise'
+     * @param {string} property - parameter name
+     * @param {number} value - slider value
+     */
+    setDetail(type, property, value) {
+        if (this.detail[type] && property in this.detail[type]) {
+            // Validate bounds
+            if (property === 'radius') {
+                // Radius is 0.5-3.0
+                this.detail[type][property] = Math.max(0.5, Math.min(3.0, value));
+            } else {
+                // All other values 0-100
+                this.detail[type][property] = Math.max(0, Math.min(100, value));
+            }
+        }
+    }
+
+    /**
+     * Get Detail value
+     */
+    getDetail(type, property) {
+        if (this.detail[type] && property in this.detail[type]) {
+            return this.detail[type][property];
+        }
+        return 0;
+    }
+
+    /**
+     * Check if any detail adjustments are active
+     */
+    _hasDetailChanges() {
+        const { sharpening, noise } = this.detail;
+        return sharpening.amount > 0 ||
+            noise.luminance > 0 ||
+            noise.color > 0;
+    }
+
+    /**
      * Reset all settings to defaults
      */
     reset() {
@@ -448,6 +562,19 @@ export class ImageDevelopment {
             blending: 50,
             balance: 0
         };
+
+        // Reset detail
+        this.detail = {
+            sharpening: { amount: 0, radius: 1.0, detail: 25, masking: 0 },
+            noise: { luminance: 0, luminanceDetail: 50, luminanceContrast: 0, color: 0, colorDetail: 50, colorSmoothness: 50 }
+        };
+    }
+
+    /**
+     * Set Preview Mode (e.g. 'sharpenMask')
+     */
+    setPreviewMode(mode) {
+        this.previewMode = mode;
     }
 
     /**
@@ -761,6 +888,154 @@ export class ImageDevelopment {
                     const newLum = Math.max(0, lum[i] + highPass * clarityAmount);
                     [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
                         linearR[i], linearG[i], linearB[i], newLum
+                    );
+                }
+            }
+        }
+
+
+
+        // ============================================================
+        // STEP 8.5: Sharpening (Frequency Separation)
+        // Luminance-only, edge-aware mask
+        // ============================================================
+        const { amount: sharpAmount, radius: sharpRadius, detail: sharpDetail, masking: sharpMasking } = this.detail.sharpening;
+
+        // Preview buffer
+        let previewBuffer = null;
+        if (this.previewMode === 'sharpenMask') {
+            previewBuffer = new Float32Array(pixelCount);
+        }
+
+        if (sharpAmount > 0 || this.previewMode === 'sharpenMask') {
+            // Extract luminance
+            const lum = new Float32Array(pixelCount);
+            for (let i = 0; i < pixelCount; i++) {
+                lum[i] = this.luminance(linearR[i], linearG[i], linearB[i]);
+            }
+
+            // Multi-scale blur
+            // Radius perceptual mapping: 0.5-1 crisp, 2-3 halo risk
+            const effectiveRadius = 0.6 + Math.pow(sharpRadius / 3, 1.4) * 2.4;
+
+            const blurred = new Float32Array(pixelCount);
+            this.applyGaussianSeparable(width, height, lum, blurred, effectiveRadius);
+
+            const detailThreshLow = 0.02;  // Noise floor
+            const detailThreshHigh = 0.15; // Strong edge
+
+            // Edge mask threshold (0-1) - Perceptual remap
+            const t = sharpMasking / 100;
+            const maskThresh = 0.01 + t * t * 0.25;
+
+            for (let i = 0; i < pixelCount; i++) {
+                const Y = lum[i];
+                const highPass = Y - blurred[i];
+                const edgeMag = Math.abs(highPass);
+
+                // Detail Gate: controls which frequencies are sharpened
+                const detailFactor = sharpDetail / 100;
+                const gate = this.smoothstep(detailThreshLow * (1 - detailFactor * 0.8), detailThreshHigh, edgeMag);
+
+                // Masking: protect smooth areas
+                let mask = 1.0;
+                if (sharpMasking > 0 || this.previewMode === 'sharpenMask') {
+                    mask = this.smoothstep(maskThresh, maskThresh + 0.05, edgeMag);
+                }
+
+                // Capture preview
+                if (previewBuffer) {
+                    previewBuffer[i] = mask;
+                }
+
+                // Apply sharpening
+                const gain = (sharpAmount / 100) * 2.2; // Reduced from 3.0 for better control
+                const sharpY = Y + highPass * gain * gate * mask;
+
+                // Apply via luminance ratio
+                [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
+                    linearR[i], linearG[i], linearB[i], Math.max(0, sharpY)
+                );
+            }
+        }
+
+        // Return Preview if active
+        if (this.previewMode === 'sharpenMask' && previewBuffer) {
+            const previewData = new ImageData(width, height);
+            for (let i = 0; i < pixelCount; i++) {
+                // Visualize mask (Black = protected, White = sharpened)
+                const v = Math.round(Math.max(0, Math.min(1, previewBuffer[i])) * 255);
+                previewData.data[i * 4] = v;
+                previewData.data[i * 4 + 1] = v;
+                previewData.data[i * 4 + 2] = v;
+                previewData.data[i * 4 + 3] = 255;
+            }
+            return previewData;
+        }
+
+        // ============================================================
+        // STEP 8.7: Noise Reduction (Luminance & Color)
+        // ============================================================
+        const { luminance: nrLum, color: nrColor } = this.detail.noise;
+
+        if (nrLum > 0 || nrColor > 0) {
+            // 1. Color Noise Reduction (Chroma Blur)
+            if (nrColor > 0) {
+                // Convert to OKLab
+                const L_buf = new Float32Array(pixelCount);
+                const a_buf = new Float32Array(pixelCount);
+                const b_buf = new Float32Array(pixelCount);
+
+                for (let i = 0; i < pixelCount; i++) {
+                    const [L, a, b] = this.linearRGBtoOKLab(linearR[i], linearG[i], linearB[i]);
+                    L_buf[i] = L;
+                    a_buf[i] = a;
+                    b_buf[i] = b;
+                }
+
+                // Blur a/b channels only
+                const radius = (nrColor / 100) * 10.0;
+                const a_blur = new Float32Array(pixelCount);
+                const b_blur = new Float32Array(pixelCount);
+
+                this.applyGaussianSeparable(width, height, a_buf, a_blur, radius);
+                this.applyGaussianSeparable(width, height, b_buf, b_blur, radius);
+
+                // Recombine
+                for (let i = 0; i < pixelCount; i++) {
+                    [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(
+                        L_buf[i], a_blur[i], b_blur[i]
+                    );
+                    linearR[i] = Math.max(0, linearR[i]);
+                    linearG[i] = Math.max(0, linearG[i]);
+                    linearB[i] = Math.max(0, linearB[i]);
+                }
+            }
+
+            // 2. Luminance Noise Reduction (Edge-aware smoothing)
+            if (nrLum > 0) {
+                // Re-extract L
+                const lum = new Float32Array(pixelCount);
+                for (let i = 0; i < pixelCount; i++) {
+                    lum[i] = this.luminance(linearR[i], linearG[i], linearB[i]);
+                }
+
+                const blurRad = (nrLum / 100) * 3.0; // Max 3px radius
+                const lumBlurred = new Float32Array(pixelCount);
+                this.applyGaussianSeparable(width, height, lum, lumBlurred, blurRad);
+
+                for (let i = 0; i < pixelCount; i++) {
+                    const Y = lum[i];
+                    const diff = Math.abs(Y - lumBlurred[i]);
+
+                    // Edge detection
+                    const threshold = 0.05 * (100 / (nrLum + 1));
+                    const edgeWeight = this.smoothstep(0, threshold, diff);
+
+                    const newY = Y * edgeWeight + lumBlurred[i] * (1 - edgeWeight);
+
+                    [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
+                        linearR[i], linearG[i], linearB[i], Math.max(0, newY)
                     );
                 }
             }
