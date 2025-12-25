@@ -60,7 +60,13 @@
                             <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
                         </svg>
                     </button>
-                    <button class="tool-btn" data-tool="transform" title="Crop & Transform">
+                    <button class="tool-btn" data-tool="geometry" title="Geometry & Transform">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M14 6l-3.8 5 3.8 5h6l3.8-5-3.8-5h-6zm-8 4l-4 5h8l-4-5zm6-5V2h-2v3h2zm0 15v3h-2v-3h2z" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" data-tool="transform" title="Crop & Rotate">
                         <svg viewBox="0 0 24 24">
                             <path
                                 d="M7 17V3a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H9a2 2 0 01-2-2zm0 0H3a2 2 0 01-2-2V3m4 4v14a2 2 0 002 2h14" />
@@ -70,6 +76,11 @@
                         <svg viewBox="0 0 24 24">
                             <path
                                 d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" data-tool="text" title="Text">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M5 4v3h5.5v12h3V7H19V4z" />
                         </svg>
                     </button>
 
@@ -791,16 +802,65 @@
                                 </div>
                             </div>
 
-                            <!-- Vignette -->
+                            <!-- Effects -->
                             <div class="accordion-item">
-                                <div class="accordion-header" data-target="vignette-content">
-                                    <span class="accordion-label">Vignette</span>
+                                <div class="accordion-header" data-target="effects-content">
+                                    <span class="accordion-label">Effects</span>
                                     <span class="accordion-icon">▸</span>
                                 </div>
-                                <div class="accordion-content" id="vignette-content">
-                                    <div class="control-group">
-                                        <label class="control-label">Amount</label>
-                                        <input type="range" class="slider" disabled value="0">
+                                <div class="accordion-content" id="effects-content">
+                                    <!-- Vignette -->
+                                    <div class="control-group-header">Post-Crop Vignetting</div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Amount</span>
+                                        <input type="range" class="slider" id="effect-vig-amount" min="-100" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="effect-vig-amount-val">0</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Midpoint</span>
+                                        <input type="range" class="slider" id="effect-vig-midpoint" min="0" max="100"
+                                            value="50">
+                                        <span class="slider-value" id="effect-vig-midpoint-val">50</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Roundness</span>
+                                        <input type="range" class="slider" id="effect-vig-roundness" min="-100"
+                                            max="100" value="0">
+                                        <span class="slider-value" id="effect-vig-roundness-val">0</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Feather</span>
+                                        <input type="range" class="slider" id="effect-vig-feather" min="0" max="100"
+                                            value="50">
+                                        <span class="slider-value" id="effect-vig-feather-val">50</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Highlights</span>
+                                        <input type="range" class="slider" id="effect-vig-highlights" min="0" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="effect-vig-highlights-val">0</span>
+                                    </div>
+
+                                    <!-- Grain -->
+                                    <div class="control-group-header" style="margin-top: 12px;">Grain</div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Amount</span>
+                                        <input type="range" class="slider" id="effect-grain-amount" min="0" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="effect-grain-amount-val">0</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Size</span>
+                                        <input type="range" class="slider" id="effect-grain-size" min="0" max="100"
+                                            value="25">
+                                        <span class="slider-value" id="effect-grain-size-val">25</span>
+                                    </div>
+                                    <div class="slider-row">
+                                        <span class="slider-label">Roughness</span>
+                                        <input type="range" class="slider" id="effect-grain-roughness" min="0" max="100"
+                                            value="50">
+                                        <span class="slider-value" id="effect-grain-roughness-val">50</span>
                                     </div>
                                 </div>
                             </div>

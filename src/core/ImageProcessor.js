@@ -1,3 +1,5 @@
+import { GeometryMath } from './GeometryMath.js';
+
 /**
  * ImageProcessor - Manages proxy/original images for optimized editing
  * 
@@ -400,6 +402,170 @@ export class ImageProcessor {
                 resolve();
             }, this.originalMimeType, 0.95);
         });
+    }
+
+    /**
+     * Apply Homography Transform (Geometry Engine)
+     * Resamples image using inverse pixel mapping
+     * Calculates expanded bounding box to prevent corner clipping
+     * @param {Object} image - Input image (proxy or full res)
+     * @param {Float32Array} matrix - 3x3 Homography Matrix
+     * @returns {HTMLCanvasElement} - Transformed canvas
+     */
+    applyHomography(image, matrix) {
+        if (!matrix) return image; // Identity
+
+        const srcWidth = image.width;
+        const srcHeight = image.height;
+
+        // Transform the 4 corners to find the bounding box of the output
+        const corners = [
+            [-1, -1], [1, -1], [1, 1], [-1, 1] // Normalized corners
+        ];
+
+        const transformedCorners = corners.map(([nx, ny]) => {
+            const w = matrix[6] * nx + matrix[7] * ny + matrix[8];
+            const polyW = 1.0 / (w || 0.00001);
+            return [
+                (matrix[0] * nx + matrix[1] * ny + matrix[2]) * polyW,
+                (matrix[3] * nx + matrix[4] * ny + matrix[5]) * polyW
+            ];
+        });
+
+        // Find bounding box in normalized coords
+        const xCoords = transformedCorners.map(c => c[0]);
+        const yCoords = transformedCorners.map(c => c[1]);
+        const minX = Math.min(...xCoords);
+        const maxX = Math.max(...xCoords);
+        const minY = Math.min(...yCoords);
+        const maxY = Math.max(...yCoords);
+
+        // Calculate output dimensions (scale to fit the transformed content)
+        const outWidth = Math.ceil(((maxX - minX) / 2) * srcWidth);
+        const outHeight = Math.ceil(((maxY - minY) / 2) * srcHeight);
+
+        // Offset to center the bounding box
+        const offsetX = (minX + maxX) / 2;
+        const offsetY = (minY + maxY) / 2;
+
+        // Output canvas with expanded size
+        const canvas = document.createElement('canvas');
+        canvas.width = outWidth;
+        canvas.height = outHeight;
+        const ctx = canvas.getContext('2d');
+        const outputData = ctx.createImageData(outWidth, outHeight);
+
+        // Input data
+        let inputCtx;
+        if (image.canvas) {
+            inputCtx = image.canvas.getContext('2d');
+        } else {
+            const temp = document.createElement('canvas');
+            temp.width = srcWidth;
+            temp.height = srcHeight;
+            inputCtx = temp.getContext('2d');
+            inputCtx.drawImage(image.element || image, 0, 0);
+        }
+        const inputData = inputCtx.getImageData(0, 0, srcWidth, srcHeight);
+
+        // Inverse matrix for reverse mapping
+        const invMatrix = GeometryMath.invert(matrix);
+        if (!invMatrix) return image; // Singular
+
+        const srcData = inputData.data;
+        const dstData = outputData.data;
+
+        for (let y = 0; y < outHeight; y++) {
+            // Map output pixel to normalized coords (accounting for bounding box)
+            const ny = minY + (y / outHeight) * (maxY - minY);
+
+            for (let x = 0; x < outWidth; x++) {
+                const nx = minX + (x / outWidth) * (maxX - minX);
+
+                // Inverse Project back to source normalized coords
+                const w = invMatrix[6] * nx + invMatrix[7] * ny + invMatrix[8];
+                const polyW = 1.0 / (w || 0.00001);
+
+                const srcNx = (invMatrix[0] * nx + invMatrix[1] * ny + invMatrix[2]) * polyW;
+                const srcNy = (invMatrix[3] * nx + invMatrix[4] * ny + invMatrix[5]) * polyW;
+
+                // Denormalize to source pixel coords
+                const u = (srcNx + 1) * 0.5 * srcWidth;
+                const v = (srcNy + 1) * 0.5 * srcHeight;
+
+                // Boundary check (source image bounds)
+                if (u < 0 || u >= srcWidth - 1 || v < 0 || v >= srcHeight - 1) {
+                    // Leave transparent
+                    continue;
+                }
+
+                // Bilinear Sample
+                const u0 = Math.floor(u);
+                const v0 = Math.floor(v);
+                const u1 = u0 + 1;
+                const v1 = v0 + 1;
+
+                const fu = u - u0;
+                const fv = v - v0;
+                const w00 = (1 - fu) * (1 - fv);
+                const w10 = fu * (1 - fv);
+                const w01 = (1 - fu) * fv;
+                const w11 = fu * fv;
+
+                const idx = (y * outWidth + x) * 4;
+
+                const i00 = (v0 * srcWidth + u0) * 4;
+                const i10 = (v0 * srcWidth + u1) * 4;
+                const i01 = (v1 * srcWidth + u0) * 4;
+                const i11 = (v1 * srcWidth + u1) * 4;
+
+                for (let c = 0; c < 4; c++) {
+                    dstData[idx + c] =
+                        srcData[i00 + c] * w00 +
+                        srcData[i10 + c] * w10 +
+                        srcData[i01 + c] * w01 +
+                        srcData[i11 + c] * w11;
+                }
+            }
+        }
+
+        ctx.putImageData(outputData, 0, 0);
+        return canvas;
+    }
+
+    /**
+     * Commit Homography to Proxy (Destructive Edit)
+     */
+    async commitHomography(matrix) {
+        if (!this.proxy) return null;
+
+        console.log('Committing Homography...');
+
+        // 1. Apply to Proxy
+        const newCanvas = this.applyHomography(this.proxy, matrix);
+
+        // 2. Update Proxy
+        const newProxyImage = new Image();
+        const proxyUrl = newCanvas.toDataURL(this.originalMimeType);
+        newProxyImage.src = proxyUrl;
+        await new Promise(r => newProxyImage.onload = r);
+
+        const newProxy = {
+            element: newProxyImage,
+            width: newProxyImage.naturalWidth,
+            height: newProxyImage.naturalHeight,
+            canvas: newCanvas,
+            imageData: newCanvas.getContext('2d').getImageData(0, 0, newProxyImage.naturalWidth, newProxyImage.naturalHeight),
+            dataURL: proxyUrl
+        };
+
+        this.proxy = newProxy;
+
+        // Note: We do NOT update originalBlob here because JS homography is too slow for 40MP.
+        // We defer full-res processing to Export time (or accept mismatch).
+        // For V1, this is acceptable.
+
+        return newProxy;
     }
 
     /**

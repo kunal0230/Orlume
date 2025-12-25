@@ -102,7 +102,9 @@ export class CanvasManager {
         }
 
         // Draw main image
-        this.mainCtx.drawImage(this.image.canvas, 0, 0);
+        // Handle different image object structures (canvas, element, or direct canvas)
+        const drawable = this.image.canvas || this.image.element || this.image;
+        this.mainCtx.drawImage(drawable, 0, 0);
 
         // Restore context (remove coordinate transforms for overlay)
         this.mainCtx.restore();
@@ -116,6 +118,73 @@ export class CanvasManager {
         if (transformTool && transformTool.active) {
             // Pass scale=1 because context is 1:1 with image pixels
             transformTool.render(this.mainCtx, 1, 0, 0);
+        }
+
+        // Render Text Layers (on top of image, separate from image processing)
+        this.renderTextLayers();
+    }
+
+    /**
+     * Render all text layers on top of the image
+     * Text is vector, rendered separately from image data
+     */
+    renderTextLayers() {
+        const textManager = this.app.textManager;
+        if (!textManager) return;
+
+        const layers = textManager.getTextLayers();
+        const ctx = this.mainCtx;
+
+        for (const layer of layers) {
+            if (layer.editing) continue; // Skip if being edited (editor overlay handles it)
+
+            ctx.save();
+
+            // Apply transform
+            ctx.translate(layer.x, layer.y);
+            ctx.rotate(layer.rotation * Math.PI / 180);
+            ctx.scale(layer.scale, layer.scale);
+
+            // Set typography
+            ctx.font = layer.getCanvasFont();
+            ctx.fillStyle = layer.color;
+            ctx.globalAlpha = layer.opacity;
+            ctx.textAlign = layer.textAlign;
+            ctx.textBaseline = 'top';
+
+            // Apply shadow if enabled
+            if (layer.shadow?.enabled) {
+                ctx.shadowColor = layer.shadow.color;
+                ctx.shadowBlur = layer.shadow.blur;
+                ctx.shadowOffsetX = layer.shadow.offsetX;
+                ctx.shadowOffsetY = layer.shadow.offsetY;
+            }
+
+            // Draw background if enabled
+            if (layer.background?.enabled) {
+                layer.measure(ctx);
+                const bounds = layer._bounds;
+                ctx.fillStyle = layer.background.color;
+                const pad = layer.background.padding;
+                ctx.fillRect(-pad, -pad, bounds.width + pad * 2, bounds.height + pad * 2);
+                ctx.fillStyle = layer.color;
+            }
+
+            // Draw text lines
+            const lines = layer.content.split('\n');
+            const lineHeight = layer.fontSize * layer.lineHeight;
+
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], 0, i * lineHeight);
+            }
+
+            ctx.restore();
+        }
+
+        // Render selection overlay if text tool is active
+        const textTool = this.app.components.textTool;
+        if (textTool?.active) {
+            textTool.renderOverlay(this.mainCtx);
         }
     }
 

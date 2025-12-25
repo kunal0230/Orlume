@@ -568,6 +568,43 @@ export class ImageDevelopment {
             sharpening: { amount: 0, radius: 1.0, detail: 25, masking: 0 },
             noise: { luminance: 0, luminanceDetail: 50, luminanceContrast: 0, color: 0, colorDetail: 50, colorSmoothness: 50 }
         };
+
+        // Reset effects
+        this.effects = {
+            vignette: { amount: 0, midpoint: 50, roundness: 0, feather: 50, highlights: 0 },
+            grain: { amount: 0, size: 25, roughness: 50 }
+        };
+    }
+
+    /**
+     * Set effects settings
+     */
+    setEffects(type, property, value) {
+        if (!this.effects) this.effects = { vignette: { amount: 0, midpoint: 50, roundness: 0, feather: 50, highlights: 0 }, grain: { amount: 0, size: 25, roughness: 50 } };
+        if (this.effects[type] && this.effects[type][property] !== undefined) {
+            this.effects[type][property] = value;
+        }
+    }
+
+    /**
+     * Get effects settings
+     */
+    getEffects(type, property) {
+        if (!this.effects) return 0;
+        if (this.effects[type] && this.effects[type][property] !== undefined) {
+            return this.effects[type][property];
+        }
+        return 0;
+    }
+
+    /**
+     * Check if effects have changes
+     */
+    _hasEffectsChanges() {
+        if (!this.effects) return false;
+        const v = this.effects.vignette;
+        const g = this.effects.grain;
+        return (v && v.amount !== 0) || (g && g.amount !== 0);
     }
 
     /**
@@ -1348,6 +1385,117 @@ export class ImageDevelopment {
         }
 
         // ============================================================
+        // STEP 8.8: Effects (Vignette & Grain)
+        // Pipeline: Sharpen -> NR -> Vignette -> Grain -> Gamma
+        // ============================================================
+
+        // 1. Post-Crop Vignette (Highlight Priority)
+        if (!this.effects) {
+            this.effects = {
+                vignette: { amount: 0, midpoint: 50, roundness: 0, feather: 50, highlights: 0 },
+                grain: { amount: 0, size: 25, roughness: 50 }
+            };
+        }
+        const { amount: vigAmount, midpoint: vigMid, roundness: vigRound, feather: vigFeather, highlights: vigHigh } = this.effects.vignette;
+
+        if (vigAmount !== 0) {
+            const aspect = width / height;
+            // Midpoint & Feather remapping
+            const midpoint = vigMid / 100;
+            const feather = vigFeather / 100;
+            const amount = vigAmount / 100; // -1 to +1
+
+            for (let i = 0; i < pixelCount; i++) {
+                const x = i % width;
+                const y = Math.floor(i / width);
+
+                // Normalized coords (-1 to +1)
+                const nx = (x + 0.5) / width * 2 - 1;
+                const ny = (y + 0.5) / height * 2 - 1;
+
+                // Roundness mapping
+                let rx = nx;
+                let ry = ny;
+                if (vigRound > 0) {
+                    ry *= Math.pow(aspect, vigRound / 100);
+                } else if (vigRound < 0) {
+                    rx *= Math.pow(aspect, -vigRound / 100);
+                }
+
+                // Distance field
+                let d = Math.sqrt(rx * rx + ry * ry);
+                d = Math.min(1, d);
+
+                // Perceptual falloff
+                // t = 0 (center) -> 1 (edge)
+                let t = (d - midpoint) / Math.max(1e-4, 1 - midpoint);
+                t = Math.max(0, Math.min(1, t));
+
+                // Feather (smoothstep exponent)
+                const featherExp = 1 + feather * 4;
+                t = Math.pow(t, featherExp);
+
+                // Highlight protection
+                if (vigHigh > 0 && amount < 0) { // Only protect if darkening
+                    const lum = this.luminance(linearR[i], linearG[i], linearB[i]);
+                    // Protect highlights: 0.6 -> 0.95 range
+                    const highlightProtect = this.smoothstep(0.6, 0.95, lum);
+                    // Reduce vignette effect where high is protected
+                    t = t * (1 - highlightProtect * (vigHigh / 100));
+                }
+
+                // Apply vignette (Luminance scaling)
+                let vignetteFactor = 1.0;
+                if (amount < 0) {
+                    vignetteFactor = 1 - (t * Math.abs(amount));
+                } else {
+                    vignetteFactor = 1 + (t * amount * 2.0);
+                }
+
+                // Apply via luminance ratio
+                const lum = this.luminance(linearR[i], linearG[i], linearB[i]);
+                const newLum = lum * Math.max(0, vignetteFactor);
+
+                [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(
+                    linearR[i], linearG[i], linearB[i], newLum
+                );
+            }
+        }
+
+        // 2. Film Grain (Luminance-dependent)
+        const { amount: grainAmount, size: grainSize, roughness: grainRough } = this.effects.grain;
+
+        if (grainAmount > 0) {
+            const size = Math.max(1, grainSize / 25 * 2.0); // Scale factor
+            const seed = 1337;
+
+            // Inline grain synthesis for performance
+            for (let i = 0; i < pixelCount; i++) {
+                const x = i % width;
+                const y = Math.floor(i / width);
+
+                // Sample pos
+                const gx = x / size;
+                const gy = y / size;
+
+                // Simple high-freq noise (approximation of film structure)
+                const n = Math.sin((gx + seed) * 12.9898 + (gy + seed) * 78.233) * 43758.5453;
+                const g = n - Math.floor(n); // 0..1
+
+                // Luminance weight (Grain lives in midtones, dies in shadows/highlights)
+                const lum = this.luminance(linearR[i], linearG[i], linearB[i]);
+                const grainWeight = this.smoothstep(0.02, 0.2, lum) * (1.0 - this.smoothstep(0.8, 1.0, lum));
+
+                const grainValue = (g - 0.5) * (grainAmount / 100) * grainWeight * 0.5;
+
+                // Apply additively
+                linearR[i] += grainValue;
+                linearG[i] += grainValue;
+                linearB[i] += grainValue;
+            }
+        }
+
+        // ============================================================
         // STEP 12: Final conversion - Linear Float32 → sRGB Uint8
         // Single gamma conversion at the very end
         // ============================================================
@@ -1446,6 +1594,7 @@ export class ImageDevelopment {
             this.settings.dehaze !== 0 ||
             this.settings.vibrance !== 0 ||
             this.settings.saturation !== 0 ||
-            this._hasColorMixerChanges();
+            this._hasColorMixerChanges() ||
+            this._hasEffectsChanges();
     }
 }

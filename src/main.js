@@ -20,6 +20,10 @@ import { ImageDevelopment } from './core/ImageDevelopment.js';
 import { ToneCurve } from './components/ToneCurve.js';
 import { ColorMixer } from './components/ColorMixer.js';
 import { ColorGrading } from './components/ColorGrading.js';
+import { GeometryPanel } from './components/GeometryPanel.js';
+import { TextManager } from './core/TextManager.js';
+import { TextTool } from './components/TextTool.js';
+import { TextPanel } from './components/TextPanel.js';
 
 class OrlumeApp {
     constructor() {
@@ -61,7 +65,18 @@ class OrlumeApp {
         this.components.develop = new ImageDevelopment();
         this.components.toneCurve = new ToneCurve('tone-curve-canvas');
         this.components.colorMixer = new ColorMixer(this);
+        this.components.colorMixer = new ColorMixer(this);
         this.components.colorGrading = new ColorGrading(this);
+
+        // Geometry Engine
+        this.components.geometryPanel = new GeometryPanel(this);
+        this.components.geometryPanel.init();
+
+        // Text Tool System
+        this.textManager = new TextManager(this);
+        this.components.textTool = new TextTool(this);
+        this.components.textPanel = new TextPanel(this);
+        this.components.textPanel.init();
 
         // Connect tone curve to develop pipeline
         this.components.toneCurve.onChange = (luts) => {
@@ -79,21 +94,33 @@ class OrlumeApp {
         const indicator = statusGpu.querySelector('.gpu-indicator');
 
         if (!navigator.gpu) {
-            statusGpu.innerHTML = '<span class="gpu-indicator error"></span> WebGPU not supported';
+            statusGpu.innerHTML = '<span class="gpu-indicator error"></span> WebGPU not supported (using CPU)';
             return false;
         }
 
+        // Timeout wrapper to prevent infinite hang
+        const timeout = (ms) => new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('GPU check timed out')), ms)
+        );
+
         try {
-            const adapter = await navigator.gpu.requestAdapter();
+            const adapter = await Promise.race([
+                navigator.gpu.requestAdapter(),
+                timeout(3000) // 3 second timeout
+            ]);
             if (!adapter) throw new Error('No GPU adapter');
 
-            await adapter.requestDevice();
+            await Promise.race([
+                adapter.requestDevice(),
+                timeout(3000)
+            ]);
             indicator.classList.add('active');
             statusGpu.innerHTML = '<span class="gpu-indicator active"></span> WebGPU Ready';
             return true;
         } catch (e) {
+            console.warn('WebGPU not available:', e.message);
             indicator.classList.add('error');
-            statusGpu.innerHTML = '<span class="gpu-indicator error"></span> GPU Error';
+            statusGpu.innerHTML = '<span class="gpu-indicator error"></span> CPU Mode';
             return false;
         }
     }
@@ -301,6 +328,19 @@ class OrlumeApp {
             case 'develop':
                 document.getElementById('develop-section').hidden = false;
                 break;
+            case 'geometry':
+                if (this.state.image) {
+                    document.getElementById('geometry-section').hidden = false;
+                    this.components.geometryPanel.activate();
+                }
+                break;
+            case 'text':
+                if (this.state.image) {
+                    document.getElementById('text-section').hidden = false;
+                    this.components.textTool.activate();
+                    this.components.textPanel.activate();
+                }
+                break;
         }
     }
 
@@ -312,6 +352,8 @@ class OrlumeApp {
             '3d': '3D View',
             parallax: 'Parallax Effect',
             transform: 'Crop & Transform',
+            geometry: 'Geometry',
+            text: 'Text',
             develop: 'Develop'
         };
         return names[tool] || 'Unknown';

@@ -417,6 +417,7 @@ export class ControlPanel {
         });
 
         this._bindDetailControls();
+        this._bindEffectsControls();
     }
 
     /**
@@ -460,7 +461,7 @@ export class ControlPanel {
 
                 // Handle Preview Mode (Alt key)
                 if (ctrl.type === "sharpening" && isAltDown) {
-                     this.app.components.develop?.setPreviewMode("sharpenMask");
+                    this.app.components.develop?.setPreviewMode("sharpenMask");
                 } else if (this.app.components.develop?.previewMode) {
                     this.app.components.develop.setPreviewMode(null);
                 }
@@ -483,6 +484,52 @@ export class ControlPanel {
                 if (label) label.textContent = def;
 
                 this.app.components.develop?.setDetail(ctrl.type, ctrl.prop, def);
+                this.app.updateDevelopPreview();
+            });
+        });
+    }
+
+    /**
+     * Bind Effects (Vignette & Grain) sliders
+     */
+    _bindEffectsControls() {
+        const effectsControls = [
+            { id: 'effect-vig-amount', type: 'vignette', prop: 'amount', def: 0 },
+            { id: 'effect-vig-midpoint', type: 'vignette', prop: 'midpoint', def: 50 },
+            { id: 'effect-vig-roundness', type: 'vignette', prop: 'roundness', def: 0 },
+            { id: 'effect-vig-feather', type: 'vignette', prop: 'feather', def: 50 },
+            { id: 'effect-vig-highlights', type: 'vignette', prop: 'highlights', def: 0 },
+            { id: 'effect-grain-amount', type: 'grain', prop: 'amount', def: 0 },
+            { id: 'effect-grain-size', type: 'grain', prop: 'size', def: 25 },
+            { id: 'effect-grain-roughness', type: 'grain', prop: 'roughness', def: 50 }
+        ];
+
+        effectsControls.forEach(ctrl => {
+            const input = document.getElementById(ctrl.id);
+            if (!input) return;
+
+            input.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+
+                // Update label
+                const label = document.getElementById(`${ctrl.id}-val`);
+                if (label) label.textContent = val;
+
+                // Update engine
+                this.app.components.develop?.setEffects(ctrl.type, ctrl.prop, val);
+
+                // Trigger preview
+                this.app.updateDevelopPreview();
+            });
+
+            // Double click reset
+            input.addEventListener('dblclick', () => {
+                const def = ctrl.def;
+                input.value = def;
+                const label = document.getElementById(`${ctrl.id}-val`);
+                if (label) label.textContent = def;
+
+                this.app.components.develop?.setEffects(ctrl.type, ctrl.prop, def);
                 this.app.updateDevelopPreview();
             });
         });
