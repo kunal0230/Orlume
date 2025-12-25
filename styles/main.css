@@ -1282,6 +1282,57 @@ body {
   display: none;
 }
 
+/* ===============================================
+   Color Mixer
+   =============================================== */
+
+.color-band-selector {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.color-band-btn {
+  flex: 1;
+  min-width: 28px;
+  padding: 6px 4px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.color-band-btn[data-band="all"] {
+  background: linear-gradient(90deg,
+      #e53935 0%, #ff9800 15%, #fdd835 30%,
+      #43a047 45%, #00bcd4 60%, #1e88e5 75%,
+      #8e24aa 90%, #e91e63 100%);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.color-band-btn[data-band]:not([data-band="all"]) {
+  background: var(--band-color, var(--bg-tertiary));
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.color-band-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-band-btn.active {
+  border-color: white;
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
 /* Develop Actions */
 .develop-actions {
   display: flex;

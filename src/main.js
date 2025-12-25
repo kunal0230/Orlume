@@ -18,6 +18,7 @@ import { HistoryManager } from './core/HistoryManager.js';
 import { Histogram } from './components/Histogram.js';
 import { ImageDevelopment } from './core/ImageDevelopment.js';
 import { ToneCurve } from './components/ToneCurve.js';
+import { ColorMixer } from './components/ColorMixer.js';
 
 class OrlumeApp {
     constructor() {
@@ -53,6 +54,7 @@ class OrlumeApp {
         this.components.histogram = new Histogram('histogram-canvas');
         this.components.develop = new ImageDevelopment();
         this.components.toneCurve = new ToneCurve('tone-curve-canvas');
+        this.components.colorMixer = new ColorMixer(this);
 
         // Connect tone curve to develop pipeline
         this.components.toneCurve.onChange = (luts) => {

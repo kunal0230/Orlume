@@ -643,7 +643,50 @@
                                     <span class="accordion-icon">▸</span>
                                 </div>
                                 <div class="accordion-content" id="mixer-content">
-                                    <p class="panel-hint">HSL Adjustment</p>
+                                    <!-- Band Selector -->
+                                    <div class="color-band-selector" id="color-band-selector">
+                                        <button class="color-band-btn active" data-band="all">All</button>
+                                        <button class="color-band-btn" data-band="red"
+                                            style="--band-color: #e53935;">R</button>
+                                        <button class="color-band-btn" data-band="orange"
+                                            style="--band-color: #ff9800;">O</button>
+                                        <button class="color-band-btn" data-band="yellow"
+                                            style="--band-color: #fdd835;">Y</button>
+                                        <button class="color-band-btn" data-band="green"
+                                            style="--band-color: #43a047;">G</button>
+                                        <button class="color-band-btn" data-band="aqua"
+                                            style="--band-color: #00bcd4;">A</button>
+                                        <button class="color-band-btn" data-band="blue"
+                                            style="--band-color: #1e88e5;">B</button>
+                                        <button class="color-band-btn" data-band="purple"
+                                            style="--band-color: #8e24aa;">P</button>
+                                        <button class="color-band-btn" data-band="magenta"
+                                            style="--band-color: #e91e63;">M</button>
+                                    </div>
+
+                                    <!-- Hue -->
+                                    <div class="slider-row">
+                                        <label class="control-label">Hue</label>
+                                        <input type="range" class="slider" id="mixer-hue" min="-100" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="mixer-hue-val">0</span>
+                                    </div>
+
+                                    <!-- Saturation -->
+                                    <div class="slider-row">
+                                        <label class="control-label">Saturation</label>
+                                        <input type="range" class="slider" id="mixer-sat" min="-100" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="mixer-sat-val">0</span>
+                                    </div>
+
+                                    <!-- Luminance -->
+                                    <div class="slider-row">
+                                        <label class="control-label">Luminance</label>
+                                        <input type="range" class="slider" id="mixer-lum" min="-100" max="100"
+                                            value="0">
+                                        <span class="slider-value" id="mixer-lum-val">0</span>
+                                    </div>
                                 </div>
                             </div>
 

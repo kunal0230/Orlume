@@ -271,8 +271,58 @@ export class ControlPanel {
         // Reset Develop
         document.getElementById('btn-reset-develop')?.addEventListener('click', () => {
             this._resetDevelopSliders();
+            this._resetColorMixer();
             this.app.components.develop?.reset();
             this._triggerDevelopPreview();
+        });
+
+        // ========================================
+        // Color Mixer Controls
+        // ========================================
+        this._activeMixerBand = 'all';
+
+        // Band selector buttons
+        document.querySelectorAll('.color-band-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active state
+                document.querySelectorAll('.color-band-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Set active band
+                this._activeMixerBand = btn.dataset.band;
+
+                // Update sliders to show current band values
+                const band = this.app.components.develop?.colorMixer[this._activeMixerBand];
+                if (band) {
+                    document.getElementById('mixer-hue').value = band.hue;
+                    document.getElementById('mixer-hue-val').textContent = band.hue;
+                    document.getElementById('mixer-sat').value = band.sat;
+                    document.getElementById('mixer-sat-val').textContent = band.sat;
+                    document.getElementById('mixer-lum').value = band.lum;
+                    document.getElementById('mixer-lum-val').textContent = band.lum;
+                }
+            });
+        });
+
+        // Mixer sliders
+        ['hue', 'sat', 'lum'].forEach(prop => {
+            const slider = document.getElementById(`mixer-${prop}`);
+            if (slider) {
+                slider.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById(`mixer-${prop}-val`).textContent = value;
+                    this.app.components.develop?.setColorMixer(this._activeMixerBand, prop, value);
+                    this._triggerDevelopPreview();
+                });
+
+                // Double-click to reset
+                slider.addEventListener('dblclick', () => {
+                    slider.value = 0;
+                    document.getElementById(`mixer-${prop}-val`).textContent = '0';
+                    this.app.components.develop?.setColorMixer(this._activeMixerBand, prop, 0);
+                    this._triggerDevelopPreview();
+                });
+            }
         });
     }
 
@@ -300,6 +350,25 @@ export class ControlPanel {
         // Reset profile
         document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.profile-btn[data-profile="color"]')?.classList.add('active');
+    }
+
+    /**
+     * Reset Color Mixer sliders and band selection
+     */
+    _resetColorMixer() {
+        // Reset sliders
+        ['hue', 'sat', 'lum'].forEach(prop => {
+            const slider = document.getElementById(`mixer-${prop}`);
+            if (slider) {
+                slider.value = 0;
+                document.getElementById(`mixer-${prop}-val`).textContent = '0';
+            }
+        });
+
+        // Reset band selection to 'all'
+        this._activeMixerBand = 'all';
+        document.querySelectorAll('.color-band-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.color-band-btn[data-band="all"]')?.classList.add('active');
     }
 
     /**

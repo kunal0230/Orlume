@@ -57,6 +57,32 @@ export class ImageDevelopment {
             saturation: 0     // -100 to +100 (global saturation)
         };
 
+        // Color Mixer - 8 hue bands + All
+        // Each band has: hue shift, saturation, luminance (-100 to +100)
+        this.colorMixer = {
+            all: { hue: 0, sat: 0, lum: 0 },
+            red: { hue: 0, sat: 0, lum: 0 },
+            orange: { hue: 0, sat: 0, lum: 0 },
+            yellow: { hue: 0, sat: 0, lum: 0 },
+            green: { hue: 0, sat: 0, lum: 0 },
+            aqua: { hue: 0, sat: 0, lum: 0 },
+            blue: { hue: 0, sat: 0, lum: 0 },
+            purple: { hue: 0, sat: 0, lum: 0 },
+            magenta: { hue: 0, sat: 0, lum: 0 }
+        };
+
+        // Hue band center angles (degrees)
+        this.hueBandCenters = {
+            red: 25,
+            orange: 45,
+            yellow: 95,
+            green: 145,
+            aqua: 195,
+            blue: 255,
+            purple: 295,
+            magenta: 335
+        };
+
         // Precomputed LUTs for gamma conversion (sRGB ↔ Linear)
         this._sRGBtoLinearLUT = new Float32Array(256);
         this._linearToSRGBLUT = new Uint8Array(4096); // 12-bit precision
@@ -199,6 +225,50 @@ export class ImageDevelopment {
     }
 
     /**
+     * Convert Linear RGB to OKLCh (polar form)
+     * L = Lightness, C = Chroma, h = Hue angle (degrees)
+     */
+    linearRGBtoOKLCh(r, g, b) {
+        const [L, a, B] = this.linearRGBtoOKLab(r, g, b);
+        const C = Math.sqrt(a * a + B * B);
+        let h = Math.atan2(B, a) * 180 / Math.PI;
+        if (h < 0) h += 360;
+        return [L, C, h];
+    }
+
+    /**
+     * Convert OKLCh to Linear RGB
+     */
+    OKLChToLinearRGB(L, C, h) {
+        const hRad = h * Math.PI / 180;
+        const a = C * Math.cos(hRad);
+        const B = C * Math.sin(hRad);
+        return this.OKLabToLinearRGB(L, a, B);
+    }
+
+    /**
+     * Hue weight function - smooth circular blending
+     * Returns 0-1 weight based on angular distance from band center
+     */
+    hueWeight(h, center, width = 35) {
+        let d = Math.abs(h - center);
+        d = Math.min(d, 360 - d); // Circular wrap
+        const t = Math.max(0, 1 - d / width);
+        return t * t * (3 - 2 * t); // Smoothstep
+    }
+
+    /**
+     * Gamut-aware chroma clamping
+     * Prevents neon clipping and hue flipping
+     */
+    clampChroma(L, h, C) {
+        // Approximate max chroma for sRGB gamut at given L and h
+        // This is a heuristic approximation of the gamut boundary
+        const maxC = 0.35 * Math.sin(Math.PI * L);
+        return Math.min(C, Math.max(0.001, maxC));
+    }
+
+    /**
      * Update a single setting
      */
     set(key, value) {
@@ -212,6 +282,37 @@ export class ImageDevelopment {
      */
     get(key) {
         return this.settings[key];
+    }
+
+    /**
+     * Set Color Mixer value for a band
+     * @param {string} band - 'all', 'red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'
+     * @param {string} property - 'hue', 'sat', 'lum'
+     * @param {number} value - -100 to +100
+     */
+    setColorMixer(band, property, value) {
+        if (this.colorMixer[band] && property in this.colorMixer[band]) {
+            this.colorMixer[band][property] = Math.max(-100, Math.min(100, value));
+        }
+    }
+
+    /**
+     * Get Color Mixer value
+     */
+    getColorMixer(band, property) {
+        return this.colorMixer[band]?.[property] ?? 0;
+    }
+
+    /**
+     * Check if any color mixer band has non-zero values
+     */
+    _hasColorMixerChanges() {
+        for (const band of Object.values(this.colorMixer)) {
+            if (band.hue !== 0 || band.sat !== 0 || band.lum !== 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -234,6 +335,11 @@ export class ImageDevelopment {
             vibrance: 0,
             saturation: 0
         };
+
+        // Reset color mixer
+        for (const band of Object.keys(this.colorMixer)) {
+            this.colorMixer[band] = { hue: 0, sat: 0, lum: 0 };
+        }
     }
 
     /**
@@ -572,7 +678,71 @@ export class ImageDevelopment {
         }
 
         // ============================================================
-        // STEP 10: Vibrance (OKLab - perceptually uniform)
+        // STEP 10: Color Mixer (OKLCh - 8 hue bands)
+        // Per-band Hue, Saturation, Luminance adjustments
+        // ============================================================
+        if (profile !== 'bw' && this._hasColorMixerChanges()) {
+            const bands = ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'];
+            const allBand = this.colorMixer.all;
+
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+
+                // Convert to OKLCh (polar form)
+                let [L, C, h] = this.linearRGBtoOKLCh(r, g, b);
+
+                // Chroma factor: near-gray colors should not rotate
+                const chromaFactor = Math.min(1, Math.max(0, (C - 0.02) / 0.13));
+
+                // Luminance scale: protect highlights and shadows
+                const lumScale = 1 - Math.abs(L - 0.5) * 1.6;
+
+                // Apply "All" band first (global with neutral protection)
+                if (allBand.sat !== 0 || allBand.hue !== 0 || allBand.lum !== 0) {
+                    const globalWeight = chromaFactor; // Protects neutrals
+                    C *= 1 + (allBand.sat / 100) * globalWeight * 0.5;
+                    h += (allBand.hue / 100) * globalWeight * 15; // Max ±15° rotation
+                    L += (allBand.lum / 100) * globalWeight * lumScale * 0.15;
+                }
+
+                // Apply 8 hue bands
+                for (const band of bands) {
+                    const { hue: hueShift, sat, lum } = this.colorMixer[band];
+                    if (sat === 0 && hueShift === 0 && lum === 0) continue;
+
+                    const center = this.hueBandCenters[band];
+                    const w = this.hueWeight(h, center, 35);
+
+                    if (w > 0.001) {
+                        // Saturation (chroma scaling)
+                        C *= 1 + (sat / 100) * w * 0.5;
+
+                        // Hue rotation (scaled by chroma to protect grays)
+                        h += (hueShift / 100) * w * chromaFactor * 20;
+
+                        // Luminance (scaled to protect extremes)
+                        L += (lum / 100) * w * lumScale * 0.15;
+                    }
+                }
+
+                // Wrap hue to 0-360
+                h = ((h % 360) + 360) % 360;
+
+                // Gamut-aware chroma clamp
+                C = this.clampChroma(L, h, C);
+
+                // Clamp L
+                L = Math.max(0, Math.min(1, L));
+
+                // Convert back to Linear RGB
+                [linearR[i], linearG[i], linearB[i]] = this.OKLChToLinearRGB(L, C, h);
+            }
+        }
+
+        // ============================================================
+        // STEP 11: Vibrance (OKLab - perceptually uniform)
         // Works in chroma (a/b) dimensions, protects saturated colors
         // ============================================================
         if (vibranceAmount !== 0 && profile !== 'bw') {
@@ -730,6 +900,7 @@ export class ImageDevelopment {
             this.settings.clarity !== 0 ||
             this.settings.dehaze !== 0 ||
             this.settings.vibrance !== 0 ||
-            this.settings.saturation !== 0;
+            this.settings.saturation !== 0 ||
+            this._hasColorMixerChanges();
     }
 }
