@@ -5,21 +5,26 @@
  * Pipeline Order (color-science correct):
  * 
  *   sRGB → Linear (Float32)
- *   → White Balance
+ *   → White Balance (True Bradford: RGB→LMS→scale→RGB)
  *   → Exposure (EV gain)
- *   → Contrast (sigmoid, Y'/Y luminance-ratio)
+ *   → Contrast (True sigmoid: Y' = (Y-0.18)/(1+|Y-0.18|*k)+0.18)
  *   → Tone Curve (before H/S/W/B!)
  *   → Highlights / Shadows / Whites / Blacks (Y'/Y)
  *   → Dehaze (Y'/Y)
  *   → Texture / Clarity (separable Gaussian, Y'/Y)
  *   → Profile (B&W, HDR)
- *   → Vibrance / Saturation
+ *   → Vibrance (OKLab, adaptive chroma limits per hue)
+ *   → Saturation (OKLab chroma scaling)
  *   → Linear → sRGB (single pass)
  * 
  * Key principles:
  * - All processing in Float32 linear space until final output
  * - Luminance-ratio scaling (Y'/Y) for color-preserving adjustments
- * - Tone curve BEFORE highlights/shadows (curve = global, sliders = refine)
+ * - True Bradford chromatic adaptation (RGB→LMS→scale→RGB)
+ * - True sigmoid contrast (compresses extremes, prevents clipping)
+ * - OKLab for perceptually uniform vibrance/saturation
+ * - Adaptive chroma limits per hue (gamut-aware)
+ * - Tone curve BEFORE highlights/shadows
  * - Single gamma conversion at the end
  * - Separable Gaussian blur for O(n·r) local contrast
  */
@@ -141,6 +146,59 @@ export class ImageDevelopment {
     }
 
     /**
+     * Convert Linear RGB to OKLab
+     * OKLab is a perceptually uniform color space ideal for color manipulation
+     * Reference: https://bottosson.github.io/posts/oklab/
+     */
+    linearRGBtoOKLab(r, g, b) {
+        // Linear RGB to LMS (cone response)
+        const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+        const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+        const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+        // Cube root (with sign preservation for negatives)
+        const l_ = Math.cbrt(l);
+        const m_ = Math.cbrt(m);
+        const s_ = Math.cbrt(s);
+
+        // LMS to OKLab
+        const L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+        const a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+        const B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+
+        return [L, a, B];
+    }
+
+    /**
+     * Convert OKLab to Linear RGB
+     */
+    OKLabToLinearRGB(L, a, B) {
+        // OKLab to LMS
+        const l_ = L + 0.3963377774 * a + 0.2158037573 * B;
+        const m_ = L - 0.1055613458 * a - 0.0638541728 * B;
+        const s_ = L - 0.0894841775 * a - 1.2914855480 * B;
+
+        // Cube (inverse of cbrt)
+        const l = l_ * l_ * l_;
+        const m = m_ * m_ * m_;
+        const s = s_ * s_ * s_;
+
+        // LMS to Linear RGB
+        const r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+        const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+        const b = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+        return [r, g, b];
+    }
+
+    /**
+     * Get chroma (saturation) in OKLab: sqrt(a² + b²)
+     */
+    OKLabChroma(a, b) {
+        return Math.sqrt(a * a + b * b);
+    }
+
+    /**
      * Update a single setting
      */
     set(key, value) {
@@ -226,12 +284,72 @@ export class ImageDevelopment {
         const saturationFactor = 1 + saturation / 100;
 
         // ============================================================
-        // STEP 2: White Balance (in linear space)
+        // STEP 2: White Balance (True Bradford Chromatic Adaptation)
+        // RGB → LMS → scale by source/target white → LMS → RGB
         // ============================================================
-        for (let i = 0; i < pixelCount; i++) {
-            linearR[i] *= tempFactor;
-            linearB[i] *= 1 / tempFactor;
-            linearG[i] *= tintFactor;
+        if (temperature !== 0 || tint !== 0) {
+            // Temperature/tint to illuminant shift
+            // D65 (6500K) as reference, temperature shifts toward blue/yellow
+            const tempNorm = temperature / 100; // -1 to +1
+            const tintNorm = tint / 100;
+
+            // Target white point relative to D65 (approximation)
+            // Positive temp = warmer = more red/yellow = simulate cooler source
+            // This is the ratio: target_white / source_white
+            const targetR = 1 + tempNorm * 0.15;
+            const targetG = 1 - tintNorm * 0.10;
+            const targetB = 1 - tempNorm * 0.25;
+
+            // Bradford matrix: RGB to LMS (cone response)
+            // Standard Bradford coefficients
+            const M_RGB_to_LMS = [
+                [0.8951, 0.2664, -0.1614],
+                [-0.7502, 1.7135, 0.0367],
+                [0.0389, -0.0685, 1.0296]
+            ];
+
+            // Inverse Bradford matrix: LMS to RGB
+            const M_LMS_to_RGB = [
+                [0.9870, -0.1471, 0.1600],
+                [0.4323, 0.5184, 0.0493],
+                [-0.0085, 0.0400, 0.9685]
+            ];
+
+            // Compute D65 white point in LMS
+            const D65_L = M_RGB_to_LMS[0][0] + M_RGB_to_LMS[0][1] + M_RGB_to_LMS[0][2];
+            const D65_M = M_RGB_to_LMS[1][0] + M_RGB_to_LMS[1][1] + M_RGB_to_LMS[1][2];
+            const D65_S = M_RGB_to_LMS[2][0] + M_RGB_to_LMS[2][1] + M_RGB_to_LMS[2][2];
+
+            // Compute target white point in LMS
+            const TGT_L = M_RGB_to_LMS[0][0] * targetR + M_RGB_to_LMS[0][1] * targetG + M_RGB_to_LMS[0][2] * targetB;
+            const TGT_M = M_RGB_to_LMS[1][0] * targetR + M_RGB_to_LMS[1][1] * targetG + M_RGB_to_LMS[1][2] * targetB;
+            const TGT_S = M_RGB_to_LMS[2][0] * targetR + M_RGB_to_LMS[2][1] * targetG + M_RGB_to_LMS[2][2] * targetB;
+
+            // Diagonal scaling matrix: D65 / Target (to adapt from target illuminant to D65)
+            const scaleL = D65_L / TGT_L;
+            const scaleM = D65_M / TGT_M;
+            const scaleS = D65_S / TGT_S;
+
+            for (let i = 0; i < pixelCount; i++) {
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
+
+                // RGB to LMS
+                const L = M_RGB_to_LMS[0][0] * r + M_RGB_to_LMS[0][1] * g + M_RGB_to_LMS[0][2] * b;
+                const M = M_RGB_to_LMS[1][0] * r + M_RGB_to_LMS[1][1] * g + M_RGB_to_LMS[1][2] * b;
+                const S = M_RGB_to_LMS[2][0] * r + M_RGB_to_LMS[2][1] * g + M_RGB_to_LMS[2][2] * b;
+
+                // Scale LMS (chromatic adaptation)
+                const L_adapted = L * scaleL;
+                const M_adapted = M * scaleM;
+                const S_adapted = S * scaleS;
+
+                // LMS to RGB
+                linearR[i] = M_LMS_to_RGB[0][0] * L_adapted + M_LMS_to_RGB[0][1] * M_adapted + M_LMS_to_RGB[0][2] * S_adapted;
+                linearG[i] = M_LMS_to_RGB[1][0] * L_adapted + M_LMS_to_RGB[1][1] * M_adapted + M_LMS_to_RGB[1][2] * S_adapted;
+                linearB[i] = M_LMS_to_RGB[2][0] * L_adapted + M_LMS_to_RGB[2][1] * M_adapted + M_LMS_to_RGB[2][2] * S_adapted;
+            }
         }
 
         // ============================================================
@@ -244,35 +362,44 @@ export class ImageDevelopment {
         }
 
         // ============================================================
-        // STEP 4: Contrast (sigmoid-based, centered at middle gray)
-        // Better than linear: preserves highlights/shadows better
+        // STEP 4: Contrast (True Sigmoid / Logistic curve)
+        // Y' = (Y - 0.18) / (1 + |Y - 0.18| * k) + 0.18
+        // Compresses extremes naturally, prevents clipping
         // ============================================================
         if (contrast !== 0) {
             const MIDDLE_GRAY = 0.18;
-            // Convert contrast to sigmoid steepness
-            // contrast = 0 → factor = 1 (no change)
-            // contrast = 100 → factor ≈ 2 (strong S-curve)
-            const contrastFactor = 1 + Math.abs(contrast) / 100;
+            // k controls the steepness: 0 = linear, higher = more S-curve
+            // contrast = 100 → k ≈ 3 (strong S)
+            // contrast = -100 → k ≈ -0.5 (flatten toward gray)
+            const k = contrast > 0
+                ? (contrast / 100) * 3.0
+                : (contrast / 100) * 0.5;
 
             for (let i = 0; i < pixelCount; i++) {
-                let r = linearR[i];
-                let g = linearG[i];
-                let b = linearB[i];
+                const r = linearR[i];
+                const g = linearG[i];
+                const b = linearB[i];
 
                 const lum = this.luminance(r, g, b);
 
-                // Apply soft sigmoid contrast to luminance
                 let newLum;
                 if (contrast > 0) {
-                    // Increase contrast: push away from middle gray
-                    const x = (lum - MIDDLE_GRAY) * contrastFactor + MIDDLE_GRAY;
-                    newLum = x;
+                    // Increase contrast: sigmoid curve
+                    // Y' = (Y - 0.18) / (1 + |Y - 0.18| * k) + 0.18
+                    // But scaled to create an S-curve that preserves extremes
+                    const delta = lum - MIDDLE_GRAY;
+                    const compressed = delta / (1 + Math.abs(delta) * k);
+                    // Scale back to full range (sigmoid naturally compresses)
+                    const scale = 1 + k * 0.5;
+                    newLum = MIDDLE_GRAY + compressed * scale;
                 } else {
                     // Decrease contrast: pull toward middle gray
-                    newLum = lum + (MIDDLE_GRAY - lum) * (-contrast / 100) * 0.5;
+                    const blend = -k; // k is negative, so -k is positive
+                    newLum = lum + (MIDDLE_GRAY - lum) * blend;
                 }
 
-                // Apply luminance-ratio scaling to preserve color
+                // Clamp and apply luminance-ratio scaling
+                newLum = Math.max(0, newLum);
                 [linearR[i], linearG[i], linearB[i]] = this.applyLuminanceRatio(r, g, b, newLum);
             }
         }
@@ -445,7 +572,8 @@ export class ImageDevelopment {
         }
 
         // ============================================================
-        // STEP 10: Vibrance (selective saturation, protects saturated colors)
+        // STEP 10: Vibrance (OKLab - perceptually uniform)
+        // Works in chroma (a/b) dimensions, protects saturated colors
         // ============================================================
         if (vibranceAmount !== 0 && profile !== 'bw') {
             for (let i = 0; i < pixelCount; i++) {
@@ -453,22 +581,37 @@ export class ImageDevelopment {
                 const g = linearG[i];
                 const b = linearB[i];
 
-                const maxC = Math.max(r, g, b);
-                const minC = Math.min(r, g, b);
-                const currentSat = maxC > 0 ? (maxC - minC) / maxC : 0;
+                // Convert to OKLab
+                const [L, a, B] = this.linearRGBtoOKLab(r, g, b);
 
-                // Boost inversely proportional to current saturation
-                const boost = vibranceAmount * (1 - currentSat) * 0.4;
+                // Calculate current chroma and hue
+                const chroma = this.OKLabChroma(a, B);
 
-                const lum = this.luminance(r, g, b);
-                linearR[i] = lum + (r - lum) * (1 + boost);
-                linearG[i] = lum + (g - lum) * (1 + boost);
-                linearB[i] = lum + (b - lum) * (1 + boost);
+                // Adaptive max chroma per hue (sRGB gamut varies by hue)
+                // Approximate max chroma for sRGB at different hue angles:
+                // Red/Orange: ~0.25, Yellow: ~0.22, Green: ~0.15, Cyan: ~0.13, Blue: ~0.31, Magenta: ~0.32
+                const hueAngle = Math.atan2(B, a); // -π to π
+                // Smooth approximation of sRGB gamut boundary at L=0.6
+                // Uses Fourier-like approximation for the irregular gamut shape
+                const maxChroma = 0.20 + 0.08 * Math.cos(hueAngle) + 0.05 * Math.cos(2 * hueAngle - 0.5);
+
+                // Vibrance: boost inversely proportional to current chroma
+                // Low-saturation colors get boosted more
+                const normalizedChroma = Math.min(1, chroma / maxChroma);
+                const boost = 1 + vibranceAmount * (1 - normalizedChroma) * 0.5;
+
+                // Scale a and b (chroma dimensions) while preserving L
+                const newA = a * boost;
+                const newB = B * boost;
+
+                // Convert back to Linear RGB
+                [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(L, newA, newB);
             }
         }
 
         // ============================================================
-        // STEP 11: Saturation (global)
+        // STEP 11: Saturation (OKLab - perceptually uniform)
+        // Global chroma scaling
         // ============================================================
         if (saturationFactor !== 1 && profile !== 'bw') {
             for (let i = 0; i < pixelCount; i++) {
@@ -476,10 +619,16 @@ export class ImageDevelopment {
                 const g = linearG[i];
                 const b = linearB[i];
 
-                const lum = this.luminance(r, g, b);
-                linearR[i] = lum + (r - lum) * saturationFactor;
-                linearG[i] = lum + (g - lum) * saturationFactor;
-                linearB[i] = lum + (b - lum) * saturationFactor;
+                // Convert to OKLab
+                const [L, a, B] = this.linearRGBtoOKLab(r, g, b);
+
+                // Scale chroma (a and b) by saturation factor
+                // L (lightness) stays unchanged
+                const newA = a * saturationFactor;
+                const newB = B * saturationFactor;
+
+                // Convert back to Linear RGB
+                [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(L, newA, newB);
             }
         }
 
