@@ -58,29 +58,33 @@ export class ImageDevelopment {
         };
 
         // Color Mixer - 8 hue bands + All
-        // Each band has: hue shift, saturation, luminance (-100 to +100)
+        // Values stored as normalized floats:
+        //   h: hue shift in degrees (-30 to +30)
+        //   s: saturation multiplier (-1 to +1)
+        //   l: luminance offset (-0.3 to +0.3)
         this.colorMixer = {
-            all: { hue: 0, sat: 0, lum: 0 },
-            red: { hue: 0, sat: 0, lum: 0 },
-            orange: { hue: 0, sat: 0, lum: 0 },
-            yellow: { hue: 0, sat: 0, lum: 0 },
-            green: { hue: 0, sat: 0, lum: 0 },
-            aqua: { hue: 0, sat: 0, lum: 0 },
-            blue: { hue: 0, sat: 0, lum: 0 },
-            purple: { hue: 0, sat: 0, lum: 0 },
-            magenta: { hue: 0, sat: 0, lum: 0 }
+            all: { h: 0, s: 0, l: 0 },
+            red: { h: 0, s: 0, l: 0 },
+            orange: { h: 0, s: 0, l: 0 },
+            yellow: { h: 0, s: 0, l: 0 },
+            green: { h: 0, s: 0, l: 0 },
+            aqua: { h: 0, s: 0, l: 0 },
+            blue: { h: 0, s: 0, l: 0 },
+            purple: { h: 0, s: 0, l: 0 },
+            magenta: { h: 0, s: 0, l: 0 }
         };
 
-        // Hue band center angles (degrees)
-        this.hueBandCenters = {
-            red: 25,
-            orange: 45,
-            yellow: 95,
-            green: 145,
-            aqua: 195,
-            blue: 255,
-            purple: 295,
-            magenta: 335
+        // Scientifically-tuned hue band definitions
+        // Each band has center hue (degrees) and width for smooth blending
+        this.COLOR_BANDS = {
+            red: { center: 25, width: 35 },
+            orange: { center: 45, width: 35 },
+            yellow: { center: 95, width: 40 },
+            green: { center: 145, width: 40 },
+            aqua: { center: 195, width: 40 },
+            blue: { center: 255, width: 45 },
+            purple: { center: 295, width: 40 },
+            magenta: { center: 335, width: 35 }
         };
 
         // Precomputed LUTs for gamma conversion (sRGB ↔ Linear)
@@ -90,6 +94,15 @@ export class ImageDevelopment {
 
         // Tone curve LUTs (from ToneCurve component)
         this.curveLUTs = null;
+    }
+
+    /**
+     * Smoothstep function for perceptual blending
+     * Returns 0-1 smooth transition between edge0 and edge1
+     */
+    smoothstep(edge0, edge1, x) {
+        const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+        return t * t * (3 - 2 * t);
     }
 
     /**
@@ -146,14 +159,6 @@ export class ImageDevelopment {
      */
     luminance(r, g, b) {
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
-
-    /**
-     * Smoothstep function for smooth transitions
-     */
-    smoothstep(edge0, edge1, x) {
-        const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-        return t * t * (3 - 2 * t);
     }
 
     /**
@@ -257,15 +262,27 @@ export class ImageDevelopment {
         return t * t * (3 - 2 * t); // Smoothstep
     }
 
+
+
     /**
-     * Gamut-aware chroma clamping
-     * Prevents neon clipping and hue flipping
+     * Approximate maximum chroma for sRGB gamut at given L and h
+     * Uses Fourier approximation of the irregular sRGB gamut boundary
+     * Hue-dependent: blues are more restricted, reds have more headroom
      */
-    clampChroma(L, h, C) {
-        // Approximate max chroma for sRGB gamut at given L and h
-        // This is a heuristic approximation of the gamut boundary
-        const maxC = 0.35 * Math.sin(Math.PI * L);
-        return Math.min(C, Math.max(0.001, maxC));
+    approxMaxChroma(L, h) {
+        const hRad = h * Math.PI / 180;
+
+        // Hue-dependent envelope (Fourier approx of sRGB gamut)
+        // Blues (~255°) get lower max, reds/yellows get higher
+        const hueFactor =
+            0.28 +
+            0.07 * Math.cos(hRad) +
+            0.06 * Math.cos(2 * hRad - 0.5);
+
+        // Lightness envelope - midtones allow most chroma
+        const lightFactor = Math.sin(Math.PI * Math.min(1, L + 0.05));
+
+        return hueFactor * lightFactor;
     }
 
     /**
@@ -286,21 +303,50 @@ export class ImageDevelopment {
 
     /**
      * Set Color Mixer value for a band
+     * UI values are -100 to +100, converted to engine-normalized values:
+     *   hue: -30 to +30 degrees
+     *   sat: -1.0 to +1.0 multiplier
+     *   lum: -0.3 to +0.3 offset
      * @param {string} band - 'all', 'red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'
      * @param {string} property - 'hue', 'sat', 'lum'
-     * @param {number} value - -100 to +100
+     * @param {number} uiValue - -100 to +100 (UI scale)
      */
-    setColorMixer(band, property, value) {
-        if (this.colorMixer[band] && property in this.colorMixer[band]) {
-            this.colorMixer[band][property] = Math.max(-100, Math.min(100, value));
+    setColorMixer(band, property, uiValue) {
+        if (!this.colorMixer[band]) return;
+
+        // Clamp UI value
+        const clamped = Math.max(-100, Math.min(100, uiValue));
+
+        // Normalize to engine scale
+        switch (property) {
+            case 'hue':
+                this.colorMixer[band].h = (clamped / 100) * 30; // ±30°
+                break;
+            case 'sat':
+                this.colorMixer[band].s = clamped / 100; // ±1.0
+                break;
+            case 'lum':
+                this.colorMixer[band].l = (clamped / 100) * 0.3; // ±0.3
+                break;
         }
     }
 
     /**
-     * Get Color Mixer value
+     * Get Color Mixer value (returns UI scale -100..100)
      */
     getColorMixer(band, property) {
-        return this.colorMixer[band]?.[property] ?? 0;
+        if (!this.colorMixer[band]) return 0;
+
+        switch (property) {
+            case 'hue':
+                return Math.round((this.colorMixer[band].h / 30) * 100);
+            case 'sat':
+                return Math.round(this.colorMixer[band].s * 100);
+            case 'lum':
+                return Math.round((this.colorMixer[band].l / 0.3) * 100);
+            default:
+                return 0;
+        }
     }
 
     /**
@@ -308,7 +354,7 @@ export class ImageDevelopment {
      */
     _hasColorMixerChanges() {
         for (const band of Object.values(this.colorMixer)) {
-            if (band.hue !== 0 || band.sat !== 0 || band.lum !== 0) {
+            if (band.h !== 0 || band.s !== 0 || band.l !== 0) {
                 return true;
             }
         }
@@ -338,7 +384,7 @@ export class ImageDevelopment {
 
         // Reset color mixer
         for (const band of Object.keys(this.colorMixer)) {
-            this.colorMixer[band] = { hue: 0, sat: 0, lum: 0 };
+            this.colorMixer[band] = { h: 0, s: 0, l: 0 };
         }
     }
 
@@ -378,8 +424,6 @@ export class ImageDevelopment {
         }
 
         // Precompute adjustment factors
-        const tempFactor = 1 + (temperature / 100) * 0.3;
-        const tintFactor = 1 + (tint / 100) * 0.2;
         const exposureGain = Math.pow(2, exposure);
         const highlightAmount = highlights / 100;
         const shadowAmount = shadows / 100;
@@ -678,11 +722,11 @@ export class ImageDevelopment {
         }
 
         // ============================================================
-        // STEP 10: Color Mixer (OKLCh - 8 hue bands)
-        // Per-band Hue, Saturation, Luminance adjustments
+        // STEP 10: Color Mixer (OKLCh - Professional 8-band processing)
+        // Accumulative delta approach with perceptual weighting
         // ============================================================
         if (profile !== 'bw' && this._hasColorMixerChanges()) {
-            const bands = ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'];
+            const bandNames = ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'];
             const allBand = this.colorMixer.all;
 
             for (let i = 0; i < pixelCount; i++) {
@@ -693,51 +737,94 @@ export class ImageDevelopment {
                 // Convert to OKLCh (polar form)
                 let [L, C, h] = this.linearRGBtoOKLCh(r, g, b);
 
-                // Chroma factor: near-gray colors should not rotate
-                const chromaFactor = Math.min(1, Math.max(0, (C - 0.02) / 0.13));
+                // Skip near-black pixels
+                if (L < 0.001) continue;
 
-                // Luminance scale: protect highlights and shadows
-                const lumScale = 1 - Math.abs(L - 0.5) * 1.6;
+                // Accumulative delta approach
+                let dH = 0;
+                let dC = 0;
+                let dL = 0;
 
-                // Apply "All" band first (global with neutral protection)
-                if (allBand.sat !== 0 || allBand.hue !== 0 || allBand.lum !== 0) {
-                    const globalWeight = chromaFactor; // Protects neutrals
-                    C *= 1 + (allBand.sat / 100) * globalWeight * 0.5;
-                    h += (allBand.hue / 100) * globalWeight * 15; // Max ±15° rotation
-                    L += (allBand.lum / 100) * globalWeight * lumScale * 0.15;
+                // Chroma factor: neutrals (low chroma) get less hue rotation
+                const chromaFactor = this.smoothstep(0.02, 0.15, C);
+
+                // Luminance factor: protect highlights and shadows (clamped to prevent inversion)
+                const lumFactor = Math.max(0, 1 - Math.abs(L - 0.5) * 1.6);
+
+                // Track total band weight for interaction damping
+                let weightSum = 0;
+
+                // Apply "All" band first (special rules: less aggressive hue rotation)
+                if (allBand.h !== 0 || allBand.s !== 0 || allBand.l !== 0) {
+                    const neutralWeight = this.smoothstep(0.04, 0.2, C);
+                    dH += allBand.h * neutralWeight * 0.3; // All band hue is subtle
+                    dC += allBand.s * neutralWeight * 0.6; // All band sat is moderate
+                    dL += allBand.l * neutralWeight;
+                    weightSum += neutralWeight;
                 }
 
-                // Apply 8 hue bands
-                for (const band of bands) {
-                    const { hue: hueShift, sat, lum } = this.colorMixer[band];
-                    if (sat === 0 && hueShift === 0 && lum === 0) continue;
+                // Apply individual bands with accumulative deltas
+                for (const bandName of bandNames) {
+                    const band = this.colorMixer[bandName];
+                    const bandDef = this.COLOR_BANDS[bandName];
 
-                    const center = this.hueBandCenters[band];
-                    const w = this.hueWeight(h, center, 35);
+                    // Skip if no adjustment
+                    if (band.h === 0 && band.s === 0 && band.l === 0) continue;
+
+                    // Calculate weight using proper band width
+                    const w = this.hueWeight(h, bandDef.center, bandDef.width);
 
                     if (w > 0.001) {
-                        // Saturation (chroma scaling)
-                        C *= 1 + (sat / 100) * w * 0.5;
-
                         // Hue rotation (scaled by chroma to protect grays)
-                        h += (hueShift / 100) * w * chromaFactor * 20;
+                        dH += band.h * w * chromaFactor;
 
-                        // Luminance (scaled to protect extremes)
-                        L += (lum / 100) * w * lumScale * 0.15;
+                        // Saturation (chroma multiplier)
+                        dC += band.s * w;
+
+                        // Luminance (scaled by lumFactor to protect extremes)
+                        dL += band.l * w * lumFactor;
+
+                        // Track weight for damping
+                        weightSum += w;
                     }
                 }
 
-                // Wrap hue to 0-360
+                // Band interaction damping: normalize when multiple bands overlap
+                if (weightSum > 1) {
+                    dH /= weightSum;
+                    dC /= weightSum;
+                    dL /= weightSum;
+                }
+
+                // Soft clamp hue rotation to prevent extreme drift
+                const MAX_HUE_ROT = 45; // degrees
+                dH = Math.max(-MAX_HUE_ROT, Math.min(MAX_HUE_ROT, dH));
+
+                // Compress luminance delta at extremes (diminishing returns)
+                dL = dL * (1 - Math.abs(dL) * 0.7);
+
+                // Apply accumulated adjustments
+                h += dH;
+                C *= (1 + dC);
+                L += dL;
+
+                // Wrap hue to 0-360 (circular)
                 h = ((h % 360) + 360) % 360;
 
                 // Gamut-aware chroma clamp
-                C = this.clampChroma(L, h, C);
+                const maxC = this.approxMaxChroma(L, h);
+                C = Math.max(0, Math.min(C, maxC));
 
                 // Clamp L
                 L = Math.max(0, Math.min(1, L));
 
                 // Convert back to Linear RGB
                 [linearR[i], linearG[i], linearB[i]] = this.OKLChToLinearRGB(L, C, h);
+
+                // Clamp to prevent negative RGB (OKLab can produce out-of-gamut values)
+                linearR[i] = Math.max(0, linearR[i]);
+                linearG[i] = Math.max(0, linearG[i]);
+                linearB[i] = Math.max(0, linearB[i]);
             }
         }
 
@@ -768,7 +855,29 @@ export class ImageDevelopment {
                 // Vibrance: boost inversely proportional to current chroma
                 // Low-saturation colors get boosted more
                 const normalizedChroma = Math.min(1, chroma / maxChroma);
-                const boost = 1 + vibranceAmount * (1 - normalizedChroma) * 0.5;
+
+                // Hue-aware protection: dampen vibrance in sensitive hue ranges
+                // Skin tones (~20-45° in OKLab hue) and deep blues (~230-270°)
+                const hueDeg = (hueAngle * 180 / Math.PI + 360) % 360;
+                let hueProtection = 1;
+
+                // Skin tone protection (red-orange hues)
+                if (hueDeg >= 15 && hueDeg <= 50) {
+                    const skinCenter = 32.5;
+                    const dist = Math.abs(hueDeg - skinCenter) / 17.5;
+                    hueProtection *= 0.6 + 0.4 * dist; // 40% reduction at center
+                }
+
+                // Deep blue protection
+                if (hueDeg >= 220 && hueDeg <= 280) {
+                    const blueCenter = 250;
+                    const dist = Math.abs(hueDeg - blueCenter) / 30;
+                    hueProtection *= 0.6 + 0.4 * dist; // 40% reduction at center
+                }
+
+                // Luminance damping: protect highlights and shadows from over-boost
+                const lumDamp = Math.max(0, 1 - Math.abs(L - 0.5) * 1.4);
+                const boost = 1 + vibranceAmount * (1 - normalizedChroma) * 0.5 * hueProtection * lumDamp;
 
                 // Scale a and b (chroma dimensions) while preserving L
                 const newA = a * boost;
@@ -776,6 +885,11 @@ export class ImageDevelopment {
 
                 // Convert back to Linear RGB
                 [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(L, newA, newB);
+
+                // Clamp to prevent negative RGB
+                linearR[i] = Math.max(0, linearR[i]);
+                linearG[i] = Math.max(0, linearG[i]);
+                linearB[i] = Math.max(0, linearB[i]);
             }
         }
 
@@ -799,6 +913,11 @@ export class ImageDevelopment {
 
                 // Convert back to Linear RGB
                 [linearR[i], linearG[i], linearB[i]] = this.OKLabToLinearRGB(L, newA, newB);
+
+                // Clamp to prevent negative RGB
+                linearR[i] = Math.max(0, linearR[i]);
+                linearG[i] = Math.max(0, linearG[i]);
+                linearB[i] = Math.max(0, linearB[i]);
             }
         }
 

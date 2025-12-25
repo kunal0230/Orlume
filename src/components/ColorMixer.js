@@ -95,14 +95,13 @@ export class ColorMixer {
         const develop = this.app.components.develop;
         if (!develop) return;
 
-        const band = develop.colorMixer?.[this.activeBand];
-        if (!band) return;
-
+        // Use getColorMixer which returns UI-scale values (-100 to 100)
         ['hue', 'sat', 'lum'].forEach(prop => {
             const slider = document.getElementById(`mixer-${prop}`);
             const valueEl = document.getElementById(`mixer-${prop}-val`);
-            if (slider) slider.value = band[prop];
-            if (valueEl) valueEl.textContent = band[prop];
+            const value = develop.getColorMixer(this.activeBand, prop);
+            if (slider) slider.value = value;
+            if (valueEl) valueEl.textContent = value;
         });
     }
 
