@@ -607,4 +607,52 @@ class OrlumeApp {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.orlume = new OrlumeApp();
+
+    // Panel resize functionality
+    const panel = document.getElementById('control-panel');
+    const handle = document.getElementById('panel-resize-handle');
+
+    if (panel && handle) {
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        // Restore saved width
+        const savedWidth = localStorage.getItem('orlume-panel-width');
+        if (savedWidth) {
+            panel.style.width = savedWidth + 'px';
+        }
+
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            handle.classList.add('active');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            // Calculate new width (dragging left = increase width)
+            const deltaX = startX - e.clientX;
+            const newWidth = Math.min(500, Math.max(280, startWidth + deltaX));
+
+            panel.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                handle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+
+                // Save width preference
+                localStorage.setItem('orlume-panel-width', panel.offsetWidth);
+            }
+        });
+    }
 });
