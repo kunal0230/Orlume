@@ -10,13 +10,16 @@
             --bg-dark: #0a0a0a;
             --bg-surface: #141414;
             --bg-panel: #1a1a1a;
+            --bg-hover: #252525;
             --text-primary: #f0f0f0;
             --text-secondary: #888;
             --accent: #3b82f6;
+            --accent-hover: #2563eb;
             --border: #2a2a2a;
             --red: #ef4444;
             --green: #22c55e;
             --blue: #3b82f6;
+            --yellow: #eab308;
         }
 
         * {
@@ -35,8 +38,55 @@
 
         .app {
             display: grid;
-            grid-template-columns: 1fr 300px;
+            grid-template-columns: 56px 1fr 300px;
             height: 100vh;
+        }
+
+        /* Left Toolbar */
+        .toolbar {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 4px;
+        }
+
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .tool-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .tool-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .tool-divider {
+            width: 24px;
+            height: 1px;
+            background: var(--border);
+            margin: 8px 0;
         }
 
         /* Canvas Area */
@@ -45,13 +95,11 @@
             align-items: center;
             justify-content: center;
             background: var(--bg-surface);
-            padding: 20px;
             position: relative;
+            overflow: hidden;
         }
 
         .canvas-container {
-            max-width: 100%;
-            max-height: 100%;
             position: relative;
         }
 
@@ -63,15 +111,26 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
 
+        /* Brush cursor overlay */
+        .brush-cursor {
+            position: fixed;
+            pointer-events: none;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            mix-blend-mode: difference;
+        }
+
         /* Before/After indicator */
         .before-indicator {
             position: absolute;
-            top: 30px;
-            left: 30px;
-            background: rgba(0, 0, 0, 0.7);
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
             padding: 8px 16px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -95,13 +154,17 @@
             align-items: center;
             justify-content: center;
             gap: 16px;
-            opacity: 1;
-            transition: opacity 0.3s;
+            transition: all 0.3s;
         }
 
         .drop-zone.hidden {
             opacity: 0;
             pointer-events: none;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
         }
 
         .drop-zone h2 {
@@ -118,9 +181,9 @@
         .control-panel {
             background: var(--bg-panel);
             border-left: 1px solid var(--border);
-            overflow-y: auto;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .panel-header {
@@ -134,14 +197,41 @@
         .panel-title {
             font-size: 13px;
             font-weight: 600;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border: none;
+            background: none;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .panel-tab.active {
+            color: var(--accent);
+            box-shadow: inset 0 -2px 0 var(--accent);
         }
 
         .panel-content {
-            padding: 16px;
             flex: 1;
             overflow-y: auto;
+            padding: 16px;
         }
 
         /* Histogram */
@@ -149,7 +239,7 @@
             background: var(--bg-dark);
             border-radius: 8px;
             padding: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .histogram-label {
@@ -166,8 +256,9 @@
             border-radius: 4px;
         }
 
+        /* Control Groups */
         .control-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .control-label {
@@ -225,8 +316,7 @@
 
         /* Buttons */
         .btn {
-            width: 100%;
-            padding: 10px;
+            padding: 10px 16px;
             background: var(--bg-surface);
             border: 1px solid var(--border);
             color: var(--text-primary);
@@ -237,7 +327,7 @@
         }
 
         .btn:hover {
-            background: var(--border);
+            background: var(--bg-hover);
         }
 
         .btn-primary {
@@ -246,7 +336,7 @@
         }
 
         .btn-primary:hover {
-            background: #2563eb;
+            background: var(--accent-hover);
         }
 
         .btn-row {
@@ -256,6 +346,73 @@
 
         .btn-row .btn {
             flex: 1;
+        }
+
+        /* Mask Layers */
+        .mask-layers {
+            margin-bottom: 16px;
+        }
+
+        .mask-layer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .mask-layer:hover {
+            background: var(--bg-hover);
+        }
+
+        .mask-layer.active {
+            background: var(--accent);
+        }
+
+        .mask-layer-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--bg-surface);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mask-layer-name {
+            flex: 1;
+            font-size: 12px;
+        }
+
+        .mask-layer-delete {
+            opacity: 0;
+            color: var(--red);
+            cursor: pointer;
+        }
+
+        .mask-layer:hover .mask-layer-delete {
+            opacity: 1;
+        }
+
+        /* Brush Settings */
+        .brush-preview {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brush-preview-circle {
+            background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
         }
 
         /* Keyboard hint */
@@ -279,24 +436,72 @@
         .perf-indicator {
             position: fixed;
             bottom: 10px;
-            left: 10px;
+            left: 70px;
             font-size: 11px;
             color: var(--text-secondary);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 4px 10px;
             border-radius: 4px;
             font-family: 'SF Mono', Monaco, monospace;
         }
 
-        /* Hidden file input */
+        /* Hidden */
         #file-input {
             display: none;
+        }
+
+        .panel-section {
+            display: none;
+        }
+
+        .panel-section.active {
+            display: block;
         }
     </style>
 </head>
 
 <body>
     <div class="app">
+        <!-- Left Toolbar -->
+        <div class="toolbar">
+            <button class="tool-btn active" id="tool-develop" title="Develop (D)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-brush" title="Brush (B)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+                    <path
+                        d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-radial" title="Radial Filter (R)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-gradient" title="Gradient Filter (G)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                </svg>
+            </button>
+
+            <div class="tool-divider"></div>
+
+            <button class="tool-btn" id="tool-crop" title="Crop (C)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
+                    <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
+                </svg>
+            </button>
+        </div>
+
         <!-- Canvas Area -->
         <div class="canvas-area">
             <div class="canvas-container">
@@ -308,122 +513,224 @@
                 <p>or click to browse</p>
                 <button class="btn btn-primary" id="btn-browse">Choose Image</button>
             </div>
+            <div class="brush-cursor" id="brush-cursor"></div>
         </div>
 
         <!-- Control Panel -->
         <div class="control-panel">
-            <div class="panel-header">
-                <span class="panel-title">Develop</span>
+            <div class="panel-tabs">
+                <button class="panel-tab active" data-panel="develop">Develop</button>
+                <button class="panel-tab" data-panel="masks">Masks</button>
             </div>
 
             <div class="panel-content">
-                <!-- Histogram -->
-                <div class="histogram-container">
-                    <div class="histogram-label">Histogram</div>
-                    <canvas id="histogram-canvas"></canvas>
+                <!-- Develop Panel -->
+                <div class="panel-section active" id="panel-develop">
+                    <!-- Histogram -->
+                    <div class="histogram-container">
+                        <div class="histogram-label">Histogram</div>
+                        <canvas id="histogram-canvas"></canvas>
+                    </div>
+
+                    <!-- Light Section -->
+                    <div class="section">
+                        <div class="section-header">Light</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Exposure</span>
+                                <span id="val-exposure">0.00</span>
+                            </div>
+                            <input type="range" id="slider-exposure" min="-5" max="5" step="0.05" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Contrast</span>
+                                <span id="val-contrast">0</span>
+                            </div>
+                            <input type="range" id="slider-contrast" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Highlights</span>
+                                <span id="val-highlights">0</span>
+                            </div>
+                            <input type="range" id="slider-highlights" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadows</span>
+                                <span id="val-shadows">0</span>
+                            </div>
+                            <input type="range" id="slider-shadows" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Whites</span>
+                                <span id="val-whites">0</span>
+                            </div>
+                            <input type="range" id="slider-whites" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Blacks</span>
+                                <span id="val-blacks">0</span>
+                            </div>
+                            <input type="range" id="slider-blacks" min="-100" max="100" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Color Section -->
+                    <div class="section">
+                        <div class="section-header">Color</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-temperature">0</span>
+                            </div>
+                            <input type="range" id="slider-temperature" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Tint</span>
+                                <span id="val-tint">0</span>
+                            </div>
+                            <input type="range" id="slider-tint" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Vibrance</span>
+                                <span id="val-vibrance">0</span>
+                            </div>
+                            <input type="range" id="slider-vibrance" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Saturation</span>
+                                <span id="val-saturation">0</span>
+                            </div>
+                            <input type="range" id="slider-saturation" min="-100" max="100" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <div class="btn-row">
+                            <button class="btn" id="btn-reset">Reset</button>
+                            <button class="btn btn-primary" id="btn-export">Export</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Light Section -->
-                <div class="section">
-                    <div class="section-header">Light</div>
-
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Exposure</span>
-                            <span id="val-exposure">0.00</span>
+                <!-- Masks Panel -->
+                <div class="panel-section" id="panel-masks">
+                    <div class="section">
+                        <div class="section-header">Layers</div>
+                        <div class="mask-layers" id="mask-layers">
+                            <div
+                                style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
+                                No adjustment layers yet.<br>
+                                Select a tool to create one.
+                            </div>
                         </div>
-                        <input type="range" id="slider-exposure" min="-5" max="5" step="0.05" value="0">
+                        <button class="btn" id="btn-new-layer" style="width: 100%;">+ New Adjustment Layer</button>
                     </div>
 
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Contrast</span>
-                            <span id="val-contrast">0</span>
+                    <div class="section" id="brush-settings" style="display: none;">
+                        <div class="section-header">Brush</div>
+
+                        <div class="brush-preview">
+                            <div class="brush-preview-circle" id="brush-preview-circle"
+                                style="width: 40px; height: 40px;"></div>
                         </div>
-                        <input type="range" id="slider-contrast" min="-100" max="100" step="1" value="0">
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="val-brush-size">100</span>
+                            </div>
+                            <input type="range" id="slider-brush-size" min="1" max="500" step="1" value="100">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Hardness</span>
+                                <span id="val-brush-hardness">50</span>
+                            </div>
+                            <input type="range" id="slider-brush-hardness" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Flow</span>
+                                <span id="val-brush-flow">50</span>
+                            </div>
+                            <input type="range" id="slider-brush-flow" min="1" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="btn-row" style="margin-top: 12px;">
+                            <button class="btn" id="btn-brush-add">Add</button>
+                            <button class="btn" id="btn-brush-erase">Erase</button>
+                        </div>
                     </div>
 
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Highlights</span>
-                            <span id="val-highlights">0</span>
+                    <div class="section" id="mask-adjustments" style="display: none;">
+                        <div class="section-header">Mask Adjustments</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Exposure</span>
+                                <span id="val-mask-exposure">0.00</span>
+                            </div>
+                            <input type="range" id="slider-mask-exposure" min="-5" max="5" step="0.05" value="0">
                         </div>
-                        <input type="range" id="slider-highlights" min="-100" max="100" step="1" value="0">
-                    </div>
 
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Shadows</span>
-                            <span id="val-shadows">0</span>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Contrast</span>
+                                <span id="val-mask-contrast">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-contrast" min="-100" max="100" step="1" value="0">
                         </div>
-                        <input type="range" id="slider-shadows" min="-100" max="100" step="1" value="0">
-                    </div>
 
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Whites</span>
-                            <span id="val-whites">0</span>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadows</span>
+                                <span id="val-mask-shadows">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-shadows" min="-100" max="100" step="1" value="0">
                         </div>
-                        <input type="range" id="slider-whites" min="-100" max="100" step="1" value="0">
-                    </div>
 
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Blacks</span>
-                            <span id="val-blacks">0</span>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-mask-temperature">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-temperature" min="-100" max="100" step="1" value="0">
                         </div>
-                        <input type="range" id="slider-blacks" min="-100" max="100" step="1" value="0">
-                    </div>
-                </div>
 
-                <!-- Color Section -->
-                <div class="section">
-                    <div class="section-header">Color</div>
-
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Temperature</span>
-                            <span id="val-temperature">0</span>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Saturation</span>
+                                <span id="val-mask-saturation">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-saturation" min="-100" max="100" step="1" value="0">
                         </div>
-                        <input type="range" id="slider-temperature" min="-100" max="100" step="1" value="0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Tint</span>
-                            <span id="val-tint">0</span>
-                        </div>
-                        <input type="range" id="slider-tint" min="-100" max="100" step="1" value="0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Vibrance</span>
-                            <span id="val-vibrance">0</span>
-                        </div>
-                        <input type="range" id="slider-vibrance" min="-100" max="100" step="1" value="0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Saturation</span>
-                            <span id="val-saturation">0</span>
-                        </div>
-                        <input type="range" id="slider-saturation" min="-100" max="100" step="1" value="0">
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="section">
-                    <div class="btn-row">
-                        <button class="btn" id="btn-reset">Reset</button>
-                        <button class="btn btn-primary" id="btn-export">Export</button>
                     </div>
                 </div>
             </div>
 
             <div class="keyboard-hint">
-                Hold <kbd>Space</kbd> for before | <kbd>R</kbd> reset | Double-click slider to reset
+                <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>B</kbd> brush | <kbd>[</kbd> <kbd>]</kbd> size
             </div>
         </div>
     </div>
@@ -433,13 +740,17 @@
 
     <script type="module">
         import { GPUProcessor } from './src/gpu/GPUProcessor.js';
+        import { MaskSystem } from './src/gpu/MaskSystem.js';
 
-        // Initialize GPU processor
+        // Initialize
         const canvas = document.getElementById('gpu-canvas');
         const gpu = new GPUProcessor(canvas);
+        const masks = new MaskSystem(gpu);
 
-        // Store original image for before/after
         let originalImage = null;
+        let currentTool = 'develop';
+        let isPainting = false;
+        let lastPaintPos = null;
 
         // UI elements
         const dropZone = document.getElementById('drop-zone');
@@ -448,25 +759,65 @@
         const beforeIndicator = document.getElementById('before-indicator');
         const histogramCanvas = document.getElementById('histogram-canvas');
         const histogramCtx = histogramCanvas.getContext('2d');
+        const brushCursor = document.getElementById('brush-cursor');
 
-        // Sliders
-        const sliders = [
+        // Global sliders
+        const globalSliders = [
             'exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks',
             'temperature', 'tint', 'vibrance', 'saturation'
         ];
 
-        // Histogram rendering
+        // Panel tabs
+        document.querySelectorAll('.panel-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`panel-${tab.dataset.panel}`).classList.add('active');
+            });
+        });
+
+        // Tool buttons
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const toolId = btn.id.replace('tool-', '');
+                setTool(toolId);
+            });
+        });
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${tool}`)?.classList.add('active');
+
+            // Show/hide brush settings
+            const brushSettings = document.getElementById('brush-settings');
+            const maskAdjustments = document.getElementById('mask-adjustments');
+
+            if (tool === 'brush') {
+                brushSettings.style.display = 'block';
+                maskAdjustments.style.display = 'block';
+                document.querySelector('[data-panel="masks"]').click();
+                brushCursor.style.display = 'block';
+            } else {
+                brushSettings.style.display = 'none';
+                brushCursor.style.display = 'none';
+                if (tool === 'develop') {
+                    document.querySelector('[data-panel="develop"]').click();
+                }
+            }
+        }
+
+        // Histogram
         function renderHistogram() {
             if (!gpu.inputTexture) return;
 
             const w = histogramCanvas.width = histogramCanvas.offsetWidth * 2;
             const h = histogramCanvas.height = 160;
 
-            // Get image data from GPU
             const imageData = gpu.toImageData();
             const data = imageData.data;
 
-            // Calculate histogram bins (256 per channel)
             const r = new Uint32Array(256);
             const g = new Uint32Array(256);
             const b = new Uint32Array(256);
@@ -480,7 +831,6 @@
                 lum[L]++;
             }
 
-            // Find max for scaling
             let maxVal = 0;
             for (let i = 5; i < 250; i++) {
                 maxVal = Math.max(maxVal, r[i], g[i], b[i], lum[i]);
@@ -491,7 +841,6 @@
 
             const barWidth = w / 256;
 
-            // Draw luminance (white, filled)
             histogramCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             histogramCtx.beginPath();
             histogramCtx.moveTo(0, h);
@@ -503,18 +852,14 @@
             histogramCtx.closePath();
             histogramCtx.fill();
 
-            // Draw RGB lines
             function drawChannel(bins, color) {
                 histogramCtx.strokeStyle = color;
                 histogramCtx.lineWidth = 1;
                 histogramCtx.beginPath();
                 for (let i = 0; i < 256; i++) {
                     const barHeight = (bins[i] / maxVal) * h * 0.9;
-                    if (i === 0) {
-                        histogramCtx.moveTo(i * barWidth, h - barHeight);
-                    } else {
-                        histogramCtx.lineTo(i * barWidth, h - barHeight);
-                    }
+                    if (i === 0) histogramCtx.moveTo(i * barWidth, h - barHeight);
+                    else histogramCtx.lineTo(i * barWidth, h - barHeight);
                 }
                 histogramCtx.stroke();
             }
@@ -524,28 +869,23 @@
             drawChannel(b, 'rgba(59, 130, 246, 0.6)');
         }
 
-        // Bind slider events
-        sliders.forEach(name => {
+        // Global sliders
+        globalSliders.forEach(name => {
             const slider = document.getElementById(`slider-${name}`);
             const valueDisplay = document.getElementById(`val-${name}`);
 
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
-                valueDisplay.textContent = name === 'exposure'
-                    ? value.toFixed(2)
-                    : Math.round(value);
+                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
 
                 const start = performance.now();
                 gpu.setParam(name, value);
                 const elapsed = performance.now() - start;
-
                 perfIndicator.textContent = `${elapsed.toFixed(1)}ms`;
 
-                // Update histogram
                 requestAnimationFrame(renderHistogram);
             });
 
-            // Double-click to reset individual slider
             slider.addEventListener('dblclick', () => {
                 slider.value = 0;
                 valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
@@ -554,21 +894,144 @@
             });
         });
 
-        // Reset button
+        // Brush size slider
+        const brushSizeSlider = document.getElementById('slider-brush-size');
+        brushSizeSlider.addEventListener('input', () => {
+            const size = parseInt(brushSizeSlider.value);
+            document.getElementById('val-brush-size').textContent = size;
+            masks.brushSettings.size = size;
+            updateBrushCursor();
+        });
+
+        const brushHardnessSlider = document.getElementById('slider-brush-hardness');
+        brushHardnessSlider.addEventListener('input', () => {
+            const hardness = parseInt(brushHardnessSlider.value);
+            document.getElementById('val-brush-hardness').textContent = hardness;
+            masks.brushSettings.hardness = hardness;
+            updateBrushPreview();
+        });
+
+        const brushFlowSlider = document.getElementById('slider-brush-flow');
+        brushFlowSlider.addEventListener('input', () => {
+            const flow = parseInt(brushFlowSlider.value);
+            document.getElementById('val-brush-flow').textContent = flow;
+            masks.brushSettings.flow = flow;
+        });
+
+        function updateBrushCursor() {
+            const size = masks.brushSettings.size;
+            brushCursor.style.width = `${size}px`;
+            brushCursor.style.height = `${size}px`;
+        }
+
+        function updateBrushPreview() {
+            const hardness = masks.brushSettings.hardness / 100;
+            const circle = document.getElementById('brush-preview-circle');
+            const innerStop = Math.round(hardness * 50);
+            circle.style.background = `radial-gradient(circle, rgba(255,255,255,1) ${innerStop}%, rgba(255,255,255,0) 70%)`;
+        }
+
+        // Brush Add/Erase toggle
+        document.getElementById('btn-brush-add').addEventListener('click', () => {
+            masks.brushSettings.erase = false;
+            document.getElementById('btn-brush-add').classList.add('btn-primary');
+            document.getElementById('btn-brush-erase').classList.remove('btn-primary');
+        });
+
+        document.getElementById('btn-brush-erase').addEventListener('click', () => {
+            masks.brushSettings.erase = true;
+            document.getElementById('btn-brush-erase').classList.add('btn-primary');
+            document.getElementById('btn-brush-add').classList.remove('btn-primary');
+        });
+
+        // New layer button
+        document.getElementById('btn-new-layer').addEventListener('click', () => {
+            const layer = masks.createLayer('brush');
+            updateLayersList();
+            setTool('brush');
+        });
+
+        function updateLayersList() {
+            const container = document.getElementById('mask-layers');
+            if (masks.layers.length === 0) {
+                container.innerHTML = `
+                    <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
+                        No adjustment layers yet.<br>Select a tool to create one.
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = masks.layers.map((layer, i) => `
+                <div class="mask-layer ${i === masks.activeLayerIndex ? 'active' : ''}" data-index="${i}">
+                    <div class="mask-layer-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                    </div>
+                    <div class="mask-layer-name">${layer.type} #${layer.id.toString().slice(-4)}</div>
+                    <span class="mask-layer-delete" data-delete="${i}">×</span>
+                </div>
+            `).join('');
+
+            container.querySelectorAll('.mask-layer').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('mask-layer-delete')) {
+                        masks.activeLayerIndex = parseInt(el.dataset.index);
+                        updateLayersList();
+                    }
+                });
+            });
+
+            container.querySelectorAll('.mask-layer-delete').forEach(el => {
+                el.addEventListener('click', () => {
+                    masks.deleteLayer(parseInt(el.dataset.delete));
+                    updateLayersList();
+                });
+            });
+        }
+
+        // Canvas painting
+        const canvasArea = document.querySelector('.canvas-area');
+        canvasArea.addEventListener('mousemove', (e) => {
+            if (currentTool === 'brush') {
+                brushCursor.style.left = `${e.clientX}px`;
+                brushCursor.style.top = `${e.clientY}px`;
+
+                if (isPainting) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (gpu.width / rect.width);
+                    const y = (e.clientY - rect.top) * (gpu.height / rect.height);
+                    masks.paintBrush(x, y);
+                }
+            }
+        });
+
+        canvasArea.addEventListener('mousedown', (e) => {
+            if (currentTool === 'brush' && masks.activeLayerIndex >= 0) {
+                isPainting = true;
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (gpu.width / rect.width);
+                const y = (e.clientY - rect.top) * (gpu.height / rect.height);
+                masks.paintBrush(x, y);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isPainting = false;
+        });
+
+        // Reset and Export
         document.getElementById('btn-reset').addEventListener('click', () => {
-            sliders.forEach(name => {
-                const slider = document.getElementById(`slider-${name}`);
-                slider.value = 0;
+            globalSliders.forEach(name => {
+                document.getElementById(`slider-${name}`).value = 0;
                 document.getElementById(`val-${name}`).textContent = name === 'exposure' ? '0.00' : '0';
             });
             gpu.reset();
             requestAnimationFrame(renderHistogram);
         });
 
-        // Export button
         document.getElementById('btn-export').addEventListener('click', async () => {
             if (!gpu.inputTexture) return;
-
             const blob = await gpu.toBlob('image/jpeg', 0.95);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -578,26 +1041,30 @@
             URL.revokeObjectURL(url);
         });
 
-        // Before/After (hold Space)
+        // Before/After
         let showingBefore = false;
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !showingBefore && originalImage) {
                 e.preventDefault();
                 showingBefore = true;
                 beforeIndicator.classList.add('visible');
-
-                // Temporarily show original
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-                } else {
-                    // WebGL canvas - render passthrough
-                    gpu.renderOriginal();
-                }
+                gpu.renderOriginal();
             }
-
-            if (e.code === 'KeyR') {
-                document.getElementById('btn-reset').click();
+            if (e.code === 'KeyD') setTool('develop');
+            if (e.code === 'KeyB') setTool('brush');
+            if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) setTool('radial');
+            if (e.code === 'KeyG') setTool('gradient');
+            if (e.code === 'BracketLeft') {
+                masks.brushSettings.size = Math.max(1, masks.brushSettings.size - 10);
+                brushSizeSlider.value = masks.brushSettings.size;
+                document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
+                updateBrushCursor();
+            }
+            if (e.code === 'BracketRight') {
+                masks.brushSettings.size = Math.min(500, masks.brushSettings.size + 10);
+                brushSizeSlider.value = masks.brushSettings.size;
+                document.getElementById('val-brush-size').textContent = masks.brushSettings.size;
+                updateBrushCursor();
             }
         });
 
@@ -619,8 +1086,6 @@
                     gpu.loadImage(img);
                     dropZone.classList.add('hidden');
                     perfIndicator.textContent = `${img.width}×${img.height}`;
-
-                    // Render histogram
                     setTimeout(renderHistogram, 100);
                 };
                 img.src = e.target.result;
@@ -628,7 +1093,6 @@
             reader.readAsDataURL(file);
         }
 
-        // Drop zone events
         dropZone.addEventListener('click', () => fileInput.click());
         document.getElementById('btn-browse').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -636,32 +1100,28 @@
         });
 
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                loadImage(e.target.files[0]);
-            }
+            if (e.target.files[0]) loadImage(e.target.files[0]);
         });
 
-        // Drag and drop
         document.body.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = 'var(--accent)';
+            dropZone.classList.add('dragover');
         });
 
         document.body.addEventListener('dragleave', (e) => {
-            if (!e.relatedTarget) {
-                dropZone.style.borderColor = 'var(--border)';
-            }
+            if (!e.relatedTarget) dropZone.classList.remove('dragover');
         });
 
         document.body.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = 'var(--border)';
-            if (e.dataTransfer.files[0]) {
-                loadImage(e.dataTransfer.files[0]);
-            }
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
         });
 
-        console.log('🚀 GPU Editor v2 initialized');
+        // Init
+        updateBrushCursor();
+        updateBrushPreview();
+        console.log('🚀 GPU Editor v3.0 with Local Adjustments initialized');
     </script>
 </body>
 
