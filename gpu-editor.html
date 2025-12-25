@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orlume Vision Labs - GPU Editor</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-surface: #141414;
+            --bg-panel: #1a1a1a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888;
+            --accent: #3b82f6;
+            --border: #2a2a2a;
+            --red: #ef4444;
+            --green: #22c55e;
+            --blue: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            height: 100vh;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-surface);
+            padding: 20px;
+            position: relative;
+        }
+
+        .canvas-container {
+            max-width: 100%;
+            max-height: 100%;
+            position: relative;
+        }
+
+        #gpu-canvas {
+            max-width: 100%;
+            max-height: calc(100vh - 40px);
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Before/After indicator */
+        .before-indicator {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .before-indicator.visible {
+            opacity: 1;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            position: absolute;
+            inset: 20px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .drop-zone.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .drop-zone h2 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .drop-zone p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-content {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Histogram */
+        .histogram-container {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .histogram-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        #histogram-canvas {
+            width: 100%;
+            height: 80px;
+            border-radius: 4px;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .control-label span:last-child {
+            color: var(--text-secondary);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 11px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--border);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-row .btn {
+            flex: 1;
+        }
+
+        /* Keyboard hint */
+        .keyboard-hint {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        kbd {
+            background: var(--bg-surface);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 10px;
+        }
+
+        /* Performance indicator */
+        .perf-indicator {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        /* Hidden file input */
+        #file-input {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-container">
+                <canvas id="gpu-canvas"></canvas>
+            </div>
+            <div class="before-indicator" id="before-indicator">Original</div>
+            <div class="drop-zone" id="drop-zone">
+                <h2>Drop Image Here</h2>
+                <p>or click to browse</p>
+                <button class="btn btn-primary" id="btn-browse">Choose Image</button>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="panel-header">
+                <span class="panel-title">Develop</span>
+            </div>
+
+            <div class="panel-content">
+                <!-- Histogram -->
+                <div class="histogram-container">
+                    <div class="histogram-label">Histogram</div>
+                    <canvas id="histogram-canvas"></canvas>
+                </div>
+
+                <!-- Light Section -->
+                <div class="section">
+                    <div class="section-header">Light</div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Exposure</span>
+                            <span id="val-exposure">0.00</span>
+                        </div>
+                        <input type="range" id="slider-exposure" min="-5" max="5" step="0.05" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Contrast</span>
+                            <span id="val-contrast">0</span>
+                        </div>
+                        <input type="range" id="slider-contrast" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Highlights</span>
+                            <span id="val-highlights">0</span>
+                        </div>
+                        <input type="range" id="slider-highlights" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Shadows</span>
+                            <span id="val-shadows">0</span>
+                        </div>
+                        <input type="range" id="slider-shadows" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Whites</span>
+                            <span id="val-whites">0</span>
+                        </div>
+                        <input type="range" id="slider-whites" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Blacks</span>
+                            <span id="val-blacks">0</span>
+                        </div>
+                        <input type="range" id="slider-blacks" min="-100" max="100" step="1" value="0">
+                    </div>
+                </div>
+
+                <!-- Color Section -->
+                <div class="section">
+                    <div class="section-header">Color</div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Temperature</span>
+                            <span id="val-temperature">0</span>
+                        </div>
+                        <input type="range" id="slider-temperature" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Tint</span>
+                            <span id="val-tint">0</span>
+                        </div>
+                        <input type="range" id="slider-tint" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Vibrance</span>
+                            <span id="val-vibrance">0</span>
+                        </div>
+                        <input type="range" id="slider-vibrance" min="-100" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Saturation</span>
+                            <span id="val-saturation">0</span>
+                        </div>
+                        <input type="range" id="slider-saturation" min="-100" max="100" step="1" value="0">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="section">
+                    <div class="btn-row">
+                        <button class="btn" id="btn-reset">Reset</button>
+                        <button class="btn btn-primary" id="btn-export">Export</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="keyboard-hint">
+                Hold <kbd>Space</kbd> for before | <kbd>R</kbd> reset | Double-click slider to reset
+            </div>
+        </div>
+    </div>
+
+    <div class="perf-indicator" id="perf">Ready</div>
+    <input type="file" id="file-input" accept="image/*">
+
+    <script type="module">
+        import { GPUProcessor } from './src/gpu/GPUProcessor.js';
+
+        // Initialize GPU processor
+        const canvas = document.getElementById('gpu-canvas');
+        const gpu = new GPUProcessor(canvas);
+
+        // Store original image for before/after
+        let originalImage = null;
+
+        // UI elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const perfIndicator = document.getElementById('perf');
+        const beforeIndicator = document.getElementById('before-indicator');
+        const histogramCanvas = document.getElementById('histogram-canvas');
+        const histogramCtx = histogramCanvas.getContext('2d');
+
+        // Sliders
+        const sliders = [
+            'exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks',
+            'temperature', 'tint', 'vibrance', 'saturation'
+        ];
+
+        // Histogram rendering
+        function renderHistogram() {
+            if (!gpu.inputTexture) return;
+
+            const w = histogramCanvas.width = histogramCanvas.offsetWidth * 2;
+            const h = histogramCanvas.height = 160;
+
+            // Get image data from GPU
+            const imageData = gpu.toImageData();
+            const data = imageData.data;
+
+            // Calculate histogram bins (256 per channel)
+            const r = new Uint32Array(256);
+            const g = new Uint32Array(256);
+            const b = new Uint32Array(256);
+            const lum = new Uint32Array(256);
+
+            for (let i = 0; i < data.length; i += 4) {
+                r[data[i]]++;
+                g[data[i + 1]]++;
+                b[data[i + 2]]++;
+                const L = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                lum[L]++;
+            }
+
+            // Find max for scaling
+            let maxVal = 0;
+            for (let i = 5; i < 250; i++) {
+                maxVal = Math.max(maxVal, r[i], g[i], b[i], lum[i]);
+            }
+
+            histogramCtx.fillStyle = '#0a0a0a';
+            histogramCtx.fillRect(0, 0, w, h);
+
+            const barWidth = w / 256;
+
+            // Draw luminance (white, filled)
+            histogramCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            histogramCtx.beginPath();
+            histogramCtx.moveTo(0, h);
+            for (let i = 0; i < 256; i++) {
+                const barHeight = (lum[i] / maxVal) * h * 0.9;
+                histogramCtx.lineTo(i * barWidth, h - barHeight);
+            }
+            histogramCtx.lineTo(w, h);
+            histogramCtx.closePath();
+            histogramCtx.fill();
+
+            // Draw RGB lines
+            function drawChannel(bins, color) {
+                histogramCtx.strokeStyle = color;
+                histogramCtx.lineWidth = 1;
+                histogramCtx.beginPath();
+                for (let i = 0; i < 256; i++) {
+                    const barHeight = (bins[i] / maxVal) * h * 0.9;
+                    if (i === 0) {
+                        histogramCtx.moveTo(i * barWidth, h - barHeight);
+                    } else {
+                        histogramCtx.lineTo(i * barWidth, h - barHeight);
+                    }
+                }
+                histogramCtx.stroke();
+            }
+
+            drawChannel(r, 'rgba(239, 68, 68, 0.6)');
+            drawChannel(g, 'rgba(34, 197, 94, 0.6)');
+            drawChannel(b, 'rgba(59, 130, 246, 0.6)');
+        }
+
+        // Bind slider events
+        sliders.forEach(name => {
+            const slider = document.getElementById(`slider-${name}`);
+            const valueDisplay = document.getElementById(`val-${name}`);
+
+            slider.addEventListener('input', () => {
+                const value = parseFloat(slider.value);
+                valueDisplay.textContent = name === 'exposure'
+                    ? value.toFixed(2)
+                    : Math.round(value);
+
+                const start = performance.now();
+                gpu.setParam(name, value);
+                const elapsed = performance.now() - start;
+
+                perfIndicator.textContent = `${elapsed.toFixed(1)}ms`;
+
+                // Update histogram
+                requestAnimationFrame(renderHistogram);
+            });
+
+            // Double-click to reset individual slider
+            slider.addEventListener('dblclick', () => {
+                slider.value = 0;
+                valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
+                gpu.setParam(name, 0);
+                requestAnimationFrame(renderHistogram);
+            });
+        });
+
+        // Reset button
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            sliders.forEach(name => {
+                const slider = document.getElementById(`slider-${name}`);
+                slider.value = 0;
+                document.getElementById(`val-${name}`).textContent = name === 'exposure' ? '0.00' : '0';
+            });
+            gpu.reset();
+            requestAnimationFrame(renderHistogram);
+        });
+
+        // Export button
+        document.getElementById('btn-export').addEventListener('click', async () => {
+            if (!gpu.inputTexture) return;
+
+            const blob = await gpu.toBlob('image/jpeg', 0.95);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `orlume-edit-${Date.now()}.jpg`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Before/After (hold Space)
+        let showingBefore = false;
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !showingBefore && originalImage) {
+                e.preventDefault();
+                showingBefore = true;
+                beforeIndicator.classList.add('visible');
+
+                // Temporarily show original
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+                } else {
+                    // WebGL canvas - render passthrough
+                    gpu.renderOriginal();
+                }
+            }
+
+            if (e.code === 'KeyR') {
+                document.getElementById('btn-reset').click();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && showingBefore) {
+                showingBefore = false;
+                beforeIndicator.classList.remove('visible');
+                gpu.render();
+            }
+        });
+
+        // File handling
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    gpu.loadImage(img);
+                    dropZone.classList.add('hidden');
+                    perfIndicator.textContent = `${img.width}×${img.height}`;
+
+                    // Render histogram
+                    setTimeout(renderHistogram, 100);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Drop zone events
+        dropZone.addEventListener('click', () => fileInput.click());
+        document.getElementById('btn-browse').addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                loadImage(e.target.files[0]);
+            }
+        });
+
+        // Drag and drop
+        document.body.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--accent)';
+        });
+
+        document.body.addEventListener('dragleave', (e) => {
+            if (!e.relatedTarget) {
+                dropZone.style.borderColor = 'var(--border)';
+            }
+        });
+
+        document.body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border)';
+            if (e.dataTransfer.files[0]) {
+                loadImage(e.dataTransfer.files[0]);
+            }
+        });
+
+        console.log('🚀 GPU Editor v2 initialized');
+    </script>
+</body>
+
+</html>
