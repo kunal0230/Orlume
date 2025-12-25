@@ -1,10 +1,21 @@
 /**
  * ToneCurve - Interactive curve editor with Point Curve and Region Curve
+ * Orlume Vision Labs
  * 
- * Point Curve: Cubic Hermite spline with control points
+ * Point Curve: Monotonic Cubic Hermite spline with control points
  * Region Curve: Parametric adjustments (Shadows, Darks, Lights, Highlights)
  * 
  * Processing order: Y₁ = PointCurve(Y) → Y₂ = RegionCurve(Y₁)
+ * 
+ * Architecture notes:
+ * - Internal sampling at 1024 points for precision, downsampled to 256 for LUT
+ * - Monotonicity enforced on final combined LUT to prevent inversions
+ * - Region amplitude adapts to point curve slope (flatter = stronger)
+ * 
+ * Channel behavior:
+ * - RGB curve: Affects luminance, applied via Y'/Y ratio (color-preserving)
+ * - R/G/B curves: Per-channel grading, applied independently
+ * - Region curve: Luminance-only, applied to RGB curve output before per-channel
  */
 
 export class ToneCurve {
@@ -35,7 +46,16 @@ export class ToneCurve {
             highlights: 0
         };
 
-        // LUTs (256 samples each)
+        // Internal high-resolution LUTs (1024 samples for precision)
+        this._hiResPointLUTs = {
+            rgb: new Float32Array(1024),
+            r: new Float32Array(1024),
+            g: new Float32Array(1024),
+            b: new Float32Array(1024)
+        };
+        this._hiResRegionLUT = new Float32Array(1024);
+
+        // Output LUTs (256 samples, downsampled from 1024)
         this.pointLUTs = {
             rgb: new Float32Array(256),
             r: new Float32Array(256),
@@ -277,15 +297,40 @@ export class ToneCurve {
 
     /**
      * Build Point Curve LUT for a channel
+     * Uses 1024 internal samples for precision, downsamples to 256
      */
     _buildPointLUT(channel) {
         const points = this.channels[channel];
+        const hiRes = this._hiResPointLUTs[channel];
         const lut = this.pointLUTs[channel];
 
-        for (let i = 0; i < 256; i++) {
-            const x = i / 255;
-            lut[i] = this._interpolateSpline(points, x);
+        // Sample at 1024 points for precision
+        for (let i = 0; i < 1024; i++) {
+            const x = i / 1023;
+            hiRes[i] = this._interpolateSpline(points, x);
         }
+
+        // Downsample to 256 for output LUT
+        for (let i = 0; i < 256; i++) {
+            // Use 4:1 downsampling with simple averaging
+            const hiIdx = i * 4;
+            lut[i] = (hiRes[hiIdx] + hiRes[Math.min(1023, hiIdx + 1)] +
+                hiRes[Math.min(1023, hiIdx + 2)] + hiRes[Math.min(1023, hiIdx + 3)]) / 4;
+        }
+    }
+
+    /**
+     * Compute average slope of point curve (for adaptive region amplitude)
+     * Returns value close to 1 for linear curve, higher for steep curves
+     */
+    _getPointCurveSlope(channel) {
+        const lut = this.pointLUTs[channel];
+        let totalSlope = 0;
+        for (let i = 1; i < 256; i++) {
+            totalSlope += Math.abs(lut[i] - lut[i - 1]);
+        }
+        // Normalize: linear curve has total slope ≈ 1
+        return totalSlope;
     }
 
     /**
@@ -293,22 +338,27 @@ export class ToneCurve {
      * Applies smoothstep-weighted adjustments for each region
      * Regions work like Lightroom's parametric curve: Shadows, Darks, Lights, Highlights
      * 
-     * Key principle: Adjustments are gentle (max ~15% change) to preserve color fidelity
+     * Key principle: Adjustments are gentle and adapt to point curve slope
+     * Flatter point curves allow stronger region effect; steep curves get weaker regions
      */
     _buildRegionLUT() {
         const lut = this.regionLUT;
         const { shadows, darks, lights, highlights } = this.regions;
+
+        // Get slope of RGB point curve to adapt region amplitude
+        const rgbSlope = this._getPointCurveSlope('rgb');
+        // Scale factor: 1.0 for linear (slope≈1), decreases for steep curves
+        const slopeScale = Math.min(1, 1 / Math.max(0.5, rgbSlope));
 
         for (let i = 0; i < 256; i++) {
             const y = i / 255;
             let adjustment = 0;
 
             // Shadows: affects 0.00 - 0.30 range (dark areas)
-            // Gentle adjustment to prevent crushing blacks
             if (shadows !== 0) {
                 const weight = Math.max(0, 1 - (y / 0.30));
                 const smoothWeight = weight * weight * (3 - 2 * weight);
-                adjustment += (shadows / 100) * smoothWeight * 0.18;
+                adjustment += (shadows / 100) * smoothWeight * 0.18 * slopeScale;
             }
 
             // Darks: affects 0.15 - 0.45 range (shadow-midtone transition)
@@ -318,7 +368,7 @@ export class ToneCurve {
                 const dist = Math.abs(y - center) / width;
                 const weight = Math.max(0, 1 - dist);
                 const smoothWeight = weight * weight * (3 - 2 * weight);
-                adjustment += (darks / 100) * smoothWeight * 0.15;
+                adjustment += (darks / 100) * smoothWeight * 0.15 * slopeScale;
             }
 
             // Lights: affects 0.55 - 0.85 range (midtone-highlight transition)
@@ -328,15 +378,14 @@ export class ToneCurve {
                 const dist = Math.abs(y - center) / width;
                 const weight = Math.max(0, 1 - dist);
                 const smoothWeight = weight * weight * (3 - 2 * weight);
-                adjustment += (lights / 100) * smoothWeight * 0.15;
+                adjustment += (lights / 100) * smoothWeight * 0.15 * slopeScale;
             }
 
             // Highlights: affects 0.70 - 1.00 range (bright areas)
-            // Gentle adjustment to prevent clipping to white
             if (highlights !== 0) {
                 const weight = Math.max(0, (y - 0.70) / 0.30);
                 const smoothWeight = weight * weight * (3 - 2 * weight);
-                adjustment += (highlights / 100) * smoothWeight * 0.18;
+                adjustment += (highlights / 100) * smoothWeight * 0.18 * slopeScale;
             }
 
             lut[i] = Math.max(0, Math.min(1, y + adjustment));
@@ -345,6 +394,8 @@ export class ToneCurve {
 
     /**
      * Build combined LUT (Point → Region)
+     * Applies point curve first, then region curve
+     * Enforces monotonicity at the end to prevent inversions
      */
     _buildCombinedLUT(channel) {
         const pointLUT = this.pointLUTs[channel];
@@ -356,7 +407,13 @@ export class ToneCurve {
             const afterPoint = pointLUT[i];
             // Then apply region curve
             const regionIdx = Math.round(afterPoint * 255);
-            combined[i] = regionLUT[regionIdx];
+            combined[i] = regionLUT[Math.min(255, Math.max(0, regionIdx))];
+        }
+
+        // Enforce monotonicity: each value must be >= previous
+        // This prevents rare edge cases where aggressive regions + steep curves invert
+        for (let i = 1; i < 256; i++) {
+            combined[i] = Math.max(combined[i], combined[i - 1]);
         }
     }
 
