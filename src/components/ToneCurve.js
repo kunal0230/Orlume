@@ -87,7 +87,10 @@ export class ToneCurve {
         if (region in this.regions) {
             this.regions[region] = Math.max(-100, Math.min(100, value));
             this._buildRegionLUT();
-            this._buildCombinedLUTs();
+            // Rebuild combined LUTs for ALL channels since region affects all
+            for (const channel of ['rgb', 'r', 'g', 'b']) {
+                this._buildCombinedLUT(channel);
+            }
             this.render();
             this._notifyChange();
         }
@@ -288,6 +291,7 @@ export class ToneCurve {
     /**
      * Build Region Curve LUT
      * Applies smoothstep-weighted adjustments for each region
+     * Regions work like Lightroom's parametric curve: Shadows, Darks, Lights, Highlights
      */
     _buildRegionLUT() {
         const lut = this.regionLUT;
@@ -297,28 +301,42 @@ export class ToneCurve {
             const y = i / 255;
             let adjustment = 0;
 
-            // Shadows: 0.00 - 0.25
+            // Shadows: affects 0.00 - 0.25 range (dark areas)
             if (shadows !== 0) {
-                const weight = this._smoothstep(0.25, 0, y);
-                adjustment += (shadows / 100) * weight * 0.15;
+                // Peaks at 0, fades to 0 at 0.25
+                const weight = Math.max(0, 1 - (y / 0.25));
+                const smoothWeight = weight * weight * (3 - 2 * weight); // smoothstep
+                adjustment += (shadows / 100) * smoothWeight * 0.4;
             }
 
-            // Darks: 0.25 - 0.50
+            // Darks: affects 0.15 - 0.50 range (shadow-midtone transition)
             if (darks !== 0) {
-                const weight = this._smoothstep(0.15, 0.25, y) * this._smoothstep(0.55, 0.45, y);
-                adjustment += (darks / 100) * weight * 0.15;
+                // Bell curve centered around 0.35
+                const center = 0.35;
+                const width = 0.2;
+                const dist = Math.abs(y - center) / width;
+                const weight = Math.max(0, 1 - dist);
+                const smoothWeight = weight * weight * (3 - 2 * weight);
+                adjustment += (darks / 100) * smoothWeight * 0.35;
             }
 
-            // Lights: 0.50 - 0.75
+            // Lights: affects 0.50 - 0.85 range (midtone-highlight transition)
             if (lights !== 0) {
-                const weight = this._smoothstep(0.45, 0.55, y) * this._smoothstep(0.85, 0.75, y);
-                adjustment += (lights / 100) * weight * 0.15;
+                // Bell curve centered around 0.65
+                const center = 0.65;
+                const width = 0.2;
+                const dist = Math.abs(y - center) / width;
+                const weight = Math.max(0, 1 - dist);
+                const smoothWeight = weight * weight * (3 - 2 * weight);
+                adjustment += (lights / 100) * smoothWeight * 0.35;
             }
 
-            // Highlights: 0.75 - 1.00
+            // Highlights: affects 0.75 - 1.00 range (bright areas)
             if (highlights !== 0) {
-                const weight = this._smoothstep(0.75, 1.0, y);
-                adjustment += (highlights / 100) * weight * 0.15;
+                // Peaks at 1, fades to 0 at 0.75
+                const weight = Math.max(0, (y - 0.75) / 0.25);
+                const smoothWeight = weight * weight * (3 - 2 * weight);
+                adjustment += (highlights / 100) * smoothWeight * 0.4;
             }
 
             lut[i] = Math.max(0, Math.min(1, y + adjustment));
