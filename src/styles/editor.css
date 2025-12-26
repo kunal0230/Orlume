@@ -154,6 +154,44 @@ body {
     opacity: 1;
 }
 
+/* Before/After Toggle Button */
+.before-after-toggle {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 15;
+    opacity: 0.8;
+}
+
+.before-after-toggle:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.9);
+    border-color: var(--accent);
+}
+
+.before-after-toggle.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.before-after-toggle svg {
+    flex-shrink: 0;
+}
+
 /* Drop Zone */
 .drop-zone {
     position: absolute;
@@ -472,6 +510,87 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .mask-tool-btn span {
     font-size: 10px;
     font-weight: 500;
+}
+
+/* ========================================
+   Scale Factor Selector (Upscale Panel)
+   ======================================== */
+.scale-factor-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.scale-factor-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 16px 8px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.scale-factor-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.scale-factor-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.scale-factor-btn .scale-value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.scale-factor-btn .scale-label {
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scale-factor-btn.active .scale-value,
+.scale-factor-btn.active .scale-label {
+    color: white;
+}
+
+/* Mode Selector Buttons */
+.mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 14px;
+}
+
+.mode-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.mode-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
 }
 
 /* ========================================
@@ -962,7 +1081,98 @@ kbd {
     font-family: 'SF Mono', Monaco, monospace;
 }
 
-/* Canvas container smooth zoom transition */
+/* Canvas container smooth zoom/pan transition */
 .canvas-container {
     transition: transform 0.15s ease-out;
+    position: relative;
+}
+
+/* ========================================
+   Before/After Comparison Slider
+   ======================================== */
+.comparison-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.comparison-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: white;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.comparison-handle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    background: rgba(26, 26, 26, 0.95);
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: ew-resize;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: transform 0.1s;
+}
+
+.comparison-handle:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+.comparison-handle:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.comparison-label {
+    position: absolute;
+    top: 12px;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: white;
+    white-space: nowrap;
+}
+
+.comparison-label-before {
+    right: 20px;
+}
+
+.comparison-label-after {
+    left: 20px;
+}
+
+/* Original canvas overlay for comparison */
+.original-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Pan cursor states */
+.canvas-area.panning {
+    cursor: grabbing !important;
 }

@@ -4,6 +4,7 @@
  */
 import { CropTool } from '../tools/CropTool.js';
 import { HistoryManager } from './HistoryManager.js';
+import { ImageUpscaler } from '../ml/ImageUpscaler.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -44,12 +45,21 @@ export class EditorUI {
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
 
-        // Zoom state
+        // Zoom and Pan state
         this.zoom = {
             level: 1,
             min: 0.1,
             max: 5,
-            step: 0.1
+            step: 0.1,
+            panX: 0,
+            panY: 0,
+            isPanning: false
+        };
+
+        // Comparison slider state
+        this.comparison = {
+            active: false,
+            position: 50  // percentage from left
         };
 
         this._initEventListeners();
@@ -71,6 +81,9 @@ export class EditorUI {
         this._initActionButtons();
         this._initZoomControls();
         this._initZoomEvents();
+        this._initPanEvents();
+        this._initComparisonSlider();
+        this._initUpscaleControls();
     }
 
     /**
@@ -142,6 +155,7 @@ export class EditorUI {
         document.getElementById('3d-mode-header').style.display = 'none';
         document.getElementById('export-mode-header').style.display = 'none';
         document.getElementById('crop-mode-header').style.display = 'none';
+        document.getElementById('upscale-mode-header').style.display = 'none';
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -172,6 +186,13 @@ export class EditorUI {
                 document.getElementById('panel-crop').classList.add('active');
                 // Initialize and activate crop tool
                 this._activateCropTool();
+                break;
+
+            case 'upscale':
+                document.getElementById('upscale-mode-header').style.display = 'block';
+                document.getElementById('panel-upscale').classList.add('active');
+                // Update dimensions display
+                this._updateUpscaleDimensions();
                 break;
         }
     }
@@ -216,7 +237,7 @@ export class EditorUI {
      * Legacy setTool for backward compatibility with keyboard shortcuts
      */
     setTool(tool) {
-        if (['develop', '3d', 'export', 'crop'].includes(tool)) {
+        if (['develop', '3d', 'export', 'crop', 'upscale'].includes(tool)) {
             this.setMode(tool);
         } else if (['brush', 'radial', 'gradient'].includes(tool)) {
             // Switch to develop mode and masks tab, then select the tool
@@ -434,6 +455,30 @@ export class EditorUI {
                 this._applyTransformPreview();
                 this.cropTool?.setRotation(0);
             });
+        }
+
+        // Rotation increment/decrement buttons for accessibility
+        const btnRotateMinus = document.getElementById('btn-rotate-minus');
+        const btnRotatePlus = document.getElementById('btn-rotate-plus');
+
+        const updateRotation = (delta) => {
+            if (!rotationSlider || !rotationValue) return;
+            let newValue = parseFloat(rotationSlider.value) + delta;
+            // Clamp to slider bounds
+            newValue = Math.max(-180, Math.min(180, newValue));
+            rotationSlider.value = newValue;
+            rotationValue.textContent = `${newValue}°`;
+            this.cropRotation = newValue;
+            this._applyTransformPreview();
+            this.cropTool?.setRotation(newValue);
+        };
+
+        if (btnRotateMinus) {
+            btnRotateMinus.addEventListener('click', () => updateRotation(-1));
+        }
+
+        if (btnRotatePlus) {
+            btnRotatePlus.addEventListener('click', () => updateRotation(1));
         }
 
         // Flip buttons - with real-time preview
@@ -894,6 +939,7 @@ export class EditorUI {
             if (e.code === 'KeyG') this.setTool('gradient');
             if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.setTool('crop');
             if (e.code === 'KeyE' && !e.metaKey && !e.ctrlKey) this.setTool('export');
+            if (e.code === 'KeyU' && !e.metaKey && !e.ctrlKey) this.setTool('upscale');
             if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
                 this.setBrushMode(!this.masks.brushSettings.erase);
             }
@@ -942,6 +988,12 @@ export class EditorUI {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyZ') {
                 e.preventDefault();
                 this.redo();
+            }
+
+            // Toggle Before/After comparison with backslash
+            if (e.code === 'Backslash' && this.state.hasImage) {
+                e.preventDefault();
+                this.toggleComparison();
             }
         });
 
@@ -1054,18 +1106,23 @@ export class EditorUI {
     setZoom(level) {
         // Clamp zoom level
         this.zoom.level = Math.max(this.zoom.min, Math.min(this.zoom.max, level));
-
-        // Apply CSS transform to canvas container
-        const canvasContainer = document.querySelector('.canvas-container');
-        if (canvasContainer) {
-            canvasContainer.style.transform = `scale(${this.zoom.level})`;
-            canvasContainer.style.transformOrigin = 'center center';
-        }
+        this._applyCanvasTransform();
 
         // Update zoom level display
         const zoomLevelDisplay = document.getElementById('zoom-level');
         if (zoomLevelDisplay) {
             zoomLevelDisplay.textContent = `${Math.round(this.zoom.level * 100)}%`;
+        }
+    }
+
+    /**
+     * Apply combined zoom and pan transform to canvas
+     */
+    _applyCanvasTransform() {
+        const canvasContainer = document.querySelector('.canvas-container');
+        if (canvasContainer) {
+            canvasContainer.style.transform = `translate(${this.zoom.panX}px, ${this.zoom.panY}px) scale(${this.zoom.level})`;
+            canvasContainer.style.transformOrigin = 'center center';
         }
     }
 
@@ -1084,10 +1141,368 @@ export class EditorUI {
     }
 
     /**
-     * Reset zoom to 100%
+     * Reset zoom to 100% and pan to center
      */
     resetZoom() {
+        this.zoom.panX = 0;
+        this.zoom.panY = 0;
         this.setZoom(1);
+    }
+
+    /**
+     * Initialize pan events (Space + drag)
+     */
+    _initPanEvents() {
+        const canvasArea = document.querySelector('.canvas-area');
+        if (!canvasArea) return;
+
+        let startX = 0, startY = 0;
+        let startPanX = 0, startPanY = 0;
+
+        // Track Space key state
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !this.zoom.isPanning && !this.state.showingBefore) {
+                canvasArea.style.cursor = 'grab';
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && !this.zoom.isPanning) {
+                canvasArea.style.cursor = '';
+            }
+        });
+
+        // Mouse down - start panning if Space is held
+        canvasArea.addEventListener('mousedown', (e) => {
+            // Check if Space is being held (we check via keyboard state)
+            if (e.buttons === 1 && canvasArea.style.cursor === 'grab') {
+                e.preventDefault();
+                this.zoom.isPanning = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startPanX = this.zoom.panX;
+                startPanY = this.zoom.panY;
+                canvasArea.style.cursor = 'grabbing';
+            }
+        });
+
+        // Mouse move - pan if dragging
+        document.addEventListener('mousemove', (e) => {
+            if (this.zoom.isPanning) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                this.zoom.panX = startPanX + dx;
+                this.zoom.panY = startPanY + dy;
+                this._applyCanvasTransform();
+            }
+        });
+
+        // Mouse up - stop panning
+        document.addEventListener('mouseup', () => {
+            if (this.zoom.isPanning) {
+                this.zoom.isPanning = false;
+                const canvasArea = document.querySelector('.canvas-area');
+                if (canvasArea) {
+                    canvasArea.style.cursor = '';
+                }
+            }
+        });
+    }
+
+    /**
+     * Initialize Before/After comparison slider
+     */
+    _initComparisonSlider() {
+        const canvasArea = document.querySelector('.canvas-area');
+        if (!canvasArea) return;
+
+        // Create comparison slider container
+        const slider = document.createElement('div');
+        slider.className = 'comparison-slider';
+        slider.id = 'comparison-slider';
+        slider.style.display = 'none';
+        slider.innerHTML = `
+            <div class="comparison-line"></div>
+            <div class="comparison-handle">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M8 5v14l-5-7zM16 5v14l5-7z"/>
+                </svg>
+            </div>
+            <div class="comparison-label comparison-label-before">Before</div>
+            <div class="comparison-label comparison-label-after">After</div>
+        `;
+        canvasArea.appendChild(slider);
+
+        // Create original canvas overlay for comparison
+        const originalCanvas = document.createElement('canvas');
+        originalCanvas.id = 'original-canvas';
+        originalCanvas.className = 'original-canvas';
+        originalCanvas.style.display = 'none';
+        const canvasContainer = document.querySelector('.canvas-container');
+        if (canvasContainer) {
+            canvasContainer.appendChild(originalCanvas);
+        }
+
+        // Slider drag handling
+        let isDragging = false;
+        const handle = slider.querySelector('.comparison-handle');
+
+        handle?.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDragging = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !this.comparison.active) return;
+
+            const rect = canvasArea.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            this.comparison.position = Math.max(5, Math.min(95, (x / rect.width) * 100));
+            this._updateComparisonSlider();
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Before/After toggle button for accessibility
+        const beforeAfterBtn = document.getElementById('btn-before-after');
+        if (beforeAfterBtn) {
+            beforeAfterBtn.addEventListener('click', () => {
+                this.toggleComparison();
+                beforeAfterBtn.classList.toggle('active', this.comparison.active);
+            });
+        }
+    }
+
+    /**
+     * Toggle before/after comparison mode
+     */
+    toggleComparison(show = !this.comparison.active) {
+        this.comparison.active = show;
+
+        const slider = document.getElementById('comparison-slider');
+        const originalCanvas = document.getElementById('original-canvas');
+
+        if (show && this.state.hasImage) {
+            // Copy original image to overlay canvas
+            if (originalCanvas) {
+                const ctx = originalCanvas.getContext('2d');
+                const mainCanvas = this.elements.canvas;
+                originalCanvas.width = mainCanvas.width;
+                originalCanvas.height = mainCanvas.height;
+
+                // Draw original image
+                if (this.state.originalImage) {
+                    ctx.drawImage(this.state.originalImage, 0, 0, originalCanvas.width, originalCanvas.height);
+                }
+                originalCanvas.style.display = 'block';
+            }
+
+            if (slider) {
+                slider.style.display = 'flex';
+            }
+            this._updateComparisonSlider();
+        } else {
+            if (slider) slider.style.display = 'none';
+            if (originalCanvas) originalCanvas.style.display = 'none';
+        }
+
+        // Sync the toggle button active state
+        const beforeAfterBtn = document.getElementById('btn-before-after');
+        if (beforeAfterBtn) {
+            beforeAfterBtn.classList.toggle('active', this.comparison.active);
+        }
+    }
+
+    /**
+     * Update comparison slider position and clipping
+     */
+    _updateComparisonSlider() {
+        const slider = document.getElementById('comparison-slider');
+        const originalCanvas = document.getElementById('original-canvas');
+
+        if (!slider || !originalCanvas) return;
+
+        const position = this.comparison.position;
+
+        // Position the slider line and handle
+        slider.style.left = `${position}%`;
+
+        // Clip the original canvas to show only the left portion
+        originalCanvas.style.clipPath = `inset(0 ${100 - position}% 0 0)`;
+    }
+
+    /**
+     * Initialize upscale controls
+     */
+    _initUpscaleControls() {
+        // Create upscaler instance
+        this.upscaler = new ImageUpscaler();
+        this.upscaleScaleFactor = 2;
+
+        // Mode selector buttons (Enhance / Upscale / Both)
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.mode;
+                this.upscaler.setProcessingMode(mode);
+                this._updateUpscaleDimensions();
+            });
+        });
+
+        // Scale factor buttons
+        document.querySelectorAll('.scale-factor-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.scale-factor-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.upscaleScaleFactor = parseInt(btn.dataset.scale);
+                this.upscaler.setScaleFactor(this.upscaleScaleFactor);
+                this._updateUpscaleDimensions();
+            });
+        });
+
+        // Sharpen toggle
+        const sharpenToggle = document.getElementById('upscale-sharpen-toggle');
+        if (sharpenToggle) {
+            sharpenToggle.addEventListener('change', () => {
+                this.upscaler.setSharpenEdges(sharpenToggle.checked);
+            });
+        }
+
+        // AI server toggle
+        const aiToggle = document.getElementById('upscale-ai-toggle');
+        if (aiToggle) {
+            aiToggle.addEventListener('change', () => {
+                this.upscaler.setUseAI(aiToggle.checked);
+            });
+        }
+
+        // Face enhancement toggle
+        const faceToggle = document.getElementById('upscale-face-toggle');
+        if (faceToggle) {
+            faceToggle.addEventListener('change', () => {
+                this.upscaler.setEnhanceFace(faceToggle.checked);
+            });
+        }
+
+        // Server URL input
+        const serverUrlInput = document.getElementById('ai-server-url');
+        if (serverUrlInput) {
+            serverUrlInput.addEventListener('change', () => {
+                this.upscaler.setServerUrl(serverUrlInput.value);
+            });
+        }
+
+        // Apply button
+        const btnApply = document.getElementById('btn-upscale-apply');
+        if (btnApply) {
+            btnApply.addEventListener('click', () => this.applyUpscale());
+        }
+
+        // Cancel button
+        const btnCancel = document.getElementById('btn-upscale-cancel');
+        if (btnCancel) {
+            btnCancel.addEventListener('click', () => {
+                this.setMode('develop');
+            });
+        }
+    }
+
+    /**
+     * Update upscale dimensions display
+     */
+    _updateUpscaleDimensions() {
+        const currentDims = document.getElementById('upscale-current-dims');
+        const outputDims = document.getElementById('upscale-output-dims');
+
+        if (!this.state.hasImage) {
+            if (currentDims) currentDims.textContent = '-- × --';
+            if (outputDims) outputDims.textContent = '-- × --';
+            return;
+        }
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+        const outputWidth = Math.round(width * this.upscaleScaleFactor);
+        const outputHeight = Math.round(height * this.upscaleScaleFactor);
+
+        if (currentDims) currentDims.textContent = `${width} × ${height}`;
+        if (outputDims) outputDims.textContent = `${outputWidth} × ${outputHeight}`;
+    }
+
+    /**
+     * Apply upscale to image
+     */
+    async applyUpscale() {
+        if (!this.state.hasImage) {
+            console.warn('No image loaded for upscaling');
+            return;
+        }
+
+        const progressSection = document.getElementById('upscale-progress-section');
+        const progressBar = document.getElementById('upscale-progress-bar');
+        const progressText = document.getElementById('upscale-progress-text');
+        const progressPercent = document.getElementById('upscale-progress-percent');
+        const btnApply = document.getElementById('btn-upscale-apply');
+
+        // Show progress and disable button
+        if (progressSection) progressSection.style.display = 'block';
+        if (btnApply) btnApply.disabled = true;
+
+        try {
+            // Save state for undo
+            const snapshot = this._captureFullState();
+            this.history.pushState(snapshot);
+
+            // Upscale the image
+            const upscaledCanvas = await this.upscaler.upscaleFromWebGL(
+                this.gpu.gl,
+                this.gpu.width,
+                this.gpu.height,
+                (percent, message) => {
+                    if (progressBar) progressBar.style.width = `${percent}%`;
+                    if (progressText) progressText.textContent = message;
+                    if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
+                }
+            );
+
+            // Create image from canvas
+            const img = new Image();
+            img.onload = () => {
+                // Update state
+                this.state.setImage(img);
+
+                // Reload GPU processor with upscaled image
+                this.gpu.loadImage(img);
+
+                // Clear masks (they no longer align)
+                this.masks.layers = [];
+                this.masks.activeLayerIndex = -1;
+                this.updateLayersList();
+
+                // Update UI
+                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+                setTimeout(() => this.renderHistogram(), 100);
+
+                // Hide progress
+                if (progressSection) progressSection.style.display = 'none';
+                if (btnApply) btnApply.disabled = false;
+                if (progressBar) progressBar.style.width = '0%';
+
+                // Update dimensions display
+                this._updateUpscaleDimensions();
+
+                console.log(`✅ Upscale complete: ${img.width}×${img.height}`);
+            };
+            img.src = upscaledCanvas.toDataURL('image/png');
+
+        } catch (error) {
+            console.error('Upscale failed:', error);
+            if (progressSection) progressSection.style.display = 'none';
+            if (btnApply) btnApply.disabled = false;
+        }
     }
 
     /**
