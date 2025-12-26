@@ -40,6 +40,9 @@ export class EditorApp {
             // Initialize 3D Relighting
             this.relighting = new RelightingManager(this);
 
+            // Give UI access to app for relighting control
+            this.ui.app = this;
+
             // Subscribe to state events
             this._bindStateEvents();
 

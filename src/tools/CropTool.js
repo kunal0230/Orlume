@@ -34,6 +34,9 @@ export class CropTool {
         this.handleSize = 12;
         this.handleTouchSize = 24; // Larger touch target
 
+        // Rotation angle in degrees (synced with canvas CSS transform)
+        this.rotation = 0;
+
         // Create overlay elements
         this._createOverlay();
 
@@ -181,6 +184,17 @@ export class CropTool {
     toggleGrid(show) {
         this.showGrid = show !== undefined ? show : !this.showGrid;
         this.grid.style.display = this.showGrid ? 'block' : 'none';
+    }
+
+    /**
+     * Set rotation angle (syncs overlay with canvas transform)
+     * @param {number} angle - Rotation angle in degrees
+     */
+    setRotation(angle) {
+        this.rotation = angle;
+        // Apply same rotation to overlay so it matches the rotated canvas
+        this.overlay.style.transform = angle ? `rotate(${angle}deg)` : '';
+        this.overlay.style.transformOrigin = 'center center';
     }
 
     /**

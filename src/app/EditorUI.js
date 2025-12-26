@@ -3,6 +3,7 @@
  * Handles all DOM interactions, event bindings, and UI updates
  */
 import { CropTool } from '../tools/CropTool.js';
+import { HistoryManager } from './HistoryManager.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -38,6 +39,10 @@ export class EditorUI {
 
         // Applied crop state (persists across mode changes)
         this.appliedCrop = null;
+
+        // Initialize undo/redo history manager
+        this.history = new HistoryManager(50);
+        this._historyDebounceTimer = null;
 
         this._initEventListeners();
     }
@@ -101,10 +106,19 @@ export class EditorUI {
      * Set active mode (develop, 3d, export, crop)
      */
     setMode(mode) {
+        const previousMode = this.state.currentTool;
+
         // Deactivate crop tool and clear transform preview if leaving crop mode
-        if (this.state.currentTool === 'crop' && mode !== 'crop') {
+        if (previousMode === 'crop' && mode !== 'crop') {
             this.cropTool?.deactivate();
             this._clearTransformPreview();
+        }
+
+        // Disable relighting when leaving 3d mode to clean up light indicators
+        if (previousMode === '3d' && mode !== '3d') {
+            if (this.app?.relighting) {
+                this.app.relighting.disableRelight();
+            }
         }
 
         this.state.setTool(mode);
@@ -206,6 +220,9 @@ export class EditorUI {
      * Initialize global adjustment sliders
      */
     _initGlobalSliders() {
+        // Push initial state to history when initialized
+        this._pushHistoryDebounced();
+
         this.globalSliders.forEach(name => {
             const slider = document.getElementById(`slider-${name}`);
             const valueDisplay = document.getElementById(`val-${name}`);
@@ -224,12 +241,18 @@ export class EditorUI {
                 requestAnimationFrame(() => this.renderHistogram());
             });
 
+            // Push to history when slider is released
+            slider.addEventListener('change', () => {
+                this._pushHistoryDebounced();
+            });
+
             slider.addEventListener('dblclick', () => {
                 slider.value = 0;
                 valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
                 this.gpu.setParam(name, 0);
                 this.state.setAdjustment(name, 0);
                 requestAnimationFrame(() => this.renderHistogram());
+                this._pushHistoryDebounced();
             });
         });
     }
@@ -250,11 +273,17 @@ export class EditorUI {
                 this.renderWithMask(false);
             });
 
+            // Push to history when mask slider is released
+            slider.addEventListener('change', () => {
+                this._pushHistoryDebounced();
+            });
+
             slider.addEventListener('dblclick', () => {
                 slider.value = 0;
                 valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
                 this.masks.setActiveAdjustment(name, 0);
                 this.renderWithMask(false);
+                this._pushHistoryDebounced();
             });
         });
     }
@@ -384,6 +413,8 @@ export class EditorUI {
                 rotationValue.textContent = `${angle}°`;
                 this.cropRotation = angle;
                 this._applyTransformPreview();
+                // Sync crop overlay with canvas rotation
+                this.cropTool?.setRotation(angle);
             });
 
             rotationSlider.addEventListener('dblclick', () => {
@@ -391,6 +422,7 @@ export class EditorUI {
                 rotationValue.textContent = '0°';
                 this.cropRotation = 0;
                 this._applyTransformPreview();
+                this.cropTool?.setRotation(0);
             });
         }
 
@@ -432,6 +464,7 @@ export class EditorUI {
                 btnFlipV?.classList.remove('active');
 
                 this._applyTransformPreview();
+                this.cropTool?.setRotation(0);
             });
         }
 
@@ -563,6 +596,10 @@ export class EditorUI {
      */
     applyCrop() {
         if (!this.cropTool) return;
+
+        // Save state BEFORE crop for undo support
+        const snapshot = this._captureFullState();
+        this.history.pushState(snapshot);
 
         const cropData = this.cropTool.apply();
         if (!cropData || cropData.width <= 0 || cropData.height <= 0) {
@@ -884,6 +921,18 @@ export class EditorUI {
                 e.preventDefault();
                 this.exportImage();
             }
+
+            // Undo with Ctrl/Cmd + Z
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ') {
+                e.preventDefault();
+                this.undo();
+            }
+
+            // Redo with Ctrl/Cmd + Shift + Z
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyZ') {
+                e.preventDefault();
+                this.redo();
+            }
         });
 
         document.addEventListener('keyup', (e) => {
@@ -981,6 +1030,10 @@ export class EditorUI {
         const btnReset = document.getElementById('btn-reset');
         if (btnReset) {
             btnReset.addEventListener('click', () => {
+                // Save state BEFORE reset for undo support
+                const snapshot = this._captureFullState();
+                this.history.pushState(snapshot);
+
                 this.globalSliders.forEach(name => {
                     const slider = document.getElementById(`slider-${name}`);
                     const valueDisplay = document.getElementById(`val-${name}`);
@@ -1046,6 +1099,10 @@ export class EditorUI {
                 this.elements.dropZone?.classList.add('hidden');
                 this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.renderHistogram(), 100);
+
+                // Push initial state to history for undo support
+                this.history.clear();
+                this._pushHistoryDebounced();
             };
             img.src = e.target.result;
         };
@@ -1517,5 +1574,167 @@ export class EditorUI {
         if (exportOptions) {
             exportOptions.style.display = exportOptions.style.display === 'none' ? 'block' : 'none';
         }
+    }
+
+    /**
+     * Push current state to history (debounced to avoid flooding)
+     * Captures global state across all sections for full undo/redo support
+     */
+    _pushHistoryDebounced() {
+        clearTimeout(this._historyDebounceTimer);
+        this._historyDebounceTimer = setTimeout(() => {
+            const snapshot = this._captureFullState();
+            this.history.pushState(snapshot);
+        }, 100);
+    }
+
+    /**
+     * Capture the full application state for history
+     * Includes image data for undoing crops and destructive operations
+     */
+    _captureFullState() {
+        // Global develop adjustments
+        const globalAdjustments = { ...this.state.globalAdjustments };
+
+        // Mask layer adjustments (don't store texture data, just adjustments)
+        const maskLayerAdjustments = this.masks.layers.map(layer => ({
+            id: layer.id,
+            name: layer.name,
+            adjustments: { ...layer.adjustments }
+        }));
+
+        // Capture current image state for crop undo
+        let imageDataUrl = null;
+        if (this.state.originalImage) {
+            // Create a canvas to capture the original image
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.state.originalImage.width;
+            tempCanvas.height = this.state.originalImage.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.drawImage(this.state.originalImage, 0, 0);
+            imageDataUrl = tempCanvas.toDataURL('image/png');
+        }
+
+        return {
+            globalAdjustments,
+            maskLayerAdjustments,
+            activeLayerIndex: this.masks.activeLayerIndex,
+            imageDataUrl,
+            imageWidth: this.state.originalImage?.width || 0,
+            imageHeight: this.state.originalImage?.height || 0
+        };
+    }
+
+    /**
+     * Undo last adjustment
+     */
+    undo() {
+        const state = this.history.undo();
+        if (state) {
+            this._restoreState(state);
+            console.log('↩️ Undo', this.history.getInfo());
+        }
+    }
+
+    /**
+     * Redo previously undone adjustment
+     */
+    redo() {
+        const state = this.history.redo();
+        if (state) {
+            this._restoreState(state);
+            console.log('↪️ Redo', this.history.getInfo());
+        }
+    }
+
+    /**
+     * Restore full state from history snapshot
+     * Handles image restoration for crop undo
+     */
+    _restoreState(snapshot) {
+        // Check if we need to restore a different image (crop undo)
+        const currentWidth = this.state.originalImage?.width || 0;
+        const currentHeight = this.state.originalImage?.height || 0;
+        const needsImageRestore = snapshot.imageDataUrl &&
+            (snapshot.imageWidth !== currentWidth || snapshot.imageHeight !== currentHeight);
+
+        if (needsImageRestore) {
+            // Restore the image from data URL
+            const img = new Image();
+            img.onload = () => {
+                // Update state
+                this.state.setImage(img);
+
+                // Reload GPU processor with restored image
+                this.gpu.loadImage(img);
+
+                // Clear masks (they don't align with restored image)
+                this.masks.layers = [];
+                this.masks.activeLayerIndex = -1;
+                this.updateLayersList();
+
+                // Update UI
+                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+
+                // Then restore adjustments
+                this._restoreAdjustments(snapshot);
+
+                console.log(`🖼️ Image restored: ${img.width}×${img.height}`);
+            };
+            img.src = snapshot.imageDataUrl;
+        } else {
+            // No image change, just restore adjustments
+            this._restoreAdjustments(snapshot);
+        }
+    }
+
+    /**
+     * Restore adjustment values from snapshot
+     */
+    _restoreAdjustments(snapshot) {
+        // Restore global adjustments
+        if (snapshot.globalAdjustments) {
+            for (const [name, value] of Object.entries(snapshot.globalAdjustments)) {
+                // Update state
+                this.state.globalAdjustments[name] = value;
+
+                // Update GPU
+                this.gpu.setParam(name, value);
+
+                // Update slider UI
+                const slider = document.getElementById(`slider-${name}`);
+                const valueDisplay = document.getElementById(`val-${name}`);
+                if (slider && valueDisplay) {
+                    slider.value = value;
+                    valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+                }
+            }
+        }
+
+        // Restore mask layer adjustments
+        if (snapshot.maskLayerAdjustments) {
+            for (const savedLayer of snapshot.maskLayerAdjustments) {
+                const layer = this.masks.layers.find(l => l.id === savedLayer.id);
+                if (layer) {
+                    Object.assign(layer.adjustments, savedLayer.adjustments);
+
+                    // Update mask slider UI if this layer is active
+                    if (this.masks.layers.indexOf(layer) === this.masks.activeLayerIndex) {
+                        for (const [name, value] of Object.entries(savedLayer.adjustments)) {
+                            const slider = document.getElementById(`slider-mask-${name}`);
+                            const valueDisplay = document.getElementById(`val-mask-${name}`);
+                            if (slider && valueDisplay) {
+                                slider.value = value;
+                                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Re-render (handles both global and mask adjustments)
+        this.renderWithMask(false);
+        requestAnimationFrame(() => this.renderHistogram());
     }
 }
