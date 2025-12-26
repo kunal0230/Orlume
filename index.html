@@ -79,6 +79,11 @@
                 <span class="panel-title">Export Image</span>
             </div>
 
+            <!-- Crop Mode Header (shown when in crop mode) -->
+            <div class="panel-header mode-header" id="crop-mode-header" style="display: none;">
+                <span class="panel-title">Crop Image</span>
+            </div>
+
             <div class="panel-content">
                 <!-- Develop Panel -->
                 <div class="panel-section active" id="panel-develop">
@@ -473,6 +478,132 @@
                             style="width: 100%; padding: 14px; font-size: 14px;">
                             Export Image
                         </button>
+                    </div>
+                </div>
+
+                <!-- Crop Panel -->
+                <div class="panel-section" id="panel-crop">
+                    <div class="section">
+                        <div class="section-header">Aspect Ratio</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Select a preset or crop freely.
+                        </p>
+                        <div class="aspect-ratio-selector">
+                            <button class="aspect-ratio-btn active" data-ratio="free" title="Free crop">
+                                <span class="ratio-icon">⊞</span>
+                                <span>Free</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="1:1" title="Square">
+                                <span class="ratio-icon">■</span>
+                                <span>1:1</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="4:3" title="Standard photo">
+                                <span class="ratio-icon">▬</span>
+                                <span>4:3</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="3:2" title="DSLR standard">
+                                <span class="ratio-icon">▬</span>
+                                <span>3:2</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="16:9" title="Widescreen">
+                                <span class="ratio-icon">━</span>
+                                <span>16:9</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="2:1" title="Panoramic">
+                                <span class="ratio-icon">━</span>
+                                <span>2:1</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="5:4" title="Large format">
+                                <span class="ratio-icon">▬</span>
+                                <span>5:4</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="9:16" title="Vertical video">
+                                <span class="ratio-icon">▯</span>
+                                <span>9:16</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="2:3" title="Portrait">
+                                <span class="ratio-icon">▯</span>
+                                <span>2:3</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Crop Dimensions</div>
+                        <div class="crop-dimensions-container"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Selection</span>
+                                <div class="crop-dimensions-wrapper">
+                                    <span id="crop-dimensions-display" class="crop-dimensions-clickable"
+                                        style="font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer;"
+                                        title="Click to enter custom dimensions">-- × --</span>
+                                    <input type="text" id="crop-dimensions-input" class="crop-dimensions-input"
+                                        placeholder="800x600"
+                                        style="display: none; width: 100px; padding: 4px 8px; 
+                                        background: var(--bg-tertiary); border: 1px solid var(--accent); 
+                                        border-radius: 4px; color: var(--text-primary); font-size: 12px; text-align: center;">
+                                </div>
+                            </div>
+                            <p
+                                style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: right;">
+                                Click to enter custom size (e.g., 800x600)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Rotate & Flip</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Rotation</span>
+                                <span id="val-crop-rotation">0°</span>
+                            </div>
+                            <input type="range" id="slider-crop-rotation" min="-180" max="180" step="0.5" value="0">
+                        </div>
+
+                        <div class="flip-buttons" style="display: flex; gap: 8px; margin-top: 12px;">
+                            <button class="btn" id="btn-flip-h" style="flex: 1;" title="Flip Horizontal">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <path d="M12 3v18M16 7l4 5-4 5M8 7l-4 5 4 5" />
+                                </svg>
+                                Flip H
+                            </button>
+                            <button class="btn" id="btn-flip-v" style="flex: 1;" title="Flip Vertical">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <path d="M3 12h18M7 8l5-4 5 4M7 16l5 4 5-4" />
+                                </svg>
+                                Flip V
+                            </button>
+                        </div>
+
+                        <button class="btn" id="btn-reset-transform" style="width: 100%; margin-top: 8px;">
+                            Reset Rotation & Flip
+                        </button>
+                    </div>
+
+                    <div class="section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="crop-grid-toggle" checked>
+                            <span>Show rule of thirds grid</span>
+                        </label>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-crop-cancel" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button class="btn btn-primary" id="btn-crop-apply" style="flex: 1;">
+                                Apply Crop
+                            </button>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
+                            <kbd>Enter</kbd> apply • <kbd>Esc</kbd> cancel • Arrow keys to nudge
+                        </p>
                     </div>
                 </div>
             </div>
