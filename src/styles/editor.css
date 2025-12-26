@@ -897,3 +897,72 @@ kbd {
 .checkbox-label span {
     user-select: none;
 }
+
+/* ========================================
+   Zoom Controls
+   ======================================== */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    z-index: 50;
+}
+
+.zoom-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.zoom-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.zoom-btn:active {
+    background: var(--accent);
+    color: white;
+}
+
+.zoom-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.zoom-btn-text {
+    width: auto;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.zoom-level {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 45px;
+    text-align: center;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+/* Canvas container smooth zoom transition */
+.canvas-container {
+    transition: transform 0.15s ease-out;
+}

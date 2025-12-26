@@ -44,6 +44,14 @@ export class EditorUI {
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
 
+        // Zoom state
+        this.zoom = {
+            level: 1,
+            min: 0.1,
+            max: 5,
+            step: 0.1
+        };
+
         this._initEventListeners();
     }
 
@@ -61,6 +69,8 @@ export class EditorUI {
         this._initKeyboardShortcuts();
         this._initFileHandling();
         this._initActionButtons();
+        this._initZoomControls();
+        this._initZoomEvents();
     }
 
     /**
@@ -980,6 +990,104 @@ export class EditorUI {
         document.getElementById('val-brush-size').textContent = this.masks.brushSettings.size;
         this.updateBrushCursor();
         this.updateBrushSizeIndicator(this.masks.brushSettings.size);
+    }
+
+    /**
+     * Initialize zoom controls UI at bottom center of canvas
+     */
+    _initZoomControls() {
+        const canvasArea = document.querySelector('.canvas-area');
+        if (!canvasArea) return;
+
+        // Create zoom controls container
+        const zoomControls = document.createElement('div');
+        zoomControls.className = 'zoom-controls';
+        zoomControls.id = 'zoom-controls';
+        zoomControls.innerHTML = `
+            <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+            <span class="zoom-level" id="zoom-level">100%</span>
+            <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+            <button class="zoom-btn zoom-btn-text" id="btn-zoom-fit" title="Fit to View">Fit</button>
+        `;
+
+        canvasArea.appendChild(zoomControls);
+
+        // Bind button events
+        document.getElementById('btn-zoom-out')?.addEventListener('click', () => this.zoomOut());
+        document.getElementById('btn-zoom-in')?.addEventListener('click', () => this.zoomIn());
+        document.getElementById('btn-zoom-fit')?.addEventListener('click', () => this.resetZoom());
+    }
+
+    /**
+     * Initialize zoom events (Ctrl/Cmd + scroll)
+     */
+    _initZoomEvents() {
+        const canvasArea = document.querySelector('.canvas-area');
+        if (!canvasArea) return;
+
+        canvasArea.addEventListener('wheel', (e) => {
+            // Only trigger zoom when Ctrl (Windows/Linux) or Cmd (Mac) is held
+            if (!e.ctrlKey && !e.metaKey) return;
+
+            e.preventDefault();
+
+            // Determine zoom direction based on scroll
+            const delta = e.deltaY < 0 ? this.zoom.step : -this.zoom.step;
+            const newLevel = Math.max(this.zoom.min, Math.min(this.zoom.max, this.zoom.level + delta));
+
+            this.setZoom(newLevel);
+        }, { passive: false });
+    }
+
+    /**
+     * Set zoom level and apply transform
+     */
+    setZoom(level) {
+        // Clamp zoom level
+        this.zoom.level = Math.max(this.zoom.min, Math.min(this.zoom.max, level));
+
+        // Apply CSS transform to canvas container
+        const canvasContainer = document.querySelector('.canvas-container');
+        if (canvasContainer) {
+            canvasContainer.style.transform = `scale(${this.zoom.level})`;
+            canvasContainer.style.transformOrigin = 'center center';
+        }
+
+        // Update zoom level display
+        const zoomLevelDisplay = document.getElementById('zoom-level');
+        if (zoomLevelDisplay) {
+            zoomLevelDisplay.textContent = `${Math.round(this.zoom.level * 100)}%`;
+        }
+    }
+
+    /**
+     * Zoom in by one step
+     */
+    zoomIn() {
+        this.setZoom(this.zoom.level + this.zoom.step);
+    }
+
+    /**
+     * Zoom out by one step
+     */
+    zoomOut() {
+        this.setZoom(this.zoom.level - this.zoom.step);
+    }
+
+    /**
+     * Reset zoom to 100%
+     */
+    resetZoom() {
+        this.setZoom(1);
     }
 
     /**
