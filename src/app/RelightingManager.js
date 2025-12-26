@@ -41,14 +41,23 @@ export class RelightingManager {
         // Add editor-canvas class that effects look for
         container.classList.add('editor-canvas');
 
-        // Create main-canvas alias (effects look for this)
+        // Create main-canvas as a real canvas that mirrors gpu-canvas dimensions
+        // This is needed because RelightingEffect reads main-canvas.style.width/height
         const gpuCanvas = document.getElementById('gpu-canvas');
         if (gpuCanvas && !document.getElementById('main-canvas')) {
-            // Create a hidden placeholder that effects can reference
-            const mainCanvasPlaceholder = document.createElement('div');
-            mainCanvasPlaceholder.id = 'main-canvas';
-            mainCanvasPlaceholder.style.cssText = 'display: none;';
-            container.appendChild(mainCanvasPlaceholder);
+            const mainCanvas = document.createElement('canvas');
+            mainCanvas.id = 'main-canvas';
+            mainCanvas.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                opacity: 0;
+                pointer-events: none;
+            `;
+            container.appendChild(mainCanvas);
+
+            // Sync dimensions with gpu-canvas
+            this._syncMainCanvasDimensions();
         }
 
         // Create depth-canvas placeholder (effects look for this)
@@ -74,6 +83,23 @@ export class RelightingManager {
             `;
             container.appendChild(threeCanvas);
         }
+    }
+
+    /**
+     * Sync main-canvas dimensions with gpu-canvas
+     * Called before enabling relighting to ensure proper sizing
+     */
+    _syncMainCanvasDimensions() {
+        const gpuCanvas = document.getElementById('gpu-canvas');
+        const mainCanvas = document.getElementById('main-canvas');
+        if (!gpuCanvas || !mainCanvas) return;
+
+        // Copy actual rendered dimensions
+        const rect = gpuCanvas.getBoundingClientRect();
+        mainCanvas.width = gpuCanvas.width;
+        mainCanvas.height = gpuCanvas.height;
+        mainCanvas.style.width = `${rect.width}px`;
+        mainCanvas.style.height = `${rect.height}px`;
     }
 
     /**
@@ -308,16 +334,8 @@ export class RelightingManager {
 
         this.currentMode = 'relight';
 
-        // Override the mainCanvas lookup in RelightingEffect
-        // by patching the DOM temporarily
-        const gpuCanvas = document.getElementById('gpu-canvas');
-        const mainCanvas = document.getElementById('main-canvas');
-
-        // Copy GPU canvas style to main-canvas placeholder for dimension reference
-        if (mainCanvas && gpuCanvas) {
-            mainCanvas.style.width = gpuCanvas.style.width || `${gpuCanvas.width}px`;
-            mainCanvas.style.height = gpuCanvas.style.height || `${gpuCanvas.height}px`;
-        }
+        // Ensure main-canvas dimensions match gpu-canvas
+        this._syncMainCanvasDimensions();
 
         // Set depth map on effect's app adapter state
         this.appAdapter.state.depthMap = this.depthMap;

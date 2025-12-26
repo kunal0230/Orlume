@@ -101,6 +101,9 @@
 
         .canvas-container {
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #gpu-canvas {
@@ -109,6 +112,13 @@
             object-fit: contain;
             border-radius: 4px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Main canvas placeholder - hidden but used for dimension reference */
+        #main-canvas {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
         }
 
         /* Brush cursor overlay */
