@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
   server: {
@@ -11,7 +12,13 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'esbuild'
+    minify: 'esbuild',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        'gpu-editor': resolve(__dirname, 'gpu-editor.html')
+      }
+    }
   },
   optimizeDeps: {
     exclude: ['@huggingface/transformers']
