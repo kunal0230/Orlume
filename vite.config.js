@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   server: {
-    port: 5173,
+    port: 5174,
     open: true,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
@@ -15,8 +15,7 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        'gpu-editor': resolve(__dirname, 'gpu-editor.html')
+        main: resolve(__dirname, 'index.html')
       }
     }
   },
