@@ -42,9 +42,12 @@ export class HistoryManager {
      */
     undo() {
         if (!this.canUndo()) return null;
+        // Return the current state BEFORE decrementing
+        // This gives us the state we pushed before the last action
+        const state = JSON.parse(JSON.stringify(this.history[this.currentIndex]));
         this.currentIndex--;
         this._notifyListeners();
-        return JSON.parse(JSON.stringify(this.history[this.currentIndex]));
+        return state;
     }
 
     /**

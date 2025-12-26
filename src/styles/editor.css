@@ -607,6 +607,45 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ========================================
+   Liquify Tool
+   ======================================== */
+.liquify-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.liquify-mode-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.liquify-mode-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.liquify-mode-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.liquify-mode-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ========================================
    Brush Settings
    ======================================== */
 .brush-preview {
