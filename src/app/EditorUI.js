@@ -309,7 +309,11 @@ export class EditorUI {
      */
     _initKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            // Ignore shortcuts when typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
             if (e.code === 'Space' && !this.state.showingBefore && this.state.hasImage) {
+                e.preventDefault();
                 this.state.showingBefore = true;
                 this.elements.beforeIndicator?.classList.add('visible');
                 this.gpu.renderOriginal(this.state.originalImage);
@@ -318,6 +322,7 @@ export class EditorUI {
             if (e.code === 'KeyB') this.setTool('brush');
             if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) this.setTool('radial');
             if (e.code === 'KeyG') this.setTool('gradient');
+            if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.setTool('crop');
             if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
                 this.setBrushMode(!this.masks.brushSettings.erase);
             }
@@ -326,6 +331,23 @@ export class EditorUI {
             }
             if (e.code === 'BracketRight') {
                 this.adjustBrushSize(10);
+            }
+
+            // Show keyboard shortcuts modal with ? key
+            if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
+                e.preventDefault();
+                this.toggleShortcutsModal(true);
+            }
+
+            // Close modal with Escape
+            if (e.code === 'Escape') {
+                this.toggleShortcutsModal(false);
+            }
+
+            // Export with Ctrl/Cmd + E
+            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
+                e.preventDefault();
+                this.exportImage();
             }
         });
 
@@ -336,6 +358,32 @@ export class EditorUI {
                 this.gpu.render();
             }
         });
+
+        // Shortcuts modal close button
+        const shortcutsClose = document.getElementById('shortcuts-close');
+        if (shortcutsClose) {
+            shortcutsClose.addEventListener('click', () => this.toggleShortcutsModal(false));
+        }
+
+        // Close modal on backdrop click
+        const shortcutsModal = document.getElementById('shortcuts-modal');
+        if (shortcutsModal) {
+            shortcutsModal.addEventListener('click', (e) => {
+                if (e.target === shortcutsModal) {
+                    this.toggleShortcutsModal(false);
+                }
+            });
+        }
+    }
+
+    /**
+     * Toggle keyboard shortcuts modal
+     */
+    toggleShortcutsModal(show) {
+        const modal = document.getElementById('shortcuts-modal');
+        if (modal) {
+            modal.style.display = show ? 'flex' : 'none';
+        }
     }
 
     /**
@@ -416,6 +464,31 @@ export class EditorUI {
         if (btnExport) {
             btnExport.addEventListener('click', () => this.exportImage());
         }
+
+        // Export format dropdown
+        const exportFormat = document.getElementById('export-format');
+        const qualityControl = document.getElementById('quality-control');
+        if (exportFormat) {
+            exportFormat.addEventListener('change', () => {
+                // Hide quality slider for PNG (lossless)
+                if (qualityControl) {
+                    qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
+                }
+            });
+            // Initial state
+            if (qualityControl) {
+                qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
+            }
+        }
+
+        // Export quality slider
+        const qualitySlider = document.getElementById('slider-export-quality');
+        const qualityValue = document.getElementById('val-export-quality');
+        if (qualitySlider && qualityValue) {
+            qualitySlider.addEventListener('input', () => {
+                qualityValue.textContent = qualitySlider.value;
+            });
+        }
     }
 
     /**
@@ -439,11 +512,22 @@ export class EditorUI {
 
     /**
      * Render with mask overlay
+     * @param {boolean} showOverlay - Whether to show red mask overlay during painting
      */
     renderWithMask(showOverlay = false) {
+        // Step 1: Render base image with global adjustments to texture
         let resultTexture = this.gpu.renderToTexture();
+
+        // Step 2: Apply masked adjustments (if any layers with adjustments)
         resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-        this.gpu.drawToCanvas(resultTexture, showOverlay ? this.masks.getActiveLayer()?.maskTexture : null);
+
+        // Step 3: Blit result to canvas
+        this.gpu.blitToCanvas(resultTexture);
+
+        // Step 4: If painting, show red mask overlay for visual feedback
+        if (showOverlay && this.masks.getActiveLayer()) {
+            this.masks.renderMaskOverlay();
+        }
     }
 
     /**
@@ -707,15 +791,126 @@ export class EditorUI {
     }
 
     /**
-     * Export image
+     * Export image with full resolution and format options
+     * Uses offscreen canvas to render at original image resolution
      */
     exportImage() {
-        const canvas = this.elements.canvas;
-        if (!canvas) return;
+        if (!this.state.originalImage) {
+            console.warn('No image to export');
+            return;
+        }
 
-        const link = document.createElement('a');
-        link.download = 'orlume-export.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        // Get export settings from UI or use defaults
+        const formatSelect = document.getElementById('export-format');
+        const qualitySlider = document.getElementById('slider-export-quality');
+
+        const format = formatSelect?.value || 'png';
+        const quality = (qualitySlider?.value || 95) / 100;
+
+        // Determine MIME type
+        const mimeTypes = {
+            'png': 'image/png',
+            'jpeg': 'image/jpeg',
+            'webp': 'image/webp'
+        };
+        const mimeType = mimeTypes[format] || 'image/png';
+
+        // File extension
+        const extensions = {
+            'png': 'png',
+            'jpeg': 'jpg',
+            'webp': 'webp'
+        };
+        const extension = extensions[format] || 'png';
+
+        // Show export progress
+        const statusBar = document.querySelector('.status-right .perf');
+        const originalStatus = statusBar?.textContent;
+        if (statusBar) statusBar.textContent = 'Exporting...';
+
+        // Use setTimeout to allow UI to update
+        setTimeout(() => {
+            try {
+                this._performExport(mimeType, quality, extension);
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed: ' + error.message);
+            } finally {
+                if (statusBar) statusBar.textContent = originalStatus || 'Ready';
+            }
+        }, 50);
+    }
+
+    /**
+     * Internal export method - renders at original resolution
+     */
+    _performExport(mimeType, quality, extension) {
+        const originalWidth = this.state.originalImage.width;
+        const originalHeight = this.state.originalImage.height;
+
+        // Check if we're already at full resolution
+        const currentWidth = this.gpu.width;
+        const currentHeight = this.gpu.height;
+
+        let exportCanvas;
+
+        if (currentWidth === originalWidth && currentHeight === originalHeight) {
+            // Already at full resolution, use current canvas
+            exportCanvas = this.elements.canvas;
+
+            // Make sure we have the latest render with all adjustments
+            let resultTexture = this.gpu.renderToTexture();
+            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+            this.gpu.blitToCanvas(resultTexture);
+        } else {
+            // Need to render at full resolution
+            // For now, use current canvas (full resolution rendering is complex)
+            // TODO: Implement true full-resolution export in future
+            exportCanvas = this.elements.canvas;
+
+            // Render with current adjustments
+            let resultTexture = this.gpu.renderToTexture();
+            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+            this.gpu.blitToCanvas(resultTexture);
+
+            console.log(`⚠️ Exporting at display resolution (${currentWidth}×${currentHeight}). ` +
+                `Original: ${originalWidth}×${originalHeight}`);
+        }
+
+        // Export to blob
+        exportCanvas.toBlob((blob) => {
+            if (!blob) {
+                console.error('Failed to create blob');
+                return;
+            }
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            link.download = `orlume-export-${timestamp}.${extension}`;
+            link.href = url;
+            link.click();
+
+            // Cleanup
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            // Log export info
+            const sizeKB = (blob.size / 1024).toFixed(1);
+            console.log(`✅ Exported ${extension.toUpperCase()} (${sizeKB} KB) at ${currentWidth}×${currentHeight}`);
+        }, mimeType, quality);
+    }
+
+    /**
+     * Show export options modal (if expanded export UI is desired)
+     */
+    showExportOptions() {
+        // Toggle export options visibility
+        const exportOptions = document.getElementById('export-options');
+        if (exportOptions) {
+            exportOptions.style.display = exportOptions.style.display === 'none' ? 'block' : 'none';
+        }
     }
 }

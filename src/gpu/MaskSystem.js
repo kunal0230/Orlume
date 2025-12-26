@@ -490,11 +490,26 @@ export class MaskSystem {
     }
 
     /**
+     * Get the active layer object
+     */
+    getActiveLayer() {
+        if (this.activeLayerIndex < 0) return null;
+        return this.layers[this.activeLayerIndex];
+    }
+
+    /**
      * Set adjustment on active layer
      */
     setAdjustment(name, value) {
         if (this.activeLayerIndex < 0) return;
         this.layers[this.activeLayerIndex].adjustments[name] = value;
+    }
+
+    /**
+     * Set adjustment on active layer (alias for UI compatibility)
+     */
+    setActiveAdjustment(name, value) {
+        this.setAdjustment(name, value);
     }
 
     /**

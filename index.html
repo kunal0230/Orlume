@@ -174,8 +174,30 @@
                         </div>
                     </div>
 
-                    <!-- Actions -->
+                    <!-- Export Section -->
                     <div class="section">
+                        <div class="section-header">Export</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Format</span>
+                            </div>
+                            <select id="export-format"
+                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                                <option value="png">PNG (Lossless)</option>
+                                <option value="jpeg" selected>JPEG (Smaller)</option>
+                                <option value="webp">WebP (Best Compression)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group" id="quality-control">
+                            <div class="control-label">
+                                <span>Quality</span>
+                                <span id="val-export-quality">95</span>
+                            </div>
+                            <input type="range" id="slider-export-quality" min="1" max="100" step="1" value="95">
+                        </div>
+
                         <div class="btn-row">
                             <button class="btn" id="btn-reset">Reset</button>
                             <button class="btn btn-primary" id="btn-export">Export</button>
@@ -390,6 +412,43 @@
 
             <div class="keyboard-hint">
                 <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>B</kbd> brush | <kbd>[</kbd> <kbd>]</kbd> size
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="shortcuts-modal" id="shortcuts-modal" style="display: none;">
+        <div class="shortcuts-content">
+            <div class="shortcuts-header">
+                <h3>Keyboard Shortcuts</h3>
+                <button class="shortcuts-close" id="shortcuts-close">&times;</button>
+            </div>
+            <div class="shortcuts-grid">
+                <div class="shortcut-section">
+                    <h4>Tools</h4>
+                    <div class="shortcut-row"><kbd>D</kbd><span>Develop</span></div>
+                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
+                    <div class="shortcut-row"><kbd>R</kbd><span>Radial Filter</span></div>
+                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient Filter</span></div>
+                    <div class="shortcut-row"><kbd>C</kbd><span>Crop</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Brush</h4>
+                    <div class="shortcut-row"><kbd>[</kbd><span>Decrease Size</span></div>
+                    <div class="shortcut-row"><kbd>]</kbd><span>Increase Size</span></div>
+                    <div class="shortcut-row"><kbd>X</kbd><span>Toggle Add/Erase</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>View</h4>
+                    <div class="shortcut-row"><kbd>Space</kbd><span>Show Original</span></div>
+                    <div class="shortcut-row"><kbd>?</kbd><span>Show Shortcuts</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Edit</h4>
+                    <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>Undo (coming soon)</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl+Shift+Z</kbd><span>Redo (coming soon)</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl+E</kbd><span>Export</span></div>
+                </div>
             </div>
         </div>
     </div>

@@ -523,3 +523,103 @@ kbd {
     height: 100%;
     z-index: 10;
 }
+
+/* ========================================
+   Keyboard Shortcuts Modal
+   ======================================== */
+.shortcuts-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.shortcuts-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.shortcuts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.shortcuts-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.shortcuts-close:hover {
+    color: var(--text-primary);
+}
+
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.shortcut-section h4 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.shortcut-row kbd {
+    min-width: 28px;
+    text-align: center;
+    background: var(--bg-dark);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 10px;
+    color: var(--text-primary);
+}
+
+.shortcut-row span {
+    color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+    .shortcuts-grid {
+        grid-template-columns: 1fr;
+    }
+}
