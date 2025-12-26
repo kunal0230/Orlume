@@ -1,19 +1,161 @@
 /**
- * RelightingManager - Integrates depth estimation and relighting into the editor
- * Bridge between the modular editor and the existing RelightingEffect/DepthEstimator
+ * RelightingManager - Full 3D features integration (Depth, Relighting, 3D View, Parallax)
+ * Properly bridges new modular architecture with existing effect classes
  */
 import { DepthEstimator } from '../ml/DepthEstimator.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
+import { ParallaxEffect } from '../effects/ParallaxEffect.js';
+import { SceneManager } from '../renderer/SceneManager.js';
 
 export class RelightingManager {
     constructor(app) {
         this.app = app;
-        this.depthEstimator = null;
-        this.relightingEffect = null;
+
+        // State
         this.depthMap = null;
-        this.isEnabled = false;
+        this.currentMode = null; // 'relight', '3d', 'parallax'
+
+        // Setup DOM elements needed by effects
+        this._setupDOMElements();
+
+        // Create app adapter that mimics old OrlumeApp interface
+        this.appAdapter = this._createAppAdapter();
+
+        // Initialize components with adapter
+        this.depthEstimator = new DepthEstimator(this.appAdapter);
+        this.relightingEffect = new RelightingEffect(this.appAdapter);
+        this.parallaxEffect = new ParallaxEffect(this.appAdapter);
+        this.sceneManager = new SceneManager(this.appAdapter);
 
         this._initUI();
+    }
+
+    /**
+     * Setup DOM elements required by effect classes
+     * Creates placeholder elements that the old effects expect
+     */
+    _setupDOMElements() {
+        const container = document.querySelector('.canvas-container');
+        if (!container) return;
+
+        // Add editor-canvas class that effects look for
+        container.classList.add('editor-canvas');
+
+        // Create main-canvas alias (effects look for this)
+        const gpuCanvas = document.getElementById('gpu-canvas');
+        if (gpuCanvas && !document.getElementById('main-canvas')) {
+            // Create a hidden placeholder that effects can reference
+            const mainCanvasPlaceholder = document.createElement('div');
+            mainCanvasPlaceholder.id = 'main-canvas';
+            mainCanvasPlaceholder.style.cssText = 'display: none;';
+            container.appendChild(mainCanvasPlaceholder);
+        }
+
+        // Create depth-canvas placeholder (effects look for this)
+        if (!document.getElementById('depth-canvas')) {
+            const depthCanvas = document.createElement('canvas');
+            depthCanvas.id = 'depth-canvas';
+            depthCanvas.style.cssText = 'display: none; position: absolute;';
+            container.appendChild(depthCanvas);
+        }
+
+        // Create three-canvas for 3D view
+        if (!document.getElementById('three-canvas')) {
+            const threeCanvas = document.createElement('canvas');
+            threeCanvas.id = 'three-canvas';
+            threeCanvas.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: none;
+                z-index: 10;
+            `;
+            container.appendChild(threeCanvas);
+        }
+    }
+
+    /**
+     * Create an adapter that mimics the old OrlumeApp interface
+     * This allows the existing effect classes to work with the new architecture
+     */
+    _createAppAdapter() {
+        const self = this;
+        const gpuCanvas = document.getElementById('gpu-canvas');
+
+        return {
+            // State object matching old structure
+            state: {
+                get image() {
+                    if (!self.app.state.originalImage) return null;
+                    const img = self.app.state.originalImage;
+
+                    // Create canvas with image data
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    return {
+                        width: img.width,
+                        height: img.height,
+                        canvas: canvas,
+                        imageData: ctx.getImageData(0, 0, img.width, img.height),
+                        dataURL: canvas.toDataURL('image/jpeg', 0.9)
+                    };
+                },
+                get depthMap() {
+                    return self.depthMap;
+                },
+                set depthMap(val) {
+                    self.depthMap = val;
+                }
+            },
+
+            // Components matching old structure
+            components: {
+                get canvas() {
+                    return {
+                        canvas: gpuCanvas,
+                        setDepthMap: (dm) => { self.depthMap = dm; },
+                        setDepthVisible: (v) => { /* handled by effect */ }
+                    };
+                }
+            },
+
+            // Canvas manager for relighting overlay
+            canvasManager: {
+                get canvas() {
+                    return gpuCanvas;
+                },
+                getExportCanvas: () => gpuCanvas
+            },
+
+            // Progress updates
+            updateProgress: (percent, text) => {
+                const progressBar = document.getElementById('depth-progress-bar');
+                const progressText = document.getElementById('depth-progress-text');
+                const progressPercent = document.getElementById('depth-progress-percent');
+
+                if (progressBar) progressBar.style.width = `${percent}%`;
+                if (progressText) progressText.textContent = text;
+                if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
+            },
+
+            // Status messages
+            setStatus: (msg) => {
+                const perf = document.getElementById('perf');
+                if (perf) perf.textContent = msg;
+            },
+
+            showLoading: (text) => {
+                console.log('Loading:', text);
+            },
+
+            hideLoading: () => { }
+        };
     }
 
     /**
@@ -28,37 +170,54 @@ export class RelightingManager {
 
         // Lighting sliders
         this._initSlider('slider-light-intensity', 'val-light-intensity', (val) => {
-            this.relightingEffect?.setIntensity(val);
+            if (this.relightingEffect) {
+                this.relightingEffect.setIntensity(val);
+                this.relightingEffect.render();
+            }
         }, (v) => v.toFixed(1));
 
         this._initSlider('slider-light-ambient', 'val-light-ambient', (val) => {
-            this.relightingEffect?.setAmbient(val / 100);
+            if (this.relightingEffect) {
+                this.relightingEffect.setAmbient(val / 100);
+                this.relightingEffect.render();
+            }
         });
 
         this._initSlider('slider-light-shadow', 'val-light-shadow', (val) => {
-            this.relightingEffect?.setShadowStrength(val / 100);
+            if (this.relightingEffect) {
+                this.relightingEffect.setShadowStrength(val / 100);
+                this.relightingEffect.render();
+            }
         });
 
         this._initSlider('slider-light-temperature', 'val-light-temperature', (val) => {
-            this.relightingEffect?.setColorTemperature(val);
+            if (this.relightingEffect) {
+                this.relightingEffect.setColorTemperature(val);
+                this.relightingEffect.render();
+            }
         }, (v) => `${v}K`);
 
         this._initSlider('slider-light-brightness', 'val-light-brightness', (val) => {
-            this.relightingEffect?.setBrightness(val);
+            if (this.relightingEffect) {
+                this.relightingEffect.setBrightness(val);
+                this.relightingEffect.render();
+            }
         });
 
         // Reset lights button
         const btnReset = document.getElementById('btn-reset-lights');
         if (btnReset) {
             btnReset.addEventListener('click', () => {
-                this.relightingEffect?.resetLights();
+                if (this.relightingEffect) {
+                    this.relightingEffect.resetLights();
+                }
             });
         }
 
         // Disable button
         const btnDisable = document.getElementById('btn-disable-relight');
         if (btnDisable) {
-            btnDisable.addEventListener('click', () => this.disable());
+            btnDisable.addEventListener('click', () => this.disableRelight());
         }
     }
 
@@ -87,9 +246,6 @@ export class RelightingManager {
         }
 
         const progressContainer = document.getElementById('depth-progress');
-        const progressBar = document.getElementById('depth-progress-bar');
-        const progressText = document.getElementById('depth-progress-text');
-        const progressPercent = document.getElementById('depth-progress-percent');
         const btnEstimate = document.getElementById('btn-estimate-depth');
 
         try {
@@ -97,17 +253,12 @@ export class RelightingManager {
             if (progressContainer) progressContainer.hidden = false;
             if (btnEstimate) btnEstimate.disabled = true;
 
-            // Create depth estimator if needed
-            if (!this.depthEstimator) {
-                this.depthEstimator = new DepthEstimator(this._createAppAdapter());
-            }
-
-            // Get image data URL
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            // Get image with dataURL for depth estimation
             const img = this.app.state.originalImage;
+            const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
 
             const imageData = {
@@ -121,63 +272,58 @@ export class RelightingManager {
 
             console.log('✅ Depth map generated:', this.depthMap.width, '×', this.depthMap.height);
 
-            // Enable relighting
-            await this.enable();
+            // Show relighting controls
+            const controls = document.getElementById('relight-controls');
+            if (controls) controls.style.display = 'block';
+
+            // Enable relighting automatically
+            this.enableRelight();
 
             // Update UI
             if (btnEstimate) {
                 btnEstimate.textContent = 'Re-estimate Depth';
                 btnEstimate.disabled = false;
             }
-            if (progressContainer) progressContainer.hidden = true;
+
+            setTimeout(() => {
+                if (progressContainer) progressContainer.hidden = true;
+            }, 1000);
 
         } catch (error) {
             console.error('Depth estimation failed:', error);
             if (progressContainer) progressContainer.hidden = true;
             if (btnEstimate) btnEstimate.disabled = false;
-            if (progressText) progressText.textContent = 'Error: ' + error.message;
+            alert('Depth estimation failed: ' + error.message);
         }
-    }
-
-    /**
-     * Create an adapter object that mimics the old app interface for DepthEstimator
-     */
-    _createAppAdapter() {
-        return {
-            updateProgress: (percent, text) => {
-                const progressBar = document.getElementById('depth-progress-bar');
-                const progressText = document.getElementById('depth-progress-text');
-                const progressPercent = document.getElementById('depth-progress-percent');
-
-                if (progressBar) progressBar.style.width = `${percent}%`;
-                if (progressText) progressText.textContent = text;
-                if (progressPercent) progressPercent.textContent = `${percent}%`;
-            }
-        };
     }
 
     /**
      * Enable relighting mode
      */
-    async enable() {
+    enableRelight() {
         if (!this.depthMap) {
             console.warn('No depth map available');
             return;
         }
 
-        // Create relighting effect if needed
-        if (!this.relightingEffect) {
-            this.relightingEffect = new RelightingEffect(this._createRelightAppAdapter());
+        this.currentMode = 'relight';
+
+        // Override the mainCanvas lookup in RelightingEffect
+        // by patching the DOM temporarily
+        const gpuCanvas = document.getElementById('gpu-canvas');
+        const mainCanvas = document.getElementById('main-canvas');
+
+        // Copy GPU canvas style to main-canvas placeholder for dimension reference
+        if (mainCanvas && gpuCanvas) {
+            mainCanvas.style.width = gpuCanvas.style.width || `${gpuCanvas.width}px`;
+            mainCanvas.style.height = gpuCanvas.style.height || `${gpuCanvas.height}px`;
         }
 
-        // Set depth map and enable
-        this.relightingEffect.depthMap = this.depthMap;
-        this.relightingEffect.enable();
-        this.isEnabled = true;
+        // Set depth map on effect's app adapter state
+        this.appAdapter.state.depthMap = this.depthMap;
 
-        // Show controls
-        const controls = document.getElementById('relight-controls');
-        if (controls) controls.style.display = 'block';
+        // Enable the effect
+        this.relightingEffect.enable();
 
         console.log('🔦 Relighting enabled');
     }
@@ -185,17 +331,13 @@ export class RelightingManager {
     /**
      * Disable relighting mode
      */
-    disable() {
+    disableRelight() {
         if (this.relightingEffect) {
             this.relightingEffect.disable();
         }
-        this.isEnabled = false;
+        this.currentMode = null;
 
-        // Hide controls
-        const controls = document.getElementById('relight-controls');
-        if (controls) controls.style.display = 'none';
-
-        // Re-render with develop settings
+        // Re-render the GPU canvas
         if (this.app.ui) {
             this.app.ui.renderWithMask(false);
         }
@@ -204,23 +346,79 @@ export class RelightingManager {
     }
 
     /**
-     * Create an adapter for RelightingEffect that mimics the old app interface
+     * Enable 3D view mode
      */
-    _createRelightAppAdapter() {
-        const self = this;
-        return {
-            state: {
-                get image() {
-                    return self.app.state.originalImage;
-                },
-                get depthMap() {
-                    return self.depthMap;
-                }
-            },
-            canvasManager: {
-                canvas: document.getElementById('gpu-canvas'),
-                getExportCanvas: () => document.getElementById('gpu-canvas')
-            }
-        };
+    enable3DView() {
+        if (!this.depthMap) {
+            console.warn('No depth map available');
+            return;
+        }
+
+        this.currentMode = '3d';
+        this.sceneManager.enable();
+
+        // Hide GPU canvas, show three canvas
+        const gpuCanvas = document.getElementById('gpu-canvas');
+        const threeCanvas = document.getElementById('three-canvas');
+
+        if (gpuCanvas) gpuCanvas.style.display = 'none';
+        if (threeCanvas) threeCanvas.style.display = 'block';
+
+        console.log('🎮 3D View enabled');
+    }
+
+    /**
+     * Disable 3D view mode
+     */
+    disable3DView() {
+        this.sceneManager.disable();
+        this.currentMode = null;
+
+        const gpuCanvas = document.getElementById('gpu-canvas');
+        const threeCanvas = document.getElementById('three-canvas');
+
+        if (gpuCanvas) gpuCanvas.style.display = 'block';
+        if (threeCanvas) threeCanvas.style.display = 'none';
+
+        console.log('🎮 3D View disabled');
+    }
+
+    /**
+     * Enable parallax effect
+     */
+    enableParallax() {
+        if (!this.depthMap) {
+            console.warn('No depth map available');
+            return;
+        }
+
+        this.currentMode = 'parallax';
+        this.parallaxEffect.enable();
+
+        console.log('✨ Parallax enabled');
+    }
+
+    /**
+     * Disable parallax effect
+     */
+    disableParallax() {
+        this.parallaxEffect.disable();
+        this.currentMode = null;
+
+        console.log('✨ Parallax disabled');
+    }
+
+    /**
+     * Check if depth map is available
+     */
+    hasDepthMap() {
+        return !!this.depthMap;
+    }
+
+    /**
+     * Get current mode
+     */
+    getCurrentMode() {
+        return this.currentMode;
     }
 }
