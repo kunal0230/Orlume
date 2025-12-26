@@ -53,53 +53,135 @@ export class EditorUI {
      * Panel tab switching
      */
     _initPanelTabs() {
-        document.querySelectorAll('.panel-tab').forEach(tab => {
+        // Develop mode panel tabs (Develop / Masks)
+        document.querySelectorAll('#develop-mode-tabs .panel-tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+                // Only switch tabs within develop mode
+                document.querySelectorAll('#develop-mode-tabs .panel-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                document.getElementById(`panel-${tab.dataset.panel}`)?.classList.add('active');
+
+                // Show the corresponding panel
+                const panelId = tab.dataset.panel;
+                document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+                document.getElementById(`panel-${panelId}`)?.classList.add('active');
+            });
+        });
+
+        // Mask tool buttons within Masks panel
+        document.querySelectorAll('.mask-tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const toolId = btn.id.replace('mask-tool-', '');
+                this.setMaskTool(toolId);
             });
         });
     }
 
     /**
-     * Tool button handling
+     * Tool button handling - main mode switches
      */
     _initToolButtons() {
         document.querySelectorAll('.tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const toolId = btn.id.replace('tool-', '');
-                this.setTool(toolId);
+                this.setMode(toolId);
             });
         });
     }
 
     /**
-     * Set active tool
+     * Set active mode (develop, 3d, export, crop)
      */
-    setTool(tool) {
-        this.state.setTool(tool);
+    setMode(mode) {
+        this.state.setTool(mode);
 
-        // Update tool button UI
+        // Update toolbar button UI
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tool-${tool}`)?.classList.add('active');
+        document.getElementById(`tool-${mode}`)?.classList.add('active');
 
-        // Show/hide brush settings
+        // Hide all mode headers
+        document.getElementById('develop-mode-tabs').style.display = 'none';
+        document.getElementById('3d-mode-header').style.display = 'none';
+        document.getElementById('export-mode-header').style.display = 'none';
+
+        // Hide all panels
+        document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+
+        // Hide brush cursor by default
+        this.elements.brushCursor.style.display = 'none';
+
+        switch (mode) {
+            case 'develop':
+                document.getElementById('develop-mode-tabs').style.display = 'flex';
+                document.getElementById('panel-develop').classList.add('active');
+                break;
+
+            case '3d':
+                document.getElementById('3d-mode-header').style.display = 'block';
+                document.getElementById('panel-relight').classList.add('active');
+                break;
+
+            case 'export':
+                document.getElementById('export-mode-header').style.display = 'block';
+                document.getElementById('panel-export').classList.add('active');
+                // Estimate file size when entering export mode
+                setTimeout(() => this.estimateFileSize(), 100);
+                break;
+
+            case 'crop':
+                // For now, show develop panel with crop overlay (to be implemented)
+                document.getElementById('develop-mode-tabs').style.display = 'flex';
+                document.getElementById('panel-develop').classList.add('active');
+                break;
+        }
+    }
+
+    /**
+     * Set active mask tool (brush, radial, gradient)
+     */
+    setMaskTool(tool) {
+        // Update mask tool button UI
+        document.querySelectorAll('.mask-tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`mask-tool-${tool}`)?.classList.add('active');
+
+        // Show/hide brush settings and adjustments based on tool
         const brushSettings = document.getElementById('brush-settings');
         const maskAdjustments = document.getElementById('mask-adjustments');
 
         if (tool === 'brush') {
+            this.state.setTool('brush');
             brushSettings.style.display = 'block';
             maskAdjustments.style.display = 'block';
-            document.querySelector('[data-panel="masks"]')?.click();
             this.elements.brushCursor.style.display = 'block';
-        } else {
+        } else if (tool === 'radial') {
+            this.state.setTool('radial');
             brushSettings.style.display = 'none';
+            maskAdjustments.style.display = 'block';
             this.elements.brushCursor.style.display = 'none';
-            if (tool === 'develop') {
-                document.querySelector('[data-panel="develop"]')?.click();
-            }
+        } else if (tool === 'gradient') {
+            this.state.setTool('gradient');
+            brushSettings.style.display = 'none';
+            maskAdjustments.style.display = 'block';
+            this.elements.brushCursor.style.display = 'none';
+        }
+
+        // Create a new layer if none exists
+        if (this.masks.layers.length === 0) {
+            this.masks.createBrushLayer(`${tool.charAt(0).toUpperCase() + tool.slice(1)} Mask 1`);
+            this._updateLayerList();
+        }
+    }
+
+    /**
+     * Legacy setTool for backward compatibility with keyboard shortcuts
+     */
+    setTool(tool) {
+        if (['develop', '3d', 'export', 'crop'].includes(tool)) {
+            this.setMode(tool);
+        } else if (['brush', 'radial', 'gradient'].includes(tool)) {
+            // Switch to develop mode and masks tab, then select the tool
+            this.setMode('develop');
+            document.querySelector('#develop-mode-tabs [data-panel="masks"]')?.click();
+            this.setMaskTool(tool);
         }
     }
 
@@ -323,6 +405,7 @@ export class EditorUI {
             if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) this.setTool('radial');
             if (e.code === 'KeyG') this.setTool('gradient');
             if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.setTool('crop');
+            if (e.code === 'KeyE' && !e.metaKey && !e.ctrlKey) this.setTool('export');
             if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
                 this.setBrushMode(!this.masks.brushSettings.erase);
             }
@@ -465,20 +548,12 @@ export class EditorUI {
             btnExport.addEventListener('click', () => this.exportImage());
         }
 
-        // Export format dropdown
+        // Export format dropdown - initial state
         const exportFormat = document.getElementById('export-format');
         const qualityControl = document.getElementById('quality-control');
-        if (exportFormat) {
-            exportFormat.addEventListener('change', () => {
-                // Hide quality slider for PNG (lossless)
-                if (qualityControl) {
-                    qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
-                }
-            });
+        if (exportFormat && qualityControl) {
             // Initial state
-            if (qualityControl) {
-                qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
-            }
+            qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
         }
 
         // Export quality slider
@@ -487,6 +562,21 @@ export class EditorUI {
         if (qualitySlider && qualityValue) {
             qualitySlider.addEventListener('input', () => {
                 qualityValue.textContent = qualitySlider.value;
+                // Debounce file size estimation
+                clearTimeout(this._estimateSizeTimeout);
+                this._estimateSizeTimeout = setTimeout(() => this.estimateFileSize(), 300);
+            });
+        }
+
+        // Also trigger estimation when format changes
+        if (exportFormat) {
+            exportFormat.addEventListener('change', () => {
+                // Hide quality slider for PNG (lossless)
+                if (qualityControl) {
+                    qualityControl.style.display = exportFormat.value === 'png' ? 'none' : 'block';
+                }
+                // Re-estimate file size with new format
+                this.estimateFileSize();
             });
         }
     }
@@ -888,9 +978,19 @@ export class EditorUI {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
 
-            // Generate filename with timestamp
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            link.download = `orlume-export-${timestamp}.${extension}`;
+            // Get custom filename or generate with timestamp
+            const filenameInput = document.getElementById('export-filename');
+            let filename = filenameInput?.value?.trim();
+
+            if (!filename) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                filename = `orlume-export-${timestamp}`;
+            }
+
+            // Sanitize filename (remove invalid characters)
+            filename = filename.replace(/[<>:"/\\|?*]/g, '-');
+
+            link.download = `${filename}.${extension}`;
             link.href = url;
             link.click();
 
@@ -901,6 +1001,59 @@ export class EditorUI {
             const sizeKB = (blob.size / 1024).toFixed(1);
             console.log(`✅ Exported ${extension.toUpperCase()} (${sizeKB} KB) at ${currentWidth}×${currentHeight}`);
         }, mimeType, quality);
+    }
+
+    /**
+     * Estimate file size based on current settings
+     * Called when quality slider changes
+     */
+    estimateFileSize() {
+        if (!this.state.originalImage || !this.elements.canvas) {
+            this._updateFileSizeDisplay('--');
+            return;
+        }
+
+        const formatSelect = document.getElementById('export-format');
+        const qualitySlider = document.getElementById('slider-export-quality');
+
+        const format = formatSelect?.value || 'jpeg';
+        const quality = (qualitySlider?.value || 95) / 100;
+
+        const mimeTypes = {
+            'png': 'image/png',
+            'jpeg': 'image/jpeg',
+            'webp': 'image/webp'
+        };
+        const mimeType = mimeTypes[format] || 'image/jpeg';
+
+        // Ensure we have the latest render
+        let resultTexture = this.gpu.renderToTexture();
+        resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        this.gpu.blitToCanvas(resultTexture);
+
+        // Generate blob to estimate size
+        this.elements.canvas.toBlob((blob) => {
+            if (blob) {
+                const sizeKB = blob.size / 1024;
+                let sizeText;
+                if (sizeKB < 1024) {
+                    sizeText = `~${sizeKB.toFixed(0)} KB`;
+                } else {
+                    sizeText = `~${(sizeKB / 1024).toFixed(1)} MB`;
+                }
+                this._updateFileSizeDisplay(sizeText);
+            }
+        }, mimeType, quality);
+    }
+
+    /**
+     * Update file size display in UI
+     */
+    _updateFileSizeDisplay(sizeText) {
+        const sizeDisplay = document.getElementById('estimated-file-size');
+        if (sizeDisplay) {
+            sizeDisplay.textContent = sizeText;
+        }
     }
 
     /**

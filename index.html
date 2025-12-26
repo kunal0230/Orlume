@@ -22,24 +22,18 @@
                         d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-brush" title="Brush (B)">
+            <button class="tool-btn" id="tool-3d" title="3D Relight">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
-                    <path
-                        d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+                    <circle cx="12" cy="12" r="5" />
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2" />
+                    <circle cx="9" cy="9" r="1" fill="currentColor" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-radial" title="Radial Filter (R)">
+            <button class="tool-btn" id="tool-export" title="Export (E)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="6" />
-                    <circle cx="12" cy="12" r="2" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-gradient" title="Gradient Filter (G)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
             </button>
 
@@ -69,10 +63,20 @@
 
         <!-- Control Panel -->
         <div class="control-panel">
-            <div class="panel-tabs">
+            <!-- Develop Mode Tabs (shown when in develop mode) -->
+            <div class="panel-tabs" id="develop-mode-tabs">
                 <button class="panel-tab active" data-panel="develop">Develop</button>
                 <button class="panel-tab" data-panel="masks">Masks</button>
-                <button class="panel-tab" data-panel="relight">3D</button>
+            </div>
+
+            <!-- 3D Mode Header (shown when in 3D mode) -->
+            <div class="panel-header mode-header" id="3d-mode-header" style="display: none;">
+                <span class="panel-title">3D Relighting</span>
+            </div>
+
+            <!-- Export Mode Header (shown when in export mode) -->
+            <div class="panel-header mode-header" id="export-mode-header" style="display: none;">
+                <span class="panel-title">Export Image</span>
             </div>
 
             <div class="panel-content">
@@ -174,39 +178,46 @@
                         </div>
                     </div>
 
-                    <!-- Export Section -->
+                    <!-- Actions -->
                     <div class="section">
-                        <div class="section-header">Export</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Format</span>
-                            </div>
-                            <select id="export-format"
-                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
-                                <option value="png">PNG (Lossless)</option>
-                                <option value="jpeg" selected>JPEG (Smaller)</option>
-                                <option value="webp">WebP (Best Compression)</option>
-                            </select>
-                        </div>
-
-                        <div class="control-group" id="quality-control">
-                            <div class="control-label">
-                                <span>Quality</span>
-                                <span id="val-export-quality">95</span>
-                            </div>
-                            <input type="range" id="slider-export-quality" min="1" max="100" step="1" value="95">
-                        </div>
-
                         <div class="btn-row">
-                            <button class="btn" id="btn-reset">Reset</button>
-                            <button class="btn btn-primary" id="btn-export">Export</button>
+                            <button class="btn" id="btn-reset" style="width: 100%;">Reset All Adjustments</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Masks Panel -->
                 <div class="panel-section" id="panel-masks">
+                    <!-- Mask Tool Selector -->
+                    <div class="section">
+                        <div class="section-header">Mask Tools</div>
+                        <div class="mask-tool-selector">
+                            <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+                                    <path
+                                        d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+                                </svg>
+                                <span>Brush</span>
+                            </button>
+                            <button class="mask-tool-btn" id="mask-tool-radial" title="Radial (R)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <circle cx="12" cy="12" r="6" />
+                                    <circle cx="12" cy="12" r="2" />
+                                </svg>
+                                <span>Radial</span>
+                            </button>
+                            <button class="mask-tool-btn" id="mask-tool-gradient" title="Gradient (G)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <line x1="3" y1="12" x2="21" y2="12" />
+                                </svg>
+                                <span>Linear</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="section">
                         <div class="section-header">Layers</div>
                         <div class="mask-layers" id="mask-layers">
@@ -408,10 +419,66 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Export Panel -->
+                <div class="panel-section" id="panel-export">
+                    <div class="section">
+                        <div class="section-header">Export Settings</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 16px;">
+                            Export your edited image in your preferred format and quality.
+                        </p>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Format</span>
+                            </div>
+                            <select id="export-format"
+                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                                <option value="png">PNG (Lossless)</option>
+                                <option value="jpeg" selected>JPEG (Smaller)</option>
+                                <option value="webp">WebP (Best Compression)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group" id="quality-control">
+                            <div class="control-label">
+                                <span>Quality</span>
+                                <span id="val-export-quality">95</span>
+                            </div>
+                            <input type="range" id="slider-export-quality" min="1" max="100" step="1" value="95">
+                        </div>
+
+                        <!-- Estimated File Size -->
+                        <div class="export-info"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Estimated Size</span>
+                                <span id="estimated-file-size"
+                                    style="font-size: 14px; font-weight: 600; color: var(--accent);">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Filename</div>
+                        <input type="text" id="export-filename" placeholder="orlume-export"
+                            style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; margin-bottom: 8px;">
+                        <p style="font-size: 10px; color: var(--text-secondary);">
+                            Leave empty for auto-generated filename with timestamp.
+                        </p>
+                    </div>
+
+                    <div class="section">
+                        <button class="btn btn-primary" id="btn-export"
+                            style="width: 100%; padding: 14px; font-size: 14px;">
+                            Export Image
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="keyboard-hint">
-                <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>B</kbd> brush | <kbd>[</kbd> <kbd>]</kbd> size
+                <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>E</kbd> export | <kbd>?</kbd> shortcuts
             </div>
         </div>
     </div>
@@ -425,12 +492,16 @@
             </div>
             <div class="shortcuts-grid">
                 <div class="shortcut-section">
-                    <h4>Tools</h4>
+                    <h4>Modes</h4>
                     <div class="shortcut-row"><kbd>D</kbd><span>Develop</span></div>
-                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
-                    <div class="shortcut-row"><kbd>R</kbd><span>Radial Filter</span></div>
-                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient Filter</span></div>
+                    <div class="shortcut-row"><kbd>E</kbd><span>Export</span></div>
                     <div class="shortcut-row"><kbd>C</kbd><span>Crop</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Mask Tools</h4>
+                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
+                    <div class="shortcut-row"><kbd>R</kbd><span>Radial</span></div>
+                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient</span></div>
                 </div>
                 <div class="shortcut-section">
                     <h4>Brush</h4>
