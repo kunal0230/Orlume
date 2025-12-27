@@ -1039,6 +1039,12 @@ export class EditorUI {
             img.onload = () => {
                 this.state.setImage(img);
                 this.gpu.loadImage(img);
+
+                // Notify mask system of dimension change so it can update textures
+                if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
+                    this.masks.onImageDimensionsChanged();
+                }
+
                 this.elements.dropZone?.classList.add('hidden');
                 this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.renderHistogram(), 100);

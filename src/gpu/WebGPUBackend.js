@@ -100,6 +100,30 @@ export class WebGPUBackend extends GPUBackend {
     }
 
     /**
+     * Set canvas size and reconfigure WebGPU context
+     * This is critical - WebGPU context must be reconfigured when canvas dimensions change
+     */
+    setSize(width, height) {
+        // Skip if dimensions haven't changed
+        if (this.width === width && this.height === height) {
+            return;
+        }
+
+        // Call parent to set canvas dimensions
+        super.setSize(width, height);
+
+        // Reconfigure the WebGPU context for the new canvas size
+        if (this.context && this.device) {
+            this.context.configure({
+                device: this.device,
+                format: this.format,
+                alphaMode: 'opaque'
+            });
+            console.log(`📐 WebGPU context reconfigured: ${width}×${height}`);
+        }
+    }
+
+    /**
      * Create vertex buffers for fullscreen quad
      */
     _createQuadBuffers() {
@@ -555,10 +579,15 @@ export class WebGPUBackend extends GPUBackend {
             ]
         });
 
-        // Get render target
-        const targetView = target
-            ? target._internal.createView()
-            : this.context.getCurrentTexture().createView();
+        // Get render target - handle framebuffer structure
+        let targetView;
+        if (target) {
+            // Framebuffer has texture property with _internal
+            const targetTexture = target.texture ? target.texture._internal : target._internal;
+            targetView = targetTexture.createView();
+        } else {
+            targetView = this.context.getCurrentTexture().createView();
+        }
 
         // Create command encoder
         const commandEncoder = this.device.createCommandEncoder();
@@ -599,9 +628,14 @@ export class WebGPUBackend extends GPUBackend {
             ]
         });
 
-        const targetView = target
-            ? target._internal.createView()
-            : this.context.getCurrentTexture().createView();
+        // Handle framebuffer structure
+        let targetView;
+        if (target) {
+            const targetTexture = target.texture ? target.texture._internal : target._internal;
+            targetView = targetTexture.createView();
+        } else {
+            targetView = this.context.getCurrentTexture().createView();
+        }
 
         const commandEncoder = this.device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
@@ -621,6 +655,81 @@ export class WebGPUBackend extends GPUBackend {
         passEncoder.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
+    }
+
+    /**
+     * Create framebuffer for render-to-texture operations
+     * @param {number} width 
+     * @param {number} height 
+     * @returns {Object} Framebuffer handle with texture property
+     */
+    createFramebuffer(width, height) {
+        // Create render target texture - IMPORTANT: use same format as canvas
+        // to ensure pipeline compatibility (BGRA8Unorm on most systems)
+        const texture = this.device.createTexture({
+            size: [width, height],
+            format: this.format, // Use canvas format, not hardcoded rgba8unorm
+            usage: GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.RENDER_ATTACHMENT |
+                GPUTextureUsage.COPY_SRC
+        });
+
+        return {
+            texture: {
+                width,
+                height,
+                _internal: texture
+            },
+            _internal: texture,
+            width,
+            height
+        };
+    }
+
+    /**
+     * Read pixels from canvas (async operation in WebGPU)
+     * Note: This is a synchronous stub that reads from the canvas context
+     * @returns {Uint8Array} Pixel data in RGBA format
+     */
+    readPixels() {
+        // WebGPU doesn't have synchronous readPixels like WebGL
+        // Fall back to canvas 2D context for now
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.canvas.width = this.width;
+        ctx.canvas.height = this.height;
+        ctx.drawImage(this.canvas, 0, 0);
+        const imageData = ctx.getImageData(0, 0, this.width, this.height);
+        return new Uint8Array(imageData.data.buffer);
+    }
+
+    /**
+     * Convert canvas to ImageData for histogram and other uses
+     * @returns {ImageData}
+     */
+    toImageData() {
+        // Use a temporary 2D canvas to read the WebGPU canvas content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.width;
+        tempCanvas.height = this.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(this.canvas, 0, 0);
+        return ctx.getImageData(0, 0, this.width, this.height);
+    }
+
+    /**
+     * Delete framebuffer and its texture
+     * @param {Object} framebuffer 
+     */
+    deleteFramebuffer(framebuffer) {
+        if (framebuffer) {
+            if (framebuffer._internal) {
+                framebuffer._internal.destroy();
+            }
+            // Also destroy the texture wrapper if it exists separately
+            if (framebuffer.texture && framebuffer.texture._internal !== framebuffer._internal) {
+                framebuffer.texture._internal.destroy();
+            }
+        }
     }
 
     /**

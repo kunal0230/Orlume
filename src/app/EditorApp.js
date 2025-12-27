@@ -3,7 +3,7 @@
  * Coordinates between state, UI, and GPU processing
  */
 import { GPUProcessor } from '../gpu/GPUProcessor.js';
-import { MaskSystem } from '../gpu/MaskSystem.js';
+import { createMaskSystem } from '../gpu/MaskSystemFactory.js';
 import { EditorState } from './EditorState.js';
 import { EditorUI } from './EditorUI.js';
 import { RelightingManager } from './RelightingManager.js';
@@ -29,8 +29,8 @@ export class EditorApp {
             this.gpu = new GPUProcessor(this.canvas);
             await this.gpu.init();
 
-            // Initialize mask system
-            this.masks = new MaskSystem(this.gpu);
+            // Initialize mask system (uses factory to select WebGPU or WebGL2)
+            this.masks = await createMaskSystem(this.gpu);
 
             // Initialize state management
             this.state = new EditorState();
@@ -112,6 +112,12 @@ export class EditorApp {
             img.onload = () => {
                 this.state.setImage(img);
                 this.gpu.loadImage(img);
+
+                // Notify mask system of dimension change so it can update textures
+                if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
+                    this.masks.onImageDimensionsChanged();
+                }
+
                 document.getElementById('drop-zone')?.classList.add('hidden');
                 document.getElementById('perf').textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.ui.renderHistogram(), 100);
