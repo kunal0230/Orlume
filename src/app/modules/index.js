@@ -8,4 +8,5 @@ export { ExportModule } from './ExportModule.js';
 export { CropModule } from './CropModule.js';
 export { LiquifyModule } from './LiquifyModule.js';
 export { HealingModule } from './HealingModule.js';
+export { UpscaleModule } from './UpscaleModule.js';
 

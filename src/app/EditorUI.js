@@ -3,10 +3,9 @@
  * Handles all DOM interactions, event bindings, and UI updates
  */
 import { HistoryManager } from './HistoryManager.js';
-import { ImageUpscaler } from '../ml/ImageUpscaler.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -48,6 +47,7 @@ export class EditorUI {
         this.cropModule = new CropModule(this);
         this.liquifyModule = new LiquifyModule(this);
         this.healingModule = new HealingModule(this);
+        this.upscaleModule = new UpscaleModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -64,6 +64,10 @@ export class EditorUI {
         this.healingTool = null; // Will be set when healingModule.init() is called
         this.healingCanvas = null;
         this.replicate = null;
+
+        // Expose upscaler from module for backward compatibility
+        this.upscaler = null; // Will be set when upscaleModule.init() is called
+        this.upscaleScaleFactor = 2;
 
         // Comparison slider state
         this.comparison = {
@@ -93,6 +97,7 @@ export class EditorUI {
         this.cropModule.init();
         this.liquifyModule.init();
         this.healingModule.init();
+        this.upscaleModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -100,9 +105,10 @@ export class EditorUI {
         this.healingTool = this.healingModule.healingTool;
         this.healingCanvas = this.healingModule.healingCanvas;
         this.replicate = this.healingModule.replicate;
+        this.upscaler = this.upscaleModule.upscaler;
+        this.upscaleScaleFactor = this.upscaleModule.scaleFactor;
 
         this._initComparisonSlider();
-        this._initUpscaleControls();
     }
 
     /**
@@ -993,80 +999,10 @@ export class EditorUI {
     }
 
     /**
-     * Initialize upscale controls
+     * @deprecated Handled by upscaleModule.init()
      */
     _initUpscaleControls() {
-        // Create upscaler instance
-        this.upscaler = new ImageUpscaler();
-        this.upscaleScaleFactor = 2;
-
-        // Mode selector buttons (Enhance / Upscale / Both)
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const mode = btn.dataset.mode;
-                this.upscaler.setProcessingMode(mode);
-                this._updateUpscaleDimensions();
-            });
-        });
-
-        // Scale factor buttons
-        document.querySelectorAll('.scale-factor-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.scale-factor-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.upscaleScaleFactor = parseInt(btn.dataset.scale);
-                this.upscaler.setScaleFactor(this.upscaleScaleFactor);
-                this._updateUpscaleDimensions();
-            });
-        });
-
-        // Sharpen toggle
-        const sharpenToggle = document.getElementById('upscale-sharpen-toggle');
-        if (sharpenToggle) {
-            sharpenToggle.addEventListener('change', () => {
-                this.upscaler.setSharpenEdges(sharpenToggle.checked);
-            });
-        }
-
-        // AI server toggle
-        const aiToggle = document.getElementById('upscale-ai-toggle');
-        if (aiToggle) {
-            aiToggle.addEventListener('change', () => {
-                this.upscaler.setUseAI(aiToggle.checked);
-            });
-        }
-
-        // Face enhancement toggle
-        const faceToggle = document.getElementById('upscale-face-toggle');
-        if (faceToggle) {
-            faceToggle.addEventListener('change', () => {
-                this.upscaler.setEnhanceFace(faceToggle.checked);
-            });
-        }
-
-        // Server URL input
-        const serverUrlInput = document.getElementById('ai-server-url');
-        if (serverUrlInput) {
-            serverUrlInput.addEventListener('change', () => {
-                this.upscaler.setServerUrl(serverUrlInput.value);
-            });
-        }
-
-        // Apply button
-        const btnApply = document.getElementById('btn-upscale-apply');
-        if (btnApply) {
-            btnApply.addEventListener('click', () => this.applyUpscale());
-        }
-
-        // Cancel button
-        const btnCancel = document.getElementById('btn-upscale-cancel');
-        if (btnCancel) {
-            btnCancel.addEventListener('click', () => {
-                this.setMode('develop');
-            });
-        }
+        // Now delegated to upscaleModule.init()
     }
 
     /**
@@ -1183,95 +1119,14 @@ export class EditorUI {
      * Update upscale dimensions display
      */
     _updateUpscaleDimensions() {
-        const currentDims = document.getElementById('upscale-current-dims');
-        const outputDims = document.getElementById('upscale-output-dims');
-
-        if (!this.state.hasImage) {
-            if (currentDims) currentDims.textContent = '-- × --';
-            if (outputDims) outputDims.textContent = '-- × --';
-            return;
-        }
-
-        const width = this.gpu.width;
-        const height = this.gpu.height;
-        const outputWidth = Math.round(width * this.upscaleScaleFactor);
-        const outputHeight = Math.round(height * this.upscaleScaleFactor);
-
-        if (currentDims) currentDims.textContent = `${width} × ${height}`;
-        if (outputDims) outputDims.textContent = `${outputWidth} × ${outputHeight}`;
+        this.upscaleModule.updateDimensions();
     }
 
     /**
      * Apply upscale to image
      */
     async applyUpscale() {
-        if (!this.state.hasImage) {
-            console.warn('No image loaded for upscaling');
-            return;
-        }
-
-        const progressSection = document.getElementById('upscale-progress-section');
-        const progressBar = document.getElementById('upscale-progress-bar');
-        const progressText = document.getElementById('upscale-progress-text');
-        const progressPercent = document.getElementById('upscale-progress-percent');
-        const btnApply = document.getElementById('btn-upscale-apply');
-
-        // Show progress and disable button
-        if (progressSection) progressSection.style.display = 'block';
-        if (btnApply) btnApply.disabled = true;
-
-        try {
-            // Save state for undo
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Upscale the image
-            const upscaledCanvas = await this.upscaler.upscaleFromWebGL(
-                this.gpu.gl,
-                this.gpu.width,
-                this.gpu.height,
-                (percent, message) => {
-                    if (progressBar) progressBar.style.width = `${percent}%`;
-                    if (progressText) progressText.textContent = message;
-                    if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
-                }
-            );
-
-            // Create image from canvas
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
-
-                // Reload GPU processor with upscaled image
-                this.gpu.loadImage(img);
-
-                // Clear masks (they no longer align)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.updateLayersList();
-
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
-                setTimeout(() => this.renderHistogram(), 100);
-
-                // Hide progress
-                if (progressSection) progressSection.style.display = 'none';
-                if (btnApply) btnApply.disabled = false;
-                if (progressBar) progressBar.style.width = '0%';
-
-                // Update dimensions display
-                this._updateUpscaleDimensions();
-
-                console.log(`✅ Upscale complete: ${img.width}×${img.height}`);
-            };
-            img.src = upscaledCanvas.toDataURL('image/png');
-
-        } catch (error) {
-            console.error('Upscale failed:', error);
-            if (progressSection) progressSection.style.display = 'none';
-            if (btnApply) btnApply.disabled = false;
-        }
+        return this.upscaleModule.apply();
     }
 
     /**
