@@ -82,6 +82,12 @@
                     <circle cx="13" cy="9" r="2" />
                 </svg>
             </button>
+            <button class="tool-btn" id="tool-clone" title="Clone Stamp (S)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+            </button>
 
             <div class="tool-divider"></div>
 
@@ -155,6 +161,11 @@
             <!-- Healing Mode Header (shown when in healing mode) -->
             <div class="panel-header mode-header" id="healing-mode-header" style="display: none;">
                 <span class="panel-title">AI Spot Healing</span>
+            </div>
+
+            <!-- Clone Mode Header (shown when in clone mode) -->
+            <div class="panel-header mode-header" id="clone-mode-header" style="display: none;">
+                <span class="panel-title">Clone Stamp</span>
             </div>
 
             <div class="panel-content">
@@ -933,21 +944,13 @@
 
                 <!-- Healing Panel (AI Spot Healing) -->
                 <div class="panel-section" id="panel-healing">
-                    <!-- API Settings -->
+                    <!-- Status Indicator -->
                     <div class="section">
-                        <div class="section-title">API Settings</div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="password" id="replicate-api-token" class="text-input"
-                                placeholder="Enter Replicate API Token"
-                                style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary);">
+                        <div
+                            style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px;">
+                            <span style="color: #4ade80;">●</span>
+                            <span style="font-size: 12px; color: var(--text-secondary);">AI Healing Ready (LaMa)</span>
                         </div>
-                        <button class="btn btn-secondary" id="btn-test-api" style="width: 100%;">
-                            Test Connection
-                        </button>
-                        <p id="api-status"
-                            style="font-size: 11px; margin-top: 8px; text-align: center; color: var(--text-secondary);">
-                            Enter your API token from replicate.com
-                        </p>
                     </div>
 
                     <!-- Brush Settings -->
@@ -1005,6 +1008,65 @@
                         <button class="btn btn-secondary" id="btn-remove-bg" style="width: 100%; margin-bottom: 8px;">
                             🎭 Remove Background
                         </button>
+                    </div>
+                </div>
+
+                <!-- Clone Stamp Panel -->
+                <div class="panel-section" id="panel-clone">
+                    <!-- Brush Settings -->
+                    <div class="section">
+                        <div class="section-header">Brush Settings</div>
+                        <div class="slider-row">
+                            <span class="slider-label">Size</span>
+                            <span class="slider-value" id="clone-size-value">50px</span>
+                        </div>
+                        <input type="range" class="slider" id="clone-size" min="5" max="500" value="50">
+
+                        <div class="slider-row" style="margin-top: 12px;">
+                            <span class="slider-label">Hardness</span>
+                            <span class="slider-value" id="clone-hardness-value">80%</span>
+                        </div>
+                        <input type="range" class="slider" id="clone-hardness" min="0" max="100" value="80">
+
+                        <div class="slider-row" style="margin-top: 12px;">
+                            <span class="slider-label">Opacity</span>
+                            <span class="slider-value" id="clone-opacity-value">100%</span>
+                        </div>
+                        <input type="range" class="slider" id="clone-opacity" min="1" max="100" value="100">
+                    </div>
+
+                    <!-- Options -->
+                    <div class="section">
+                        <div class="section-header">Options</div>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="clone-aligned" checked>
+                            <span>Aligned (source follows brush offset)</span>
+                        </label>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="section">
+                        <div class="section-header">How to Use</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                            1. <kbd>Alt</kbd>+Click to set source point<br>
+                            2. Click and drag to clone pixels<br>
+                            3. Click "Apply" to keep changes
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <button class="btn" id="btn-clone-reset-source" style="width: 100%; margin-bottom: 8px;">
+                            Reset Source Point
+                        </button>
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-clone-cancel" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button class="btn btn-primary" id="btn-clone-apply" style="flex: 1;">
+                                Apply
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
