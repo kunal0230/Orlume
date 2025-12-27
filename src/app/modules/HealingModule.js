@@ -235,6 +235,12 @@ export class HealingModule {
             this.healingCanvas.style.display = 'none';
             this.healingCanvas.style.pointerEvents = 'none';
 
+            // Clear canvas content to prevent overlap
+            const ctx = this.healingCanvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
+            }
+
             // Remove event listeners
             if (this._healingMouseDown) {
                 this.healingCanvas.removeEventListener('mousedown', this._healingMouseDown);

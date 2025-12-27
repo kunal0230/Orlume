@@ -158,6 +158,9 @@ export class EditorUI {
     setMode(mode) {
         const previousMode = this.state.currentTool;
 
+        // Always deactivate ALL overlay tools first to prevent image overlap
+        this._deactivateAllOverlayTools();
+
         // Deactivate crop tool and clear transform preview if leaving crop mode
         if (previousMode === 'crop' && mode !== 'crop') {
             this.cropTool?.deactivate();
@@ -169,21 +172,6 @@ export class EditorUI {
             if (this.app?.relighting) {
                 this.app.relighting.disableRelight();
             }
-        }
-
-        // Deactivate liquify tool when leaving liquify mode
-        if (previousMode === 'liquify' && mode !== 'liquify') {
-            this._deactivateLiquifyTool();
-        }
-
-        // Deactivate healing tool when leaving healing mode
-        if (previousMode === 'healing' && mode !== 'healing') {
-            this._deactivateHealingTool();
-        }
-
-        // Deactivate clone tool when leaving clone mode
-        if (previousMode === 'clone' && mode !== 'clone') {
-            this.cloneModule.deactivate();
         }
 
         this.state.setTool(mode);
@@ -842,6 +830,16 @@ export class EditorUI {
      */
     _deactivateLiquifyTool() {
         this.liquifyModule.deactivate();
+    }
+
+    /**
+     * Deactivate ALL overlay tools (liquify, healing, clone)
+     * Called at the start of every mode switch to prevent image overlap
+     */
+    _deactivateAllOverlayTools() {
+        this.liquifyModule?.deactivate();
+        this.healingModule?.deactivate();
+        this.cloneModule?.deactivate();
     }
 
     /**

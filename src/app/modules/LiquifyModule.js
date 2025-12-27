@@ -241,6 +241,12 @@ export class LiquifyModule {
         this.liquifyCanvas.style.display = 'none';
         this.liquifyCanvas.style.pointerEvents = 'none';
 
+        // Clear canvas content to prevent overlap
+        const ctx = this.liquifyCanvas.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, this.liquifyCanvas.width, this.liquifyCanvas.height);
+        }
+
         // Hide brush cursor
         if (this.liquifyBrushCursor) {
             this.liquifyBrushCursor.style.display = 'none';
