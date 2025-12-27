@@ -4,11 +4,9 @@
  */
 import { HistoryManager } from './HistoryManager.js';
 import { ImageUpscaler } from '../ml/ImageUpscaler.js';
-import { HealingTool } from '../tools/HealingTool.js';
-import { replicateService } from '../services/ReplicateService.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -49,6 +47,7 @@ export class EditorUI {
         this.exportModule = new ExportModule(this);
         this.cropModule = new CropModule(this);
         this.liquifyModule = new LiquifyModule(this);
+        this.healingModule = new HealingModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -60,6 +59,11 @@ export class EditorUI {
         // Expose liquify tool from module for backward compatibility
         this.liquifyTool = null; // Will be set when liquifyModule.init() is called
         this.liquifyCanvas = null;
+
+        // Expose healing tool from module for backward compatibility
+        this.healingTool = null; // Will be set when healingModule.init() is called
+        this.healingCanvas = null;
+        this.replicate = null;
 
         // Comparison slider state
         this.comparison = {
@@ -88,14 +92,17 @@ export class EditorUI {
         this.zoomPanModule.init();
         this.cropModule.init();
         this.liquifyModule.init();
+        this.healingModule.init();
 
-        // Sync liquify references for backward compatibility
+        // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
         this.liquifyCanvas = this.liquifyModule.liquifyCanvas;
+        this.healingTool = this.healingModule.healingTool;
+        this.healingCanvas = this.healingModule.healingCanvas;
+        this.replicate = this.healingModule.replicate;
 
         this._initComparisonSlider();
         this._initUpscaleControls();
-        this._initHealingControls();
     }
 
     /**
@@ -1110,438 +1117,66 @@ export class EditorUI {
     }
 
     /**
-     * Initialize healing tool controls
+     * @deprecated Handled by healingModule.init()
      */
     _initHealingControls() {
-        // Create healing canvas (overlay on main canvas)
-        this.healingCanvas = document.createElement('canvas');
-        this.healingCanvas.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            display: none;
-        `;
-        this.elements.canvas.parentElement.appendChild(this.healingCanvas);
-
-        // Create healing tool instance
-        this.healingTool = new HealingTool(this.healingCanvas);
-
-        // Store reference to Replicate service
-        this.replicate = replicateService;
-
-        // Load saved API token
-        const tokenInput = document.getElementById('replicate-api-token');
-        if (tokenInput && this.replicate.hasApiToken()) {
-            tokenInput.value = this.replicate.getApiToken();
-            document.getElementById('api-status').textContent = '✅ Token loaded from storage';
-            document.getElementById('api-status').style.color = 'var(--accent)';
-        }
-
-        // API Token input
-        tokenInput?.addEventListener('change', () => {
-            this.replicate.setApiToken(tokenInput.value);
-            document.getElementById('api-status').textContent = '💾 Token saved';
-            document.getElementById('api-status').style.color = 'var(--accent)';
-        });
-
-        // Test API button
-        document.getElementById('btn-test-api')?.addEventListener('click', async () => {
-            const status = document.getElementById('api-status');
-            status.textContent = '🔄 Testing connection...';
-            status.style.color = 'var(--text-secondary)';
-
-            const result = await this.replicate.testConnection();
-            if (result.success) {
-                status.textContent = '✅ Connection successful!';
-                status.style.color = 'var(--accent)';
-            } else {
-                status.textContent = `❌ ${result.error}`;
-                status.style.color = 'var(--text-error)';
-            }
-        });
-
-        // Size slider
-        const sizeSlider = document.getElementById('healing-size');
-        const sizeValue = document.getElementById('healing-size-value');
-        sizeSlider?.addEventListener('input', () => {
-            const size = parseInt(sizeSlider.value);
-            this.healingTool.setBrushSize(size);
-            if (sizeValue) sizeValue.textContent = `${size}px`;
-            this._updateHealingBrushCursor();
-        });
-
-        // Hardness slider
-        const hardnessSlider = document.getElementById('healing-hardness');
-        const hardnessValue = document.getElementById('healing-hardness-value');
-        hardnessSlider?.addEventListener('input', () => {
-            const hardness = parseInt(hardnessSlider.value);
-            this.healingTool.setBrushHardness(hardness / 100);
-            if (hardnessValue) hardnessValue.textContent = `${hardness}%`;
-        });
-
-        // Heal button
-        document.getElementById('btn-heal')?.addEventListener('click', () => this._performHealing());
-
-        // Clear mask button
-        document.getElementById('btn-clear-mask')?.addEventListener('click', () => {
-            this.healingTool.clearMask();
-            this._renderHealingPreview();
-        });
-
-        // Apply button
-        document.getElementById('btn-healing-apply')?.addEventListener('click', () => this._applyHealing());
-
-        // Cancel button
-        document.getElementById('btn-healing-cancel')?.addEventListener('click', () => {
-            this.healingTool.reset();
-            this._deactivateHealingTool();
-            this.setMode('develop');
-        });
-
-        // Face enhance button
-        document.getElementById('btn-enhance-face')?.addEventListener('click', () => this._enhanceFace());
-
-        // Remove background button
-        document.getElementById('btn-remove-bg')?.addEventListener('click', () => this._removeBackground());
+        // Now delegated to healingModule.init()
     }
 
     /**
      * Activate healing tool
      */
     _activateHealingTool() {
-        if (!this.state.hasImage) return;
-
-        // Show healing canvas
-        this.healingCanvas.style.display = 'block';
-        this.healingCanvas.style.pointerEvents = 'auto';
-
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.healingCanvas.style.width = rect.width + 'px';
-        this.healingCanvas.style.height = rect.height + 'px';
-        this.healingCanvas.width = this.gpu.width;
-        this.healingCanvas.height = this.gpu.height;
-
-        // Set the image to heal
-        this.healingTool.setImage(this.elements.canvas);
-
-        // Create healing brush cursor if it doesn't exist
-        if (!this.healingBrushCursor) {
-            this.healingBrushCursor = document.createElement('div');
-            this.healingBrushCursor.className = 'healing-brush-cursor';
-            this.healingBrushCursor.style.cssText = `
-                position: fixed;
-                pointer-events: none;
-                border: 2px solid rgba(255, 100, 100, 0.8);
-                border-radius: 50%;
-                z-index: 10000;
-                display: none;
-                box-shadow: 0 0 10px rgba(255, 100, 100, 0.3);
-            `;
-            document.body.appendChild(this.healingBrushCursor);
-        }
-        this.healingBrushCursor.style.display = 'block';
-        this._updateHealingBrushCursor();
-
-        // Add mouse event listeners
-        this._healingMouseDown = (e) => {
-            const rect = this.healingCanvas.getBoundingClientRect();
-            const scaleX = this.healingTool.imageWidth / rect.width;
-            const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.healingTool.onMouseDown(x, y);
-            this._renderHealingPreview();
-        };
-
-        this._healingMouseMove = (e) => {
-            // Update cursor position
-            if (this.healingBrushCursor) {
-                const size = this.healingTool.brushSize;
-                const rect = this.healingCanvas.getBoundingClientRect();
-                const scale = rect.width / this.healingTool.imageWidth;
-                const displaySize = size * scale;
-                this.healingBrushCursor.style.width = displaySize + 'px';
-                this.healingBrushCursor.style.height = displaySize + 'px';
-                this.healingBrushCursor.style.left = (e.clientX - displaySize / 2) + 'px';
-                this.healingBrushCursor.style.top = (e.clientY - displaySize / 2) + 'px';
-            }
-
-            const rect = this.healingCanvas.getBoundingClientRect();
-            const scaleX = this.healingTool.imageWidth / rect.width;
-            const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.healingTool.onMouseMove(x, y);
-
-            if (this.healingTool.isDrawing) {
-                this._renderHealingPreview();
-            }
-        };
-
-        this._healingMouseUp = () => {
-            this.healingTool.onMouseUp();
-        };
-
-        this.healingCanvas.addEventListener('mousedown', this._healingMouseDown);
-        this.healingCanvas.addEventListener('mousemove', this._healingMouseMove);
-        this.healingCanvas.addEventListener('mouseup', this._healingMouseUp);
-        this.healingCanvas.addEventListener('mouseleave', this._healingMouseUp);
-
-        // Initial render
-        this._renderHealingPreview();
-
-        console.log('🩹 Healing tool activated');
+        this.healingModule.activate();
     }
 
     /**
      * Deactivate healing tool
      */
     _deactivateHealingTool() {
-        if (this.healingCanvas) {
-            this.healingCanvas.style.display = 'none';
-            this.healingCanvas.style.pointerEvents = 'none';
-
-            // Remove event listeners
-            if (this._healingMouseDown) {
-                this.healingCanvas.removeEventListener('mousedown', this._healingMouseDown);
-                this.healingCanvas.removeEventListener('mousemove', this._healingMouseMove);
-                this.healingCanvas.removeEventListener('mouseup', this._healingMouseUp);
-                this.healingCanvas.removeEventListener('mouseleave', this._healingMouseUp);
-            }
-        }
-
-        // Hide cursor
-        if (this.healingBrushCursor) {
-            this.healingBrushCursor.style.display = 'none';
-        }
-
-        console.log('🩹 Healing tool deactivated');
+        this.healingModule.deactivate();
     }
 
     /**
      * Update healing brush cursor size
      */
     _updateHealingBrushCursor() {
-        if (!this.healingBrushCursor || !this.healingTool) return;
-        const size = this.healingTool.brushSize;
-        const rect = this.healingCanvas?.getBoundingClientRect();
-        if (!rect) return;
-        const scale = rect.width / (this.healingTool.imageWidth || 1);
-        const displaySize = size * scale;
-        this.healingBrushCursor.style.width = displaySize + 'px';
-        this.healingBrushCursor.style.height = displaySize + 'px';
+        this.healingModule._updateBrushCursor();
     }
 
     /**
      * Render healing preview with mask overlay
      */
     _renderHealingPreview() {
-        if (!this.healingTool) return;
-        const previewCanvas = this.healingTool.getPreviewCanvas();
-        const ctx = this.healingCanvas.getContext('2d');
-        ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
-        ctx.drawImage(previewCanvas, 0, 0, this.healingCanvas.width, this.healingCanvas.height);
+        this.healingModule._renderPreview();
     }
 
     /**
      * Perform AI healing using LaMa
      */
     async _performHealing() {
-        if (!this.healingTool.hasMaskDrawn()) {
-            alert('Please paint over the area you want to heal first.');
-            return;
-        }
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-heal');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Healing...';
-        btn.disabled = true;
-
-        try {
-            const imageDataUrl = this.healingTool.getImageDataUrl();
-            const maskDataUrl = this.healingTool.getMaskDataUrl();
-
-            console.log('🩹 Sending to LaMa API...');
-            const result = await this.replicate.inpaint(imageDataUrl, maskDataUrl);
-
-            console.log('🩹 Healing result received');
-
-            // Load the result image
-            this.healedImage = await this._loadImageAsync(result);
-
-            // Show result on canvas
-            const ctx = this.healingCanvas.getContext('2d');
-            ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
-            ctx.drawImage(this.healedImage, 0, 0, this.healingCanvas.width, this.healingCanvas.height);
-
-            // Clear the mask
-            this.healingTool.clearMask();
-
-            btn.textContent = '✅ Done! Click Apply';
-
-        } catch (error) {
-            console.error('Healing failed:', error);
-            alert(`Healing failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.performHealing();
     }
 
     /**
      * Apply healed result to main canvas
      */
     async _applyHealing() {
-        if (!this.healedImage) {
-            alert('No healed image to apply. Run healing first.');
-            return;
-        }
-
-        try {
-            // Clear debounce and save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Update state and GPU
-            this.state.setImage(this.healedImage);
-            this.gpu.loadImage(this.healedImage);
-            this.state.originalImage = this.healedImage;
-
-            // Clear healed image reference
-            this.healedImage = null;
-
-            // Update histogram
-            setTimeout(() => this.renderHistogram(), 100);
-
-            // Reinitialize healing tool with new image
-            this.healingTool.setImage(this.elements.canvas);
-            this._renderHealingPreview();
-
-            console.log('✅ Healing applied successfully');
-
-        } catch (error) {
-            console.error('Failed to apply healing:', error);
-        }
+        return this.healingModule.applyHealing();
     }
 
     /**
      * Enhance face using GFPGAN
      */
     async _enhanceFace() {
-        if (!this.state.hasImage) return;
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-enhance-face');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Enhancing...';
-        btn.disabled = true;
-
-        try {
-            // Capture current image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.gpu.width;
-            tempCanvas.height = this.gpu.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
-            const imageDataUrl = tempCanvas.toDataURL('image/png');
-
-            console.log('✨ Sending to GFPGAN API...');
-            const result = await this.replicate.enhanceFace(imageDataUrl);
-
-            console.log('✨ Face enhancement result received');
-
-            // Save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Load and apply the result
-            const enhancedImage = await this._loadImageAsync(result);
-            this.state.setImage(enhancedImage);
-            this.gpu.loadImage(enhancedImage);
-            this.state.originalImage = enhancedImage;
-
-            // Update UI
-            setTimeout(() => this.renderHistogram(), 100);
-
-            btn.textContent = '✅ Enhanced!';
-            setTimeout(() => { btn.textContent = originalText; }, 2000);
-
-        } catch (error) {
-            console.error('Face enhancement failed:', error);
-            alert(`Face enhancement failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.enhanceFace();
     }
 
     /**
      * Remove background using rembg
      */
     async _removeBackground() {
-        if (!this.state.hasImage) return;
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-remove-bg');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Removing...';
-        btn.disabled = true;
-
-        try {
-            // Capture current image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.gpu.width;
-            tempCanvas.height = this.gpu.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
-            const imageDataUrl = tempCanvas.toDataURL('image/png');
-
-            console.log('🎭 Sending to rembg API...');
-            const result = await this.replicate.removeBackground(imageDataUrl);
-
-            console.log('🎭 Background removal result received');
-
-            // Save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Load and apply the result
-            const resultImage = await this._loadImageAsync(result);
-            this.state.setImage(resultImage);
-            this.gpu.loadImage(resultImage);
-            this.state.originalImage = resultImage;
-
-            // Update UI
-            setTimeout(() => this.renderHistogram(), 100);
-
-            btn.textContent = '✅ Removed!';
-            setTimeout(() => { btn.textContent = originalText; }, 2000);
-
-        } catch (error) {
-            console.error('Background removal failed:', error);
-            alert(`Background removal failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.removeBackground();
     }
 
     /**
