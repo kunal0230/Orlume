@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule, KeyboardModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -48,6 +48,7 @@ export class EditorUI {
         this.liquifyModule = new LiquifyModule(this);
         this.healingModule = new HealingModule(this);
         this.upscaleModule = new UpscaleModule(this);
+        this.keyboardModule = new KeyboardModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -88,7 +89,6 @@ export class EditorUI {
         this._initMaskSliders();
         this._initBrushControls();
         this._initCanvasEvents();
-        this._initKeyboardShortcuts();
         this._initFileHandling();
         this._initActionButtons();
 
@@ -98,6 +98,7 @@ export class EditorUI {
         this.liquifyModule.init();
         this.healingModule.init();
         this.upscaleModule.init();
+        this.keyboardModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -583,118 +584,17 @@ export class EditorUI {
     }
 
     /**
-     * Initialize keyboard shortcuts
+     * @deprecated Handled by keyboardModule.init()
      */
     _initKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Ignore shortcuts when typing in inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-            if (e.code === 'Space' && !this.state.showingBefore && this.state.hasImage) {
-                e.preventDefault();
-                this.state.showingBefore = true;
-                this.elements.beforeIndicator?.classList.add('visible');
-                this.gpu.renderOriginal(this.state.originalImage);
-            }
-            if (e.code === 'KeyD') this.setTool('develop');
-            if (e.code === 'KeyB') this.setTool('brush');
-            if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) this.setTool('radial');
-            if (e.code === 'KeyG') this.setTool('gradient');
-            if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.setTool('crop');
-            if (e.code === 'KeyE' && !e.metaKey && !e.ctrlKey) this.setTool('export');
-            if (e.code === 'KeyU' && !e.metaKey && !e.ctrlKey) this.setTool('upscale');
-            if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) this.setTool('liquify');
-            if (e.code === 'KeyH' && !e.metaKey && !e.ctrlKey) this.setTool('healing');
-            if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
-                this.setBrushMode(!this.masks.brushSettings.erase);
-            }
-            if (e.code === 'BracketLeft') {
-                this.adjustBrushSize(-10);
-            }
-            if (e.code === 'BracketRight') {
-                this.adjustBrushSize(10);
-            }
-
-            // Show keyboard shortcuts modal with ? key
-            if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
-                e.preventDefault();
-                this.toggleShortcutsModal(true);
-            }
-
-            // Close modal with Escape (or cancel crop if in crop mode)
-            if (e.code === 'Escape') {
-                if (this.state.currentTool === 'crop') {
-                    e.preventDefault();
-                    this.cancelCrop();
-                } else {
-                    this.toggleShortcutsModal(false);
-                }
-            }
-
-            // Apply crop with Enter when in crop mode
-            if (e.code === 'Enter' && this.state.currentTool === 'crop') {
-                e.preventDefault();
-                this.applyCrop();
-            }
-
-            // Export with Ctrl/Cmd + E
-            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
-                e.preventDefault();
-                this.exportImage();
-            }
-
-            // Undo with Ctrl/Cmd + Z
-            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ') {
-                e.preventDefault();
-                this.undo();
-            }
-
-            // Redo with Ctrl/Cmd + Shift + Z
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyZ') {
-                e.preventDefault();
-                this.redo();
-            }
-
-            // Toggle Before/After comparison with backslash
-            if (e.code === 'Backslash' && this.state.hasImage) {
-                e.preventDefault();
-                this.toggleComparison();
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && this.state.showingBefore) {
-                this.state.showingBefore = false;
-                this.elements.beforeIndicator?.classList.remove('visible');
-                this.gpu.render();
-            }
-        });
-
-        // Shortcuts modal close button
-        const shortcutsClose = document.getElementById('shortcuts-close');
-        if (shortcutsClose) {
-            shortcutsClose.addEventListener('click', () => this.toggleShortcutsModal(false));
-        }
-
-        // Close modal on backdrop click
-        const shortcutsModal = document.getElementById('shortcuts-modal');
-        if (shortcutsModal) {
-            shortcutsModal.addEventListener('click', (e) => {
-                if (e.target === shortcutsModal) {
-                    this.toggleShortcutsModal(false);
-                }
-            });
-        }
+        // Now delegated to keyboardModule.init()
     }
 
     /**
      * Toggle keyboard shortcuts modal
      */
     toggleShortcutsModal(show) {
-        const modal = document.getElementById('shortcuts-modal');
-        if (modal) {
-            modal.style.display = show ? 'flex' : 'none';
-        }
+        this.keyboardModule.toggleShortcutsModal(show);
     }
 
     /**
