@@ -7,7 +7,19 @@
     <title>Orlume | AI Photo Editor</title>
     <meta name="description"
         content="Transform your photos with AI-powered depth estimation, dynamic relighting, and GPU-accelerated adjustments">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Orlume">
+
+    <!-- Icons -->
     <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
+
     <link rel="stylesheet" href="/src/styles/editor.css">
 </head>
 
@@ -68,6 +80,17 @@
                     <circle cx="5" cy="17" r="2" />
                     <circle cx="9" cy="13" r="2" />
                     <circle cx="13" cy="9" r="2" />
+                </svg>
+            </button>
+
+            <div class="tool-divider"></div>
+
+            <!-- PWA Install Button -->
+            <button class="tool-btn" id="pwa-install-btn" title="Install App" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
             </button>
         </div>
@@ -1041,6 +1064,7 @@
 
     <script type="module">
         import { initApp } from './src/app/EditorApp.js';
+        import './src/pwa-install.js';
 
         // Initialize the editor
         initApp().then(app => {
