@@ -4,406 +4,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orlume | Next-Gen AI Photo Editor</title>
     <meta name="description"
-        content="Orlume - Professional AI-powered photo editing in your browser. 3D relighting, background removal, AI upscaling, and more. No installation required.">
-    <meta name="keywords"
-        content="photo editor, AI photo editing, background removal, 3D relighting, image upscaling, browser photo editor">
-    <meta name="author" content="Orlume">
-
-    <!-- Open Graph -->
-    <meta property="og:title" content="Orlume | AI Photo Editor">
-    <meta property="og:description"
-        content="Professional AI-powered photo editing in your browser. 3D relighting, background removal, and more.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://orlume.io">
-
-    <title>Orlume | AI-Powered Photo Editor</title>
-
-    <!-- Fonts -->
+        content="Professional AI photo editing. Relight, remove backgrounds, and color grade instantly.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="./src/styles/landing.css">
 </head>
 
 <body>
-    <!-- Navigation -->
-    <nav class="nav" id="nav">
+
+    <!-- Dynamic Cursor Glow -->
+    <div class="cursor-glow"></div>
+
+    <!-- Nav -->
+    <nav class="nav">
         <a href="/" class="nav-logo">Orlume</a>
         <ul class="nav-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#tech">Technology</a></li>
-            <li><a href="https://github.com" target="_blank">GitHub</a></li>
+            <li><a href="#showcase">Capabilities</a></li>
+            <li><a href="#features">Tools</a></li>
+            <li><a href="#pricing">Pricing</a></li>
         </ul>
         <a href="./editor.html" class="nav-cta">Open Editor</a>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-badge">
-            <span></span>
-            AI-Powered Photo Editing
+    <!-- Split Hero -->
+    <section class="hero-split">
+        <div class="hero-bg-blob blob-1"></div>
+        <div class="hero-bg-blob blob-2"></div>
+
+        <div class="hero-text">
+            <div class="badge-pill">
+                <span>✨ New: 3D Relighting Model</span>
+            </div>
+            <h1 class="hero-h1">
+                Transform Photos with<br>
+                <span>Neural Precision</span>
+            </h1>
+            <p class="hero-sub">
+                The first professional grade AI editor that runs entirely in your browser.
+                Relight portraits, remove backgrounds, and upscale images instantly.
+            </p>
+            <div class="btn-group">
+                <a href="./editor.html" class="btn btn-primary">Start Editing Free</a>
+                <a href="#features" class="btn btn-outline">Explore Tools</a>
+            </div>
         </div>
-        <h1 class="hero-title">
-            Edit Photos with<br><span class="gradient">AI Precision</span>
-        </h1>
-        <p class="hero-subtitle">
-            Professional-grade photo editing powered by AI. 3D relighting, background removal,
-            smart upscaling, and advanced color tools — all in your browser.
-        </p>
-        <div class="hero-buttons">
-            <a href="./editor.html" class="btn-primary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+
+        <!-- Hero Visual: Interactive Slider -->
+        <div class="hero-visual">
+            <!-- Floating Badges -->
+            <div class="floating-badge badge-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                Start Editing Free
-            </a>
-            <a href="#features" class="btn-secondary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                Processing Complete
+            </div>
+            <div class="floating-badge badge-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2">
                     <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
-                Learn More
-            </a>
-        </div>
+                0.4s Latency
+            </div>
 
-        <div class="comparison-container" id="comparison-slider">
-            <span class="comparison-label label-before">Original</span>
-            <span class="comparison-label label-after">Enhanced</span>
-
-            <img src="/landing_demo.png" alt="Enhanced Photo" class="comparison-image comparison-after">
-            <img src="/landing_demo.png" alt="Original Photo" class="comparison-image comparison-before">
-
-            <div class="comparison-slider">
-                <div class="comparison-handle">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M18 8L22 12L18 16"></path>
-                        <path d="M6 8L2 12L6 16"></path>
-                    </svg>
+            <div class="comparison-container" data-mode="relight">
+                <span class="comparison-label label-before">Original</span>
+                <span class="comparison-label label-after">AI Relight</span>
+                <img src="/relight_after.png" class="comparison-image comparison-after">
+                <img src="/relight_after.png" class="comparison-image comparison-before mode-relight">
+                <div class="comparison-slider">
+                    <div class="comparison-handle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <script>
-        // Comparison Slider
-        document.addEventListener('DOMContentLoaded', () => {
-            const slider = document.getElementById('comparison-slider');
-            const beforeImage = slider.querySelector('.comparison-before');
-            const sliderHandle = slider.querySelector('.comparison-slider');
-
-            let isDragging = false;
-
-            function updateSlider(x) {
-                const rect = slider.getBoundingClientRect();
-                const position = ((x - rect.left) / rect.width) * 100;
-                const clampedPosition = Math.min(Math.max(position, 0), 100);
-
-                beforeImage.style.clipPath = `inset(0 ${100 - clampedPosition}% 0 0)`;
-                sliderHandle.style.left = `${clampedPosition}%`;
-            }
-
-            slider.addEventListener('mousedown', () => isDragging = true);
-            window.addEventListener('mouseup', () => isDragging = false);
-
-            slider.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                updateSlider(e.clientX);
-            });
-
-            slider.addEventListener('touchstart', () => isDragging = true);
-            window.addEventListener('touchend', () => isDragging = false);
-            slider.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                updateSlider(e.touches[0].clientX);
-            });
-        });
-    </script>
-
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <div class="section-header">
-            <span class="section-label">Features</span>
-            <h2 class="section-title">Everything You Need</h2>
-            <p class="section-subtitle">
-                Powerful AI tools that transform your photos in seconds. No downloads, no subscriptions.
-            </p>
-        </div>
-
-        <div class="features-grid">
-            <!-- 3D Relighting -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M9 18h6"></path>
-                        <path d="M10 22h4"></path>
-                        <path
-                            d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14">
-                        </path>
-                    </svg>
-                </div>
-                <h3 class="feature-title">3D Relighting</h3>
-                <p class="feature-desc">
-                    Revolutionary depth-based lighting. Adjust light direction and intensity with real-time
-                    parallax preview. Perfect for portraits and product photography.
-                </p>
-                <a href="./editor.html?tool=3d" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- Background Removal -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="6" cy="6" r="3"></circle>
-                        <circle cx="6" cy="18" r="3"></circle>
-                        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
-                        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
-                        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
-                    </svg>
-                </div>
-                <h3 class="feature-title">AI Background Removal</h3>
-                <p class="feature-desc">
-                    Instantly remove backgrounds with AI precision. Replace with solid colors,
-                    gradients, or transparency. Perfect for e-commerce and social media.
-                </p>
-                <a href="./editor.html?tool=bg-remove" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- AI Upscaling -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <polyline points="9 21 3 21 3 15"></polyline>
-                        <line x1="21" y1="3" x2="14" y2="10"></line>
-                        <line x1="3" y1="21" x2="10" y2="14"></line>
-                    </svg>
-                </div>
-                <h3 class="feature-title">AI Upscaling</h3>
-                <p class="feature-desc">
-                    Enhance resolution up to 4x with AI. Restore details, sharpen edges, and
-                    enhance faces automatically. Turn low-res images into print-ready quality.
-                </p>
-                <a href="./editor.html?tool=upscale" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- HSL Color Mixer -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="4"></circle>
-                        <line x1="12" y1="2" x2="12" y2="8"></line>
-                        <line x1="12" y1="16" x2="12" y2="22"></line>
-                    </svg>
-                </div>
-                <h3 class="feature-title">HSL Color Mixer</h3>
-                <p class="feature-desc">
-                    Precise color control with Hue, Saturation, and Luminance adjustments
-                    for 8 color channels. Create stunning color grades with surgical precision.
-                </p>
-                <a href="./editor.html?tool=hsl" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- Liquify -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
-                    </svg>
-                </div>
-                <h3 class="feature-title">Liquify Tool</h3>
-                <p class="feature-desc">
-                    Push, pull, enlarge, shrink, or swirl any part of your image. Perfect for
-                    subtle retouching or creative distortion effects.
-                </p>
-                <a href="./editor.html?tool=liquify" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- Healing Brush -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M18 2l4 4-12 12-4-4z"></path>
-                        <path d="M7.5 13.5L1 20l4 4 6.5-6.5"></path>
-                    </svg>
-                </div>
-                <h3 class="feature-title">AI Healing Brush</h3>
-                <p class="feature-desc">
-                    Remove blemishes, objects, and distractions with AI-powered inpainting.
-                    LaMa technology fills in missing areas seamlessly.
-                </p>
-                <a href="./editor.html?tool=healing" class="feature-link">
-                    Try Now
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Stats Section -->
-    <section class="stats">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-number" data-target="50">50+</div>
-                <div class="stat-label">AI Features</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-target="100">100%</div>
-                <div class="stat-label">Browser-Based</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-target="0">$0</div>
-                <div class="stat-label">Free Forever</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-target="99">99.9%</div>
-                <div class="stat-label">Privacy Protected</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Technology Section -->
-    <section class="tech" id="tech">
-        <div class="section-header">
-            <span class="section-label">Technology</span>
-            <h2 class="section-title">Built for Performance</h2>
-            <p class="section-subtitle">
-                Leveraging cutting-edge web technologies for a native-like editing experience.
-            </p>
-        </div>
-
-        <div class="tech-grid">
-            <div class="tech-card">
-                <svg viewBox="0 0 24 24">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                    <polyline points="2 17 12 22 22 17"></polyline>
-                    <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>
-                <h3>WebGL Acceleration</h3>
-                <p>GPU-powered processing for instant, real-time adjustments</p>
-            </div>
-            <div class="tech-card">
-                <svg viewBox="0 0 24 24">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-                <h3>Zero Installation</h3>
-                <p>Works entirely in your browser. No downloads required</p>
-            </div>
-            <div class="tech-card">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <h3>Privacy First</h3>
-                <p>Client-side processing. Your photos never leave your device</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="cta">
-        <h2 class="cta-title">Ready to Transform Your Photos?</h2>
-        <p class="cta-subtitle">Start editing in seconds. No sign-up required.</p>
-        <a href="./editor.html" class="btn-primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    <!-- Logos Strip -->
+    <section class="logos-strip">
+        <p class="logos-label">Essential tool for creators at</p>
+        <div class="logos-grid">
+            <svg class="logo-item" width="100" height="24" viewBox="0 0 100 24">
+                <path d="M10 12h80v4H10z" opacity="0.5" />
             </svg>
-            Launch Editor
-        </a>
+            <svg class="logo-item" width="80" height="24" viewBox="0 0 80 24">
+                <circle cx="12" cy="12" r="6" />
+                <rect x="24" y="8" width="50" height="8" />
+            </svg>
+            <svg class="logo-item" width="90" height="24" viewBox="0 0 90 24">
+                <rect x="0" y="6" width="12" height="12" />
+                <rect x="20" y="8" width="60" height="8" />
+            </svg>
+            <svg class="logo-item" width="110" height="24" viewBox="0 0 110 24">
+                <path d="M0 12l6-6 6 6-6 6z" />
+                <rect x="20" y="8" width="80" height="8" />
+            </svg>
+        </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <span class="footer-logo">Orlume</span>
-        <div class="footer-links">
-            <a href="./editor.html">Editor</a>
-            <a href="https://github.com" target="_blank">GitHub</a>
-            <a href="mailto:hello@orlume.io">Contact</a>
+    <!-- Bento Grid Features -->
+    <section class="bento-section" id="features">
+        <div class="section-header">
+            <h2 class="section-h2">Everything you need</h2>
+            <p class="section-p">A complete suite of powerful tools designed for creators.</p>
         </div>
-        <span class="footer-copy">© 2024 Orlume. All rights reserved.</span>
+
+        <div class="bento-grid">
+            <div class="bento-card card-wide">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <polyline points="9 21 3 21 3 15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg></div>
+                    <h3 class="bento-h3">Smart Upscaling</h3>
+                    <p class="bento-desc">Increase resolution up to 4x while recovering lost texture details.</p>
+                </div>
+                <a href="./editor.html?tool=upscale" class="bento-link">Try Upscale →</a>
+            </div>
+
+            <div class="bento-card">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Liquify</h3>
+                    <p class="bento-desc">Perfect shapes and distortions.</p>
+                </div>
+                <a href="./editor.html?tool=liquify" class="bento-link">Try Liquify →</a>
+            </div>
+
+            <div class="bento-card">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 2l4 4-12 12-4-4z"></path>
+                            <path d="M7.5 13.5L1 20l4 4 6.5-6.5"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Magic Eraser</h3>
+                    <p class="bento-desc">Remove unwanted objects instantly.</p>
+                </div>
+                <a href="./editor.html?tool=healing" class="bento-link">Try Eraser →</a>
+            </div>
+
+            <div class="bento-card card-wide">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Clone Stamp</h3>
+                    <p class="bento-desc">Manually copy textures for full control.</p>
+                </div>
+                <a href="./editor.html?tool=clone" class="bento-link">Try Stamp →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Specific Showcases -->
+    <section class="showcase-grid" id="showcase">
+        <!-- Decor Elements -->
+        <div class="decoration-grid-dots"></div>
+        <div class="decoration-circle"></div>
+
+        <div class="showcase-row">
+            <div class="showcase-visual">
+                <div class="comparison-container" data-mode="bg">
+                    <span class="comparison-label label-before">Image</span>
+                    <span class="comparison-label label-after">No BG</span>
+                    <img src="/bg_remove_after.png" class="comparison-image comparison-after">
+                    <img src="/bg_remove_before.png" class="comparison-image comparison-before mode-bg">
+                    <div class="comparison-slider">
+                        <div class="comparison-handle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                            </svg></div>
+                    </div>
+                </div>
+            </div>
+            <div class="showcase-copy">
+                <h3>Remove Backgrounds</h3>
+                <p>Isolate subjects in seconds. Perfect for e-commerce, portraits, and design assets.</p>
+                <div class="btn-group">
+                    <a href="./editor.html?tool=bg-remove" class="bento-link">Start Removing →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-row reverse">
+            <div class="showcase-visual">
+                <div class="comparison-container" data-mode="grade">
+                    <span class="comparison-label label-before">Raw</span>
+                    <span class="comparison-label label-after">Graded</span>
+                    <img src="/grading_after.png" class="comparison-image comparison-after">
+                    <img src="/grading_after.png" class="comparison-image comparison-before mode-grade">
+                    <div class="comparison-slider">
+                        <div class="comparison-handle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                            </svg></div>
+                    </div>
+                </div>
+            </div>
+            <div class="showcase-copy">
+                <h3>Color Grading</h3>
+                <p>Advanced HSL and curves tools to get the perfect mood for your photos.</p>
+                <a href="./editor.html?tool=hsl" class="bento-link">Open Color Panel →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="pricing">
+        <div class="section-header">
+            <h2 class="section-h2">Unbeatable Value</h2>
+            <p class="section-p">Professional tools for free. Upgrade for higher limits.</p>
+        </div>
+
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="price-header">
+                    <div class="plan-name">Starter</div>
+                    <div class="price-value">$0<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Unlimited Edits</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> 720p Export</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Watermarked</li>
+                </ul>
+                <a href="./editor.html" class="btn btn-outline btn-block">Start Free</a>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured">
+                <div class="pricing-badge">Most Popular</div>
+                <div class="price-header">
+                    <div class="plan-name">Creator Pro</div>
+                    <div class="price-value">$12<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> 4K Ultra HD Export</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> No Watermark</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Priority Processing</li>
+                </ul>
+                <a href="#" class="btn btn-primary btn-block">Go Pro</a>
+            </div>
+
+            <!-- Business -->
+            <div class="pricing-card">
+                <div class="price-header">
+                    <div class="plan-name">Business</div>
+                    <div class="price-value">$49<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> API Access</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Team Seats</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Dedicated Support</li>
+                </ul>
+                <a href="#" class="btn btn-outline btn-block">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dark Footer CTA -->
+    <section class="cta-dark">
+        <div class="cta-mesh"></div>
+        <h2>Ready to create?</h2>
+        <p>Join thousands of designers editing smarter with Orlume.</p>
+        <a href="./editor.html" class="btn btn-primary">Launch Editor</a>
+    </section>
+
+    <footer class="footer">
+        © 2024 Orlume Inc.
     </footer>
 
-    <!-- Scripts -->
     <script>
-        // Navbar scroll effect
-        const nav = document.getElementById('nav');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                nav.classList.add('scrolled');
-            } else {
-                nav.classList.remove('scrolled');
+        // Init Sliders
+        document.querySelectorAll('.comparison-container').forEach(container => {
+            // ... existing slider code ...
+            const beforeImage = container.querySelector('.comparison-before');
+            const sliderHandle = container.querySelector('.comparison-slider');
+            let isDragging = false;
+
+            function update(x) {
+                const rect = container.getBoundingClientRect();
+                const pos = Math.min(Math.max(((x - rect.left) / rect.width) * 100, 0), 100);
+                beforeImage.style.clipPath = `inset(0 ${100 - pos}% 0 0)`;
+                sliderHandle.style.left = `${pos}%`;
             }
+
+            container.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            container.addEventListener('mousemove', (e) => { if (isDragging) update(e.clientX); });
+
+            container.addEventListener('touchstart', () => isDragging = true);
+            window.addEventListener('touchend', () => isDragging = false);
+            container.addEventListener('touchmove', (e) => { if (isDragging) update(e.touches[0].clientX); });
         });
 
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
+        // Mouse Tracker & Blob Movement
+        const cursorGlow = document.querySelector('.cursor-glow');
+        let mouseX = 0, mouseY = 0;
+        let currentX = 0, currentY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animate() {
+            currentX += (mouseX - currentX) * 0.1;
+            currentY += (mouseY - currentY) * 0.1;
+            if (cursorGlow) {
+                cursorGlow.style.transform = `translate(${currentX}px, ${currentY}px) translate(-50%, -50%)`;
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Subdomain Navigation Logic
+        (function () {
+            const IS_PROD = window.location.hostname === 'orlume.io';
+            if (IS_PROD) {
+                document.querySelectorAll('a[href*="editor.html"]').forEach(link => {
+                    const url = new URL(link.href, window.location.origin);
+                    // Preserve search params (e.g. ?tool=upscale)
+                    link.href = 'https://editor.orlume.io' + ((url.search && url.search !== '') ? url.search : '/');
                 });
-            });
-        });
-
-        // Intersection Observer for fade-in animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-
-        // Animate feature cards on scroll
-        document.querySelectorAll('.feature-card, .tech-card, .stat-item').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'all 0.6s ease';
-            observer.observe(el);
-        });
+            }
+        })();
     </script>
 </body>
 
