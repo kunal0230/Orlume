@@ -61,6 +61,15 @@
                     <path d="M19 16l3 3-3 3" />
                 </svg>
             </button>
+            <button class="tool-btn" id="tool-healing" title="Healing Brush (H)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 3v18" />
+                    <path d="M3 19l16-16" />
+                    <circle cx="5" cy="17" r="2" />
+                    <circle cx="9" cy="13" r="2" />
+                    <circle cx="13" cy="9" r="2" />
+                </svg>
+            </button>
         </div>
 
         <!-- Canvas Area -->
@@ -118,6 +127,11 @@
             <!-- Liquify Mode Header (shown when in liquify mode) -->
             <div class="panel-header mode-header" id="liquify-mode-header" style="display: none;">
                 <span class="panel-title">Liquify</span>
+            </div>
+
+            <!-- Healing Mode Header (shown when in healing mode) -->
+            <div class="panel-header mode-header" id="healing-mode-header" style="display: none;">
+                <span class="panel-title">AI Spot Healing</span>
             </div>
 
             <div class="panel-content">
@@ -890,6 +904,83 @@
                         </div>
                         <button class="btn" id="btn-liquify-cancel" style="width: 100%; margin-top: 8px;">
                             Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Healing Panel (AI Spot Healing) -->
+                <div class="panel-section" id="panel-healing">
+                    <!-- API Settings -->
+                    <div class="section">
+                        <div class="section-title">API Settings</div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="password" id="replicate-api-token" class="text-input"
+                                placeholder="Enter Replicate API Token"
+                                style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary);">
+                        </div>
+                        <button class="btn btn-secondary" id="btn-test-api" style="width: 100%;">
+                            Test Connection
+                        </button>
+                        <p id="api-status"
+                            style="font-size: 11px; margin-top: 8px; text-align: center; color: var(--text-secondary);">
+                            Enter your API token from replicate.com
+                        </p>
+                    </div>
+
+                    <!-- Brush Settings -->
+                    <div class="section">
+                        <div class="section-title">Brush Settings</div>
+                        <div class="slider-row">
+                            <span class="slider-label">Size</span>
+                            <span class="slider-value" id="healing-size-value">30px</span>
+                        </div>
+                        <input type="range" class="slider" id="healing-size" min="5" max="200" value="30">
+
+                        <div class="slider-row" style="margin-top: 12px;">
+                            <span class="slider-label">Hardness</span>
+                            <span class="slider-value" id="healing-hardness-value">80%</span>
+                        </div>
+                        <input type="range" class="slider" id="healing-hardness" min="0" max="100" value="80">
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="section">
+                        <div class="section-title">How to Use</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                            1. Paint over the area you want to heal<br>
+                            2. Click "Heal" to send to AI<br>
+                            3. Wait for the result<br>
+                            4. Click "Apply" to keep changes
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px;">
+                            🩹 Heal Selected Area
+                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" id="btn-clear-mask" style="flex: 1;">
+                                Clear Mask
+                            </button>
+                            <button class="btn btn-primary" id="btn-healing-apply" style="flex: 1;">
+                                Apply
+                            </button>
+                        </div>
+                        <button class="btn" id="btn-healing-cancel" style="width: 100%; margin-top: 8px;">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <!-- Other AI Features -->
+                    <div class="section">
+                        <div class="section-title">More AI Tools</div>
+                        <button class="btn btn-secondary" id="btn-enhance-face"
+                            style="width: 100%; margin-bottom: 8px;">
+                            ✨ Enhance Face (GFPGAN)
+                        </button>
+                        <button class="btn btn-secondary" id="btn-remove-bg" style="width: 100%; margin-bottom: 8px;">
+                            🎭 Remove Background
                         </button>
                     </div>
                 </div>
