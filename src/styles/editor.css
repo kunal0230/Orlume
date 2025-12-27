@@ -362,6 +362,59 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ========================================
+   Colored Slider Gradients
+   ======================================== */
+/* Temperature: Blue to Orange */
+input[type="range"].slider-temperature {
+    background: linear-gradient(to right, #4fa8f9, #f9a84f);
+}
+
+/* Tint: Green to Magenta */
+input[type="range"].slider-tint {
+    background: linear-gradient(to right, #4fd98d, #d94fa8);
+}
+
+/* Vibrance: Gray to Saturated */
+input[type="range"].slider-vibrance {
+    background: linear-gradient(to right, #666, #ff6b9d);
+}
+
+/* Saturation: Gray to Vivid */
+input[type="range"].slider-saturation {
+    background: linear-gradient(to right, #444, #ff4f4f);
+}
+
+/* Exposure: Dark to Bright */
+input[type="range"].slider-exposure {
+    background: linear-gradient(to right, #222, #fff);
+}
+
+/* Highlights: Mid to Bright */
+input[type="range"].slider-highlights {
+    background: linear-gradient(to right, #666, #fff);
+}
+
+/* Shadows: Dark to Mid */
+input[type="range"].slider-shadows {
+    background: linear-gradient(to right, #000, #888);
+}
+
+/* Whites: Mid to White */
+input[type="range"].slider-whites {
+    background: linear-gradient(to right, #888, #fff);
+}
+
+/* Blacks: Black to Mid */
+input[type="range"].slider-blacks {
+    background: linear-gradient(to right, #000, #666);
+}
+
+/* Contrast: Low to High */
+input[type="range"].slider-contrast {
+    background: linear-gradient(to right, #777, #111 50%, #fff);
+}
+
+/* ========================================
    Sections
    ======================================== */
 .section {

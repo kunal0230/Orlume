@@ -189,6 +189,9 @@ export class EditorUI {
         document.getElementById('liquify-mode-header').style.display = 'none';
         document.getElementById('healing-mode-header').style.display = 'none';
         document.getElementById('clone-mode-header').style.display = 'none';
+        document.getElementById('hsl-mode-header').style.display = 'none';
+        document.getElementById('presets-mode-header').style.display = 'none';
+        document.getElementById('bg-remove-mode-header').style.display = 'none';
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -247,6 +250,21 @@ export class EditorUI {
                 document.getElementById('panel-clone').classList.add('active');
                 // Activate clone tool
                 this.cloneModule.activate();
+                break;
+
+            case 'hsl':
+                document.getElementById('hsl-mode-header').style.display = 'block';
+                document.getElementById('panel-hsl').classList.add('active');
+                break;
+
+            case 'presets':
+                document.getElementById('presets-mode-header').style.display = 'block';
+                document.getElementById('panel-presets').classList.add('active');
+                break;
+
+            case 'bg-remove':
+                document.getElementById('bg-remove-mode-header').style.display = 'block';
+                document.getElementById('panel-bg-remove').classList.add('active');
                 break;
         }
     }

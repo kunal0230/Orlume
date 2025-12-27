@@ -26,7 +26,8 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html')
+        main: resolve(__dirname, 'index.html'),
+        editor: resolve(__dirname, 'editor.html')
       }
     }
   },
