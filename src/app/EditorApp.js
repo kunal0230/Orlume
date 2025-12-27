@@ -25,8 +25,9 @@ export class EditorApp {
         console.log('🚀 Initializing Orlume GPU Editor...');
 
         try {
-            // Initialize GPU processor
+            // Initialize GPU processor (async - detects WebGPU/WebGL2)
             this.gpu = new GPUProcessor(this.canvas);
+            await this.gpu.init();
 
             // Initialize mask system
             this.masks = new MaskSystem(this.gpu);
