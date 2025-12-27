@@ -9,6 +9,9 @@ import { LiquifyTool } from '../tools/LiquifyTool.js';
 import { HealingTool } from '../tools/HealingTool.js';
 import { replicateService } from '../services/ReplicateService.js';
 
+// Modular components
+import { HistoryModule, ZoomPanModule, ExportModule } from './modules/index.js';
+
 export class EditorUI {
     constructor(state, gpu, masks) {
         this.state = state;
@@ -48,16 +51,13 @@ export class EditorUI {
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
 
-        // Zoom and Pan state
-        this.zoom = {
-            level: 1,
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-            panX: 0,
-            panY: 0,
-            isPanning: false
-        };
+        // Initialize modular components
+        this.historyModule = new HistoryModule(this);
+        this.zoomPanModule = new ZoomPanModule(this);
+        this.exportModule = new ExportModule(this);
+
+        // Expose zoom state from module for backward compatibility
+        this.zoom = this.zoomPanModule.zoom;
 
         // Comparison slider state
         this.comparison = {
@@ -82,9 +82,10 @@ export class EditorUI {
         this._initKeyboardShortcuts();
         this._initFileHandling();
         this._initActionButtons();
-        this._initZoomControls();
-        this._initZoomEvents();
-        this._initPanEvents();
+
+        // Initialize modular components
+        this.zoomPanModule.init();
+
         this._initComparisonSlider();
         this._initUpscaleControls();
         this._initLiquifyControls();
@@ -2680,122 +2681,15 @@ export class EditorUI {
      * Uses offscreen canvas to render at original image resolution
      */
     exportImage() {
-        if (!this.state.originalImage) {
-            console.warn('No image to export');
-            return;
-        }
-
-        // Get export settings from UI or use defaults
-        const formatSelect = document.getElementById('export-format');
-        const qualitySlider = document.getElementById('slider-export-quality');
-
-        const format = formatSelect?.value || 'png';
-        const quality = (qualitySlider?.value || 95) / 100;
-
-        // Determine MIME type
-        const mimeTypes = {
-            'png': 'image/png',
-            'jpeg': 'image/jpeg',
-            'webp': 'image/webp'
-        };
-        const mimeType = mimeTypes[format] || 'image/png';
-
-        // File extension
-        const extensions = {
-            'png': 'png',
-            'jpeg': 'jpg',
-            'webp': 'webp'
-        };
-        const extension = extensions[format] || 'png';
-
-        // Show export progress
-        const statusBar = document.querySelector('.status-right .perf');
-        const originalStatus = statusBar?.textContent;
-        if (statusBar) statusBar.textContent = 'Exporting...';
-
-        // Use setTimeout to allow UI to update
-        setTimeout(() => {
-            try {
-                this._performExport(mimeType, quality, extension);
-            } catch (error) {
-                console.error('Export failed:', error);
-                alert('Export failed: ' + error.message);
-            } finally {
-                if (statusBar) statusBar.textContent = originalStatus || 'Ready';
-            }
-        }, 50);
+        this.exportModule.exportImage();
     }
 
     /**
      * Internal export method - renders at original resolution
+     * @deprecated Use exportModule._performExport instead
      */
     _performExport(mimeType, quality, extension) {
-        const originalWidth = this.state.originalImage.width;
-        const originalHeight = this.state.originalImage.height;
-
-        // Check if we're already at full resolution
-        const currentWidth = this.gpu.width;
-        const currentHeight = this.gpu.height;
-
-        let exportCanvas;
-
-        if (currentWidth === originalWidth && currentHeight === originalHeight) {
-            // Already at full resolution, use current canvas
-            exportCanvas = this.elements.canvas;
-
-            // Make sure we have the latest render with all adjustments
-            let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
-        } else {
-            // Need to render at full resolution
-            // For now, use current canvas (full resolution rendering is complex)
-            // TODO: Implement true full-resolution export in future
-            exportCanvas = this.elements.canvas;
-
-            // Render with current adjustments
-            let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
-
-            console.log(`⚠️ Exporting at display resolution (${currentWidth}×${currentHeight}). ` +
-                `Original: ${originalWidth}×${originalHeight}`);
-        }
-
-        // Export to blob
-        exportCanvas.toBlob((blob) => {
-            if (!blob) {
-                console.error('Failed to create blob');
-                return;
-            }
-
-            // Create download link
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-
-            // Get custom filename or generate with timestamp
-            const filenameInput = document.getElementById('export-filename');
-            let filename = filenameInput?.value?.trim();
-
-            if (!filename) {
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                filename = `orlume-export-${timestamp}`;
-            }
-
-            // Sanitize filename (remove invalid characters)
-            filename = filename.replace(/[<>:"/\\|?*]/g, '-');
-
-            link.download = `${filename}.${extension}`;
-            link.href = url;
-            link.click();
-
-            // Cleanup
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-            // Log export info
-            const sizeKB = (blob.size / 1024).toFixed(1);
-            console.log(`✅ Exported ${extension.toUpperCase()} (${sizeKB} KB) at ${currentWidth}×${currentHeight}`);
-        }, mimeType, quality);
+        this.exportModule._performExport(mimeType, quality, extension);
     }
 
     /**
@@ -2803,63 +2697,21 @@ export class EditorUI {
      * Called when quality slider changes
      */
     estimateFileSize() {
-        if (!this.state.originalImage || !this.elements.canvas) {
-            this._updateFileSizeDisplay('--');
-            return;
-        }
-
-        const formatSelect = document.getElementById('export-format');
-        const qualitySlider = document.getElementById('slider-export-quality');
-
-        const format = formatSelect?.value || 'jpeg';
-        const quality = (qualitySlider?.value || 95) / 100;
-
-        const mimeTypes = {
-            'png': 'image/png',
-            'jpeg': 'image/jpeg',
-            'webp': 'image/webp'
-        };
-        const mimeType = mimeTypes[format] || 'image/jpeg';
-
-        // Ensure we have the latest render
-        let resultTexture = this.gpu.renderToTexture();
-        resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-        this.gpu.blitToCanvas(resultTexture);
-
-        // Generate blob to estimate size
-        this.elements.canvas.toBlob((blob) => {
-            if (blob) {
-                const sizeKB = blob.size / 1024;
-                let sizeText;
-                if (sizeKB < 1024) {
-                    sizeText = `~${sizeKB.toFixed(0)} KB`;
-                } else {
-                    sizeText = `~${(sizeKB / 1024).toFixed(1)} MB`;
-                }
-                this._updateFileSizeDisplay(sizeText);
-            }
-        }, mimeType, quality);
+        this.exportModule.estimateFileSize();
     }
 
     /**
      * Update file size display in UI
      */
     _updateFileSizeDisplay(sizeText) {
-        const sizeDisplay = document.getElementById('estimated-file-size');
-        if (sizeDisplay) {
-            sizeDisplay.textContent = sizeText;
-        }
+        this.exportModule._updateFileSizeDisplay(sizeText);
     }
 
     /**
      * Show export options modal (if expanded export UI is desired)
      */
     showExportOptions() {
-        // Toggle export options visibility
-        const exportOptions = document.getElementById('export-options');
-        if (exportOptions) {
-            exportOptions.style.display = exportOptions.style.display === 'none' ? 'block' : 'none';
-        }
+        this.exportModule.showExportOptions();
     }
 
     /**
@@ -2867,11 +2719,7 @@ export class EditorUI {
      * Captures global state across all sections for full undo/redo support
      */
     _pushHistoryDebounced() {
-        clearTimeout(this._historyDebounceTimer);
-        this._historyDebounceTimer = setTimeout(() => {
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-        }, 100);
+        this.historyModule.pushDebounced();
     }
 
     /**
@@ -2879,68 +2727,21 @@ export class EditorUI {
      * Includes image data for undoing crops and destructive operations
      */
     _captureFullState() {
-        // Global develop adjustments
-        const globalAdjustments = { ...this.state.globalAdjustments };
-
-        // Mask layer adjustments (don't store texture data, just adjustments)
-        const maskLayerAdjustments = this.masks.layers.map(layer => ({
-            id: layer.id,
-            name: layer.name,
-            adjustments: { ...layer.adjustments }
-        }));
-
-        // Capture current image state for crop undo
-        let imageDataUrl = null;
-        if (this.state.originalImage) {
-            // Create a canvas to capture the original image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.state.originalImage.width;
-            tempCanvas.height = this.state.originalImage.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.state.originalImage, 0, 0);
-            imageDataUrl = tempCanvas.toDataURL('image/png');
-        }
-
-        return {
-            globalAdjustments,
-            maskLayerAdjustments,
-            activeLayerIndex: this.masks.activeLayerIndex,
-            imageDataUrl,
-            imageWidth: this.state.originalImage?.width || 0,
-            imageHeight: this.state.originalImage?.height || 0
-        };
+        return this.historyModule.captureFullState();
     }
 
     /**
      * Undo last adjustment
      */
     undo() {
-        const state = this.history.undo();
-        if (state) {
-            this._restoreState(state);
-            console.log('↩️ Undo', this.history.getInfo());
-
-            // If in liquify mode, refresh the liquify tool to show the change
-            if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this._activateLiquifyTool(), 300);
-            }
-        }
+        this.historyModule.undo();
     }
 
     /**
      * Redo previously undone adjustment
      */
     redo() {
-        const state = this.history.redo();
-        if (state) {
-            this._restoreState(state);
-            console.log('↪️ Redo', this.history.getInfo());
-
-            // If in liquify mode, refresh the liquify tool to show the change
-            if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this._activateLiquifyTool(), 300);
-            }
-        }
+        this.historyModule.redo();
     }
 
     /**
@@ -2948,89 +2749,14 @@ export class EditorUI {
      * Handles image restoration for crop undo
      */
     _restoreState(snapshot) {
-        console.log('🔄 Restoring state. DataURL length:', snapshot.imageDataUrl?.length || 0);
-
-        // Check if we need to restore a different image (crop or liquify undo)
-        // Always restore if imageDataUrl exists - this handles liquify with same dimensions
-        const needsImageRestore = !!snapshot.imageDataUrl;
-
-        if (needsImageRestore) {
-            // Restore the image from data URL
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
-
-                // Reload GPU processor with restored image
-                this.gpu.loadImage(img);
-
-                // Clear masks (they don't align with restored image)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.updateLayersList();
-
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
-
-                // Then restore adjustments
-                this._restoreAdjustments(snapshot);
-
-                console.log(`🖼️ Image restored: ${img.width}×${img.height}`);
-            };
-            img.src = snapshot.imageDataUrl;
-        } else {
-            // No image change, just restore adjustments
-            this._restoreAdjustments(snapshot);
-        }
+        this.historyModule.restoreState(snapshot);
     }
 
     /**
      * Restore adjustment values from snapshot
      */
     _restoreAdjustments(snapshot) {
-        // Restore global adjustments
-        if (snapshot.globalAdjustments) {
-            for (const [name, value] of Object.entries(snapshot.globalAdjustments)) {
-                // Update state
-                this.state.globalAdjustments[name] = value;
-
-                // Update GPU
-                this.gpu.setParam(name, value);
-
-                // Update slider UI
-                const slider = document.getElementById(`slider-${name}`);
-                const valueDisplay = document.getElementById(`val-${name}`);
-                if (slider && valueDisplay) {
-                    slider.value = value;
-                    valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-                }
-            }
-        }
-
-        // Restore mask layer adjustments
-        if (snapshot.maskLayerAdjustments) {
-            for (const savedLayer of snapshot.maskLayerAdjustments) {
-                const layer = this.masks.layers.find(l => l.id === savedLayer.id);
-                if (layer) {
-                    Object.assign(layer.adjustments, savedLayer.adjustments);
-
-                    // Update mask slider UI if this layer is active
-                    if (this.masks.layers.indexOf(layer) === this.masks.activeLayerIndex) {
-                        for (const [name, value] of Object.entries(savedLayer.adjustments)) {
-                            const slider = document.getElementById(`slider-mask-${name}`);
-                            const valueDisplay = document.getElementById(`val-mask-${name}`);
-                            if (slider && valueDisplay) {
-                                slider.value = value;
-                                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Re-render (handles both global and mask adjustments)
-        this.renderWithMask(false);
-        requestAnimationFrame(() => this.renderHistogram());
+        this.historyModule.restoreAdjustments(snapshot);
     }
 }
+
