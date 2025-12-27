@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule, KeyboardModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule, KeyboardModule, ComparisonModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -49,6 +49,7 @@ export class EditorUI {
         this.healingModule = new HealingModule(this);
         this.upscaleModule = new UpscaleModule(this);
         this.keyboardModule = new KeyboardModule(this);
+        this.comparisonModule = new ComparisonModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -70,11 +71,8 @@ export class EditorUI {
         this.upscaler = null; // Will be set when upscaleModule.init() is called
         this.upscaleScaleFactor = 2;
 
-        // Comparison slider state
-        this.comparison = {
-            active: false,
-            position: 50  // percentage from left
-        };
+        // Comparison slider state - exposed from module for backward compatibility
+        this.comparison = null; // Will be set when comparisonModule.init() is called
 
         this._initEventListeners();
     }
@@ -99,6 +97,7 @@ export class EditorUI {
         this.healingModule.init();
         this.upscaleModule.init();
         this.keyboardModule.init();
+        this.comparisonModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -108,8 +107,7 @@ export class EditorUI {
         this.replicate = this.healingModule.replicate;
         this.upscaler = this.upscaleModule.upscaler;
         this.upscaleScaleFactor = this.upscaleModule.scaleFactor;
-
-        this._initComparisonSlider();
+        this.comparison = this.comparisonModule.comparison;
     }
 
     /**
@@ -775,127 +773,24 @@ export class EditorUI {
     }
 
     /**
-     * Initialize Before/After comparison slider
+     * @deprecated Handled by comparisonModule.init()
      */
     _initComparisonSlider() {
-        const canvasArea = document.querySelector('.canvas-area');
-        if (!canvasArea) return;
-
-        // Create comparison slider container
-        const slider = document.createElement('div');
-        slider.className = 'comparison-slider';
-        slider.id = 'comparison-slider';
-        slider.style.display = 'none';
-        slider.innerHTML = `
-            <div class="comparison-line"></div>
-            <div class="comparison-handle">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M8 5v14l-5-7zM16 5v14l5-7z"/>
-                </svg>
-            </div>
-            <div class="comparison-label comparison-label-before">Before</div>
-            <div class="comparison-label comparison-label-after">After</div>
-        `;
-        canvasArea.appendChild(slider);
-
-        // Create original canvas overlay for comparison
-        const originalCanvas = document.createElement('canvas');
-        originalCanvas.id = 'original-canvas';
-        originalCanvas.className = 'original-canvas';
-        originalCanvas.style.display = 'none';
-        const canvasContainer = document.querySelector('.canvas-container');
-        if (canvasContainer) {
-            canvasContainer.appendChild(originalCanvas);
-        }
-
-        // Slider drag handling
-        let isDragging = false;
-        const handle = slider.querySelector('.comparison-handle');
-
-        handle?.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            isDragging = true;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging || !this.comparison.active) return;
-
-            const rect = canvasArea.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            this.comparison.position = Math.max(5, Math.min(95, (x / rect.width) * 100));
-            this._updateComparisonSlider();
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Before/After toggle button for accessibility
-        const beforeAfterBtn = document.getElementById('btn-before-after');
-        if (beforeAfterBtn) {
-            beforeAfterBtn.addEventListener('click', () => {
-                this.toggleComparison();
-                beforeAfterBtn.classList.toggle('active', this.comparison.active);
-            });
-        }
+        // Now delegated to comparisonModule.init()
     }
 
     /**
      * Toggle before/after comparison mode
      */
-    toggleComparison(show = !this.comparison.active) {
-        this.comparison.active = show;
-
-        const slider = document.getElementById('comparison-slider');
-        const originalCanvas = document.getElementById('original-canvas');
-
-        if (show && this.state.hasImage) {
-            // Copy original image to overlay canvas
-            if (originalCanvas) {
-                const ctx = originalCanvas.getContext('2d');
-                const mainCanvas = this.elements.canvas;
-                originalCanvas.width = mainCanvas.width;
-                originalCanvas.height = mainCanvas.height;
-
-                // Draw original image
-                if (this.state.originalImage) {
-                    ctx.drawImage(this.state.originalImage, 0, 0, originalCanvas.width, originalCanvas.height);
-                }
-                originalCanvas.style.display = 'block';
-            }
-
-            if (slider) {
-                slider.style.display = 'flex';
-            }
-            this._updateComparisonSlider();
-        } else {
-            if (slider) slider.style.display = 'none';
-            if (originalCanvas) originalCanvas.style.display = 'none';
-        }
-
-        // Sync the toggle button active state
-        const beforeAfterBtn = document.getElementById('btn-before-after');
-        if (beforeAfterBtn) {
-            beforeAfterBtn.classList.toggle('active', this.comparison.active);
-        }
+    toggleComparison(show) {
+        this.comparisonModule.toggle(show);
     }
 
     /**
      * Update comparison slider position and clipping
      */
     _updateComparisonSlider() {
-        const slider = document.getElementById('comparison-slider');
-        const originalCanvas = document.getElementById('original-canvas');
-
-        if (!slider || !originalCanvas) return;
-
-        const position = this.comparison.position;
-
-        // Position the slider line and handle
-        slider.style.left = `${position}%`;
-
-        // Clip the original canvas to show only the left portion
-        originalCanvas.style.clipPath = `inset(0 ${100 - position}% 0 0)`;
+        this.comparisonModule._updateSlider();
     }
 
     /**

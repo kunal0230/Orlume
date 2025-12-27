@@ -10,4 +10,5 @@ export { LiquifyModule } from './LiquifyModule.js';
 export { HealingModule } from './HealingModule.js';
 export { UpscaleModule } from './UpscaleModule.js';
 export { KeyboardModule } from './KeyboardModule.js';
+export { ComparisonModule } from './ComparisonModule.js';
 
