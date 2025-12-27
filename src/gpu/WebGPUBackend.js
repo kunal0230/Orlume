@@ -609,6 +609,10 @@ export class WebGPUBackend extends GPUBackend {
 
         this.device.queue.submit([commandEncoder.finish()]);
 
+        // Store last render state for readback (toImageData)
+        this._lastInputTexture = inputTexture;
+        this._lastUniforms = uniforms;
+
         // Cleanup
         uniformBuffer.destroy();
     }
@@ -704,15 +708,37 @@ export class WebGPUBackend extends GPUBackend {
 
     /**
      * Convert canvas to ImageData for histogram and other uses
+     * Re-renders to a fresh texture since WebGPU clears backbuffer after presentation
      * @returns {ImageData}
      */
     toImageData() {
-        // Use a temporary 2D canvas to read the WebGPU canvas content
+        // WebGPU clears the backbuffer after presenting, so drawImage returns black
+        // We need to re-render to a fresh texture and read from there
+
+        if (!this._lastInputTexture) {
+            console.warn('No input texture available for toImageData');
+            return new ImageData(this.width || 1, this.height || 1);
+        }
+
+        // Create a fresh framebuffer for readback
+        const readFBO = this.createFramebuffer(this.width, this.height);
+
+        // Re-render with last uniforms
+        this.renderDevelop(this._lastInputTexture, this._lastUniforms || {}, readFBO);
+
+        // Now render the FBO to canvas so we can read it
+        this.renderPassthrough(readFBO.texture, null);
+
+        // Read from canvas
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = this.width;
         tempCanvas.height = this.height;
         const ctx = tempCanvas.getContext('2d');
         ctx.drawImage(this.canvas, 0, 0);
+
+        // Cleanup FBO
+        this.deleteFramebuffer(readFBO);
+
         return ctx.getImageData(0, 0, this.width, this.height);
     }
 

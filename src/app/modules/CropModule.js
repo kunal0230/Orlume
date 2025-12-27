@@ -363,30 +363,23 @@ export class CropModule {
      * Perform the actual crop operation with rotation and flip
      */
     _performCrop(cropData) {
-        // Read current canvas pixels
-        const gl = this.gpu.gl;
+        // Read current canvas pixels using backend-agnostic method
         const fullWidth = this.gpu.width;
         const fullHeight = this.gpu.height;
 
-        // Read pixels from WebGL
-        const pixels = new Uint8Array(fullWidth * fullHeight * 4);
-        gl.readPixels(0, 0, fullWidth, fullHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        // Use the abstracted toImageData() which works for both WebGL2 and WebGPU
+        const imageData = this.gpu.toImageData();
+        if (!imageData) {
+            console.error('Failed to read canvas data for crop');
+            return;
+        }
 
-        // Create ImageData from full canvas (flipping Y for WebGL)
+        // Create canvas from ImageData
         const fullTempCanvas = document.createElement('canvas');
         fullTempCanvas.width = fullWidth;
         fullTempCanvas.height = fullHeight;
         const fullTempCtx = fullTempCanvas.getContext('2d');
-        const fullImageData = fullTempCtx.createImageData(fullWidth, fullHeight);
-
-        for (let y = 0; y < fullHeight; y++) {
-            const srcRow = (fullHeight - 1 - y) * fullWidth * 4;
-            const dstRow = y * fullWidth * 4;
-            for (let x = 0; x < fullWidth * 4; x++) {
-                fullImageData.data[dstRow + x] = pixels[srcRow + x];
-            }
-        }
-        fullTempCtx.putImageData(fullImageData, 0, 0);
+        fullTempCtx.putImageData(imageData, 0, 0);
 
         // Calculate output dimensions based on rotation
         const radians = (cropData.rotation || 0) * Math.PI / 180;
