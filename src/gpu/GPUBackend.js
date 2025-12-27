@@ -169,11 +169,7 @@ export class GPUBackend {
  * @returns {Promise<GPUBackend>}
  */
 export async function createBestBackend(canvas) {
-    // NOTE: Currently forcing WebGL2 because MaskSystem depends on gl context
-    // TODO: Migrate MaskSystem to WebGPU, then enable WebGPU backend selection
-
-    // Check if WebGPU should be used (uncomment when MaskSystem is ready)
-    /*
+    // Try WebGPU first (now that MaskSystemWebGPU exists)
     const { WebGPUBackend } = await import('./WebGPUBackend.js');
     if (await WebGPUBackend.isSupported()) {
         const backend = new WebGPUBackend(canvas);
@@ -182,17 +178,16 @@ export async function createBestBackend(canvas) {
             return backend;
         }
     }
-    */
 
-    // Use WebGL2 (MaskSystem compatible)
+    // Fall back to WebGL2
     const { WebGL2Backend } = await import('./WebGL2Backend.js');
     if (await WebGL2Backend.isSupported()) {
         const backend = new WebGL2Backend(canvas);
         if (await backend.init()) {
-            console.log('🎮 Using WebGL2 backend');
+            console.log('🎮 Using WebGL2 backend (fallback)');
             return backend;
         }
     }
 
-    throw new Error('No GPU backend available. WebGL2 required.');
+    throw new Error('No GPU backend available. WebGL2 or WebGPU required.');
 }
