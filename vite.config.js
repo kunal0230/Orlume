@@ -9,6 +9,16 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'
+    },
+    proxy: {
+      '/api/replicate': {
+        target: 'https://api.replicate.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/replicate/, '/v1'),
+        headers: {
+          'Origin': 'https://api.replicate.com'
+        }
+      }
     }
   },
   build: {

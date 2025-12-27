@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -47,6 +47,7 @@ export class EditorUI {
         this.cropModule = new CropModule(this);
         this.liquifyModule = new LiquifyModule(this);
         this.healingModule = new HealingModule(this);
+        this.cloneModule = new CloneModule(this);
         this.upscaleModule = new UpscaleModule(this);
         this.keyboardModule = new KeyboardModule(this);
         this.comparisonModule = new ComparisonModule(this);
@@ -96,6 +97,7 @@ export class EditorUI {
         this.cropModule.init();
         this.liquifyModule.init();
         this.healingModule.init();
+        this.cloneModule.init();
         this.upscaleModule.init();
         this.keyboardModule.init();
         this.comparisonModule.init();
@@ -179,6 +181,11 @@ export class EditorUI {
             this._deactivateHealingTool();
         }
 
+        // Deactivate clone tool when leaving clone mode
+        if (previousMode === 'clone' && mode !== 'clone') {
+            this.cloneModule.deactivate();
+        }
+
         this.state.setTool(mode);
 
         // Update toolbar button UI
@@ -193,6 +200,7 @@ export class EditorUI {
         document.getElementById('upscale-mode-header').style.display = 'none';
         document.getElementById('liquify-mode-header').style.display = 'none';
         document.getElementById('healing-mode-header').style.display = 'none';
+        document.getElementById('clone-mode-header').style.display = 'none';
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -244,6 +252,13 @@ export class EditorUI {
                 document.getElementById('panel-healing').classList.add('active');
                 // Activate healing tool
                 this._activateHealingTool();
+                break;
+
+            case 'clone':
+                document.getElementById('clone-mode-header').style.display = 'block';
+                document.getElementById('panel-clone').classList.add('active');
+                // Activate clone tool
+                this.cloneModule.activate();
                 break;
         }
     }

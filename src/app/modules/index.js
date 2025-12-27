@@ -8,6 +8,7 @@ export { ExportModule } from './ExportModule.js';
 export { CropModule } from './CropModule.js';
 export { LiquifyModule } from './LiquifyModule.js';
 export { HealingModule } from './HealingModule.js';
+export { CloneModule } from './CloneModule.js';
 export { UpscaleModule } from './UpscaleModule.js';
 export { KeyboardModule } from './KeyboardModule.js';
 export { ComparisonModule } from './ComparisonModule.js';

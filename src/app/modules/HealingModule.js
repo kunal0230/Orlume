@@ -147,8 +147,16 @@ export class HealingModule {
         this.healingCanvas.width = this.gpu.width;
         this.healingCanvas.height = this.gpu.height;
 
+        // Create 2D canvas copy from GPU (WebGPU canvas cannot be read directly)
+        const imageData = this.gpu.toImageData();
+        const sourceCanvas = document.createElement('canvas');
+        sourceCanvas.width = this.gpu.width;
+        sourceCanvas.height = this.gpu.height;
+        const sourceCtx = sourceCanvas.getContext('2d');
+        sourceCtx.putImageData(imageData, 0, 0);
+
         // Set the image to heal
-        this.healingTool.setImage(this.elements.canvas);
+        this.healingTool.setImage(sourceCanvas);
 
         // Create healing brush cursor if it doesn't exist
         if (!this.healingBrushCursor) {
@@ -474,6 +482,8 @@ export class HealingModule {
     _loadImageAsync(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
+            // Required for cross-origin images with COEP headers
+            img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
             img.onerror = reject;
             img.src = src;
