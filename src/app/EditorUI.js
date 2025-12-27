@@ -2,7 +2,6 @@
  * EditorUI - UI management for the GPU Editor
  * Handles all DOM interactions, event bindings, and UI updates
  */
-import { CropTool } from '../tools/CropTool.js';
 import { HistoryManager } from './HistoryManager.js';
 import { ImageUpscaler } from '../ml/ImageUpscaler.js';
 import { LiquifyTool } from '../tools/LiquifyTool.js';
@@ -10,7 +9,7 @@ import { HealingTool } from '../tools/HealingTool.js';
 import { replicateService } from '../services/ReplicateService.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -41,12 +40,6 @@ export class EditorUI {
 
         this.maskSliders = ['exposure', 'contrast', 'shadows', 'temperature', 'saturation'];
 
-        // Initialize crop tool
-        this.cropTool = null;
-
-        // Applied crop state (persists across mode changes)
-        this.appliedCrop = null;
-
         // Initialize undo/redo history manager
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
@@ -55,9 +48,14 @@ export class EditorUI {
         this.historyModule = new HistoryModule(this);
         this.zoomPanModule = new ZoomPanModule(this);
         this.exportModule = new ExportModule(this);
+        this.cropModule = new CropModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
+
+        // Expose crop tool from module for backward compatibility
+        this.cropTool = null; // Will be set when cropModule.activate() is called
+        this.appliedCrop = null;
 
         // Comparison slider state
         this.comparison = {
@@ -77,7 +75,6 @@ export class EditorUI {
         this._initGlobalSliders();
         this._initMaskSliders();
         this._initBrushControls();
-        this._initCropControls();
         this._initCanvasEvents();
         this._initKeyboardShortcuts();
         this._initFileHandling();
@@ -85,6 +82,7 @@ export class EditorUI {
 
         // Initialize modular components
         this.zoomPanModule.init();
+        this.cropModule.init();
 
         this._initComparisonSlider();
         this._initUpscaleControls();
@@ -416,459 +414,71 @@ export class EditorUI {
     }
 
     /**
-     * Initialize crop tool controls
+     * @deprecated Handled by cropModule.init()
      */
     _initCropControls() {
-        // Aspect ratio buttons
-        document.querySelectorAll('.aspect-ratio-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Update active state
-                document.querySelectorAll('.aspect-ratio-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Set aspect ratio on crop tool
-                const ratioStr = btn.dataset.ratio;
-                let ratio = null;
-
-                if (ratioStr === '1:1') ratio = 1;
-                else if (ratioStr === '4:3') ratio = 4 / 3;
-                else if (ratioStr === '3:2') ratio = 3 / 2;
-                else if (ratioStr === '16:9') ratio = 16 / 9;
-                else if (ratioStr === '2:1') ratio = 2;
-                else if (ratioStr === '5:4') ratio = 5 / 4;
-                else if (ratioStr === '9:16') ratio = 9 / 16;
-                else if (ratioStr === '2:3') ratio = 2 / 3;
-                // 'free' = null
-
-                this.cropTool?.setAspectRatio(ratio);
-            });
-        });
-
-        // Grid toggle
-        const gridToggle = document.getElementById('crop-grid-toggle');
-        if (gridToggle) {
-            gridToggle.addEventListener('change', () => {
-                this.cropTool?.toggleGrid(gridToggle.checked);
-            });
-        }
-
-        // Apply crop button
-        const btnApply = document.getElementById('btn-crop-apply');
-        if (btnApply) {
-            btnApply.addEventListener('click', () => this.applyCrop());
-        }
-
-        // Cancel crop button
-        const btnCancel = document.getElementById('btn-crop-cancel');
-        if (btnCancel) {
-            btnCancel.addEventListener('click', () => this.cancelCrop());
-        }
-
-        // Editable dimensions input
-        this._initCropDimensionsInput();
-
-        // Rotation slider - with real-time preview
-        const rotationSlider = document.getElementById('slider-crop-rotation');
-        const rotationValue = document.getElementById('val-crop-rotation');
-        if (rotationSlider && rotationValue) {
-            rotationSlider.addEventListener('input', () => {
-                const angle = parseFloat(rotationSlider.value);
-                rotationValue.textContent = `${angle}°`;
-                this.cropRotation = angle;
-                this._applyTransformPreview();
-                // Sync crop overlay with canvas rotation
-                this.cropTool?.setRotation(angle);
-            });
-
-            rotationSlider.addEventListener('dblclick', () => {
-                rotationSlider.value = 0;
-                rotationValue.textContent = '0°';
-                this.cropRotation = 0;
-                this._applyTransformPreview();
-                this.cropTool?.setRotation(0);
-            });
-        }
-
-        // Rotation increment/decrement buttons for accessibility
-        const btnRotateMinus = document.getElementById('btn-rotate-minus');
-        const btnRotatePlus = document.getElementById('btn-rotate-plus');
-
-        const updateRotation = (delta) => {
-            if (!rotationSlider || !rotationValue) return;
-            let newValue = parseFloat(rotationSlider.value) + delta;
-            // Clamp to slider bounds
-            newValue = Math.max(-180, Math.min(180, newValue));
-            rotationSlider.value = newValue;
-            rotationValue.textContent = `${newValue}°`;
-            this.cropRotation = newValue;
-            this._applyTransformPreview();
-            this.cropTool?.setRotation(newValue);
-        };
-
-        if (btnRotateMinus) {
-            btnRotateMinus.addEventListener('click', () => updateRotation(-1));
-        }
-
-        if (btnRotatePlus) {
-            btnRotatePlus.addEventListener('click', () => updateRotation(1));
-        }
-
-        // Flip buttons - with real-time preview
-        const btnFlipH = document.getElementById('btn-flip-h');
-        const btnFlipV = document.getElementById('btn-flip-v');
-
-        if (btnFlipH) {
-            btnFlipH.addEventListener('click', () => {
-                this.cropFlipH = !this.cropFlipH;
-                btnFlipH.classList.toggle('active', this.cropFlipH);
-                this._applyTransformPreview();
-            });
-        }
-
-        if (btnFlipV) {
-            btnFlipV.addEventListener('click', () => {
-                this.cropFlipV = !this.cropFlipV;
-                btnFlipV.classList.toggle('active', this.cropFlipV);
-                this._applyTransformPreview();
-            });
-        }
-
-        // Reset transform button - with real-time preview
-        const btnReset = document.getElementById('btn-reset-transform');
-        if (btnReset) {
-            btnReset.addEventListener('click', () => {
-                // Reset rotation
-                if (rotationSlider) {
-                    rotationSlider.value = 0;
-                    rotationValue.textContent = '0°';
-                }
-                this.cropRotation = 0;
-
-                // Reset flips
-                this.cropFlipH = false;
-                this.cropFlipV = false;
-                btnFlipH?.classList.remove('active');
-                btnFlipV?.classList.remove('active');
-
-                this._applyTransformPreview();
-                this.cropTool?.setRotation(0);
-            });
-        }
-
-        // Initialize transform states
-        this.cropRotation = 0;
-        this.cropFlipH = false;
-        this.cropFlipV = false;
+        // Now delegated to cropModule.init()
     }
 
     /**
      * Apply real-time CSS transform preview for rotation and flip
      */
     _applyTransformPreview() {
-        const canvas = this.elements.canvas;
-        if (!canvas) return;
-
-        const transforms = [];
-
-        // Apply rotation
-        if (this.cropRotation && this.cropRotation !== 0) {
-            transforms.push(`rotate(${this.cropRotation}deg)`);
-        }
-
-        // Apply flip
-        const scaleX = this.cropFlipH ? -1 : 1;
-        const scaleY = this.cropFlipV ? -1 : 1;
-        if (scaleX !== 1 || scaleY !== 1) {
-            transforms.push(`scale(${scaleX}, ${scaleY})`);
-        }
-
-        canvas.style.transform = transforms.length > 0 ? transforms.join(' ') : '';
-        canvas.style.transformOrigin = 'center center';
+        this.cropModule._applyTransformPreview();
     }
 
     /**
      * Clear transform preview (reset CSS transform)
      */
     _clearTransformPreview() {
-        const canvas = this.elements.canvas;
-        if (canvas) {
-            canvas.style.transform = '';
-        }
+        this.cropModule._clearTransformPreview();
     }
 
     /**
-     * Initialize editable crop dimensions input
+     * @deprecated Handled by cropModule
      */
     _initCropDimensionsInput() {
-        const display = document.getElementById('crop-dimensions-display');
-        const input = document.getElementById('crop-dimensions-input');
-
-        if (!display || !input) return;
-
-        // Click on display to show input
-        display.addEventListener('click', () => {
-            if (!this.cropTool) return;
-
-            const pixels = this.cropTool.getCropPixels();
-            input.value = `${pixels.width}x${pixels.height}`;
-            display.style.display = 'none';
-            input.style.display = 'block';
-            input.focus();
-            input.select();
-        });
-
-        // Handle input submission
-        const applyCustomDimensions = () => {
-            const value = input.value.trim();
-            // Parse formats: "800x600", "800*600", "800 600"
-            const match = value.match(/^(\d+)\s*[x×*\s]\s*(\d+)$/i);
-
-            if (match) {
-                const width = parseInt(match[1]);
-                const height = parseInt(match[2]);
-
-                if (width > 0 && height > 0 && this.cropTool) {
-                    this.cropTool.setCustomDimensions(width, height);
-                }
-            }
-
-            // Hide input, show display
-            input.style.display = 'none';
-            display.style.display = 'inline';
-        };
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                applyCustomDimensions();
-            } else if (e.key === 'Escape') {
-                input.style.display = 'none';
-                display.style.display = 'inline';
-            }
-        });
-
-        input.addEventListener('blur', () => {
-            // Hide input on blur
-            input.style.display = 'none';
-            display.style.display = 'inline';
-        });
+        // Now delegated to cropModule
     }
 
     /**
      * Activate crop tool and show overlay
      */
     _activateCropTool() {
-        if (!this.state.hasImage) {
-            console.warn('No image loaded for cropping');
-            return;
-        }
-
-        // Create crop tool if not exists
-        if (!this.cropTool) {
-            const canvasArea = document.querySelector('.canvas-area');
-            this.cropTool = new CropTool(canvasArea, this.elements.canvas);
-        }
-
-        // Activate with callback for dimension updates
-        this.cropTool.onUpdate = () => {
-            this._updateCropDimensionsDisplay();
-        };
-
-        this.cropTool.activate();
-        this._updateCropDimensionsDisplay();
+        this.cropModule.activate();
+        // Sync cropTool reference for backward compatibility
+        this.cropTool = this.cropModule.cropTool;
     }
 
     /**
      * Apply crop to image
      */
     applyCrop() {
-        if (!this.cropTool) return;
-
-        // Save state BEFORE crop for undo support
-        const snapshot = this._captureFullState();
-        this.history.pushState(snapshot);
-
-        const cropData = this.cropTool.apply();
-        if (!cropData || cropData.width <= 0 || cropData.height <= 0) {
-            console.warn('Invalid crop region');
-            return;
-        }
-
-        // Store the crop data for export
-        this.appliedCrop = cropData;
-
-        // Add rotation and flip data
-        cropData.rotation = this.cropRotation || 0;
-        cropData.flipH = this.cropFlipH || false;
-        cropData.flipV = this.cropFlipV || false;
-
-        // Apply the crop to the image
-        this._performCrop(cropData);
-
-        // Stay in crop mode - don't switch to develop mode
-        // The crop tool will be reactivated after the image is loaded
-
-        console.log(`✅ Crop applied: ${cropData.width}×${cropData.height}${cropData.rotation ? ` @ ${cropData.rotation}°` : ''}`);
+        this.cropModule.applyCrop();
+        // Sync appliedCrop for backward compatibility
+        this.appliedCrop = this.cropModule.appliedCrop;
     }
 
     /**
      * Cancel crop and reset (stay in crop mode)
      */
     cancelCrop() {
-        this.cropTool?.cancel();
-
-        // Reset rotation and flip UI
-        const rotationSlider = document.getElementById('slider-crop-rotation');
-        const rotationValue = document.getElementById('val-crop-rotation');
-        if (rotationSlider && rotationValue) {
-            rotationSlider.value = 0;
-            rotationValue.textContent = '0°';
-        }
-        this.cropRotation = 0;
-        this.cropFlipH = false;
-        this.cropFlipV = false;
-        document.getElementById('btn-flip-h')?.classList.remove('active');
-        document.getElementById('btn-flip-v')?.classList.remove('active');
-
-        // Clear real-time transform preview
-        this._clearTransformPreview();
-
-        // Reactivate crop tool instead of switching mode
-        if (this.state.hasImage) {
-            this.cropTool?.activate();
-            this._updateCropDimensionsDisplay();
-        }
+        this.cropModule.cancelCrop();
     }
 
     /**
      * Perform the actual crop operation with rotation and flip
+     * @deprecated Use cropModule._performCrop instead
      */
     _performCrop(cropData) {
-        // Read current canvas pixels
-        const gl = this.gpu.gl;
-        const fullWidth = this.gpu.width;
-        const fullHeight = this.gpu.height;
-
-        // Read pixels from WebGL
-        const pixels = new Uint8Array(fullWidth * fullHeight * 4);
-        gl.readPixels(0, 0, fullWidth, fullHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-        // Create ImageData from full canvas (flipping Y for WebGL)
-        const fullTempCanvas = document.createElement('canvas');
-        fullTempCanvas.width = fullWidth;
-        fullTempCanvas.height = fullHeight;
-        const fullTempCtx = fullTempCanvas.getContext('2d');
-        const fullImageData = fullTempCtx.createImageData(fullWidth, fullHeight);
-
-        for (let y = 0; y < fullHeight; y++) {
-            const srcRow = (fullHeight - 1 - y) * fullWidth * 4;
-            const dstRow = y * fullWidth * 4;
-            for (let x = 0; x < fullWidth * 4; x++) {
-                fullImageData.data[dstRow + x] = pixels[srcRow + x];
-            }
-        }
-        fullTempCtx.putImageData(fullImageData, 0, 0);
-
-        // Calculate output dimensions based on rotation
-        const radians = (cropData.rotation || 0) * Math.PI / 180;
-        const cos = Math.abs(Math.cos(radians));
-        const sin = Math.abs(Math.sin(radians));
-
-        // If rotated, the bounding box changes
-        let outputWidth, outputHeight;
-        if (cropData.rotation && cropData.rotation !== 0) {
-            outputWidth = Math.ceil(cropData.width * cos + cropData.height * sin);
-            outputHeight = Math.ceil(cropData.height * cos + cropData.width * sin);
-        } else {
-            outputWidth = cropData.width;
-            outputHeight = cropData.height;
-        }
-
-        // Create output canvas with proper dimensions
-        const outputCanvas = document.createElement('canvas');
-        outputCanvas.width = outputWidth;
-        outputCanvas.height = outputHeight;
-        const outputCtx = outputCanvas.getContext('2d');
-
-        // Apply transformations
-        outputCtx.save();
-        outputCtx.translate(outputWidth / 2, outputHeight / 2);
-
-        // Apply rotation
-        if (cropData.rotation) {
-            outputCtx.rotate(radians);
-        }
-
-        // Apply flip
-        const scaleX = cropData.flipH ? -1 : 1;
-        const scaleY = cropData.flipV ? -1 : 1;
-        outputCtx.scale(scaleX, scaleY);
-
-        // Draw cropped region centered
-        outputCtx.drawImage(
-            fullTempCanvas,
-            cropData.x, cropData.y, cropData.width, cropData.height,
-            -cropData.width / 2, -cropData.height / 2, cropData.width, cropData.height
-        );
-        outputCtx.restore();
-
-        // Create new image from output canvas and reload
-        const croppedImage = new Image();
-        croppedImage.onload = () => {
-            // Update state
-            this.state.setImage(croppedImage);
-
-            // Reload GPU processor with cropped image
-            this.gpu.loadImage(croppedImage);
-
-            // Clear any masks (they no longer align)
-            this.masks.layers = [];
-            this.masks.activeLayerIndex = -1;
-            this.updateLayersList();
-
-            // Update UI
-            this.elements.perfIndicator.textContent = `${croppedImage.width}×${croppedImage.height}`;
-            setTimeout(() => this.renderHistogram(), 100);
-
-            // Clear applied crop (it's been applied)
-            this.appliedCrop = null;
-
-            // Reset rotation and flip UI after successful crop
-            const rotationSlider = document.getElementById('slider-crop-rotation');
-            const rotationValue = document.getElementById('val-crop-rotation');
-            if (rotationSlider && rotationValue) {
-                rotationSlider.value = 0;
-                rotationValue.textContent = '0°';
-            }
-            this.cropRotation = 0;
-            this.cropFlipH = false;
-            this.cropFlipV = false;
-            document.getElementById('btn-flip-h')?.classList.remove('active');
-            document.getElementById('btn-flip-v')?.classList.remove('active');
-
-            // Clear CSS transform preview (rotation/flip is now baked into image)
-            this._clearTransformPreview();
-
-            // Reactivate crop tool for the new image (stay in crop mode)
-            setTimeout(() => {
-                if (this.state.currentTool === 'crop') {
-                    this.cropTool?.deactivate();
-                    this._activateCropTool();
-                }
-            }, 150);
-        };
-        croppedImage.src = outputCanvas.toDataURL('image/png');
+        this.cropModule._performCrop(cropData);
     }
 
     /**
      * Update crop dimensions display in panel
      */
     _updateCropDimensionsDisplay() {
-        const display = document.getElementById('crop-dimensions-display');
-        if (display && this.cropTool) {
-            const pixels = this.cropTool.getCropPixels();
-            display.textContent = `${pixels.width} × ${pixels.height}`;
-        }
+        this.cropModule._updateCropDimensionsDisplay();
     }
 
     /**
