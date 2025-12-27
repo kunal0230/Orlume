@@ -339,6 +339,12 @@ export class CloneModule {
         this.cloneCanvas.style.display = 'none';
         this.cloneCanvas.style.pointerEvents = 'none';
 
+        // Clear canvas content to prevent overlap
+        const ctx = this.cloneCanvas.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, this.cloneCanvas.width, this.cloneCanvas.height);
+        }
+
         // Hide cursor elements
         if (this.cloneBrushCursor) {
             this.cloneBrushCursor.style.display = 'none';

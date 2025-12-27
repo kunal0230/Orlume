@@ -4,1134 +4,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orlume | AI Photo Editor</title>
+    <title>Orlume | Next-Gen AI Photo Editor</title>
     <meta name="description"
-        content="Transform your photos with AI-powered depth estimation, dynamic relighting, and GPU-accelerated adjustments">
-
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Orlume">
-
-    <!-- Icons -->
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="apple-touch-icon" href="/icon.svg">
-
-    <link rel="stylesheet" href="/src/styles/editor.css">
+        content="Professional AI photo editing. Relight, remove backgrounds, and color grade instantly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/styles/landing.css">
 </head>
 
 <body>
-    <div class="app">
-        <!-- Left Toolbar -->
-        <div class="toolbar">
-            <button class="tool-btn active" id="tool-develop" title="Develop (D)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3" />
-                    <path
-                        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-3d" title="3D Relight">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="5" />
-                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2" />
-                    <circle cx="9" cy="9" r="1" fill="currentColor" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-export" title="Export (E)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-            </button>
 
-            <div class="tool-divider"></div>
+    <!-- Dynamic Cursor Glow -->
+    <div class="cursor-glow"></div>
 
-            <button class="tool-btn" id="tool-crop" title="Crop (C)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
-                    <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-upscale" title="Upscale (U)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-liquify" title="Liquify (W)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.5 0 3-.3 4.3-.9" />
-                    <path d="M12 2c3 0 5.5 4.5 5.5 10 0 2-.3 3.9-.8 5.5" />
-                    <path d="M2 12h10" />
-                    <path d="M19 16l3 3-3 3" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-healing" title="Healing Brush (H)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 3v18" />
-                    <path d="M3 19l16-16" />
-                    <circle cx="5" cy="17" r="2" />
-                    <circle cx="9" cy="13" r="2" />
-                    <circle cx="13" cy="9" r="2" />
-                </svg>
-            </button>
-            <button class="tool-btn" id="tool-clone" title="Clone Stamp (S)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-            </button>
+    <!-- Nav -->
+    <nav class="nav">
+        <a href="/" class="nav-logo">Orlume</a>
+        <ul class="nav-links">
+            <li><a href="#showcase">Capabilities</a></li>
+            <li><a href="#features">Tools</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+        </ul>
+        <a href="./editor.html" class="nav-cta">Open Editor</a>
+    </nav>
 
-            <div class="tool-divider"></div>
+    <!-- Split Hero -->
+    <section class="hero-split">
+        <div class="hero-bg-blob blob-1"></div>
+        <div class="hero-bg-blob blob-2"></div>
 
-            <!-- PWA Install Button -->
-            <button class="tool-btn" id="pwa-install-btn" title="Install App" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-            </button>
-        </div>
-
-        <!-- Canvas Area -->
-        <div class="canvas-area">
-            <div class="canvas-container">
-                <canvas id="gpu-canvas"></canvas>
+        <div class="hero-text">
+            <div class="badge-pill">
+                <span>✨ New: 3D Relighting Model</span>
             </div>
-            <div class="before-indicator" id="before-indicator">Original</div>
-            <div class="drop-zone" id="drop-zone">
-                <h2>Drop Image Here</h2>
-                <p>or click to browse</p>
-                <button class="btn btn-primary" id="btn-browse">Choose Image</button>
-            </div>
-            <div class="brush-cursor" id="brush-cursor"></div>
-
-            <!-- Before/After Toggle Button -->
-            <button class="btn before-after-toggle" id="btn-before-after" title="Toggle Before/After Comparison (\)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                    <line x1="12" y1="3" x2="12" y2="21"></line>
-                    <path d="M8 12l-2 0M16 12l2 0"></path>
-                </svg>
-                <span>Before / After</span>
-            </button>
-        </div>
-
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <!-- Develop Mode Tabs (shown when in develop mode) -->
-            <div class="panel-tabs" id="develop-mode-tabs">
-                <button class="panel-tab active" data-panel="develop">Develop</button>
-                <button class="panel-tab" data-panel="masks">Masks</button>
-            </div>
-
-            <!-- 3D Mode Header (shown when in 3D mode) -->
-            <div class="panel-header mode-header" id="3d-mode-header" style="display: none;">
-                <span class="panel-title">3D Relighting</span>
-            </div>
-
-            <!-- Export Mode Header (shown when in export mode) -->
-            <div class="panel-header mode-header" id="export-mode-header" style="display: none;">
-                <span class="panel-title">Export Image</span>
-            </div>
-
-            <!-- Crop Mode Header (shown when in crop mode) -->
-            <div class="panel-header mode-header" id="crop-mode-header" style="display: none;">
-                <span class="panel-title">Crop Image</span>
-            </div>
-
-            <!-- Upscale Mode Header (shown when in upscale mode) -->
-            <div class="panel-header mode-header" id="upscale-mode-header" style="display: none;">
-                <span class="panel-title">Upscale Image</span>
-            </div>
-
-            <!-- Liquify Mode Header (shown when in liquify mode) -->
-            <div class="panel-header mode-header" id="liquify-mode-header" style="display: none;">
-                <span class="panel-title">Liquify</span>
-            </div>
-
-            <!-- Healing Mode Header (shown when in healing mode) -->
-            <div class="panel-header mode-header" id="healing-mode-header" style="display: none;">
-                <span class="panel-title">AI Spot Healing</span>
-            </div>
-
-            <!-- Clone Mode Header (shown when in clone mode) -->
-            <div class="panel-header mode-header" id="clone-mode-header" style="display: none;">
-                <span class="panel-title">Clone Stamp</span>
-            </div>
-
-            <div class="panel-content">
-                <!-- Develop Panel -->
-                <div class="panel-section active" id="panel-develop">
-                    <!-- Histogram -->
-                    <div class="histogram-container">
-                        <div class="histogram-label">Histogram</div>
-                        <canvas id="histogram-canvas"></canvas>
-                    </div>
-
-                    <!-- Light Section -->
-                    <div class="section">
-                        <div class="section-header">Light</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Exposure</span>
-                                <span id="val-exposure">0.00</span>
-                            </div>
-                            <input type="range" id="slider-exposure" min="-5" max="5" step="0.05" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Contrast</span>
-                                <span id="val-contrast">0</span>
-                            </div>
-                            <input type="range" id="slider-contrast" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Highlights</span>
-                                <span id="val-highlights">0</span>
-                            </div>
-                            <input type="range" id="slider-highlights" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadows</span>
-                                <span id="val-shadows">0</span>
-                            </div>
-                            <input type="range" id="slider-shadows" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Whites</span>
-                                <span id="val-whites">0</span>
-                            </div>
-                            <input type="range" id="slider-whites" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Blacks</span>
-                                <span id="val-blacks">0</span>
-                            </div>
-                            <input type="range" id="slider-blacks" min="-100" max="100" step="1" value="0">
-                        </div>
-                    </div>
-
-                    <!-- Color Section -->
-                    <div class="section">
-                        <div class="section-header">Color</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Temperature</span>
-                                <span id="val-temperature">0</span>
-                            </div>
-                            <input type="range" id="slider-temperature" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Tint</span>
-                                <span id="val-tint">0</span>
-                            </div>
-                            <input type="range" id="slider-tint" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Vibrance</span>
-                                <span id="val-vibrance">0</span>
-                            </div>
-                            <input type="range" id="slider-vibrance" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Saturation</span>
-                                <span id="val-saturation">0</span>
-                            </div>
-                            <input type="range" id="slider-saturation" min="-100" max="100" step="1" value="0">
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="section">
-                        <div class="btn-row">
-                            <button class="btn" id="btn-reset" style="width: 100%;">Reset All Adjustments</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Masks Panel -->
-                <div class="panel-section" id="panel-masks">
-                    <!-- Mask Tool Selector -->
-                    <div class="section">
-                        <div class="section-header">Mask Tools</div>
-                        <div class="mask-tool-selector">
-                            <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
-                                    <path
-                                        d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
-                                </svg>
-                                <span>Brush</span>
-                            </button>
-                            <button class="mask-tool-btn" id="mask-tool-radial" title="Radial (R)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <circle cx="12" cy="12" r="6" />
-                                    <circle cx="12" cy="12" r="2" />
-                                </svg>
-                                <span>Radial</span>
-                            </button>
-                            <button class="mask-tool-btn" id="mask-tool-gradient" title="Gradient (G)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                    <line x1="3" y1="12" x2="21" y2="12" />
-                                </svg>
-                                <span>Linear</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Layers</div>
-                        <div class="mask-layers" id="mask-layers">
-                            <div
-                                style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
-                                No adjustment layers yet.<br>
-                                Select a tool to create one.
-                            </div>
-                        </div>
-                        <button class="btn" id="btn-new-layer" style="width: 100%;">+ New Adjustment Layer</button>
-                    </div>
-
-                    <div class="section" id="brush-settings" style="display: none;">
-                        <div class="section-header">Brush Tool</div>
-
-                        <!-- Brush Preview with size indicator -->
-                        <div class="brush-preview" style="position: relative;">
-                            <div class="brush-preview-circle" id="brush-preview-circle"
-                                style="width: 40px; height: 40px;"></div>
-                            <div id="brush-size-indicator"
-                                style="position: absolute; bottom: 4px; right: 4px; font-size: 10px; color: var(--text-secondary);">
-                                100px</div>
-                        </div>
-
-                        <!-- Mode Toggle - Segmented Control -->
-                        <div
-                            style="display: flex; margin-bottom: 16px; background: var(--bg-dark); border-radius: 8px; padding: 4px;">
-                            <button class="btn brush-mode-btn active" id="btn-brush-add"
-                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                </svg>
-                                Add
-                            </button>
-                            <button class="btn brush-mode-btn" id="btn-brush-erase"
-                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                </svg>
-                                Erase
-                            </button>
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Size</span>
-                                <span id="val-brush-size">100</span>
-                            </div>
-                            <input type="range" id="slider-brush-size" min="1" max="500" step="1" value="100">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Feather</span>
-                                <span id="val-brush-hardness">50</span>
-                            </div>
-                            <input type="range" id="slider-brush-hardness" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Flow</span>
-                                <span id="val-brush-flow">50</span>
-                            </div>
-                            <input type="range" id="slider-brush-flow" min="1" max="100" step="1" value="50">
-                        </div>
-
-                        <div
-                            style="font-size: 10px; color: var(--text-secondary); margin-top: 12px; text-align: center;">
-                            <kbd>[</kbd> / <kbd>]</kbd> = resize &nbsp; <kbd>X</kbd> = toggle mode
-                        </div>
-                    </div>
-
-                    <div class="section" id="mask-adjustments" style="display: none;">
-                        <div class="section-header">Mask Adjustments</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Exposure</span>
-                                <span id="val-mask-exposure">0.00</span>
-                            </div>
-                            <input type="range" id="slider-mask-exposure" min="-5" max="5" step="0.05" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Contrast</span>
-                                <span id="val-mask-contrast">0</span>
-                            </div>
-                            <input type="range" id="slider-mask-contrast" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadows</span>
-                                <span id="val-mask-shadows">0</span>
-                            </div>
-                            <input type="range" id="slider-mask-shadows" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Temperature</span>
-                                <span id="val-mask-temperature">0</span>
-                            </div>
-                            <input type="range" id="slider-mask-temperature" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Saturation</span>
-                                <span id="val-mask-saturation">0</span>
-                            </div>
-                            <input type="range" id="slider-mask-saturation" min="-100" max="100" step="1" value="0">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3D Relighting Panel -->
-                <div class="panel-section" id="panel-relight">
-                    <div class="section">
-                        <div class="section-header">Depth Estimation</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Generate depth map using AI to enable 3D relighting effects.
-                        </p>
-                        <button class="btn btn-primary" id="btn-estimate-depth" style="width: 100%;">
-                            Estimate Depth
-                        </button>
-                        <div id="depth-progress" hidden style="margin-top: 12px;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                                <span id="depth-progress-text">Loading model...</span>
-                                <span id="depth-progress-percent">0%</span>
-                            </div>
-                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
-                                <div id="depth-progress-bar"
-                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section" id="relight-controls" style="display: none;">
-                        <div class="section-header">Lighting</div>
-
-                        <div
-                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
-                            Click on image to add lights<br>
-                            Drag to reposition • Double-click to remove
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Intensity</span>
-                                <span id="val-light-intensity">1.5</span>
-                            </div>
-                            <input type="range" id="slider-light-intensity" min="0" max="5" step="0.1" value="1.5">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Ambient</span>
-                                <span id="val-light-ambient">30</span>
-                            </div>
-                            <input type="range" id="slider-light-ambient" min="0" max="100" step="1" value="30">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow</span>
-                                <span id="val-light-shadow">50</span>
-                            </div>
-                            <input type="range" id="slider-light-shadow" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Temperature</span>
-                                <span id="val-light-temperature">5500K</span>
-                            </div>
-                            <input type="range" id="slider-light-temperature" min="2000" max="10000" step="100"
-                                value="5500">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Brightness</span>
-                                <span id="val-light-brightness">0</span>
-                            </div>
-                            <input type="range" id="slider-light-brightness" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="btn-row" style="margin-top: 16px;">
-                            <button class="btn" id="btn-reset-lights">Reset Lights</button>
-                            <button class="btn" id="btn-disable-relight">Disable</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Export Panel -->
-                <div class="panel-section" id="panel-export">
-                    <div class="section">
-                        <div class="section-header">Export Settings</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 16px;">
-                            Export your edited image in your preferred format and quality.
-                        </p>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Format</span>
-                            </div>
-                            <select id="export-format"
-                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
-                                <option value="png">PNG (Lossless)</option>
-                                <option value="jpeg" selected>JPEG (Smaller)</option>
-                                <option value="webp">WebP (Best Compression)</option>
-                            </select>
-                        </div>
-
-                        <div class="control-group" id="quality-control">
-                            <div class="control-label">
-                                <span>Quality</span>
-                                <span id="val-export-quality">95</span>
-                            </div>
-                            <input type="range" id="slider-export-quality" min="1" max="100" step="1" value="95">
-                        </div>
-
-                        <!-- Estimated File Size -->
-                        <div class="export-info"
-                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px; margin-top: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 11px; color: var(--text-secondary);">Estimated Size</span>
-                                <span id="estimated-file-size"
-                                    style="font-size: 14px; font-weight: 600; color: var(--accent);">--</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Filename</div>
-                        <input type="text" id="export-filename" placeholder="orlume-export"
-                            style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; margin-bottom: 8px;">
-                        <p style="font-size: 10px; color: var(--text-secondary);">
-                            Leave empty for auto-generated filename with timestamp.
-                        </p>
-                    </div>
-
-                    <div class="section">
-                        <button class="btn btn-primary" id="btn-export"
-                            style="width: 100%; padding: 14px; font-size: 14px;">
-                            Export Image
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Crop Panel -->
-                <div class="panel-section" id="panel-crop">
-                    <div class="section">
-                        <div class="section-header">Aspect Ratio</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Select a preset or crop freely.
-                        </p>
-                        <div class="aspect-ratio-selector">
-                            <button class="aspect-ratio-btn active" data-ratio="free" title="Free crop">
-                                <span class="ratio-icon">⊞</span>
-                                <span>Free</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="1:1" title="Square">
-                                <span class="ratio-icon">■</span>
-                                <span>1:1</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="4:3" title="Standard photo">
-                                <span class="ratio-icon">▬</span>
-                                <span>4:3</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="3:2" title="DSLR standard">
-                                <span class="ratio-icon">▬</span>
-                                <span>3:2</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="16:9" title="Widescreen">
-                                <span class="ratio-icon">━</span>
-                                <span>16:9</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="2:1" title="Panoramic">
-                                <span class="ratio-icon">━</span>
-                                <span>2:1</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="5:4" title="Large format">
-                                <span class="ratio-icon">▬</span>
-                                <span>5:4</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="9:16" title="Vertical video">
-                                <span class="ratio-icon">▯</span>
-                                <span>9:16</span>
-                            </button>
-                            <button class="aspect-ratio-btn" data-ratio="2:3" title="Portrait">
-                                <span class="ratio-icon">▯</span>
-                                <span>2:3</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Crop Dimensions</div>
-                        <div class="crop-dimensions-container"
-                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 11px; color: var(--text-secondary);">Selection</span>
-                                <div class="crop-dimensions-wrapper">
-                                    <span id="crop-dimensions-display" class="crop-dimensions-clickable"
-                                        style="font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer;"
-                                        title="Click to enter custom dimensions">-- × --</span>
-                                    <input type="text" id="crop-dimensions-input" class="crop-dimensions-input"
-                                        placeholder="800x600"
-                                        style="display: none; width: 100px; padding: 4px 8px; 
-                                        background: var(--bg-tertiary); border: 1px solid var(--accent); 
-                                        border-radius: 4px; color: var(--text-primary); font-size: 12px; text-align: center;">
-                                </div>
-                            </div>
-                            <p
-                                style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: right;">
-                                Click to enter custom size (e.g., 800x600)
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Rotate & Flip</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Rotation</span>
-                                <span id="val-crop-rotation">0°</span>
-                            </div>
-                            <div class="slider-with-buttons" style="display: flex; align-items: center; gap: 8px;">
-                                <button class="btn slider-btn" id="btn-rotate-minus" title="Rotate left (-1°)"
-                                    style="padding: 6px 10px; min-width: 32px;">
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                </button>
-                                <input type="range" id="slider-crop-rotation" min="-180" max="180" step="0.5" value="0"
-                                    style="flex: 1;">
-                                <button class="btn slider-btn" id="btn-rotate-plus" title="Rotate right (+1°)"
-                                    style="padding: 6px 10px; min-width: 32px;">
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="flip-buttons" style="display: flex; gap: 8px; margin-top: 12px;">
-                            <button class="btn" id="btn-flip-h" style="flex: 1;" title="Flip Horizontal">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                                    <path d="M12 3v18M16 7l4 5-4 5M8 7l-4 5 4 5" />
-                                </svg>
-                                Flip H
-                            </button>
-                            <button class="btn" id="btn-flip-v" style="flex: 1;" title="Flip Vertical">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                                    <path d="M3 12h18M7 8l5-4 5 4M7 16l5 4 5-4" />
-                                </svg>
-                                Flip V
-                            </button>
-                        </div>
-
-                        <button class="btn" id="btn-reset-transform" style="width: 100%; margin-top: 8px;">
-                            Reset Rotation & Flip
-                        </button>
-                    </div>
-
-                    <div class="section">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="crop-grid-toggle" checked>
-                            <span>Show rule of thirds grid</span>
-                        </label>
-                    </div>
-
-                    <div class="section">
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-crop-cancel" style="flex: 1;">
-                                Cancel
-                            </button>
-                            <button class="btn btn-primary" id="btn-crop-apply" style="flex: 1;">
-                                Apply Crop
-                            </button>
-                        </div>
-                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            <kbd>Enter</kbd> apply • <kbd>Esc</kbd> cancel • Arrow keys to nudge
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Upscale Panel -->
-                <div class="panel-section" id="panel-upscale">
-                    <div class="section">
-                        <div class="section-header">Scale Factor</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Choose how much to enlarge your image.
-                        </p>
-                        <div class="scale-factor-selector">
-                            <button class="scale-factor-btn active" data-scale="2" title="2x Upscale">
-                                <span class="scale-value">2×</span>
-                                <span class="scale-label">Standard</span>
-                            </button>
-                            <button class="scale-factor-btn" data-scale="3" title="3x Upscale">
-                                <span class="scale-value">3×</span>
-                                <span class="scale-label">Large</span>
-                            </button>
-                            <button class="scale-factor-btn" data-scale="4" title="4x Upscale">
-                                <span class="scale-value">4×</span>
-                                <span class="scale-label">Maximum</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Processing Mode</div>
-                        <div class="mode-selector"
-                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;">
-                            <button class="mode-btn" data-mode="enhance" title="Enhance only">
-                                <span>🎨</span>
-                                <span style="font-size: 9px;">Enhance</span>
-                            </button>
-                            <button class="mode-btn" data-mode="upscale" title="Upscale only">
-                                <span>📐</span>
-                                <span style="font-size: 9px;">Upscale</span>
-                            </button>
-                            <button class="mode-btn active" data-mode="both" title="Enhance + Upscale">
-                                <span>✨</span>
-                                <span style="font-size: 9px;">Both</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">AI Enhancement</div>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-ai-toggle" checked>
-                            <span>🚀 Use AI Server</span>
-                        </label>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-face-toggle">
-                            <span>👤 Face Enhancement (GFPGAN)</span>
-                        </label>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-sharpen-toggle" checked>
-                            <span>🔍 Sharpen Details</span>
-                        </label>
-                        <div style="margin-top: 10px;">
-                            <label
-                                style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Server
-                                URL</label>
-                            <input type="text" id="ai-server-url" value="http://localhost:8000"
-                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 11px;">
-                        </div>
-                        <p style="font-size: 9px; color: var(--text-secondary); margin-top: 6px;">
-                            Run <code
-                                style="background: var(--bg-dark); padding: 2px 4px; border-radius: 3px;">./server/start.sh</code>
-                            to start the AI server
-                        </p>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Dimensions</div>
-                        <div class="upscale-dimensions-container"
-                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px;">
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span style="font-size: 11px; color: var(--text-secondary);">Current</span>
-                                <span id="upscale-current-dims" style="font-size: 13px; color: var(--text-primary);">--
-                                    × --</span>
-                            </div>
-                            <div style="display: flex; justify-content: center; margin-bottom: 8px;">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
-                                    stroke="var(--text-secondary)" stroke-width="2">
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <polyline points="19 12 12 19 5 12"></polyline>
-                                </svg>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 11px; color: var(--text-secondary);">Output</span>
-                                <span id="upscale-output-dims"
-                                    style="font-size: 14px; font-weight: 600; color: var(--accent);">-- × --</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section" id="upscale-progress-section" style="display: none;">
-                        <div class="section-header">Processing</div>
-                        <div style="margin-bottom: 8px;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                                <span id="upscale-progress-text">Starting...</span>
-                                <span id="upscale-progress-percent">0%</span>
-                            </div>
-                            <div style="background: var(--bg-dark); border-radius: 4px; height: 6px; overflow: hidden;">
-                                <div id="upscale-progress-bar"
-                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-upscale-cancel" style="flex: 1;">
-                                Cancel
-                            </button>
-                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1;">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                                    <polyline points="15 3 21 3 21 9" />
-                                    <line x1="21" y1="3" x2="14" y2="10" />
-                                </svg>
-                                Upscale
-                            </button>
-                        </div>
-                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            Higher scale factors may take longer to process.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Liquify Panel -->
-                <div class="panel-section" id="panel-liquify">
-                    <div class="section">
-                        <div class="section-header">Tool</div>
-                        <div class="liquify-mode-grid">
-                            <button class="liquify-mode-btn active" data-mode="push" title="Push">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M5 12h14" />
-                                    <path d="M12 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                            <button class="liquify-mode-btn" data-mode="enlarge" title="Enlarge">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <polyline points="15 3 21 3 21 9" />
-                                    <polyline points="9 21 3 21 3 15" />
-                                    <line x1="21" y1="3" x2="14" y2="10" />
-                                    <line x1="3" y1="21" x2="10" y2="14" />
-                                </svg>
-                            </button>
-                            <button class="liquify-mode-btn" data-mode="shrink" title="Shrink">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <polyline points="4 14 10 14 10 20" />
-                                    <polyline points="20 10 14 10 14 4" />
-                                    <line x1="14" y1="10" x2="21" y2="3" />
-                                    <line x1="3" y1="21" x2="10" y2="14" />
-                                </svg>
-                            </button>
-                            <button class="liquify-mode-btn" data-mode="swirlRight" title="Swirl Right">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                    <polyline points="21 3 21 9 15 9" />
-                                </svg>
-                            </button>
-                            <button class="liquify-mode-btn" data-mode="swirlLeft" title="Swirl Left">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M3 12a9 9 0 1 0 6.219-8.56" />
-                                    <polyline points="3 3 3 9 9 9" />
-                                </svg>
-                            </button>
-                            <button class="liquify-mode-btn" data-mode="reset" title="Reset Brush">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <polyline points="1 4 1 10 7 10" />
-                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                                </svg>
-                            </button>
-                        </div>
-                        <p id="liquify-mode-label"
-                            style="font-size: 11px; color: var(--accent); text-align: center; margin-top: 8px;">PUSH</p>
-                    </div>
-
-                    <div class="section">
-                        <div class="slider-row">
-                            <span class="slider-label">Size</span>
-                            <span class="slider-value" id="liquify-size-value">218px</span>
-                        </div>
-                        <input type="range" class="slider" id="liquify-size" min="10" max="500" value="218">
-                    </div>
-
-                    <div class="section">
-                        <div class="slider-row">
-                            <span class="slider-label">Strength</span>
-                            <span class="slider-value" id="liquify-strength-value">50%</span>
-                        </div>
-                        <input type="range" class="slider" id="liquify-strength" min="1" max="100" value="50">
-                    </div>
-
-                    <div class="section">
-                        <div class="slider-row">
-                            <span class="slider-label">Density</span>
-                            <span class="slider-value" id="liquify-density-value">75%</span>
-                        </div>
-                        <input type="range" class="slider" id="liquify-density" min="1" max="100" value="75">
-                    </div>
-
-                    <div class="section">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="liquify-high-quality">
-                            <span>High quality preview</span>
-                        </label>
-                    </div>
-
-                    <div class="section">
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-liquify-reset" style="flex: 1;">
-                                Reset All
-                            </button>
-                            <button class="btn btn-primary" id="btn-liquify-apply" style="flex: 1;">
-                                Apply
-                            </button>
-                        </div>
-                        <button class="btn" id="btn-liquify-cancel" style="width: 100%; margin-top: 8px;">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Healing Panel (AI Spot Healing) -->
-                <div class="panel-section" id="panel-healing">
-                    <!-- Status Indicator -->
-                    <div class="section">
-                        <div
-                            style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px;">
-                            <span style="color: #4ade80;">●</span>
-                            <span style="font-size: 12px; color: var(--text-secondary);">AI Healing Ready (LaMa)</span>
-                        </div>
-                    </div>
-
-                    <!-- Brush Settings -->
-                    <div class="section">
-                        <div class="section-title">Brush Settings</div>
-                        <div class="slider-row">
-                            <span class="slider-label">Size</span>
-                            <span class="slider-value" id="healing-size-value">30px</span>
-                        </div>
-                        <input type="range" class="slider" id="healing-size" min="5" max="200" value="30">
-
-                        <div class="slider-row" style="margin-top: 12px;">
-                            <span class="slider-label">Hardness</span>
-                            <span class="slider-value" id="healing-hardness-value">80%</span>
-                        </div>
-                        <input type="range" class="slider" id="healing-hardness" min="0" max="100" value="80">
-                    </div>
-
-                    <!-- Instructions -->
-                    <div class="section">
-                        <div class="section-title">How to Use</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
-                            1. Paint over the area you want to heal<br>
-                            2. Click "Heal" to send to AI<br>
-                            3. Wait for the result<br>
-                            4. Click "Apply" to keep changes
-                        </p>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="section">
-                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px;">
-                            🩹 Heal Selected Area
-                        </button>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-secondary" id="btn-clear-mask" style="flex: 1;">
-                                Clear Mask
-                            </button>
-                            <button class="btn btn-primary" id="btn-healing-apply" style="flex: 1;">
-                                Apply
-                            </button>
-                        </div>
-                        <button class="btn" id="btn-healing-cancel" style="width: 100%; margin-top: 8px;">
-                            Cancel
-                        </button>
-                    </div>
-
-                    <!-- Other AI Features -->
-                    <div class="section">
-                        <div class="section-title">More AI Tools</div>
-                        <button class="btn btn-secondary" id="btn-enhance-face"
-                            style="width: 100%; margin-bottom: 8px;">
-                            ✨ Enhance Face (GFPGAN)
-                        </button>
-                        <button class="btn btn-secondary" id="btn-remove-bg" style="width: 100%; margin-bottom: 8px;">
-                            🎭 Remove Background
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Clone Stamp Panel -->
-                <div class="panel-section" id="panel-clone">
-                    <!-- Brush Settings -->
-                    <div class="section">
-                        <div class="section-header">Brush Settings</div>
-                        <div class="slider-row">
-                            <span class="slider-label">Size</span>
-                            <span class="slider-value" id="clone-size-value">50px</span>
-                        </div>
-                        <input type="range" class="slider" id="clone-size" min="5" max="500" value="50">
-
-                        <div class="slider-row" style="margin-top: 12px;">
-                            <span class="slider-label">Hardness</span>
-                            <span class="slider-value" id="clone-hardness-value">80%</span>
-                        </div>
-                        <input type="range" class="slider" id="clone-hardness" min="0" max="100" value="80">
-
-                        <div class="slider-row" style="margin-top: 12px;">
-                            <span class="slider-label">Opacity</span>
-                            <span class="slider-value" id="clone-opacity-value">100%</span>
-                        </div>
-                        <input type="range" class="slider" id="clone-opacity" min="1" max="100" value="100">
-                    </div>
-
-                    <!-- Options -->
-                    <div class="section">
-                        <div class="section-header">Options</div>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="clone-aligned" checked>
-                            <span>Aligned (source follows brush offset)</span>
-                        </label>
-                    </div>
-
-                    <!-- Instructions -->
-                    <div class="section">
-                        <div class="section-header">How to Use</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
-                            1. <kbd>Alt</kbd>+Click to set source point<br>
-                            2. Click and drag to clone pixels<br>
-                            3. Click "Apply" to keep changes
-                        </p>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="section">
-                        <button class="btn" id="btn-clone-reset-source" style="width: 100%; margin-bottom: 8px;">
-                            Reset Source Point
-                        </button>
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-clone-cancel" style="flex: 1;">
-                                Cancel
-                            </button>
-                            <button class="btn btn-primary" id="btn-clone-apply" style="flex: 1;">
-                                Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="keyboard-hint">
-                <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>E</kbd> export | <kbd>?</kbd> shortcuts
+            <h1 class="hero-h1">
+                Transform Photos with<br>
+                <span>Neural Precision</span>
+            </h1>
+            <p class="hero-sub">
+                The first professional grade AI editor that runs entirely in your browser.
+                Relight portraits, remove backgrounds, and upscale images instantly.
+            </p>
+            <div class="btn-group">
+                <a href="./editor.html" class="btn btn-primary">Start Editing Free</a>
+                <a href="#features" class="btn btn-outline">Explore Tools</a>
             </div>
         </div>
-    </div>
 
-    <!-- Keyboard Shortcuts Modal -->
-    <div class="shortcuts-modal" id="shortcuts-modal" style="display: none;">
-        <div class="shortcuts-content">
-            <div class="shortcuts-header">
-                <h3>Keyboard Shortcuts</h3>
-                <button class="shortcuts-close" id="shortcuts-close">&times;</button>
+        <!-- Hero Visual: Interactive Slider -->
+        <div class="hero-visual">
+            <!-- Floating Badges -->
+            <div class="floating-badge badge-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Processing Complete
             </div>
-            <div class="shortcuts-grid">
-                <div class="shortcut-section">
-                    <h4>Modes</h4>
-                    <div class="shortcut-row"><kbd>D</kbd><span>Develop</span></div>
-                    <div class="shortcut-row"><kbd>E</kbd><span>Export</span></div>
-                    <div class="shortcut-row"><kbd>C</kbd><span>Crop</span></div>
-                </div>
-                <div class="shortcut-section">
-                    <h4>Mask Tools</h4>
-                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
-                    <div class="shortcut-row"><kbd>R</kbd><span>Radial</span></div>
-                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient</span></div>
-                </div>
-                <div class="shortcut-section">
-                    <h4>Brush</h4>
-                    <div class="shortcut-row"><kbd>[</kbd><span>Decrease Size</span></div>
-                    <div class="shortcut-row"><kbd>]</kbd><span>Increase Size</span></div>
-                    <div class="shortcut-row"><kbd>X</kbd><span>Toggle Add/Erase</span></div>
-                </div>
-                <div class="shortcut-section">
-                    <h4>View</h4>
-                    <div class="shortcut-row"><kbd>Space</kbd><span>Show Original (hold)</span></div>
-                    <div class="shortcut-row"><kbd>\</kbd><span>Before/After Slider</span></div>
-                    <div class="shortcut-row"><kbd>Space+Drag</kbd><span>Pan Canvas</span></div>
-                    <div class="shortcut-row"><kbd>⌘/Ctrl+Scroll</kbd><span>Zoom In/Out</span></div>
-                    <div class="shortcut-row"><kbd>?</kbd><span>Show Shortcuts</span></div>
-                </div>
-                <div class="shortcut-section">
-                    <h4>Edit</h4>
-                    <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>Undo</span></div>
-                    <div class="shortcut-row"><kbd>Ctrl+Shift+Z</kbd><span>Redo</span></div>
-                    <div class="shortcut-row"><kbd>Ctrl+E</kbd><span>Export</span></div>
+            <div class="floating-badge badge-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                0.4s Latency
+            </div>
+
+            <div class="comparison-container" data-mode="relight">
+                <span class="comparison-label label-before">Original</span>
+                <span class="comparison-label label-after">AI Relight</span>
+                <img src="/relight_after.png" class="comparison-image comparison-after">
+                <img src="/relight_after.png" class="comparison-image comparison-before mode-relight">
+                <div class="comparison-slider">
+                    <div class="comparison-handle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="perf-indicator" id="perf">Ready</div>
-    <input type="file" id="file-input" accept="image/*">
+    <!-- Logos Strip -->
+    <section class="logos-strip">
+        <p class="logos-label">Essential tool for creators at</p>
+        <div class="logos-grid">
+            <svg class="logo-item" width="100" height="24" viewBox="0 0 100 24">
+                <path d="M10 12h80v4H10z" opacity="0.5" />
+            </svg>
+            <svg class="logo-item" width="80" height="24" viewBox="0 0 80 24">
+                <circle cx="12" cy="12" r="6" />
+                <rect x="24" y="8" width="50" height="8" />
+            </svg>
+            <svg class="logo-item" width="90" height="24" viewBox="0 0 90 24">
+                <rect x="0" y="6" width="12" height="12" />
+                <rect x="20" y="8" width="60" height="8" />
+            </svg>
+            <svg class="logo-item" width="110" height="24" viewBox="0 0 110 24">
+                <path d="M0 12l6-6 6 6-6 6z" />
+                <rect x="20" y="8" width="80" height="8" />
+            </svg>
+        </div>
+    </section>
 
-    <script type="module">
-        import { initApp } from './src/app/EditorApp.js';
-        import './src/pwa-install.js';
+    <!-- Bento Grid Features -->
+    <section class="bento-section" id="features">
+        <div class="section-header">
+            <h2 class="section-h2">Everything you need</h2>
+            <p class="section-p">A complete suite of powerful tools designed for creators.</p>
+        </div>
 
-        // Initialize the editor
-        initApp().then(app => {
-            console.log('🚀 Orlume AI Photo Editor v4.0.0 - Consolidated Architecture');
+        <div class="bento-grid">
+            <div class="bento-card card-wide">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <polyline points="9 21 3 21 3 15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg></div>
+                    <h3 class="bento-h3">Smart Upscaling</h3>
+                    <p class="bento-desc">Increase resolution up to 4x while recovering lost texture details.</p>
+                </div>
+                <a href="./editor.html?tool=upscale" class="bento-link">Try Upscale →</a>
+            </div>
+
+            <div class="bento-card">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Liquify</h3>
+                    <p class="bento-desc">Perfect shapes and distortions.</p>
+                </div>
+                <a href="./editor.html?tool=liquify" class="bento-link">Try Liquify →</a>
+            </div>
+
+            <div class="bento-card">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 2l4 4-12 12-4-4z"></path>
+                            <path d="M7.5 13.5L1 20l4 4 6.5-6.5"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Magic Eraser</h3>
+                    <p class="bento-desc">Remove unwanted objects instantly.</p>
+                </div>
+                <a href="./editor.html?tool=healing" class="bento-link">Try Eraser →</a>
+            </div>
+
+            <div class="bento-card card-wide">
+                <div>
+                    <div class="bento-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg></div>
+                    <h3 class="bento-h3">Clone Stamp</h3>
+                    <p class="bento-desc">Manually copy textures for full control.</p>
+                </div>
+                <a href="./editor.html?tool=clone" class="bento-link">Try Stamp →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Specific Showcases -->
+    <section class="showcase-grid" id="showcase">
+        <!-- Decor Elements -->
+        <div class="decoration-grid-dots"></div>
+        <div class="decoration-circle"></div>
+
+        <div class="showcase-row">
+            <div class="showcase-visual">
+                <div class="comparison-container" data-mode="bg">
+                    <span class="comparison-label label-before">Image</span>
+                    <span class="comparison-label label-after">No BG</span>
+                    <img src="/bg_remove_after.png" class="comparison-image comparison-after">
+                    <img src="/bg_remove_before.png" class="comparison-image comparison-before mode-bg">
+                    <div class="comparison-slider">
+                        <div class="comparison-handle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                            </svg></div>
+                    </div>
+                </div>
+            </div>
+            <div class="showcase-copy">
+                <h3>Remove Backgrounds</h3>
+                <p>Isolate subjects in seconds. Perfect for e-commerce, portraits, and design assets.</p>
+                <div class="btn-group">
+                    <a href="./editor.html?tool=bg-remove" class="bento-link">Start Removing →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-row reverse">
+            <div class="showcase-visual">
+                <div class="comparison-container" data-mode="grade">
+                    <span class="comparison-label label-before">Raw</span>
+                    <span class="comparison-label label-after">Graded</span>
+                    <img src="/grading_after.png" class="comparison-image comparison-after">
+                    <img src="/grading_after.png" class="comparison-image comparison-before mode-grade">
+                    <div class="comparison-slider">
+                        <div class="comparison-handle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
+                            </svg></div>
+                    </div>
+                </div>
+            </div>
+            <div class="showcase-copy">
+                <h3>Color Grading</h3>
+                <p>Advanced HSL and curves tools to get the perfect mood for your photos.</p>
+                <a href="./editor.html?tool=hsl" class="bento-link">Open Color Panel →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="pricing">
+        <div class="section-header">
+            <h2 class="section-h2">Unbeatable Value</h2>
+            <p class="section-p">Professional tools for free. Upgrade for higher limits.</p>
+        </div>
+
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="price-header">
+                    <div class="plan-name">Starter</div>
+                    <div class="price-value">$0<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Unlimited Edits</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> 720p Export</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Watermarked</li>
+                </ul>
+                <a href="./editor.html" class="btn btn-outline btn-block">Start Free</a>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured">
+                <div class="pricing-badge">Most Popular</div>
+                <div class="price-header">
+                    <div class="plan-name">Creator Pro</div>
+                    <div class="price-value">$12<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> 4K Ultra HD Export</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> No Watermark</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Priority Processing</li>
+                </ul>
+                <a href="#" class="btn btn-primary btn-block">Go Pro</a>
+            </div>
+
+            <!-- Business -->
+            <div class="pricing-card">
+                <div class="price-header">
+                    <div class="plan-name">Business</div>
+                    <div class="price-value">$49<span class="price-period">/mo</span></div>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> API Access</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Team Seats</li>
+                    <li class="feature-item"><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg> Dedicated Support</li>
+                </ul>
+                <a href="#" class="btn btn-outline btn-block">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dark Footer CTA -->
+    <section class="cta-dark">
+        <div class="cta-mesh"></div>
+        <h2>Ready to create?</h2>
+        <p>Join thousands of designers editing smarter with Orlume.</p>
+        <a href="./editor.html" class="btn btn-primary">Launch Editor</a>
+    </section>
+
+    <footer class="footer">
+        © 2024 Orlume Inc.
+    </footer>
+
+    <script>
+        // Init Sliders
+        document.querySelectorAll('.comparison-container').forEach(container => {
+            // ... existing slider code ...
+            const beforeImage = container.querySelector('.comparison-before');
+            const sliderHandle = container.querySelector('.comparison-slider');
+            let isDragging = false;
+
+            function update(x) {
+                const rect = container.getBoundingClientRect();
+                const pos = Math.min(Math.max(((x - rect.left) / rect.width) * 100, 0), 100);
+                beforeImage.style.clipPath = `inset(0 ${100 - pos}% 0 0)`;
+                sliderHandle.style.left = `${pos}%`;
+            }
+
+            container.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            container.addEventListener('mousemove', (e) => { if (isDragging) update(e.clientX); });
+
+            container.addEventListener('touchstart', () => isDragging = true);
+            window.addEventListener('touchend', () => isDragging = false);
+            container.addEventListener('touchmove', (e) => { if (isDragging) update(e.touches[0].clientX); });
         });
+
+        // Mouse Tracker & Blob Movement
+        const cursorGlow = document.querySelector('.cursor-glow');
+        let mouseX = 0, mouseY = 0;
+        let currentX = 0, currentY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animate() {
+            currentX += (mouseX - currentX) * 0.1;
+            currentY += (mouseY - currentY) * 0.1;
+            if (cursorGlow) {
+                cursorGlow.style.transform = `translate(${currentX}px, ${currentY}px) translate(-50%, -50%)`;
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Subdomain Navigation Logic
+        (function () {
+            const IS_PROD = window.location.hostname === 'orlume.io';
+            if (IS_PROD) {
+                document.querySelectorAll('a[href*="editor.html"]').forEach(link => {
+                    const url = new URL(link.href, window.location.origin);
+                    // Preserve search params (e.g. ?tool=upscale)
+                    link.href = 'https://editor.orlume.io' + ((url.search && url.search !== '') ? url.search : '/');
+                });
+            }
+        })();
     </script>
 </body>
 

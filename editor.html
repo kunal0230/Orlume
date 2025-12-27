@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orlume | AI Photo Editor</title>
+    <meta name="description"
+        content="Transform your photos with AI-powered depth estimation, dynamic relighting, and GPU-accelerated adjustments">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Orlume">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
+
+    <link rel="stylesheet" href="/src/styles/editor.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Left Toolbar -->
+        <div class="toolbar">
+            <button class="tool-btn active" id="tool-develop" title="Develop (D)">
+                <!-- Sliders icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="21" x2="4" y2="14" />
+                    <line x1="4" y1="10" x2="4" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12" y2="3" />
+                    <line x1="20" y1="21" x2="20" y2="16" />
+                    <line x1="20" y1="12" x2="20" y2="3" />
+                    <circle cx="4" cy="12" r="2" fill="currentColor" />
+                    <circle cx="12" cy="10" r="2" fill="currentColor" />
+                    <circle cx="20" cy="14" r="2" fill="currentColor" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-hsl" title="HSL / Color Mixer">
+                <!-- Color wheel icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="4" />
+                    <line x1="12" y1="2" x2="12" y2="8" />
+                    <line x1="12" y1="16" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="8" y2="12" />
+                    <line x1="16" y1="12" x2="22" y2="12" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-presets" title="Presets">
+                <!-- Grid icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-3d" title="3D Relight">
+                <!-- Lightbulb icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18h6" />
+                    <path d="M10 22h4" />
+                    <path
+                        d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+                </svg>
+            </button>
+
+            <div class="tool-divider"></div>
+
+            <button class="tool-btn" id="tool-crop" title="Crop (C)">
+                <!-- Crop icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L6 6M6 6L2 6M6 6L6 16a2 2 0 0 0 2 2h10" />
+                    <path d="M18 22L18 18M18 18L22 18M18 18L18 8a2 2 0 0 0-2-2H6" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-upscale" title="Upscale (U)">
+                <!-- Maximize/scale icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-liquify" title="Liquify (W)">
+                <!-- Water drop icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-healing" title="Healing Brush (H)">
+                <!-- Bandaid icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 2l4 4-12 12-4-4z" />
+                    <path d="M7.5 13.5L1 20l4 4 6.5-6.5" />
+                    <line x1="12" y1="9" x2="12" y2="9.01" />
+                    <line x1="9" y1="12" x2="9" y2="12.01" />
+                    <line x1="15" y1="12" x2="15" y2="12.01" />
+                    <line x1="12" y1="15" x2="12" y2="15.01" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-clone" title="Clone Stamp (S)">
+                <!-- Stamp icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3v12" />
+                    <circle cx="12" cy="6" r="3" />
+                    <path d="M6 21h12" />
+                    <path d="M6 21v-4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4" />
+                </svg>
+            </button>
+
+            <div class="tool-divider"></div>
+
+            <!-- AI Tools Group -->
+            <button class="tool-btn" id="tool-bg-remove" title="Remove Background">
+                <!-- Scissors icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="6" cy="18" r="3" />
+                    <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                    <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                    <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                </svg>
+            </button>
+
+            <!-- Spacer to push export to bottom -->
+            <div style="flex: 1;"></div>
+
+            <!-- PWA Install Button -->
+            <button class="tool-btn" id="pwa-install-btn" title="Install App" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+            </button>
+
+            <!-- Export at bottom -->
+            <button class="tool-btn" id="tool-export" title="Export (E)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-container">
+                <canvas id="gpu-canvas"></canvas>
+            </div>
+            <div class="before-indicator" id="before-indicator">Original</div>
+            <div class="drop-zone" id="drop-zone">
+                <h2>Drop Image Here</h2>
+                <p>or click to browse</p>
+                <button class="btn btn-primary" id="btn-browse">Choose Image</button>
+            </div>
+            <div class="brush-cursor" id="brush-cursor"></div>
+
+            <!-- Before/After Toggle Button -->
+            <button class="btn before-after-toggle" id="btn-before-after" title="Toggle Before/After Comparison (\)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <line x1="12" y1="3" x2="12" y2="21"></line>
+                    <path d="M8 12l-2 0M16 12l2 0"></path>
+                </svg>
+                <span>Before / After</span>
+            </button>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <!-- Develop Mode Tabs (shown when in develop mode) -->
+            <div class="panel-tabs" id="develop-mode-tabs">
+                <button class="panel-tab active" data-panel="develop">Develop</button>
+                <button class="panel-tab" data-panel="masks">Masks</button>
+            </div>
+
+            <!-- 3D Mode Header (shown when in 3D mode) -->
+            <div class="panel-header mode-header" id="3d-mode-header" style="display: none;">
+                <span class="panel-title">3D Relighting</span>
+            </div>
+
+            <!-- Export Mode Header (shown when in export mode) -->
+            <div class="panel-header mode-header" id="export-mode-header" style="display: none;">
+                <span class="panel-title">Export Image</span>
+            </div>
+
+            <!-- Crop Mode Header (shown when in crop mode) -->
+            <div class="panel-header mode-header" id="crop-mode-header" style="display: none;">
+                <span class="panel-title">Crop Image</span>
+            </div>
+
+            <!-- Upscale Mode Header (shown when in upscale mode) -->
+            <div class="panel-header mode-header" id="upscale-mode-header" style="display: none;">
+                <span class="panel-title">Upscale Image</span>
+            </div>
+
+            <!-- Liquify Mode Header (shown when in liquify mode) -->
+            <div class="panel-header mode-header" id="liquify-mode-header" style="display: none;">
+                <span class="panel-title">Liquify</span>
+            </div>
+
+            <!-- Healing Mode Header (shown when in healing mode) -->
+            <div class="panel-header mode-header" id="healing-mode-header" style="display: none;">
+                <span class="panel-title">AI Spot Healing</span>
+            </div>
+
+            <!-- Clone Mode Header (shown when in clone mode) -->
+            <div class="panel-header mode-header" id="clone-mode-header" style="display: none;">
+                <span class="panel-title">Clone Stamp</span>
+            </div>
+
+            <!-- HSL Mode Header -->
+            <div class="panel-header mode-header" id="hsl-mode-header" style="display: none;">
+                <span class="panel-title">HSL / Color Mixer</span>
+            </div>
+
+            <!-- Presets Mode Header -->
+            <div class="panel-header mode-header" id="presets-mode-header" style="display: none;">
+                <span class="panel-title">Presets</span>
+            </div>
+
+            <!-- Background Remove Mode Header -->
+            <div class="panel-header mode-header" id="bg-remove-mode-header" style="display: none;">
+                <span class="panel-title">Remove Background</span>
+            </div>
+
+            <div class="panel-content">
+                <!-- Develop Panel -->
+                <div class="panel-section active" id="panel-develop">
+                    <!-- Histogram -->
+                    <div class="histogram-container">
+                        <div class="histogram-label">Histogram</div>
+                        <canvas id="histogram-canvas"></canvas>
+                    </div>
+
+                    <!-- Light Section -->
+                    <div class="section">
+                        <div class="section-header">Light</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Exposure</span>
+                                <span id="val-exposure">0.00</span>
+                            </div>
+                            <input type="range" id="slider-exposure" class="slider-exposure" min="-5" max="5"
+                                step="0.05" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Contrast</span>
+                                <span id="val-contrast">0</span>
+                            </div>
+                            <input type="range" id="slider-contrast" class="slider-contrast" min="-100" max="100"
+                                step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Highlights</span>
+                                <span id="val-highlights">0</span>
+                            </div>
+                            <input type="range" id="slider-highlights" class="slider-highlights" min="-100" max="100"
+                                step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadows</span>
+                                <span id="val-shadows">0</span>
+                            </div>
+                            <input type="range" id="slider-shadows" class="slider-shadows" min="-100" max="100" step="1"
+                                value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Whites</span>
+                                <span id="val-whites">0</span>
+                            </div>
+                            <input type="range" id="slider-whites" class="slider-whites" min="-100" max="100" step="1"
+                                value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Blacks</span>
+                                <span id="val-blacks">0</span>
+                            </div>
+                            <input type="range" id="slider-blacks" class="slider-blacks" min="-100" max="100" step="1"
+                                value="0">
+                        </div>
+                    </div>
+
+                    <!-- Color Section -->
+                    <div class="section">
+                        <div class="section-header">Color</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-temperature">0</span>
+                            </div>
+                            <input type="range" id="slider-temperature" class="slider-temperature" min="-100" max="100"
+                                step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Tint</span>
+                                <span id="val-tint">0</span>
+                            </div>
+                            <input type="range" id="slider-tint" class="slider-tint" min="-100" max="100" step="1"
+                                value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Vibrance</span>
+                                <span id="val-vibrance">0</span>
+                            </div>
+                            <input type="range" id="slider-vibrance" class="slider-vibrance" min="-100" max="100"
+                                step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Saturation</span>
+                                <span id="val-saturation">0</span>
+                            </div>
+                            <input type="range" id="slider-saturation" class="slider-saturation" min="-100" max="100"
+                                step="1" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <div class="btn-row">
+                            <button class="btn" id="btn-reset" style="width: 100%;">Reset All Adjustments</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Masks Panel -->
+                <div class="panel-section" id="panel-masks">
+                    <!-- Mask Tool Selector -->
+                    <div class="section">
+                        <div class="section-header">Mask Tools</div>
+                        <div class="mask-tool-selector">
+                            <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+                                    <path
+                                        d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+                                </svg>
+                                <span>Brush</span>
+                            </button>
+                            <button class="mask-tool-btn" id="mask-tool-radial" title="Radial (R)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <circle cx="12" cy="12" r="6" />
+                                    <circle cx="12" cy="12" r="2" />
+                                </svg>
+                                <span>Radial</span>
+                            </button>
+                            <button class="mask-tool-btn" id="mask-tool-gradient" title="Gradient (G)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <line x1="3" y1="12" x2="21" y2="12" />
+                                </svg>
+                                <span>Linear</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Layers</div>
+                        <div class="mask-layers" id="mask-layers">
+                            <div
+                                style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
+                                No adjustment layers yet.<br>
+                                Select a tool to create one.
+                            </div>
+                        </div>
+                        <button class="btn" id="btn-new-layer" style="width: 100%;">+ New Adjustment Layer</button>
+                    </div>
+
+                    <div class="section" id="brush-settings" style="display: none;">
+                        <div class="section-header">Brush Tool</div>
+
+                        <!-- Brush Preview with size indicator -->
+                        <div class="brush-preview" style="position: relative;">
+                            <div class="brush-preview-circle" id="brush-preview-circle"
+                                style="width: 40px; height: 40px;"></div>
+                            <div id="brush-size-indicator"
+                                style="position: absolute; bottom: 4px; right: 4px; font-size: 10px; color: var(--text-secondary);">
+                                100px</div>
+                        </div>
+
+                        <!-- Mode Toggle - Segmented Control -->
+                        <div
+                            style="display: flex; margin-bottom: 16px; background: var(--bg-dark); border-radius: 8px; padding: 4px;">
+                            <button class="btn brush-mode-btn active" id="btn-brush-add"
+                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add
+                            </button>
+                            <button class="btn brush-mode-btn" id="btn-brush-erase"
+                                style="flex: 1; border-radius: 6px; padding: 8px 0; font-size: 11px; border: none;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Erase
+                            </button>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="val-brush-size">100</span>
+                            </div>
+                            <input type="range" id="slider-brush-size" min="1" max="500" step="1" value="100">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Feather</span>
+                                <span id="val-brush-hardness">50</span>
+                            </div>
+                            <input type="range" id="slider-brush-hardness" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Flow</span>
+                                <span id="val-brush-flow">50</span>
+                            </div>
+                            <input type="range" id="slider-brush-flow" min="1" max="100" step="1" value="50">
+                        </div>
+
+                        <div
+                            style="font-size: 10px; color: var(--text-secondary); margin-top: 12px; text-align: center;">
+                            <kbd>[</kbd> / <kbd>]</kbd> = resize &nbsp; <kbd>X</kbd> = toggle mode
+                        </div>
+                    </div>
+
+                    <div class="section" id="mask-adjustments" style="display: none;">
+                        <div class="section-header">Mask Adjustments</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Exposure</span>
+                                <span id="val-mask-exposure">0.00</span>
+                            </div>
+                            <input type="range" id="slider-mask-exposure" min="-5" max="5" step="0.05" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Contrast</span>
+                                <span id="val-mask-contrast">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-contrast" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadows</span>
+                                <span id="val-mask-shadows">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-shadows" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-mask-temperature">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-temperature" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Saturation</span>
+                                <span id="val-mask-saturation">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-saturation" min="-100" max="100" step="1" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D Relighting Panel -->
+                <div class="panel-section" id="panel-relight">
+                    <div class="section">
+                        <div class="section-header">Depth Estimation</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Generate depth map using AI to enable 3D relighting effects.
+                        </p>
+                        <button class="btn btn-primary" id="btn-estimate-depth" style="width: 100%;">
+                            Estimate Depth
+                        </button>
+                        <div id="depth-progress" hidden style="margin-top: 12px;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                                <span id="depth-progress-text">Loading model...</span>
+                                <span id="depth-progress-percent">0%</span>
+                            </div>
+                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
+                                <div id="depth-progress-bar"
+                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="relight-controls" style="display: none;">
+                        <div class="section-header">Lighting</div>
+
+                        <div
+                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
+                            Click on image to add lights<br>
+                            Drag to reposition • Double-click to remove
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Intensity</span>
+                                <span id="val-light-intensity">1.5</span>
+                            </div>
+                            <input type="range" id="slider-light-intensity" min="0" max="5" step="0.1" value="1.5">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Ambient</span>
+                                <span id="val-light-ambient">30</span>
+                            </div>
+                            <input type="range" id="slider-light-ambient" min="0" max="100" step="1" value="30">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow</span>
+                                <span id="val-light-shadow">50</span>
+                            </div>
+                            <input type="range" id="slider-light-shadow" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Temperature</span>
+                                <span id="val-light-temperature">5500K</span>
+                            </div>
+                            <input type="range" id="slider-light-temperature" min="2000" max="10000" step="100"
+                                value="5500">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Brightness</span>
+                                <span id="val-light-brightness">0</span>
+                            </div>
+                            <input type="range" id="slider-light-brightness" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="btn-row" style="margin-top: 16px;">
+                            <button class="btn" id="btn-reset-lights">Reset Lights</button>
+                            <button class="btn" id="btn-disable-relight">Disable</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Panel -->
+                <div class="panel-section" id="panel-export">
+                    <div class="section">
+                        <div class="section-header">Export Settings</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 16px;">
+                            Export your edited image in your preferred format and quality.
+                        </p>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Format</span>
+                            </div>
+                            <select id="export-format"
+                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                                <option value="png">PNG (Lossless)</option>
+                                <option value="jpeg" selected>JPEG (Smaller)</option>
+                                <option value="webp">WebP (Best Compression)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group" id="quality-control">
+                            <div class="control-label">
+                                <span>Quality</span>
+                                <span id="val-export-quality">95</span>
+                            </div>
+                            <input type="range" id="slider-export-quality" min="1" max="100" step="1" value="95">
+                        </div>
+
+                        <!-- Estimated File Size -->
+                        <div class="export-info"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Estimated Size</span>
+                                <span id="estimated-file-size"
+                                    style="font-size: 14px; font-weight: 600; color: var(--accent);">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Filename</div>
+                        <input type="text" id="export-filename" placeholder="orlume-export"
+                            style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; margin-bottom: 8px;">
+                        <p style="font-size: 10px; color: var(--text-secondary);">
+                            Leave empty for auto-generated filename with timestamp.
+                        </p>
+                    </div>
+
+                    <div class="section">
+                        <button class="btn btn-primary" id="btn-export"
+                            style="width: 100%; padding: 14px; font-size: 14px;">
+                            Export Image
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Crop Panel -->
+                <div class="panel-section" id="panel-crop">
+                    <div class="section">
+                        <div class="section-header">Aspect Ratio</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Select a preset or crop freely.
+                        </p>
+                        <div class="aspect-ratio-selector">
+                            <button class="aspect-ratio-btn active" data-ratio="free" title="Free crop">
+                                <span class="ratio-icon">⊞</span>
+                                <span>Free</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="1:1" title="Square">
+                                <span class="ratio-icon">■</span>
+                                <span>1:1</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="4:3" title="Standard photo">
+                                <span class="ratio-icon">▬</span>
+                                <span>4:3</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="3:2" title="DSLR standard">
+                                <span class="ratio-icon">▬</span>
+                                <span>3:2</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="16:9" title="Widescreen">
+                                <span class="ratio-icon">━</span>
+                                <span>16:9</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="2:1" title="Panoramic">
+                                <span class="ratio-icon">━</span>
+                                <span>2:1</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="5:4" title="Large format">
+                                <span class="ratio-icon">▬</span>
+                                <span>5:4</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="9:16" title="Vertical video">
+                                <span class="ratio-icon">▯</span>
+                                <span>9:16</span>
+                            </button>
+                            <button class="aspect-ratio-btn" data-ratio="2:3" title="Portrait">
+                                <span class="ratio-icon">▯</span>
+                                <span>2:3</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Crop Dimensions</div>
+                        <div class="crop-dimensions-container"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Selection</span>
+                                <div class="crop-dimensions-wrapper">
+                                    <span id="crop-dimensions-display" class="crop-dimensions-clickable"
+                                        style="font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer;"
+                                        title="Click to enter custom dimensions">-- × --</span>
+                                    <input type="text" id="crop-dimensions-input" class="crop-dimensions-input"
+                                        placeholder="800x600"
+                                        style="display: none; width: 100px; padding: 4px 8px; 
+                                        background: var(--bg-tertiary); border: 1px solid var(--accent); 
+                                        border-radius: 4px; color: var(--text-primary); font-size: 12px; text-align: center;">
+                                </div>
+                            </div>
+                            <p
+                                style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: right;">
+                                Click to enter custom size (e.g., 800x600)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Rotate & Flip</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Rotation</span>
+                                <span id="val-crop-rotation">0°</span>
+                            </div>
+                            <div class="slider-with-buttons" style="display: flex; align-items: center; gap: 8px;">
+                                <button class="btn slider-btn" id="btn-rotate-minus" title="Rotate left (-1°)"
+                                    style="padding: 6px 10px; min-width: 32px;">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                                <input type="range" id="slider-crop-rotation" min="-180" max="180" step="0.5" value="0"
+                                    style="flex: 1;">
+                                <button class="btn slider-btn" id="btn-rotate-plus" title="Rotate right (+1°)"
+                                    style="padding: 6px 10px; min-width: 32px;">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flip-buttons" style="display: flex; gap: 8px; margin-top: 12px;">
+                            <button class="btn" id="btn-flip-h" style="flex: 1;" title="Flip Horizontal">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <path d="M12 3v18M16 7l4 5-4 5M8 7l-4 5 4 5" />
+                                </svg>
+                                Flip H
+                            </button>
+                            <button class="btn" id="btn-flip-v" style="flex: 1;" title="Flip Vertical">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <path d="M3 12h18M7 8l5-4 5 4M7 16l5 4 5-4" />
+                                </svg>
+                                Flip V
+                            </button>
+                        </div>
+
+                        <button class="btn" id="btn-reset-transform" style="width: 100%; margin-top: 8px;">
+                            Reset Rotation & Flip
+                        </button>
+                    </div>
+
+                    <div class="section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="crop-grid-toggle" checked>
+                            <span>Show rule of thirds grid</span>
+                        </label>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-crop-cancel" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button class="btn btn-primary" id="btn-crop-apply" style="flex: 1;">
+                                Apply Crop
+                            </button>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
+                            <kbd>Enter</kbd> apply • <kbd>Esc</kbd> cancel • Arrow keys to nudge
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Upscale Panel -->
+                <div class="panel-section" id="panel-upscale">
+                    <div class="section">
+                        <div class="section-header">Scale Factor</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Choose how much to enlarge your image.
+                        </p>
+                        <div class="scale-factor-selector">
+                            <button class="scale-factor-btn active" data-scale="2" title="2x Upscale">
+                                <span class="scale-value">2×</span>
+                                <span class="scale-label">Standard</span>
+                            </button>
+                            <button class="scale-factor-btn" data-scale="3" title="3x Upscale">
+                                <span class="scale-value">3×</span>
+                                <span class="scale-label">Large</span>
+                            </button>
+                            <button class="scale-factor-btn" data-scale="4" title="4x Upscale">
+                                <span class="scale-value">4×</span>
+                                <span class="scale-label">Maximum</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Processing Mode</div>
+                        <div class="mode-selector"
+                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;">
+                            <button class="mode-btn" data-mode="enhance" title="Enhance only">
+                                <span style="font-size: 11px; font-weight: 500;">Enhance</span>
+                            </button>
+                            <button class="mode-btn" data-mode="upscale" title="Upscale only">
+                                <span style="font-size: 11px; font-weight: 500;">Upscale</span>
+                            </button>
+                            <button class="mode-btn active" data-mode="both" title="Enhance + Upscale">
+                                <span style="font-size: 11px; font-weight: 500;">Both</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">AI Enhancement</div>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="upscale-ai-toggle" checked>
+                            <span>Use AI Enhancement</span>
+                        </label>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="upscale-face-toggle">
+                            <span>Face Enhancement</span>
+                        </label>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="upscale-sharpen-toggle" checked>
+                            <span>Sharpen Details</span>
+                        </label>
+                        <!-- Hidden server URL for code compatibility -->
+                        <input type="hidden" id="ai-server-url" value="http://localhost:8000">
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Dimensions</div>
+                        <div class="upscale-dimensions-container"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 12px;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Current</span>
+                                <span id="upscale-current-dims" style="font-size: 13px; color: var(--text-primary);">--
+                                    × --</span>
+                            </div>
+                            <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                    stroke="var(--text-secondary)" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <polyline points="19 12 12 19 5 12"></polyline>
+                                </svg>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Output</span>
+                                <span id="upscale-output-dims"
+                                    style="font-size: 14px; font-weight: 600; color: var(--accent);">-- × --</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="upscale-progress-section" style="display: none;">
+                        <div class="section-header">Processing</div>
+                        <div style="margin-bottom: 8px;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                                <span id="upscale-progress-text">Starting...</span>
+                                <span id="upscale-progress-percent">0%</span>
+                            </div>
+                            <div style="background: var(--bg-dark); border-radius: 4px; height: 6px; overflow: hidden;">
+                                <div id="upscale-progress-bar"
+                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-upscale-cancel" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                                    <polyline points="15 3 21 3 21 9" />
+                                    <line x1="21" y1="3" x2="14" y2="10" />
+                                </svg>
+                                Upscale
+                            </button>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
+                            Higher scale factors may take longer to process.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Liquify Panel -->
+                <div class="panel-section" id="panel-liquify">
+                    <div class="section">
+                        <div class="section-header">Tool</div>
+                        <div class="liquify-mode-grid">
+                            <button class="liquify-mode-btn active" data-mode="push" title="Push">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                            <button class="liquify-mode-btn" data-mode="enlarge" title="Enlarge">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="15 3 21 3 21 9" />
+                                    <polyline points="9 21 3 21 3 15" />
+                                    <line x1="21" y1="3" x2="14" y2="10" />
+                                    <line x1="3" y1="21" x2="10" y2="14" />
+                                </svg>
+                            </button>
+                            <button class="liquify-mode-btn" data-mode="shrink" title="Shrink">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="4 14 10 14 10 20" />
+                                    <polyline points="20 10 14 10 14 4" />
+                                    <line x1="14" y1="10" x2="21" y2="3" />
+                                    <line x1="3" y1="21" x2="10" y2="14" />
+                                </svg>
+                            </button>
+                            <button class="liquify-mode-btn" data-mode="swirlRight" title="Swirl Right">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                    <polyline points="21 3 21 9 15 9" />
+                                </svg>
+                            </button>
+                            <button class="liquify-mode-btn" data-mode="swirlLeft" title="Swirl Left">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M3 12a9 9 0 1 0 6.219-8.56" />
+                                    <polyline points="3 3 3 9 9 9" />
+                                </svg>
+                            </button>
+                            <button class="liquify-mode-btn" data-mode="reset" title="Reset Brush">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="1 4 1 10 7 10" />
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                </svg>
+                            </button>
+                        </div>
+                        <p id="liquify-mode-label"
+                            style="font-size: 11px; color: var(--accent); text-align: center; margin-top: 8px;">PUSH</p>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Brush</div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="liquify-size-value">218px</span>
+                            </div>
+                            <input type="range" id="liquify-size" min="10" max="500" value="218">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Strength</span>
+                                <span id="liquify-strength-value">50%</span>
+                            </div>
+                            <input type="range" id="liquify-strength" min="1" max="100" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Density</span>
+                                <span id="liquify-density-value">75%</span>
+                            </div>
+                            <input type="range" id="liquify-density" min="1" max="100" value="75">
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="liquify-high-quality">
+                            <span>High quality preview</span>
+                        </label>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-liquify-reset" style="flex: 1;">
+                                Reset All
+                            </button>
+                            <button class="btn btn-primary" id="btn-liquify-apply" style="flex: 1;">
+                                Apply
+                            </button>
+                        </div>
+                        <button class="btn" id="btn-liquify-cancel" style="width: 100%; margin-top: 8px;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Healing Panel (AI Spot Healing) -->
+                <div class="panel-section" id="panel-healing">
+                    <!-- Status Indicator -->
+                    <div class="section">
+                        <div
+                            style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px;">
+                            <span style="color: #4ade80;">●</span>
+                            <span style="font-size: 12px; color: var(--text-secondary);">AI Healing Ready (LaMa)</span>
+                        </div>
+                    </div>
+
+                    <!-- Brush Settings -->
+                    <div class="section">
+                        <div class="section-header">Brush</div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="healing-size-value">30px</span>
+                            </div>
+                            <input type="range" id="healing-size" min="5" max="200" value="30">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Hardness</span>
+                                <span id="healing-hardness-value">80%</span>
+                            </div>
+                            <input type="range" id="healing-hardness" min="0" max="100" value="80">
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="section">
+                        <div class="section-header">How to Use</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                            Paint over the area to heal, then click Heal to process with AI.
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px;">
+                            Heal Selected Area
+                        </button>
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-clear-mask" style="flex: 1;">Clear Mask</button>
+                            <button class="btn btn-primary" id="btn-healing-apply" style="flex: 1;">Apply</button>
+                        </div>
+                        <button class="btn" id="btn-healing-cancel" style="width: 100%; margin-top: 8px;">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <!-- Other AI Features -->
+                    <div class="section">
+                        <div class="section-header">More AI Tools</div>
+                        <button class="btn" id="btn-enhance-face" style="width: 100%; margin-bottom: 8px;">
+                            Enhance Face
+                        </button>
+                        <button class="btn" id="btn-remove-bg" style="width: 100%;">
+                            Remove Background
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Clone Stamp Panel -->
+                <div class="panel-section" id="panel-clone">
+                    <!-- Brush Settings -->
+                    <div class="section">
+                        <div class="section-header">Brush</div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="clone-size-value">50px</span>
+                            </div>
+                            <input type="range" id="clone-size" min="5" max="500" value="50">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Hardness</span>
+                                <span id="clone-hardness-value">80%</span>
+                            </div>
+                            <input type="range" id="clone-hardness" min="0" max="100" value="80">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Opacity</span>
+                                <span id="clone-opacity-value">100%</span>
+                            </div>
+                            <input type="range" id="clone-opacity" min="1" max="100" value="100">
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="section">
+                        <div class="section-header">Options</div>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="clone-aligned" checked>
+                            <span>Aligned (source follows brush offset)</span>
+                        </label>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="section">
+                        <div class="section-header">How to Use</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                            1. <kbd>Alt</kbd>+Click to set source point<br>
+                            2. Click and drag to clone pixels<br>
+                            3. Click "Apply" to keep changes
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <button class="btn" id="btn-clone-reset-source" style="width: 100%; margin-bottom: 8px;">
+                            Reset Source Point
+                        </button>
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-clone-cancel" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button class="btn btn-primary" id="btn-clone-apply" style="flex: 1;">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HSL Panel -->
+                <div class="panel-section" id="panel-hsl">
+                    <!-- HSL Mode Tabs -->
+                    <div class="hsl-tabs"
+                        style="display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px;">
+                        <button class="hsl-tab active" data-tab="hue"
+                            style="flex: 1; padding: 10px; background: none; border: none; color: var(--accent); font-size: 11px; font-weight: 600; cursor: pointer; border-bottom: 2px solid var(--accent);">Hue</button>
+                        <button class="hsl-tab" data-tab="saturation"
+                            style="flex: 1; padding: 10px; background: none; border: none; color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer;">Saturation</button>
+                        <button class="hsl-tab" data-tab="luminance"
+                            style="flex: 1; padding: 10px; background: none; border: none; color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer;">Luminance</button>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">Hue</div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Red</span>
+                                <span id="hsl-hue-red">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-red" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Orange</span>
+                                <span id="hsl-hue-orange">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-orange" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Yellow</span>
+                                <span id="hsl-hue-yellow">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-yellow" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Green</span>
+                                <span id="hsl-hue-green">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-green" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Aqua</span>
+                                <span id="hsl-hue-aqua">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-aqua" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Blue</span>
+                                <span id="hsl-hue-blue">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-blue" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Purple</span>
+                                <span id="hsl-hue-purple">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-purple" min="-100" max="100" step="1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Magenta</span>
+                                <span id="hsl-hue-magenta">0</span>
+                            </div>
+                            <input type="range" id="slider-hsl-hue-magenta" min="-100" max="100" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Saturation Section (hidden by default) -->
+                    <div class="section hsl-section" id="hsl-saturation-section" style="display: none;">
+                        <div class="section-header">Saturation</div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Red</span><span id="hsl-sat-red">0</span></div>
+                            <input type="range" id="slider-hsl-sat-red" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #ff0000);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Orange</span><span id="hsl-sat-orange">0</span></div>
+                            <input type="range" id="slider-hsl-sat-orange" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #ff8800);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Yellow</span><span id="hsl-sat-yellow">0</span></div>
+                            <input type="range" id="slider-hsl-sat-yellow" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #ffff00);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Green</span><span id="hsl-sat-green">0</span></div>
+                            <input type="range" id="slider-hsl-sat-green" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #00ff00);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Aqua</span><span id="hsl-sat-aqua">0</span></div>
+                            <input type="range" id="slider-hsl-sat-aqua" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #00ffff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Blue</span><span id="hsl-sat-blue">0</span></div>
+                            <input type="range" id="slider-hsl-sat-blue" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #0000ff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Purple</span><span id="hsl-sat-purple">0</span></div>
+                            <input type="range" id="slider-hsl-sat-purple" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #8800ff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Magenta</span><span id="hsl-sat-magenta">0</span></div>
+                            <input type="range" id="slider-hsl-sat-magenta" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #808080, #ff00ff);">
+                        </div>
+                    </div>
+
+                    <!-- Luminance Section (hidden by default) -->
+                    <div class="section hsl-section" id="hsl-luminance-section" style="display: none;">
+                        <div class="section-header">Luminance</div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Red</span><span id="hsl-lum-red">0</span></div>
+                            <input type="range" id="slider-hsl-lum-red" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #400000, #ff0000, #ffc0c0);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Orange</span><span id="hsl-lum-orange">0</span></div>
+                            <input type="range" id="slider-hsl-lum-orange" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #402800, #ff8800, #ffe0c0);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Yellow</span><span id="hsl-lum-yellow">0</span></div>
+                            <input type="range" id="slider-hsl-lum-yellow" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #404000, #ffff00, #ffffc0);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Green</span><span id="hsl-lum-green">0</span></div>
+                            <input type="range" id="slider-hsl-lum-green" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #004000, #00ff00, #c0ffc0);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Aqua</span><span id="hsl-lum-aqua">0</span></div>
+                            <input type="range" id="slider-hsl-lum-aqua" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #004040, #00ffff, #c0ffff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Blue</span><span id="hsl-lum-blue">0</span></div>
+                            <input type="range" id="slider-hsl-lum-blue" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #000040, #0000ff, #c0c0ff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Purple</span><span id="hsl-lum-purple">0</span></div>
+                            <input type="range" id="slider-hsl-lum-purple" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #280040, #8800ff, #e0c0ff);">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label"><span>Magenta</span><span id="hsl-lum-magenta">0</span></div>
+                            <input type="range" id="slider-hsl-lum-magenta" min="-100" max="100" value="0"
+                                style="background: linear-gradient(to right, #400040, #ff00ff, #ffc0ff);">
+                        </div>
+                    </div>
+
+                    <div class="section" style="margin-top: 12px;">
+                        <button class="btn" id="btn-hsl-reset" style="width: 100%;">Reset All Colors</button>
+                    </div>
+                </div>
+
+                <!-- Presets Panel -->
+                <div class="panel-section" id="panel-presets">
+                    <div class="section">
+                        <div class="section-header">Color Presets</div>
+                        <div class="presets-grid"
+                            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                            <button class="preset-btn" data-preset="vibrant"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Vibrant</span>
+                            </button>
+                            <button class="preset-btn" data-preset="warm"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Warm</span>
+                            </button>
+                            <button class="preset-btn" data-preset="cool"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Cool</span>
+                            </button>
+                            <button class="preset-btn" data-preset="bw"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">B&W</span>
+                            </button>
+                            <button class="preset-btn" data-preset="cinematic"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Cinematic</span>
+                            </button>
+                            <button class="preset-btn" data-preset="vintage"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Vintage</span>
+                            </button>
+                            <button class="preset-btn" data-preset="film"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Film</span>
+                            </button>
+                            <button class="preset-btn" data-preset="matte"
+                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; color: var(--text-primary);">Matte</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Intensity</div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Strength</span>
+                                <span id="preset-intensity">100%</span>
+                            </div>
+                            <input type="range" id="slider-preset-intensity" min="0" max="100" step="1" value="100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Background Remove Panel -->
+                <div class="panel-section" id="panel-bg-remove">
+                    <div class="section">
+                        <div class="section-header">AI Background Removal</div>
+                        <p
+                            style="font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+                            Automatically remove the background from your image using AI.
+                        </p>
+                        <button class="btn btn-primary" id="btn-remove-background" style="width: 100%;">
+                            Remove Background
+                        </button>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Background Options</div>
+                        <div class="bg-options-grid"
+                            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                            <button class="bg-option-btn active" data-bg="transparent"
+                                style="width: 100%; aspect-ratio: 1; background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px; border: 2px solid var(--accent); border-radius: 8px; cursor: pointer;"
+                                title="Transparent"></button>
+                            <button class="bg-option-btn" data-bg="white"
+                                style="width: 100%; aspect-ratio: 1; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
+                                title="White"></button>
+                            <button class="bg-option-btn" data-bg="black"
+                                style="width: 100%; aspect-ratio: 1; background: black; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
+                                title="Black"></button>
+                            <button class="bg-option-btn" data-bg="custom"
+                                style="width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #ff6b6b, #4ecdc4); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
+                                title="Custom Color"></button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-bg-remove-cancel" style="flex: 1;">Cancel</button>
+                            <button class="btn btn-primary" id="btn-bg-remove-apply" style="flex: 1;">Apply</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="keyboard-hint">
+                <kbd>Space</kbd> before | <kbd>D</kbd> develop | <kbd>E</kbd> export | <kbd>?</kbd> shortcuts
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="shortcuts-modal" id="shortcuts-modal" style="display: none;">
+        <div class="shortcuts-content">
+            <div class="shortcuts-header">
+                <h3>Keyboard Shortcuts</h3>
+                <button class="shortcuts-close" id="shortcuts-close">&times;</button>
+            </div>
+            <div class="shortcuts-grid">
+                <div class="shortcut-section">
+                    <h4>Modes</h4>
+                    <div class="shortcut-row"><kbd>D</kbd><span>Develop</span></div>
+                    <div class="shortcut-row"><kbd>E</kbd><span>Export</span></div>
+                    <div class="shortcut-row"><kbd>C</kbd><span>Crop</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Mask Tools</h4>
+                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
+                    <div class="shortcut-row"><kbd>R</kbd><span>Radial</span></div>
+                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Brush</h4>
+                    <div class="shortcut-row"><kbd>[</kbd><span>Decrease Size</span></div>
+                    <div class="shortcut-row"><kbd>]</kbd><span>Increase Size</span></div>
+                    <div class="shortcut-row"><kbd>X</kbd><span>Toggle Add/Erase</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>View</h4>
+                    <div class="shortcut-row"><kbd>Space</kbd><span>Show Original (hold)</span></div>
+                    <div class="shortcut-row"><kbd>\</kbd><span>Before/After Slider</span></div>
+                    <div class="shortcut-row"><kbd>Space+Drag</kbd><span>Pan Canvas</span></div>
+                    <div class="shortcut-row"><kbd>⌘/Ctrl+Scroll</kbd><span>Zoom In/Out</span></div>
+                    <div class="shortcut-row"><kbd>?</kbd><span>Show Shortcuts</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h4>Edit</h4>
+                    <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>Undo</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl+Shift+Z</kbd><span>Redo</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl+E</kbd><span>Export</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="perf-indicator" id="perf">Ready</div>
+    <input type="file" id="file-input" accept="image/*">
+
+    <script type="module">
+        import { initApp } from './src/app/EditorApp.js';
+        import './src/pwa-install.js';
+
+        // Initialize the editor
+        initApp().then(app => {
+            console.log('🚀 Orlume AI Photo Editor v4.0.0 - Consolidated Architecture');
+        });
+    </script>
+</body>
+
+</html>

@@ -139,6 +139,21 @@ export async function initApp() {
     if (success) {
         // Expose app globally for debugging
         window.orlumeApp = app;
+
+        // Handle deep links - switch to tool specified in URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const toolParam = urlParams.get('tool');
+        if (toolParam) {
+            // Valid tools that can be deep-linked
+            const validTools = ['develop', '3d', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export'];
+            if (validTools.includes(toolParam)) {
+                console.log(`🔗 Deep link detected: switching to ${toolParam} tool`);
+                // Small delay to ensure UI is fully ready
+                setTimeout(() => {
+                    app.ui.setMode(toolParam);
+                }, 100);
+            }
+        }
     }
 
     return app;

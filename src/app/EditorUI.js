@@ -158,6 +158,9 @@ export class EditorUI {
     setMode(mode) {
         const previousMode = this.state.currentTool;
 
+        // Always deactivate ALL overlay tools first to prevent image overlap
+        this._deactivateAllOverlayTools();
+
         // Deactivate crop tool and clear transform preview if leaving crop mode
         if (previousMode === 'crop' && mode !== 'crop') {
             this.cropTool?.deactivate();
@@ -169,21 +172,6 @@ export class EditorUI {
             if (this.app?.relighting) {
                 this.app.relighting.disableRelight();
             }
-        }
-
-        // Deactivate liquify tool when leaving liquify mode
-        if (previousMode === 'liquify' && mode !== 'liquify') {
-            this._deactivateLiquifyTool();
-        }
-
-        // Deactivate healing tool when leaving healing mode
-        if (previousMode === 'healing' && mode !== 'healing') {
-            this._deactivateHealingTool();
-        }
-
-        // Deactivate clone tool when leaving clone mode
-        if (previousMode === 'clone' && mode !== 'clone') {
-            this.cloneModule.deactivate();
         }
 
         this.state.setTool(mode);
@@ -201,6 +189,9 @@ export class EditorUI {
         document.getElementById('liquify-mode-header').style.display = 'none';
         document.getElementById('healing-mode-header').style.display = 'none';
         document.getElementById('clone-mode-header').style.display = 'none';
+        document.getElementById('hsl-mode-header').style.display = 'none';
+        document.getElementById('presets-mode-header').style.display = 'none';
+        document.getElementById('bg-remove-mode-header').style.display = 'none';
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -259,6 +250,21 @@ export class EditorUI {
                 document.getElementById('panel-clone').classList.add('active');
                 // Activate clone tool
                 this.cloneModule.activate();
+                break;
+
+            case 'hsl':
+                document.getElementById('hsl-mode-header').style.display = 'block';
+                document.getElementById('panel-hsl').classList.add('active');
+                break;
+
+            case 'presets':
+                document.getElementById('presets-mode-header').style.display = 'block';
+                document.getElementById('panel-presets').classList.add('active');
+                break;
+
+            case 'bg-remove':
+                document.getElementById('bg-remove-mode-header').style.display = 'block';
+                document.getElementById('panel-bg-remove').classList.add('active');
                 break;
         }
     }
@@ -842,6 +848,16 @@ export class EditorUI {
      */
     _deactivateLiquifyTool() {
         this.liquifyModule.deactivate();
+    }
+
+    /**
+     * Deactivate ALL overlay tools (liquify, healing, clone)
+     * Called at the start of every mode switch to prevent image overlap
+     */
+    _deactivateAllOverlayTools() {
+        this.liquifyModule?.deactivate();
+        this.healingModule?.deactivate();
+        this.cloneModule?.deactivate();
     }
 
     /**
