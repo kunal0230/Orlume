@@ -1,0 +1,15 @@
+/**
+ * Module Index - Exports all EditorUI modules
+ */
+
+export { HistoryModule } from './HistoryModule.js';
+export { ZoomPanModule } from './ZoomPanModule.js';
+export { ExportModule } from './ExportModule.js';
+export { CropModule } from './CropModule.js';
+export { LiquifyModule } from './LiquifyModule.js';
+export { HealingModule } from './HealingModule.js';
+export { UpscaleModule } from './UpscaleModule.js';
+export { KeyboardModule } from './KeyboardModule.js';
+export { ComparisonModule } from './ComparisonModule.js';
+export { LayersModule } from './LayersModule.js';
+

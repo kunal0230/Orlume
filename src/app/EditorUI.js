@@ -2,12 +2,10 @@
  * EditorUI - UI management for the GPU Editor
  * Handles all DOM interactions, event bindings, and UI updates
  */
-import { CropTool } from '../tools/CropTool.js';
 import { HistoryManager } from './HistoryManager.js';
-import { ImageUpscaler } from '../ml/ImageUpscaler.js';
-import { LiquifyTool } from '../tools/LiquifyTool.js';
-import { HealingTool } from '../tools/HealingTool.js';
-import { replicateService } from '../services/ReplicateService.js';
+
+// Modular components
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -38,32 +36,44 @@ export class EditorUI {
 
         this.maskSliders = ['exposure', 'contrast', 'shadows', 'temperature', 'saturation'];
 
-        // Initialize crop tool
-        this.cropTool = null;
-
-        // Applied crop state (persists across mode changes)
-        this.appliedCrop = null;
-
         // Initialize undo/redo history manager
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
 
-        // Zoom and Pan state
-        this.zoom = {
-            level: 1,
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-            panX: 0,
-            panY: 0,
-            isPanning: false
-        };
+        // Initialize modular components
+        this.historyModule = new HistoryModule(this);
+        this.zoomPanModule = new ZoomPanModule(this);
+        this.exportModule = new ExportModule(this);
+        this.cropModule = new CropModule(this);
+        this.liquifyModule = new LiquifyModule(this);
+        this.healingModule = new HealingModule(this);
+        this.upscaleModule = new UpscaleModule(this);
+        this.keyboardModule = new KeyboardModule(this);
+        this.comparisonModule = new ComparisonModule(this);
+        this.layersModule = new LayersModule(this);
 
-        // Comparison slider state
-        this.comparison = {
-            active: false,
-            position: 50  // percentage from left
-        };
+        // Expose zoom state from module for backward compatibility
+        this.zoom = this.zoomPanModule.zoom;
+
+        // Expose crop tool from module for backward compatibility
+        this.cropTool = null; // Will be set when cropModule.activate() is called
+        this.appliedCrop = null;
+
+        // Expose liquify tool from module for backward compatibility
+        this.liquifyTool = null; // Will be set when liquifyModule.init() is called
+        this.liquifyCanvas = null;
+
+        // Expose healing tool from module for backward compatibility
+        this.healingTool = null; // Will be set when healingModule.init() is called
+        this.healingCanvas = null;
+        this.replicate = null;
+
+        // Expose upscaler from module for backward compatibility
+        this.upscaler = null; // Will be set when upscaleModule.init() is called
+        this.upscaleScaleFactor = 2;
+
+        // Comparison slider state - exposed from module for backward compatibility
+        this.comparison = null; // Will be set when comparisonModule.init() is called
 
         this._initEventListeners();
     }
@@ -77,18 +87,28 @@ export class EditorUI {
         this._initGlobalSliders();
         this._initMaskSliders();
         this._initBrushControls();
-        this._initCropControls();
         this._initCanvasEvents();
-        this._initKeyboardShortcuts();
         this._initFileHandling();
         this._initActionButtons();
-        this._initZoomControls();
-        this._initZoomEvents();
-        this._initPanEvents();
-        this._initComparisonSlider();
-        this._initUpscaleControls();
-        this._initLiquifyControls();
-        this._initHealingControls();
+
+        // Initialize modular components
+        this.zoomPanModule.init();
+        this.cropModule.init();
+        this.liquifyModule.init();
+        this.healingModule.init();
+        this.upscaleModule.init();
+        this.keyboardModule.init();
+        this.comparisonModule.init();
+
+        // Sync tool references for backward compatibility
+        this.liquifyTool = this.liquifyModule.liquifyTool;
+        this.liquifyCanvas = this.liquifyModule.liquifyCanvas;
+        this.healingTool = this.healingModule.healingTool;
+        this.healingCanvas = this.healingModule.healingCanvas;
+        this.replicate = this.healingModule.replicate;
+        this.upscaler = this.upscaleModule.upscaler;
+        this.upscaleScaleFactor = this.upscaleModule.scaleFactor;
+        this.comparison = this.comparisonModule.comparison;
     }
 
     /**
@@ -415,459 +435,71 @@ export class EditorUI {
     }
 
     /**
-     * Initialize crop tool controls
+     * @deprecated Handled by cropModule.init()
      */
     _initCropControls() {
-        // Aspect ratio buttons
-        document.querySelectorAll('.aspect-ratio-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Update active state
-                document.querySelectorAll('.aspect-ratio-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Set aspect ratio on crop tool
-                const ratioStr = btn.dataset.ratio;
-                let ratio = null;
-
-                if (ratioStr === '1:1') ratio = 1;
-                else if (ratioStr === '4:3') ratio = 4 / 3;
-                else if (ratioStr === '3:2') ratio = 3 / 2;
-                else if (ratioStr === '16:9') ratio = 16 / 9;
-                else if (ratioStr === '2:1') ratio = 2;
-                else if (ratioStr === '5:4') ratio = 5 / 4;
-                else if (ratioStr === '9:16') ratio = 9 / 16;
-                else if (ratioStr === '2:3') ratio = 2 / 3;
-                // 'free' = null
-
-                this.cropTool?.setAspectRatio(ratio);
-            });
-        });
-
-        // Grid toggle
-        const gridToggle = document.getElementById('crop-grid-toggle');
-        if (gridToggle) {
-            gridToggle.addEventListener('change', () => {
-                this.cropTool?.toggleGrid(gridToggle.checked);
-            });
-        }
-
-        // Apply crop button
-        const btnApply = document.getElementById('btn-crop-apply');
-        if (btnApply) {
-            btnApply.addEventListener('click', () => this.applyCrop());
-        }
-
-        // Cancel crop button
-        const btnCancel = document.getElementById('btn-crop-cancel');
-        if (btnCancel) {
-            btnCancel.addEventListener('click', () => this.cancelCrop());
-        }
-
-        // Editable dimensions input
-        this._initCropDimensionsInput();
-
-        // Rotation slider - with real-time preview
-        const rotationSlider = document.getElementById('slider-crop-rotation');
-        const rotationValue = document.getElementById('val-crop-rotation');
-        if (rotationSlider && rotationValue) {
-            rotationSlider.addEventListener('input', () => {
-                const angle = parseFloat(rotationSlider.value);
-                rotationValue.textContent = `${angle}°`;
-                this.cropRotation = angle;
-                this._applyTransformPreview();
-                // Sync crop overlay with canvas rotation
-                this.cropTool?.setRotation(angle);
-            });
-
-            rotationSlider.addEventListener('dblclick', () => {
-                rotationSlider.value = 0;
-                rotationValue.textContent = '0°';
-                this.cropRotation = 0;
-                this._applyTransformPreview();
-                this.cropTool?.setRotation(0);
-            });
-        }
-
-        // Rotation increment/decrement buttons for accessibility
-        const btnRotateMinus = document.getElementById('btn-rotate-minus');
-        const btnRotatePlus = document.getElementById('btn-rotate-plus');
-
-        const updateRotation = (delta) => {
-            if (!rotationSlider || !rotationValue) return;
-            let newValue = parseFloat(rotationSlider.value) + delta;
-            // Clamp to slider bounds
-            newValue = Math.max(-180, Math.min(180, newValue));
-            rotationSlider.value = newValue;
-            rotationValue.textContent = `${newValue}°`;
-            this.cropRotation = newValue;
-            this._applyTransformPreview();
-            this.cropTool?.setRotation(newValue);
-        };
-
-        if (btnRotateMinus) {
-            btnRotateMinus.addEventListener('click', () => updateRotation(-1));
-        }
-
-        if (btnRotatePlus) {
-            btnRotatePlus.addEventListener('click', () => updateRotation(1));
-        }
-
-        // Flip buttons - with real-time preview
-        const btnFlipH = document.getElementById('btn-flip-h');
-        const btnFlipV = document.getElementById('btn-flip-v');
-
-        if (btnFlipH) {
-            btnFlipH.addEventListener('click', () => {
-                this.cropFlipH = !this.cropFlipH;
-                btnFlipH.classList.toggle('active', this.cropFlipH);
-                this._applyTransformPreview();
-            });
-        }
-
-        if (btnFlipV) {
-            btnFlipV.addEventListener('click', () => {
-                this.cropFlipV = !this.cropFlipV;
-                btnFlipV.classList.toggle('active', this.cropFlipV);
-                this._applyTransformPreview();
-            });
-        }
-
-        // Reset transform button - with real-time preview
-        const btnReset = document.getElementById('btn-reset-transform');
-        if (btnReset) {
-            btnReset.addEventListener('click', () => {
-                // Reset rotation
-                if (rotationSlider) {
-                    rotationSlider.value = 0;
-                    rotationValue.textContent = '0°';
-                }
-                this.cropRotation = 0;
-
-                // Reset flips
-                this.cropFlipH = false;
-                this.cropFlipV = false;
-                btnFlipH?.classList.remove('active');
-                btnFlipV?.classList.remove('active');
-
-                this._applyTransformPreview();
-                this.cropTool?.setRotation(0);
-            });
-        }
-
-        // Initialize transform states
-        this.cropRotation = 0;
-        this.cropFlipH = false;
-        this.cropFlipV = false;
+        // Now delegated to cropModule.init()
     }
 
     /**
      * Apply real-time CSS transform preview for rotation and flip
      */
     _applyTransformPreview() {
-        const canvas = this.elements.canvas;
-        if (!canvas) return;
-
-        const transforms = [];
-
-        // Apply rotation
-        if (this.cropRotation && this.cropRotation !== 0) {
-            transforms.push(`rotate(${this.cropRotation}deg)`);
-        }
-
-        // Apply flip
-        const scaleX = this.cropFlipH ? -1 : 1;
-        const scaleY = this.cropFlipV ? -1 : 1;
-        if (scaleX !== 1 || scaleY !== 1) {
-            transforms.push(`scale(${scaleX}, ${scaleY})`);
-        }
-
-        canvas.style.transform = transforms.length > 0 ? transforms.join(' ') : '';
-        canvas.style.transformOrigin = 'center center';
+        this.cropModule._applyTransformPreview();
     }
 
     /**
      * Clear transform preview (reset CSS transform)
      */
     _clearTransformPreview() {
-        const canvas = this.elements.canvas;
-        if (canvas) {
-            canvas.style.transform = '';
-        }
+        this.cropModule._clearTransformPreview();
     }
 
     /**
-     * Initialize editable crop dimensions input
+     * @deprecated Handled by cropModule
      */
     _initCropDimensionsInput() {
-        const display = document.getElementById('crop-dimensions-display');
-        const input = document.getElementById('crop-dimensions-input');
-
-        if (!display || !input) return;
-
-        // Click on display to show input
-        display.addEventListener('click', () => {
-            if (!this.cropTool) return;
-
-            const pixels = this.cropTool.getCropPixels();
-            input.value = `${pixels.width}x${pixels.height}`;
-            display.style.display = 'none';
-            input.style.display = 'block';
-            input.focus();
-            input.select();
-        });
-
-        // Handle input submission
-        const applyCustomDimensions = () => {
-            const value = input.value.trim();
-            // Parse formats: "800x600", "800*600", "800 600"
-            const match = value.match(/^(\d+)\s*[x×*\s]\s*(\d+)$/i);
-
-            if (match) {
-                const width = parseInt(match[1]);
-                const height = parseInt(match[2]);
-
-                if (width > 0 && height > 0 && this.cropTool) {
-                    this.cropTool.setCustomDimensions(width, height);
-                }
-            }
-
-            // Hide input, show display
-            input.style.display = 'none';
-            display.style.display = 'inline';
-        };
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                applyCustomDimensions();
-            } else if (e.key === 'Escape') {
-                input.style.display = 'none';
-                display.style.display = 'inline';
-            }
-        });
-
-        input.addEventListener('blur', () => {
-            // Hide input on blur
-            input.style.display = 'none';
-            display.style.display = 'inline';
-        });
+        // Now delegated to cropModule
     }
 
     /**
      * Activate crop tool and show overlay
      */
     _activateCropTool() {
-        if (!this.state.hasImage) {
-            console.warn('No image loaded for cropping');
-            return;
-        }
-
-        // Create crop tool if not exists
-        if (!this.cropTool) {
-            const canvasArea = document.querySelector('.canvas-area');
-            this.cropTool = new CropTool(canvasArea, this.elements.canvas);
-        }
-
-        // Activate with callback for dimension updates
-        this.cropTool.onUpdate = () => {
-            this._updateCropDimensionsDisplay();
-        };
-
-        this.cropTool.activate();
-        this._updateCropDimensionsDisplay();
+        this.cropModule.activate();
+        // Sync cropTool reference for backward compatibility
+        this.cropTool = this.cropModule.cropTool;
     }
 
     /**
      * Apply crop to image
      */
     applyCrop() {
-        if (!this.cropTool) return;
-
-        // Save state BEFORE crop for undo support
-        const snapshot = this._captureFullState();
-        this.history.pushState(snapshot);
-
-        const cropData = this.cropTool.apply();
-        if (!cropData || cropData.width <= 0 || cropData.height <= 0) {
-            console.warn('Invalid crop region');
-            return;
-        }
-
-        // Store the crop data for export
-        this.appliedCrop = cropData;
-
-        // Add rotation and flip data
-        cropData.rotation = this.cropRotation || 0;
-        cropData.flipH = this.cropFlipH || false;
-        cropData.flipV = this.cropFlipV || false;
-
-        // Apply the crop to the image
-        this._performCrop(cropData);
-
-        // Stay in crop mode - don't switch to develop mode
-        // The crop tool will be reactivated after the image is loaded
-
-        console.log(`✅ Crop applied: ${cropData.width}×${cropData.height}${cropData.rotation ? ` @ ${cropData.rotation}°` : ''}`);
+        this.cropModule.applyCrop();
+        // Sync appliedCrop for backward compatibility
+        this.appliedCrop = this.cropModule.appliedCrop;
     }
 
     /**
      * Cancel crop and reset (stay in crop mode)
      */
     cancelCrop() {
-        this.cropTool?.cancel();
-
-        // Reset rotation and flip UI
-        const rotationSlider = document.getElementById('slider-crop-rotation');
-        const rotationValue = document.getElementById('val-crop-rotation');
-        if (rotationSlider && rotationValue) {
-            rotationSlider.value = 0;
-            rotationValue.textContent = '0°';
-        }
-        this.cropRotation = 0;
-        this.cropFlipH = false;
-        this.cropFlipV = false;
-        document.getElementById('btn-flip-h')?.classList.remove('active');
-        document.getElementById('btn-flip-v')?.classList.remove('active');
-
-        // Clear real-time transform preview
-        this._clearTransformPreview();
-
-        // Reactivate crop tool instead of switching mode
-        if (this.state.hasImage) {
-            this.cropTool?.activate();
-            this._updateCropDimensionsDisplay();
-        }
+        this.cropModule.cancelCrop();
     }
 
     /**
      * Perform the actual crop operation with rotation and flip
+     * @deprecated Use cropModule._performCrop instead
      */
     _performCrop(cropData) {
-        // Read current canvas pixels
-        const gl = this.gpu.gl;
-        const fullWidth = this.gpu.width;
-        const fullHeight = this.gpu.height;
-
-        // Read pixels from WebGL
-        const pixels = new Uint8Array(fullWidth * fullHeight * 4);
-        gl.readPixels(0, 0, fullWidth, fullHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-        // Create ImageData from full canvas (flipping Y for WebGL)
-        const fullTempCanvas = document.createElement('canvas');
-        fullTempCanvas.width = fullWidth;
-        fullTempCanvas.height = fullHeight;
-        const fullTempCtx = fullTempCanvas.getContext('2d');
-        const fullImageData = fullTempCtx.createImageData(fullWidth, fullHeight);
-
-        for (let y = 0; y < fullHeight; y++) {
-            const srcRow = (fullHeight - 1 - y) * fullWidth * 4;
-            const dstRow = y * fullWidth * 4;
-            for (let x = 0; x < fullWidth * 4; x++) {
-                fullImageData.data[dstRow + x] = pixels[srcRow + x];
-            }
-        }
-        fullTempCtx.putImageData(fullImageData, 0, 0);
-
-        // Calculate output dimensions based on rotation
-        const radians = (cropData.rotation || 0) * Math.PI / 180;
-        const cos = Math.abs(Math.cos(radians));
-        const sin = Math.abs(Math.sin(radians));
-
-        // If rotated, the bounding box changes
-        let outputWidth, outputHeight;
-        if (cropData.rotation && cropData.rotation !== 0) {
-            outputWidth = Math.ceil(cropData.width * cos + cropData.height * sin);
-            outputHeight = Math.ceil(cropData.height * cos + cropData.width * sin);
-        } else {
-            outputWidth = cropData.width;
-            outputHeight = cropData.height;
-        }
-
-        // Create output canvas with proper dimensions
-        const outputCanvas = document.createElement('canvas');
-        outputCanvas.width = outputWidth;
-        outputCanvas.height = outputHeight;
-        const outputCtx = outputCanvas.getContext('2d');
-
-        // Apply transformations
-        outputCtx.save();
-        outputCtx.translate(outputWidth / 2, outputHeight / 2);
-
-        // Apply rotation
-        if (cropData.rotation) {
-            outputCtx.rotate(radians);
-        }
-
-        // Apply flip
-        const scaleX = cropData.flipH ? -1 : 1;
-        const scaleY = cropData.flipV ? -1 : 1;
-        outputCtx.scale(scaleX, scaleY);
-
-        // Draw cropped region centered
-        outputCtx.drawImage(
-            fullTempCanvas,
-            cropData.x, cropData.y, cropData.width, cropData.height,
-            -cropData.width / 2, -cropData.height / 2, cropData.width, cropData.height
-        );
-        outputCtx.restore();
-
-        // Create new image from output canvas and reload
-        const croppedImage = new Image();
-        croppedImage.onload = () => {
-            // Update state
-            this.state.setImage(croppedImage);
-
-            // Reload GPU processor with cropped image
-            this.gpu.loadImage(croppedImage);
-
-            // Clear any masks (they no longer align)
-            this.masks.layers = [];
-            this.masks.activeLayerIndex = -1;
-            this.updateLayersList();
-
-            // Update UI
-            this.elements.perfIndicator.textContent = `${croppedImage.width}×${croppedImage.height}`;
-            setTimeout(() => this.renderHistogram(), 100);
-
-            // Clear applied crop (it's been applied)
-            this.appliedCrop = null;
-
-            // Reset rotation and flip UI after successful crop
-            const rotationSlider = document.getElementById('slider-crop-rotation');
-            const rotationValue = document.getElementById('val-crop-rotation');
-            if (rotationSlider && rotationValue) {
-                rotationSlider.value = 0;
-                rotationValue.textContent = '0°';
-            }
-            this.cropRotation = 0;
-            this.cropFlipH = false;
-            this.cropFlipV = false;
-            document.getElementById('btn-flip-h')?.classList.remove('active');
-            document.getElementById('btn-flip-v')?.classList.remove('active');
-
-            // Clear CSS transform preview (rotation/flip is now baked into image)
-            this._clearTransformPreview();
-
-            // Reactivate crop tool for the new image (stay in crop mode)
-            setTimeout(() => {
-                if (this.state.currentTool === 'crop') {
-                    this.cropTool?.deactivate();
-                    this._activateCropTool();
-                }
-            }, 150);
-        };
-        croppedImage.src = outputCanvas.toDataURL('image/png');
+        this.cropModule._performCrop(cropData);
     }
 
     /**
      * Update crop dimensions display in panel
      */
     _updateCropDimensionsDisplay() {
-        const display = document.getElementById('crop-dimensions-display');
-        if (display && this.cropTool) {
-            const pixels = this.cropTool.getCropPixels();
-            display.textContent = `${pixels.width} × ${pixels.height}`;
-        }
+        this.cropModule._updateCropDimensionsDisplay();
     }
 
     /**
@@ -951,118 +583,17 @@ export class EditorUI {
     }
 
     /**
-     * Initialize keyboard shortcuts
+     * @deprecated Handled by keyboardModule.init()
      */
     _initKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Ignore shortcuts when typing in inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-            if (e.code === 'Space' && !this.state.showingBefore && this.state.hasImage) {
-                e.preventDefault();
-                this.state.showingBefore = true;
-                this.elements.beforeIndicator?.classList.add('visible');
-                this.gpu.renderOriginal(this.state.originalImage);
-            }
-            if (e.code === 'KeyD') this.setTool('develop');
-            if (e.code === 'KeyB') this.setTool('brush');
-            if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) this.setTool('radial');
-            if (e.code === 'KeyG') this.setTool('gradient');
-            if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.setTool('crop');
-            if (e.code === 'KeyE' && !e.metaKey && !e.ctrlKey) this.setTool('export');
-            if (e.code === 'KeyU' && !e.metaKey && !e.ctrlKey) this.setTool('upscale');
-            if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) this.setTool('liquify');
-            if (e.code === 'KeyH' && !e.metaKey && !e.ctrlKey) this.setTool('healing');
-            if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
-                this.setBrushMode(!this.masks.brushSettings.erase);
-            }
-            if (e.code === 'BracketLeft') {
-                this.adjustBrushSize(-10);
-            }
-            if (e.code === 'BracketRight') {
-                this.adjustBrushSize(10);
-            }
-
-            // Show keyboard shortcuts modal with ? key
-            if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
-                e.preventDefault();
-                this.toggleShortcutsModal(true);
-            }
-
-            // Close modal with Escape (or cancel crop if in crop mode)
-            if (e.code === 'Escape') {
-                if (this.state.currentTool === 'crop') {
-                    e.preventDefault();
-                    this.cancelCrop();
-                } else {
-                    this.toggleShortcutsModal(false);
-                }
-            }
-
-            // Apply crop with Enter when in crop mode
-            if (e.code === 'Enter' && this.state.currentTool === 'crop') {
-                e.preventDefault();
-                this.applyCrop();
-            }
-
-            // Export with Ctrl/Cmd + E
-            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
-                e.preventDefault();
-                this.exportImage();
-            }
-
-            // Undo with Ctrl/Cmd + Z
-            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ') {
-                e.preventDefault();
-                this.undo();
-            }
-
-            // Redo with Ctrl/Cmd + Shift + Z
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyZ') {
-                e.preventDefault();
-                this.redo();
-            }
-
-            // Toggle Before/After comparison with backslash
-            if (e.code === 'Backslash' && this.state.hasImage) {
-                e.preventDefault();
-                this.toggleComparison();
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && this.state.showingBefore) {
-                this.state.showingBefore = false;
-                this.elements.beforeIndicator?.classList.remove('visible');
-                this.gpu.render();
-            }
-        });
-
-        // Shortcuts modal close button
-        const shortcutsClose = document.getElementById('shortcuts-close');
-        if (shortcutsClose) {
-            shortcutsClose.addEventListener('click', () => this.toggleShortcutsModal(false));
-        }
-
-        // Close modal on backdrop click
-        const shortcutsModal = document.getElementById('shortcuts-modal');
-        if (shortcutsModal) {
-            shortcutsModal.addEventListener('click', (e) => {
-                if (e.target === shortcutsModal) {
-                    this.toggleShortcutsModal(false);
-                }
-            });
-        }
+        // Now delegated to keyboardModule.init()
     }
 
     /**
      * Toggle keyboard shortcuts modal
      */
     toggleShortcutsModal(show) {
-        const modal = document.getElementById('shortcuts-modal');
-        if (modal) {
-            modal.style.display = show ? 'flex' : 'none';
-        }
+        this.keyboardModule.toggleShortcutsModal(show);
     }
 
     /**
@@ -1243,487 +774,66 @@ export class EditorUI {
     }
 
     /**
-     * Initialize Before/After comparison slider
+     * @deprecated Handled by comparisonModule.init()
      */
     _initComparisonSlider() {
-        const canvasArea = document.querySelector('.canvas-area');
-        if (!canvasArea) return;
-
-        // Create comparison slider container
-        const slider = document.createElement('div');
-        slider.className = 'comparison-slider';
-        slider.id = 'comparison-slider';
-        slider.style.display = 'none';
-        slider.innerHTML = `
-            <div class="comparison-line"></div>
-            <div class="comparison-handle">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M8 5v14l-5-7zM16 5v14l5-7z"/>
-                </svg>
-            </div>
-            <div class="comparison-label comparison-label-before">Before</div>
-            <div class="comparison-label comparison-label-after">After</div>
-        `;
-        canvasArea.appendChild(slider);
-
-        // Create original canvas overlay for comparison
-        const originalCanvas = document.createElement('canvas');
-        originalCanvas.id = 'original-canvas';
-        originalCanvas.className = 'original-canvas';
-        originalCanvas.style.display = 'none';
-        const canvasContainer = document.querySelector('.canvas-container');
-        if (canvasContainer) {
-            canvasContainer.appendChild(originalCanvas);
-        }
-
-        // Slider drag handling
-        let isDragging = false;
-        const handle = slider.querySelector('.comparison-handle');
-
-        handle?.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            isDragging = true;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging || !this.comparison.active) return;
-
-            const rect = canvasArea.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            this.comparison.position = Math.max(5, Math.min(95, (x / rect.width) * 100));
-            this._updateComparisonSlider();
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Before/After toggle button for accessibility
-        const beforeAfterBtn = document.getElementById('btn-before-after');
-        if (beforeAfterBtn) {
-            beforeAfterBtn.addEventListener('click', () => {
-                this.toggleComparison();
-                beforeAfterBtn.classList.toggle('active', this.comparison.active);
-            });
-        }
+        // Now delegated to comparisonModule.init()
     }
 
     /**
      * Toggle before/after comparison mode
      */
-    toggleComparison(show = !this.comparison.active) {
-        this.comparison.active = show;
-
-        const slider = document.getElementById('comparison-slider');
-        const originalCanvas = document.getElementById('original-canvas');
-
-        if (show && this.state.hasImage) {
-            // Copy original image to overlay canvas
-            if (originalCanvas) {
-                const ctx = originalCanvas.getContext('2d');
-                const mainCanvas = this.elements.canvas;
-                originalCanvas.width = mainCanvas.width;
-                originalCanvas.height = mainCanvas.height;
-
-                // Draw original image
-                if (this.state.originalImage) {
-                    ctx.drawImage(this.state.originalImage, 0, 0, originalCanvas.width, originalCanvas.height);
-                }
-                originalCanvas.style.display = 'block';
-            }
-
-            if (slider) {
-                slider.style.display = 'flex';
-            }
-            this._updateComparisonSlider();
-        } else {
-            if (slider) slider.style.display = 'none';
-            if (originalCanvas) originalCanvas.style.display = 'none';
-        }
-
-        // Sync the toggle button active state
-        const beforeAfterBtn = document.getElementById('btn-before-after');
-        if (beforeAfterBtn) {
-            beforeAfterBtn.classList.toggle('active', this.comparison.active);
-        }
+    toggleComparison(show) {
+        this.comparisonModule.toggle(show);
     }
 
     /**
      * Update comparison slider position and clipping
      */
     _updateComparisonSlider() {
-        const slider = document.getElementById('comparison-slider');
-        const originalCanvas = document.getElementById('original-canvas');
-
-        if (!slider || !originalCanvas) return;
-
-        const position = this.comparison.position;
-
-        // Position the slider line and handle
-        slider.style.left = `${position}%`;
-
-        // Clip the original canvas to show only the left portion
-        originalCanvas.style.clipPath = `inset(0 ${100 - position}% 0 0)`;
+        this.comparisonModule._updateSlider();
     }
 
     /**
-     * Initialize upscale controls
+     * @deprecated Handled by upscaleModule.init()
      */
     _initUpscaleControls() {
-        // Create upscaler instance
-        this.upscaler = new ImageUpscaler();
-        this.upscaleScaleFactor = 2;
-
-        // Mode selector buttons (Enhance / Upscale / Both)
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const mode = btn.dataset.mode;
-                this.upscaler.setProcessingMode(mode);
-                this._updateUpscaleDimensions();
-            });
-        });
-
-        // Scale factor buttons
-        document.querySelectorAll('.scale-factor-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.scale-factor-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.upscaleScaleFactor = parseInt(btn.dataset.scale);
-                this.upscaler.setScaleFactor(this.upscaleScaleFactor);
-                this._updateUpscaleDimensions();
-            });
-        });
-
-        // Sharpen toggle
-        const sharpenToggle = document.getElementById('upscale-sharpen-toggle');
-        if (sharpenToggle) {
-            sharpenToggle.addEventListener('change', () => {
-                this.upscaler.setSharpenEdges(sharpenToggle.checked);
-            });
-        }
-
-        // AI server toggle
-        const aiToggle = document.getElementById('upscale-ai-toggle');
-        if (aiToggle) {
-            aiToggle.addEventListener('change', () => {
-                this.upscaler.setUseAI(aiToggle.checked);
-            });
-        }
-
-        // Face enhancement toggle
-        const faceToggle = document.getElementById('upscale-face-toggle');
-        if (faceToggle) {
-            faceToggle.addEventListener('change', () => {
-                this.upscaler.setEnhanceFace(faceToggle.checked);
-            });
-        }
-
-        // Server URL input
-        const serverUrlInput = document.getElementById('ai-server-url');
-        if (serverUrlInput) {
-            serverUrlInput.addEventListener('change', () => {
-                this.upscaler.setServerUrl(serverUrlInput.value);
-            });
-        }
-
-        // Apply button
-        const btnApply = document.getElementById('btn-upscale-apply');
-        if (btnApply) {
-            btnApply.addEventListener('click', () => this.applyUpscale());
-        }
-
-        // Cancel button
-        const btnCancel = document.getElementById('btn-upscale-cancel');
-        if (btnCancel) {
-            btnCancel.addEventListener('click', () => {
-                this.setMode('develop');
-            });
-        }
+        // Now delegated to upscaleModule.init()
     }
 
     /**
-     * Initialize Liquify tool controls
+     * @deprecated Handled by liquifyModule.init()
      */
     _initLiquifyControls() {
-        // Create canvas for liquify (overlay on main canvas)
-        this.liquifyCanvas = document.createElement('canvas');
-        this.liquifyCanvas.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            display: none;
-        `;
-        this.elements.canvas.parentElement.appendChild(this.liquifyCanvas);
-
-        // Create liquify tool instance
-        this.liquifyTool = new LiquifyTool(this.liquifyCanvas);
-        this.liquifyTool.init();
-
-        // Mode buttons
-        document.querySelectorAll('.liquify-mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.liquify-mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const mode = btn.dataset.mode;
-                this.liquifyTool.setMode(mode);
-
-                // Update label
-                const label = document.getElementById('liquify-mode-label');
-                if (label) {
-                    label.textContent = mode.toUpperCase().replace('SWIRLRIGHT', 'SWIRL RIGHT').replace('SWIRLLEFT', 'SWIRL LEFT');
-                }
-            });
-        });
-
-        // Size slider
-        const sizeSlider = document.getElementById('liquify-size');
-        const sizeValue = document.getElementById('liquify-size-value');
-        if (sizeSlider) {
-            sizeSlider.addEventListener('input', () => {
-                const size = parseInt(sizeSlider.value);
-                this.liquifyTool.setBrushSize(size);
-                if (sizeValue) sizeValue.textContent = `${size}px`;
-                this._updateLiquifyBrushCursor();
-            });
-        }
-
-        // Strength slider
-        const strengthSlider = document.getElementById('liquify-strength');
-        const strengthValue = document.getElementById('liquify-strength-value');
-        if (strengthSlider) {
-            strengthSlider.addEventListener('input', () => {
-                const strength = parseInt(strengthSlider.value);
-                this.liquifyTool.setBrushStrength(strength / 100);
-                if (strengthValue) strengthValue.textContent = `${strength}%`;
-            });
-        }
-
-        // Density slider
-        const densitySlider = document.getElementById('liquify-density');
-        const densityValue = document.getElementById('liquify-density-value');
-        if (densitySlider) {
-            densitySlider.addEventListener('input', () => {
-                const density = parseInt(densitySlider.value);
-                this.liquifyTool.setBrushDensity(density / 100);
-                if (densityValue) densityValue.textContent = `${density}%`;
-            });
-        }
-
-        // High quality toggle
-        const hqToggle = document.getElementById('liquify-high-quality');
-        if (hqToggle) {
-            hqToggle.addEventListener('change', () => {
-                this.liquifyTool.setHighQuality(hqToggle.checked);
-            });
-        }
-
-        // Reset All button
-        const btnReset = document.getElementById('btn-liquify-reset');
-        if (btnReset) {
-            btnReset.addEventListener('click', () => {
-                this.liquifyTool.resetAll();
-            });
-        }
-
-        // Apply button
-        const btnApply = document.getElementById('btn-liquify-apply');
-        if (btnApply) {
-            btnApply.addEventListener('click', () => this.applyLiquify());
-        }
-
-        // Cancel button
-        const btnCancel = document.getElementById('btn-liquify-cancel');
-        if (btnCancel) {
-            btnCancel.addEventListener('click', () => {
-                this.liquifyTool.resetAll();
-                this._deactivateLiquifyTool();
-                this.setMode('develop');
-            });
-        }
+        // Now delegated to liquifyModule.init()
     }
 
     /**
      * Activate liquify tool
      */
     _activateLiquifyTool() {
-        if (!this.state.hasImage) return;
-
-        // Show liquify canvas
-        this.liquifyCanvas.style.display = 'block';
-        this.liquifyCanvas.style.pointerEvents = 'auto';
-
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.liquifyCanvas.style.width = rect.width + 'px';
-        this.liquifyCanvas.style.height = rect.height + 'px';
-
-        // Set the image to liquify
-        this.liquifyTool.setImage(this.elements.canvas);
-
-        // Create liquify brush cursor if it doesn't exist
-        if (!this.liquifyBrushCursor) {
-            this.liquifyBrushCursor = document.createElement('div');
-            this.liquifyBrushCursor.className = 'liquify-brush-cursor';
-            this.liquifyBrushCursor.style.cssText = `
-                position: fixed;
-                pointer-events: none;
-                border: 2px solid rgba(0, 180, 255, 0.8);
-                border-radius: 50%;
-                z-index: 10000;
-                display: none;
-                box-shadow: 0 0 10px rgba(0, 180, 255, 0.3);
-            `;
-            document.body.appendChild(this.liquifyBrushCursor);
-        }
-        this.liquifyBrushCursor.style.display = 'block';
-        this._updateLiquifyBrushCursor();
-
-        // Add mouse event listeners
-        this._liquifyMouseDown = (e) => {
-            const rect = this.liquifyCanvas.getBoundingClientRect();
-            const scaleX = this.liquifyTool.imageWidth / rect.width;
-            const scaleY = this.liquifyTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.liquifyTool.onMouseDown(x, y);
-        };
-
-        this._liquifyMouseMove = (e) => {
-            // Update cursor position
-            if (this.liquifyBrushCursor) {
-                const size = this.liquifyTool.brushSize;
-                const rect = this.liquifyCanvas.getBoundingClientRect();
-                const scaleX = rect.width / this.liquifyTool.imageWidth;
-                const displaySize = size * scaleX;
-
-                this.liquifyBrushCursor.style.width = displaySize + 'px';
-                this.liquifyBrushCursor.style.height = displaySize + 'px';
-                this.liquifyBrushCursor.style.left = (e.clientX - displaySize / 2) + 'px';
-                this.liquifyBrushCursor.style.top = (e.clientY - displaySize / 2) + 'px';
-            }
-
-            // Apply liquify if dragging
-            if (this.liquifyTool.isDragging) {
-                const rect = this.liquifyCanvas.getBoundingClientRect();
-                const scaleX = this.liquifyTool.imageWidth / rect.width;
-                const scaleY = this.liquifyTool.imageHeight / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                this.liquifyTool.onMouseMove(x, y);
-            }
-        };
-
-        this._liquifyMouseUp = () => {
-            this.liquifyTool.onMouseUp();
-        };
-
-        this.liquifyCanvas.addEventListener('mousedown', this._liquifyMouseDown);
-        document.addEventListener('mousemove', this._liquifyMouseMove);
-        document.addEventListener('mouseup', this._liquifyMouseUp);
+        this.liquifyModule.activate();
     }
 
     /**
      * Update liquify brush cursor size
      */
     _updateLiquifyBrushCursor() {
-        if (this.liquifyBrushCursor && this.liquifyTool) {
-            const size = this.liquifyTool.brushSize;
-            const rect = this.liquifyCanvas.getBoundingClientRect();
-            const scaleX = rect.width / this.liquifyTool.imageWidth;
-            const displaySize = size * scaleX;
-            this.liquifyBrushCursor.style.width = displaySize + 'px';
-            this.liquifyBrushCursor.style.height = displaySize + 'px';
-        }
+        this.liquifyModule._updateBrushCursor();
     }
 
     /**
      * Deactivate liquify tool
      */
     _deactivateLiquifyTool() {
-        // Hide liquify canvas
-        this.liquifyCanvas.style.display = 'none';
-        this.liquifyCanvas.style.pointerEvents = 'none';
-
-        // Hide brush cursor
-        if (this.liquifyBrushCursor) {
-            this.liquifyBrushCursor.style.display = 'none';
-        }
-
-        // Remove event listeners
-        if (this._liquifyMouseDown) {
-            this.liquifyCanvas.removeEventListener('mousedown', this._liquifyMouseDown);
-        }
-        if (this._liquifyMouseMove) {
-            document.removeEventListener('mousemove', this._liquifyMouseMove);
-        }
-        if (this._liquifyMouseUp) {
-            document.removeEventListener('mouseup', this._liquifyMouseUp);
-        }
+        this.liquifyModule.deactivate();
     }
 
     /**
      * Apply liquify changes to the main canvas
      */
     async applyLiquify() {
-        try {
-            // Clear any pending debounced history push to avoid duplicates
-            clearTimeout(this._historyDebounceTimer);
-
-            // Save state BEFORE liquify for undo support
-            const snapshot = this._captureFullState();
-            console.log('📸 Liquify: Capturing state. DataURL:', snapshot.imageDataUrl?.length || 0);
-            this.history.pushState(snapshot);
-
-            // Get the result from the liquify tool's WebGL canvas
-            const liquifyCanvas = this.liquifyTool.getResultCanvas();
-
-            // Create an intermediate 2D canvas to transfer the image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = liquifyCanvas.width;
-            tempCanvas.height = liquifyCanvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // Draw the WebGL canvas onto the 2D canvas
-            tempCtx.drawImage(liquifyCanvas, 0, 0);
-
-            // Update the GPU with the new image
-            // First, resize the GPU if needed
-            if (this.gpu.width !== tempCanvas.width || this.gpu.height !== tempCanvas.height) {
-                this.gpu.resize(tempCanvas.width, tempCanvas.height);
-            }
-
-            // Load the new image into the GPU - WAIT for it to complete
-            const dataUrl = tempCanvas.toDataURL('image/png');
-            const img = await this._loadImageAsync(dataUrl);
-
-            // Update state with new image (like crop apply does)
-            this.state.setImage(img);
-
-            // Reload GPU processor with new image  
-            this.gpu.loadImage(img);
-
-            // Store the image (not ImageData) as new original for undo compatibility
-            this.state.originalImage = img;
-
-            // Update histogram
-            setTimeout(() => this.renderHistogram(), 100);
-
-            console.log('✅ Liquify applied successfully');
-
-            // Reset liquify tool for next use but stay in liquify mode
-            this.liquifyTool.resetAll();
-
-            // Re-initialize the liquify tool with the new image
-            if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this._activateLiquifyTool(), 100);
-            }
-
-        } catch (error) {
-            console.error('Failed to apply liquify:', error);
-        }
+        return this.liquifyModule.apply();
     }
 
     /**
@@ -1739,533 +849,80 @@ export class EditorUI {
     }
 
     /**
-     * Initialize healing tool controls
+     * @deprecated Handled by healingModule.init()
      */
     _initHealingControls() {
-        // Create healing canvas (overlay on main canvas)
-        this.healingCanvas = document.createElement('canvas');
-        this.healingCanvas.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            display: none;
-        `;
-        this.elements.canvas.parentElement.appendChild(this.healingCanvas);
-
-        // Create healing tool instance
-        this.healingTool = new HealingTool(this.healingCanvas);
-
-        // Store reference to Replicate service
-        this.replicate = replicateService;
-
-        // Load saved API token
-        const tokenInput = document.getElementById('replicate-api-token');
-        if (tokenInput && this.replicate.hasApiToken()) {
-            tokenInput.value = this.replicate.getApiToken();
-            document.getElementById('api-status').textContent = '✅ Token loaded from storage';
-            document.getElementById('api-status').style.color = 'var(--accent)';
-        }
-
-        // API Token input
-        tokenInput?.addEventListener('change', () => {
-            this.replicate.setApiToken(tokenInput.value);
-            document.getElementById('api-status').textContent = '💾 Token saved';
-            document.getElementById('api-status').style.color = 'var(--accent)';
-        });
-
-        // Test API button
-        document.getElementById('btn-test-api')?.addEventListener('click', async () => {
-            const status = document.getElementById('api-status');
-            status.textContent = '🔄 Testing connection...';
-            status.style.color = 'var(--text-secondary)';
-
-            const result = await this.replicate.testConnection();
-            if (result.success) {
-                status.textContent = '✅ Connection successful!';
-                status.style.color = 'var(--accent)';
-            } else {
-                status.textContent = `❌ ${result.error}`;
-                status.style.color = 'var(--text-error)';
-            }
-        });
-
-        // Size slider
-        const sizeSlider = document.getElementById('healing-size');
-        const sizeValue = document.getElementById('healing-size-value');
-        sizeSlider?.addEventListener('input', () => {
-            const size = parseInt(sizeSlider.value);
-            this.healingTool.setBrushSize(size);
-            if (sizeValue) sizeValue.textContent = `${size}px`;
-            this._updateHealingBrushCursor();
-        });
-
-        // Hardness slider
-        const hardnessSlider = document.getElementById('healing-hardness');
-        const hardnessValue = document.getElementById('healing-hardness-value');
-        hardnessSlider?.addEventListener('input', () => {
-            const hardness = parseInt(hardnessSlider.value);
-            this.healingTool.setBrushHardness(hardness / 100);
-            if (hardnessValue) hardnessValue.textContent = `${hardness}%`;
-        });
-
-        // Heal button
-        document.getElementById('btn-heal')?.addEventListener('click', () => this._performHealing());
-
-        // Clear mask button
-        document.getElementById('btn-clear-mask')?.addEventListener('click', () => {
-            this.healingTool.clearMask();
-            this._renderHealingPreview();
-        });
-
-        // Apply button
-        document.getElementById('btn-healing-apply')?.addEventListener('click', () => this._applyHealing());
-
-        // Cancel button
-        document.getElementById('btn-healing-cancel')?.addEventListener('click', () => {
-            this.healingTool.reset();
-            this._deactivateHealingTool();
-            this.setMode('develop');
-        });
-
-        // Face enhance button
-        document.getElementById('btn-enhance-face')?.addEventListener('click', () => this._enhanceFace());
-
-        // Remove background button
-        document.getElementById('btn-remove-bg')?.addEventListener('click', () => this._removeBackground());
+        // Now delegated to healingModule.init()
     }
 
     /**
      * Activate healing tool
      */
     _activateHealingTool() {
-        if (!this.state.hasImage) return;
-
-        // Show healing canvas
-        this.healingCanvas.style.display = 'block';
-        this.healingCanvas.style.pointerEvents = 'auto';
-
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.healingCanvas.style.width = rect.width + 'px';
-        this.healingCanvas.style.height = rect.height + 'px';
-        this.healingCanvas.width = this.gpu.width;
-        this.healingCanvas.height = this.gpu.height;
-
-        // Set the image to heal
-        this.healingTool.setImage(this.elements.canvas);
-
-        // Create healing brush cursor if it doesn't exist
-        if (!this.healingBrushCursor) {
-            this.healingBrushCursor = document.createElement('div');
-            this.healingBrushCursor.className = 'healing-brush-cursor';
-            this.healingBrushCursor.style.cssText = `
-                position: fixed;
-                pointer-events: none;
-                border: 2px solid rgba(255, 100, 100, 0.8);
-                border-radius: 50%;
-                z-index: 10000;
-                display: none;
-                box-shadow: 0 0 10px rgba(255, 100, 100, 0.3);
-            `;
-            document.body.appendChild(this.healingBrushCursor);
-        }
-        this.healingBrushCursor.style.display = 'block';
-        this._updateHealingBrushCursor();
-
-        // Add mouse event listeners
-        this._healingMouseDown = (e) => {
-            const rect = this.healingCanvas.getBoundingClientRect();
-            const scaleX = this.healingTool.imageWidth / rect.width;
-            const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.healingTool.onMouseDown(x, y);
-            this._renderHealingPreview();
-        };
-
-        this._healingMouseMove = (e) => {
-            // Update cursor position
-            if (this.healingBrushCursor) {
-                const size = this.healingTool.brushSize;
-                const rect = this.healingCanvas.getBoundingClientRect();
-                const scale = rect.width / this.healingTool.imageWidth;
-                const displaySize = size * scale;
-                this.healingBrushCursor.style.width = displaySize + 'px';
-                this.healingBrushCursor.style.height = displaySize + 'px';
-                this.healingBrushCursor.style.left = (e.clientX - displaySize / 2) + 'px';
-                this.healingBrushCursor.style.top = (e.clientY - displaySize / 2) + 'px';
-            }
-
-            const rect = this.healingCanvas.getBoundingClientRect();
-            const scaleX = this.healingTool.imageWidth / rect.width;
-            const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.healingTool.onMouseMove(x, y);
-
-            if (this.healingTool.isDrawing) {
-                this._renderHealingPreview();
-            }
-        };
-
-        this._healingMouseUp = () => {
-            this.healingTool.onMouseUp();
-        };
-
-        this.healingCanvas.addEventListener('mousedown', this._healingMouseDown);
-        this.healingCanvas.addEventListener('mousemove', this._healingMouseMove);
-        this.healingCanvas.addEventListener('mouseup', this._healingMouseUp);
-        this.healingCanvas.addEventListener('mouseleave', this._healingMouseUp);
-
-        // Initial render
-        this._renderHealingPreview();
-
-        console.log('🩹 Healing tool activated');
+        this.healingModule.activate();
     }
 
     /**
      * Deactivate healing tool
      */
     _deactivateHealingTool() {
-        if (this.healingCanvas) {
-            this.healingCanvas.style.display = 'none';
-            this.healingCanvas.style.pointerEvents = 'none';
-
-            // Remove event listeners
-            if (this._healingMouseDown) {
-                this.healingCanvas.removeEventListener('mousedown', this._healingMouseDown);
-                this.healingCanvas.removeEventListener('mousemove', this._healingMouseMove);
-                this.healingCanvas.removeEventListener('mouseup', this._healingMouseUp);
-                this.healingCanvas.removeEventListener('mouseleave', this._healingMouseUp);
-            }
-        }
-
-        // Hide cursor
-        if (this.healingBrushCursor) {
-            this.healingBrushCursor.style.display = 'none';
-        }
-
-        console.log('🩹 Healing tool deactivated');
+        this.healingModule.deactivate();
     }
 
     /**
      * Update healing brush cursor size
      */
     _updateHealingBrushCursor() {
-        if (!this.healingBrushCursor || !this.healingTool) return;
-        const size = this.healingTool.brushSize;
-        const rect = this.healingCanvas?.getBoundingClientRect();
-        if (!rect) return;
-        const scale = rect.width / (this.healingTool.imageWidth || 1);
-        const displaySize = size * scale;
-        this.healingBrushCursor.style.width = displaySize + 'px';
-        this.healingBrushCursor.style.height = displaySize + 'px';
+        this.healingModule._updateBrushCursor();
     }
 
     /**
      * Render healing preview with mask overlay
      */
     _renderHealingPreview() {
-        if (!this.healingTool) return;
-        const previewCanvas = this.healingTool.getPreviewCanvas();
-        const ctx = this.healingCanvas.getContext('2d');
-        ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
-        ctx.drawImage(previewCanvas, 0, 0, this.healingCanvas.width, this.healingCanvas.height);
+        this.healingModule._renderPreview();
     }
 
     /**
      * Perform AI healing using LaMa
      */
     async _performHealing() {
-        if (!this.healingTool.hasMaskDrawn()) {
-            alert('Please paint over the area you want to heal first.');
-            return;
-        }
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-heal');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Healing...';
-        btn.disabled = true;
-
-        try {
-            const imageDataUrl = this.healingTool.getImageDataUrl();
-            const maskDataUrl = this.healingTool.getMaskDataUrl();
-
-            console.log('🩹 Sending to LaMa API...');
-            const result = await this.replicate.inpaint(imageDataUrl, maskDataUrl);
-
-            console.log('🩹 Healing result received');
-
-            // Load the result image
-            this.healedImage = await this._loadImageAsync(result);
-
-            // Show result on canvas
-            const ctx = this.healingCanvas.getContext('2d');
-            ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
-            ctx.drawImage(this.healedImage, 0, 0, this.healingCanvas.width, this.healingCanvas.height);
-
-            // Clear the mask
-            this.healingTool.clearMask();
-
-            btn.textContent = '✅ Done! Click Apply';
-
-        } catch (error) {
-            console.error('Healing failed:', error);
-            alert(`Healing failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.performHealing();
     }
 
     /**
      * Apply healed result to main canvas
      */
     async _applyHealing() {
-        if (!this.healedImage) {
-            alert('No healed image to apply. Run healing first.');
-            return;
-        }
-
-        try {
-            // Clear debounce and save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Update state and GPU
-            this.state.setImage(this.healedImage);
-            this.gpu.loadImage(this.healedImage);
-            this.state.originalImage = this.healedImage;
-
-            // Clear healed image reference
-            this.healedImage = null;
-
-            // Update histogram
-            setTimeout(() => this.renderHistogram(), 100);
-
-            // Reinitialize healing tool with new image
-            this.healingTool.setImage(this.elements.canvas);
-            this._renderHealingPreview();
-
-            console.log('✅ Healing applied successfully');
-
-        } catch (error) {
-            console.error('Failed to apply healing:', error);
-        }
+        return this.healingModule.applyHealing();
     }
 
     /**
      * Enhance face using GFPGAN
      */
     async _enhanceFace() {
-        if (!this.state.hasImage) return;
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-enhance-face');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Enhancing...';
-        btn.disabled = true;
-
-        try {
-            // Capture current image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.gpu.width;
-            tempCanvas.height = this.gpu.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
-            const imageDataUrl = tempCanvas.toDataURL('image/png');
-
-            console.log('✨ Sending to GFPGAN API...');
-            const result = await this.replicate.enhanceFace(imageDataUrl);
-
-            console.log('✨ Face enhancement result received');
-
-            // Save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Load and apply the result
-            const enhancedImage = await this._loadImageAsync(result);
-            this.state.setImage(enhancedImage);
-            this.gpu.loadImage(enhancedImage);
-            this.state.originalImage = enhancedImage;
-
-            // Update UI
-            setTimeout(() => this.renderHistogram(), 100);
-
-            btn.textContent = '✅ Enhanced!';
-            setTimeout(() => { btn.textContent = originalText; }, 2000);
-
-        } catch (error) {
-            console.error('Face enhancement failed:', error);
-            alert(`Face enhancement failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.enhanceFace();
     }
 
     /**
      * Remove background using rembg
      */
     async _removeBackground() {
-        if (!this.state.hasImage) return;
-
-        if (!this.replicate.hasApiToken()) {
-            alert('Please enter your Replicate API token first.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-remove-bg');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Removing...';
-        btn.disabled = true;
-
-        try {
-            // Capture current image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.gpu.width;
-            tempCanvas.height = this.gpu.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
-            const imageDataUrl = tempCanvas.toDataURL('image/png');
-
-            console.log('🎭 Sending to rembg API...');
-            const result = await this.replicate.removeBackground(imageDataUrl);
-
-            console.log('🎭 Background removal result received');
-
-            // Save state for undo
-            clearTimeout(this._historyDebounceTimer);
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Load and apply the result
-            const resultImage = await this._loadImageAsync(result);
-            this.state.setImage(resultImage);
-            this.gpu.loadImage(resultImage);
-            this.state.originalImage = resultImage;
-
-            // Update UI
-            setTimeout(() => this.renderHistogram(), 100);
-
-            btn.textContent = '✅ Removed!';
-            setTimeout(() => { btn.textContent = originalText; }, 2000);
-
-        } catch (error) {
-            console.error('Background removal failed:', error);
-            alert(`Background removal failed: ${error.message}`);
-            btn.textContent = originalText;
-        } finally {
-            btn.disabled = false;
-        }
+        return this.healingModule.removeBackground();
     }
 
     /**
      * Update upscale dimensions display
      */
     _updateUpscaleDimensions() {
-        const currentDims = document.getElementById('upscale-current-dims');
-        const outputDims = document.getElementById('upscale-output-dims');
-
-        if (!this.state.hasImage) {
-            if (currentDims) currentDims.textContent = '-- × --';
-            if (outputDims) outputDims.textContent = '-- × --';
-            return;
-        }
-
-        const width = this.gpu.width;
-        const height = this.gpu.height;
-        const outputWidth = Math.round(width * this.upscaleScaleFactor);
-        const outputHeight = Math.round(height * this.upscaleScaleFactor);
-
-        if (currentDims) currentDims.textContent = `${width} × ${height}`;
-        if (outputDims) outputDims.textContent = `${outputWidth} × ${outputHeight}`;
+        this.upscaleModule.updateDimensions();
     }
 
     /**
      * Apply upscale to image
      */
     async applyUpscale() {
-        if (!this.state.hasImage) {
-            console.warn('No image loaded for upscaling');
-            return;
-        }
-
-        const progressSection = document.getElementById('upscale-progress-section');
-        const progressBar = document.getElementById('upscale-progress-bar');
-        const progressText = document.getElementById('upscale-progress-text');
-        const progressPercent = document.getElementById('upscale-progress-percent');
-        const btnApply = document.getElementById('btn-upscale-apply');
-
-        // Show progress and disable button
-        if (progressSection) progressSection.style.display = 'block';
-        if (btnApply) btnApply.disabled = true;
-
-        try {
-            // Save state for undo
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-
-            // Upscale the image
-            const upscaledCanvas = await this.upscaler.upscaleFromWebGL(
-                this.gpu.gl,
-                this.gpu.width,
-                this.gpu.height,
-                (percent, message) => {
-                    if (progressBar) progressBar.style.width = `${percent}%`;
-                    if (progressText) progressText.textContent = message;
-                    if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
-                }
-            );
-
-            // Create image from canvas
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
-
-                // Reload GPU processor with upscaled image
-                this.gpu.loadImage(img);
-
-                // Clear masks (they no longer align)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.updateLayersList();
-
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
-                setTimeout(() => this.renderHistogram(), 100);
-
-                // Hide progress
-                if (progressSection) progressSection.style.display = 'none';
-                if (btnApply) btnApply.disabled = false;
-                if (progressBar) progressBar.style.width = '0%';
-
-                // Update dimensions display
-                this._updateUpscaleDimensions();
-
-                console.log(`✅ Upscale complete: ${img.width}×${img.height}`);
-            };
-            img.src = upscaledCanvas.toDataURL('image/png');
-
-        } catch (error) {
-            console.error('Upscale failed:', error);
-            if (progressSection) progressSection.style.display = 'none';
-            if (btnApply) btnApply.disabled = false;
-        }
+        return this.upscaleModule.apply();
     }
 
     /**
@@ -2486,140 +1143,22 @@ export class EditorUI {
      * Update layers list in UI
      */
     updateLayersList() {
-        const container = document.getElementById('mask-layers');
-        if (!container) return;
-
-        if (this.masks.layers.length === 0) {
-            container.innerHTML = `
-                <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
-                    No adjustment layers yet.<br>Select a tool to create one.
-                </div>`;
-            return;
-        }
-
-        container.innerHTML = this.masks.layers.map((layer, i) => `
-            <div class="mask-layer ${i === this.masks.activeLayerIndex ? 'active' : ''}" data-index="${i}">
-                <div class="mask-layer-icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                    </svg>
-                </div>
-                <div class="mask-layer-name" data-layer-index="${i}">${layer.name}</div>
-                <span class="mask-layer-delete" data-delete="${i}" title="Delete layer">×</span>
-            </div>
-        `).join('');
-
-        this._bindLayerEvents(container);
+        this.layersModule.updateList();
     }
 
     /**
      * Bind layer list events
+     * @deprecated Layer events are now handled in layersModule
      */
     _bindLayerEvents(container) {
-        // Layer selection
-        container.querySelectorAll('.mask-layer').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('mask-layer-delete') &&
-                    !e.target.classList.contains('mask-layer-name') &&
-                    e.target.tagName !== 'INPUT') {
-                    this.masks.activeLayerIndex = parseInt(el.dataset.index);
-                    this.updateLayersList();
-                    this.syncLayerUI();
-                }
-            });
-        });
-
-        // Single click on name selects layer (only if different layer)
-        container.querySelectorAll('.mask-layer-name').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (e.target.tagName === 'INPUT') return;
-                const index = parseInt(el.dataset.layerIndex);
-                if (this.masks.activeLayerIndex !== index) {
-                    this.masks.activeLayerIndex = index;
-                    this.updateLayersList();
-                    this.syncLayerUI();
-                }
-            });
-
-            // Double-click for inline rename
-            el.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const index = parseInt(el.dataset.layerIndex);
-                const layer = this.masks.layers[index];
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = layer.name;
-                input.style.cssText = `
-                    width: 100%;
-                    background: var(--bg-tertiary);
-                    border: 1px solid var(--accent-primary);
-                    border-radius: 4px;
-                    color: var(--text-primary);
-                    font-size: 12px;
-                    padding: 2px 6px;
-                    outline: none;
-                    box-sizing: border-box;
-                `;
-
-                el.textContent = '';
-                el.appendChild(input);
-                input.focus();
-                input.select();
-
-                let saved = false;
-                const saveRename = () => {
-                    if (saved) return;
-                    saved = true;
-                    const newName = input.value.trim();
-                    if (newName) {
-                        layer.name = newName;
-                    }
-                    this.updateLayersList();
-                };
-
-                input.addEventListener('blur', saveRename);
-                input.addEventListener('keydown', (ev) => {
-                    if (ev.key === 'Enter') {
-                        ev.preventDefault();
-                        input.blur();
-                    } else if (ev.key === 'Escape') {
-                        saved = true;
-                        this.updateLayersList();
-                    }
-                });
-            });
-        });
-
-        // Delete layer with confirmation
-        container.querySelectorAll('.mask-layer-delete').forEach(el => {
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(el.dataset.delete);
-                const layer = this.masks.layers[index];
-                if (confirm(`Delete "${layer.name}"?`)) {
-                    this.masks.deleteLayer(index);
-                    this.updateLayersList();
-                    this.syncLayerUI();
-                    this.renderWithMask(false);
-                }
-            });
-        });
+        // Now delegated to layersModule._bindEvents()
     }
 
     /**
      * Sync layer UI with active layer
      */
     syncLayerUI() {
-        const adj = this.masks.getActiveAdjustments();
-        this.maskSliders.forEach(name => {
-            const slider = document.getElementById(`slider-mask-${name}`);
-            const valueDisplay = document.getElementById(`val-mask-${name}`);
-            const value = adj ? (adj[name] || 0) : 0;
-            if (slider) slider.value = value;
-            if (valueDisplay) valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-        });
+        this.layersModule.syncUI();
     }
 
     /**
@@ -2680,122 +1219,15 @@ export class EditorUI {
      * Uses offscreen canvas to render at original image resolution
      */
     exportImage() {
-        if (!this.state.originalImage) {
-            console.warn('No image to export');
-            return;
-        }
-
-        // Get export settings from UI or use defaults
-        const formatSelect = document.getElementById('export-format');
-        const qualitySlider = document.getElementById('slider-export-quality');
-
-        const format = formatSelect?.value || 'png';
-        const quality = (qualitySlider?.value || 95) / 100;
-
-        // Determine MIME type
-        const mimeTypes = {
-            'png': 'image/png',
-            'jpeg': 'image/jpeg',
-            'webp': 'image/webp'
-        };
-        const mimeType = mimeTypes[format] || 'image/png';
-
-        // File extension
-        const extensions = {
-            'png': 'png',
-            'jpeg': 'jpg',
-            'webp': 'webp'
-        };
-        const extension = extensions[format] || 'png';
-
-        // Show export progress
-        const statusBar = document.querySelector('.status-right .perf');
-        const originalStatus = statusBar?.textContent;
-        if (statusBar) statusBar.textContent = 'Exporting...';
-
-        // Use setTimeout to allow UI to update
-        setTimeout(() => {
-            try {
-                this._performExport(mimeType, quality, extension);
-            } catch (error) {
-                console.error('Export failed:', error);
-                alert('Export failed: ' + error.message);
-            } finally {
-                if (statusBar) statusBar.textContent = originalStatus || 'Ready';
-            }
-        }, 50);
+        this.exportModule.exportImage();
     }
 
     /**
      * Internal export method - renders at original resolution
+     * @deprecated Use exportModule._performExport instead
      */
     _performExport(mimeType, quality, extension) {
-        const originalWidth = this.state.originalImage.width;
-        const originalHeight = this.state.originalImage.height;
-
-        // Check if we're already at full resolution
-        const currentWidth = this.gpu.width;
-        const currentHeight = this.gpu.height;
-
-        let exportCanvas;
-
-        if (currentWidth === originalWidth && currentHeight === originalHeight) {
-            // Already at full resolution, use current canvas
-            exportCanvas = this.elements.canvas;
-
-            // Make sure we have the latest render with all adjustments
-            let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
-        } else {
-            // Need to render at full resolution
-            // For now, use current canvas (full resolution rendering is complex)
-            // TODO: Implement true full-resolution export in future
-            exportCanvas = this.elements.canvas;
-
-            // Render with current adjustments
-            let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
-
-            console.log(`⚠️ Exporting at display resolution (${currentWidth}×${currentHeight}). ` +
-                `Original: ${originalWidth}×${originalHeight}`);
-        }
-
-        // Export to blob
-        exportCanvas.toBlob((blob) => {
-            if (!blob) {
-                console.error('Failed to create blob');
-                return;
-            }
-
-            // Create download link
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-
-            // Get custom filename or generate with timestamp
-            const filenameInput = document.getElementById('export-filename');
-            let filename = filenameInput?.value?.trim();
-
-            if (!filename) {
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                filename = `orlume-export-${timestamp}`;
-            }
-
-            // Sanitize filename (remove invalid characters)
-            filename = filename.replace(/[<>:"/\\|?*]/g, '-');
-
-            link.download = `${filename}.${extension}`;
-            link.href = url;
-            link.click();
-
-            // Cleanup
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-            // Log export info
-            const sizeKB = (blob.size / 1024).toFixed(1);
-            console.log(`✅ Exported ${extension.toUpperCase()} (${sizeKB} KB) at ${currentWidth}×${currentHeight}`);
-        }, mimeType, quality);
+        this.exportModule._performExport(mimeType, quality, extension);
     }
 
     /**
@@ -2803,63 +1235,21 @@ export class EditorUI {
      * Called when quality slider changes
      */
     estimateFileSize() {
-        if (!this.state.originalImage || !this.elements.canvas) {
-            this._updateFileSizeDisplay('--');
-            return;
-        }
-
-        const formatSelect = document.getElementById('export-format');
-        const qualitySlider = document.getElementById('slider-export-quality');
-
-        const format = formatSelect?.value || 'jpeg';
-        const quality = (qualitySlider?.value || 95) / 100;
-
-        const mimeTypes = {
-            'png': 'image/png',
-            'jpeg': 'image/jpeg',
-            'webp': 'image/webp'
-        };
-        const mimeType = mimeTypes[format] || 'image/jpeg';
-
-        // Ensure we have the latest render
-        let resultTexture = this.gpu.renderToTexture();
-        resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-        this.gpu.blitToCanvas(resultTexture);
-
-        // Generate blob to estimate size
-        this.elements.canvas.toBlob((blob) => {
-            if (blob) {
-                const sizeKB = blob.size / 1024;
-                let sizeText;
-                if (sizeKB < 1024) {
-                    sizeText = `~${sizeKB.toFixed(0)} KB`;
-                } else {
-                    sizeText = `~${(sizeKB / 1024).toFixed(1)} MB`;
-                }
-                this._updateFileSizeDisplay(sizeText);
-            }
-        }, mimeType, quality);
+        this.exportModule.estimateFileSize();
     }
 
     /**
      * Update file size display in UI
      */
     _updateFileSizeDisplay(sizeText) {
-        const sizeDisplay = document.getElementById('estimated-file-size');
-        if (sizeDisplay) {
-            sizeDisplay.textContent = sizeText;
-        }
+        this.exportModule._updateFileSizeDisplay(sizeText);
     }
 
     /**
      * Show export options modal (if expanded export UI is desired)
      */
     showExportOptions() {
-        // Toggle export options visibility
-        const exportOptions = document.getElementById('export-options');
-        if (exportOptions) {
-            exportOptions.style.display = exportOptions.style.display === 'none' ? 'block' : 'none';
-        }
+        this.exportModule.showExportOptions();
     }
 
     /**
@@ -2867,11 +1257,7 @@ export class EditorUI {
      * Captures global state across all sections for full undo/redo support
      */
     _pushHistoryDebounced() {
-        clearTimeout(this._historyDebounceTimer);
-        this._historyDebounceTimer = setTimeout(() => {
-            const snapshot = this._captureFullState();
-            this.history.pushState(snapshot);
-        }, 100);
+        this.historyModule.pushDebounced();
     }
 
     /**
@@ -2879,68 +1265,21 @@ export class EditorUI {
      * Includes image data for undoing crops and destructive operations
      */
     _captureFullState() {
-        // Global develop adjustments
-        const globalAdjustments = { ...this.state.globalAdjustments };
-
-        // Mask layer adjustments (don't store texture data, just adjustments)
-        const maskLayerAdjustments = this.masks.layers.map(layer => ({
-            id: layer.id,
-            name: layer.name,
-            adjustments: { ...layer.adjustments }
-        }));
-
-        // Capture current image state for crop undo
-        let imageDataUrl = null;
-        if (this.state.originalImage) {
-            // Create a canvas to capture the original image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.state.originalImage.width;
-            tempCanvas.height = this.state.originalImage.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.state.originalImage, 0, 0);
-            imageDataUrl = tempCanvas.toDataURL('image/png');
-        }
-
-        return {
-            globalAdjustments,
-            maskLayerAdjustments,
-            activeLayerIndex: this.masks.activeLayerIndex,
-            imageDataUrl,
-            imageWidth: this.state.originalImage?.width || 0,
-            imageHeight: this.state.originalImage?.height || 0
-        };
+        return this.historyModule.captureFullState();
     }
 
     /**
      * Undo last adjustment
      */
     undo() {
-        const state = this.history.undo();
-        if (state) {
-            this._restoreState(state);
-            console.log('↩️ Undo', this.history.getInfo());
-
-            // If in liquify mode, refresh the liquify tool to show the change
-            if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this._activateLiquifyTool(), 300);
-            }
-        }
+        this.historyModule.undo();
     }
 
     /**
      * Redo previously undone adjustment
      */
     redo() {
-        const state = this.history.redo();
-        if (state) {
-            this._restoreState(state);
-            console.log('↪️ Redo', this.history.getInfo());
-
-            // If in liquify mode, refresh the liquify tool to show the change
-            if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this._activateLiquifyTool(), 300);
-            }
-        }
+        this.historyModule.redo();
     }
 
     /**
@@ -2948,89 +1287,14 @@ export class EditorUI {
      * Handles image restoration for crop undo
      */
     _restoreState(snapshot) {
-        console.log('🔄 Restoring state. DataURL length:', snapshot.imageDataUrl?.length || 0);
-
-        // Check if we need to restore a different image (crop or liquify undo)
-        // Always restore if imageDataUrl exists - this handles liquify with same dimensions
-        const needsImageRestore = !!snapshot.imageDataUrl;
-
-        if (needsImageRestore) {
-            // Restore the image from data URL
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
-
-                // Reload GPU processor with restored image
-                this.gpu.loadImage(img);
-
-                // Clear masks (they don't align with restored image)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.updateLayersList();
-
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
-
-                // Then restore adjustments
-                this._restoreAdjustments(snapshot);
-
-                console.log(`🖼️ Image restored: ${img.width}×${img.height}`);
-            };
-            img.src = snapshot.imageDataUrl;
-        } else {
-            // No image change, just restore adjustments
-            this._restoreAdjustments(snapshot);
-        }
+        this.historyModule.restoreState(snapshot);
     }
 
     /**
      * Restore adjustment values from snapshot
      */
     _restoreAdjustments(snapshot) {
-        // Restore global adjustments
-        if (snapshot.globalAdjustments) {
-            for (const [name, value] of Object.entries(snapshot.globalAdjustments)) {
-                // Update state
-                this.state.globalAdjustments[name] = value;
-
-                // Update GPU
-                this.gpu.setParam(name, value);
-
-                // Update slider UI
-                const slider = document.getElementById(`slider-${name}`);
-                const valueDisplay = document.getElementById(`val-${name}`);
-                if (slider && valueDisplay) {
-                    slider.value = value;
-                    valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-                }
-            }
-        }
-
-        // Restore mask layer adjustments
-        if (snapshot.maskLayerAdjustments) {
-            for (const savedLayer of snapshot.maskLayerAdjustments) {
-                const layer = this.masks.layers.find(l => l.id === savedLayer.id);
-                if (layer) {
-                    Object.assign(layer.adjustments, savedLayer.adjustments);
-
-                    // Update mask slider UI if this layer is active
-                    if (this.masks.layers.indexOf(layer) === this.masks.activeLayerIndex) {
-                        for (const [name, value] of Object.entries(savedLayer.adjustments)) {
-                            const slider = document.getElementById(`slider-mask-${name}`);
-                            const valueDisplay = document.getElementById(`val-mask-${name}`);
-                            if (slider && valueDisplay) {
-                                slider.value = value;
-                                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Re-render (handles both global and mask adjustments)
-        this.renderWithMask(false);
-        requestAnimationFrame(() => this.renderHistogram());
+        this.historyModule.restoreAdjustments(snapshot);
     }
 }
+
