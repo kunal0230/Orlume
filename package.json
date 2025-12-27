@@ -19,6 +19,7 @@
     "upscaler": "^1.0.0-beta.19"
   },
   "devDependencies": {
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }
