@@ -19,36 +19,28 @@ export class DepthEstimator {
         try {
             const { pipeline, env } = await import('@huggingface/transformers');
 
+            // Configure ONNX Runtime WASM paths (Transformers.js uses ONNX internally)
+            env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/';
+
             env.allowLocalModels = false;
             env.useBrowserCache = true;
 
-            console.log('Loading Depth Anything V2 model...');
+            console.log('Loading Depth Anything V2 model (WASM backend)...');
 
+            // Use WASM directly to avoid WebGPU conflicts
             this.model = await pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
-                device: 'webgpu',
+                device: 'wasm',
+                dtype: 'fp32',
                 progress_callback: progressCallback,
             });
 
             this.isLoading = false;
-            console.log('✓ Depth model loaded');
+            console.log('✅ Depth model loaded (WASM)');
             return this.model;
 
         } catch (error) {
             this.isLoading = false;
-
-            if (error.message?.includes('WebGPU')) {
-                console.warn('WebGPU failed, falling back to WASM...');
-                const { pipeline, env } = await import('@huggingface/transformers');
-                env.allowLocalModels = false;
-
-                this.model = await pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
-                    device: 'wasm',
-                    progress_callback: progressCallback,
-                });
-
-                return this.model;
-            }
-
+            console.error('Depth model loading failed:', error);
             throw error;
         }
     }
