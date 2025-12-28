@@ -2,9 +2,15 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "framework": "vite",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "rewrites": [
         {
-            "source": "/(.*)",
+            "source": "/editor",
+            "destination": "/editor.html"
+        },
+        {
+            "source": "/((?!assets|images|public|.*\\..*).*)",
             "destination": "/index.html"
         }
     ]
