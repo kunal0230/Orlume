@@ -159,29 +159,48 @@ export class DepthEstimator {
         };
     }
 
-    generateNormalMap(depthMap) {
+    generateNormalMap(depthMap, strength = 50.0) {
         const { width, height, data } = depthMap;
         const normalData = new Uint8ClampedArray(width * height * 4);
+
+        // Sobel kernels for better edge detection
+        // Gx = [-1, 0, 1], Gy = [-1, 0, 1]^T
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const idx = (y * width + x) * 4;
 
-                const leftIdx = (y * width + Math.max(0, x - 1)) * 4;
-                const rightIdx = (y * width + Math.min(width - 1, x + 1)) * 4;
-                const topIdx = (Math.max(0, y - 1) * width + x) * 4;
-                const bottomIdx = (Math.min(height - 1, y + 1) * width + x) * 4;
+                // Get 3x3 neighborhood depth values (using R channel which has depth)
+                const getDepth = (px, py) => {
+                    px = Math.max(0, Math.min(width - 1, px));
+                    py = Math.max(0, Math.min(height - 1, py));
+                    return data[(py * width + px) * 4] / 255.0;
+                };
 
-                const dX = (data[rightIdx] - data[leftIdx]) / 255;
-                const dY = (data[bottomIdx] - data[topIdx]) / 255;
+                // Sobel gradient calculation
+                const left = getDepth(x - 1, y);
+                const right = getDepth(x + 1, y);
+                const top = getDepth(x, y - 1);
+                const bottom = getDepth(x, y + 1);
+                const topLeft = getDepth(x - 1, y - 1);
+                const topRight = getDepth(x + 1, y - 1);
+                const bottomLeft = getDepth(x - 1, y + 1);
+                const bottomRight = getDepth(x + 1, y + 1);
 
-                const scale = 3.0;
-                const nx = -dX * scale;
-                const ny = -dY * scale;
+                // Sobel X = right - left (with diagonal weights)
+                const gx = (topRight + 2 * right + bottomRight) - (topLeft + 2 * left + bottomLeft);
+                // Sobel Y = bottom - top
+                const gy = (bottomLeft + 2 * bottom + bottomRight) - (topLeft + 2 * top + topRight);
+
+                // Scale up gradients to make normals more pronounced
+                const nx = -gx * strength;
+                const ny = -gy * strength;
                 const nz = 1.0;
 
+                // Normalize
                 const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
 
+                // Encode to 0-255 range (normal from -1..1 to 0..255)
                 normalData[idx] = Math.floor(((nx / len) * 0.5 + 0.5) * 255);
                 normalData[idx + 1] = Math.floor(((ny / len) * 0.5 + 0.5) * 255);
                 normalData[idx + 2] = Math.floor(((nz / len) * 0.5 + 0.5) * 255);

@@ -587,6 +587,51 @@
                             ✨ Apply Relighting
                         </button>
                     </div>
+
+                    <!-- Debug Visualization Section -->
+                    <div class="section" id="debug-viz-controls" style="display: none;">
+                        <div class="section-header"
+                            style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🔍 Debug Maps</span>
+                            <span style="font-size: 10px; color: var(--text-secondary);">View Analysis</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                            <button class="btn viz-btn" id="btn-viz-original" data-viz="original"
+                                style="padding: 8px; font-size: 11px;">
+                                🖼️ Original
+                            </button>
+                            <button class="btn viz-btn" id="btn-viz-depth" data-viz="depth"
+                                style="padding: 8px; font-size: 11px;">
+                                📊 Depth
+                            </button>
+                            <button class="btn viz-btn" id="btn-viz-normals" data-viz="normals"
+                                style="padding: 8px; font-size: 11px;">
+                                🧭 Normals
+                            </button>
+                            <button class="btn viz-btn" id="btn-viz-albedo" data-viz="albedo"
+                                style="padding: 8px; font-size: 11px;">
+                                🌈 Albedo
+                            </button>
+                            <button class="btn viz-btn" id="btn-viz-materials" data-viz="materials"
+                                style="padding: 8px; font-size: 11px; grid-column: span 2;">
+                                🎨 Materials
+                            </button>
+                        </div>
+
+                        <div id="viz-preview"
+                            style="background: var(--bg-dark); border-radius: 8px; padding: 8px; display: none;">
+                            <div id="viz-label"
+                                style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; text-align: center;">
+                                Preview
+                            </div>
+                            <canvas id="viz-canvas" style="width: 100%; border-radius: 4px; display: block;"></canvas>
+                        </div>
+
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
+                            Click a button to see how the AI understands your image
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Export Panel -->

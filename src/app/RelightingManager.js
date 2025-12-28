@@ -1,15 +1,21 @@
 /**
  * RelightingManager - Full 3D features integration (Depth, Relighting, 3D View, Parallax)
- * Enhanced with ONNX Runtime depth estimation, raymarching shadows, and HBAO
  * 
- * v4.8.0: Added high-performance ONNX depth, raymarching shadows, HBAO ambient occlusion
+ * v4.9.0: Multi-Modal Image Intelligence System
+ * - Depth Estimation (Depth Anything Small)
+ * - Semantic Segmentation (SegFormer B0 - 150 classes)
+ * - Fusion Engine (depth-seg fusion, material inference)
+ * - Enhanced raymarching shadows and HBAO ambient occlusion
  */
 import { DepthEstimator } from '../ml/DepthEstimator.js';
+import { SegmentationEstimator } from '../ml/SegmentationEstimator.js';
+import { FusionEngine } from '../effects/FusionEngine.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
 import { ParallaxEffect } from '../effects/ParallaxEffect.js';
 import { SceneManager } from '../renderer/SceneManager.js';
 import { RaymarchingShadowProcessor } from '../effects/RaymarchingShadowShader.js';
 import { HBAOProcessor } from '../effects/HBAOShader.js';
+import { RelightingEngine } from '../effects/RelightingEngine.js';
 
 export class RelightingManager {
     constructor(app) {
@@ -25,6 +31,7 @@ export class RelightingManager {
         this.useONNX = false;      // Disabled - conflicts with Transformers.js ONNX runtime
         this.useRaymarching = true;
         this.useHBAO = true;
+        this.useSegmentation = true; // Enable multi-modal segmentation
 
         // Setup DOM elements needed by effects
         this._setupDOMElements();
@@ -35,9 +42,23 @@ export class RelightingManager {
         // Initialize depth estimator (has built-in WebGPU → WASM fallback)
         this.depthEstimator = new DepthEstimator(this.appAdapter);
 
+        // Initialize segmentation estimator for multi-modal analysis
+        this.segmentationEstimator = new SegmentationEstimator(this.appAdapter);
+
+        // Initialize fusion engine for combining depth + segmentation
+        this.fusionEngine = new FusionEngine();
+
+        // Additional outputs from fusion
+        this.materialMap = null;
+        this.segmentationResult = null;
+
         // Initialize enhanced processors
         this.shadowProcessor = new RaymarchingShadowProcessor();
         this.hbaoProcessor = new HBAOProcessor();
+
+        // Initialize new PBR-based relighting engine
+        this.relightingEngine = new RelightingEngine(this.appAdapter);
+        this.albedoMap = null;  // Albedo (unlit color) from intrinsic decomposition
 
         // Initialize other components with adapter
         this.relightingEffect = new RelightingEffect(this.appAdapter);
@@ -46,7 +67,7 @@ export class RelightingManager {
 
         this._initUI();
 
-        console.log('🔦 RelightingManager v4.8.0 initialized (ONNX + Raymarching + HBAO)');
+        console.log('🔦 RelightingManager v5.0.0 initialized (PBR Relighting Engine)');
     }
 
     /**
@@ -270,6 +291,152 @@ export class RelightingManager {
         if (btnApply) {
             btnApply.addEventListener('click', () => this.applyRelighting());
         }
+
+        // Debug visualization buttons
+        this._initVisualizationButtons();
+    }
+
+    /**
+     * Initialize debug visualization buttons
+     */
+    _initVisualizationButtons() {
+        const vizButtons = document.querySelectorAll('.viz-btn');
+        const vizPreview = document.getElementById('viz-preview');
+        const vizCanvas = document.getElementById('viz-canvas');
+        const vizLabel = document.getElementById('viz-label');
+
+        if (!vizButtons.length) return;
+
+        vizButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vizType = btn.dataset.viz;
+
+                // Update active state
+                vizButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show visualization
+                this._showVisualization(vizType, vizCanvas, vizLabel, vizPreview);
+            });
+        });
+    }
+
+    /**
+     * Show a visualization on the debug canvas
+     */
+    _showVisualization(type, canvas, label, container) {
+        if (!container) return;
+
+        let sourceCanvas = null;
+        let labelText = '';
+
+        console.log(`🔍 Showing visualization: ${type}`);
+        console.log('  depthMap:', this.depthMap ? `${this.depthMap.width}×${this.depthMap.height}` : 'null');
+        console.log('  normalMap:', this.normalMap ? `${this.normalMap.width}×${this.normalMap.height}` : 'null');
+        console.log('  materialMap:', this.materialMap ? `${this.materialMap.width}×${this.materialMap.height}` : 'null');
+
+        switch (type) {
+            case 'original':
+                // Show original image
+                if (this.app?.state?.originalImage) {
+                    const img = this.app.state.originalImage;
+                    sourceCanvas = document.createElement('canvas');
+                    sourceCanvas.width = img.width;
+                    sourceCanvas.height = img.height;
+                    sourceCanvas.getContext('2d').drawImage(img, 0, 0);
+                    labelText = '🖼️ Original Image';
+                }
+                break;
+
+            case 'depth':
+                sourceCanvas = this._getCanvasFromMap(this.depthMap);
+                labelText = sourceCanvas ? '📊 Depth Map - Brighter = Further' : '📊 Depth Map - Not available';
+                break;
+
+            case 'normals':
+                sourceCanvas = this._getCanvasFromMap(this.normalMap);
+                labelText = sourceCanvas ? '🧭 Normal Map - RGB = XYZ' : '🧭 Normal Map - Not available';
+                break;
+
+            case 'materials':
+                sourceCanvas = this._getCanvasFromMap(this.materialMap);
+                labelText = sourceCanvas ? '🎨 Material Map - R:Rough G:Metal B:SSS' : '🎨 Material Map - Not available';
+                break;
+
+            case 'albedo':
+                sourceCanvas = this._getCanvasFromMap(this.albedoMap);
+                labelText = sourceCanvas ? '🌈 Albedo - True color (unlit)' : '🌈 Albedo - Not available';
+                break;
+        }
+
+        // Always show container
+        container.style.display = 'block';
+
+        if (sourceCanvas) {
+            canvas.width = sourceCanvas.width;
+            canvas.height = sourceCanvas.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(sourceCanvas, 0, 0);
+            console.log(`  ✅ Drew ${sourceCanvas.width}×${sourceCanvas.height}`);
+        } else {
+            // Show "not available" message
+            canvas.width = 280;
+            canvas.height = 80;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, 280, 80);
+            ctx.fillStyle = '#888';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Map not available', 140, 40);
+            ctx.fillText('Run "Estimate Depth" first', 140, 58);
+        }
+
+        if (label) {
+            label.textContent = labelText;
+        }
+    }
+
+    /**
+     * Helper to extract canvas from various map formats
+     */
+    _getCanvasFromMap(map) {
+        if (!map) return null;
+        if (map instanceof HTMLCanvasElement) return map;
+        if (map.canvas instanceof HTMLCanvasElement) return map.canvas;
+
+        // Check for object with width, height, data (like normalMap from DepthEstimator)
+        if (map.width && map.height && map.data) {
+            const canvas = document.createElement('canvas');
+            canvas.width = map.width;
+            canvas.height = map.height;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(map.width, map.height);
+
+            // Check if data is already RGBA format (Uint8ClampedArray with length = w*h*4)
+            if (map.data.length === map.width * map.height * 4) {
+                // Direct copy - data is already in RGBA format
+                imgData.data.set(map.data);
+            } else if (map.data.length === map.width * map.height) {
+                // Single channel data (grayscale) - expand to RGBA
+                for (let i = 0; i < map.data.length; i++) {
+                    const v = map.data[i] > 1 ? map.data[i] : Math.round(map.data[i] * 255);
+                    imgData.data[i * 4] = v;
+                    imgData.data[i * 4 + 1] = v;
+                    imgData.data[i * 4 + 2] = v;
+                    imgData.data[i * 4 + 3] = 255;
+                }
+            } else {
+                console.warn('Unknown data format length:', map.data.length, 'expected:', map.width * map.height * 4);
+                return null;
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            return canvas;
+        }
+
+        console.warn('Unknown map format:', typeof map, map);
+        return null;
     }
 
     /**
@@ -289,7 +456,10 @@ export class RelightingManager {
 
     /**
      * Estimate depth from the current image
-     * Uses ONNX Runtime (WebGPU) for best performance, falls back to Transformers.js
+     * 
+     * v4.9.0: Multi-Modal Intelligence System
+     * Runs depth estimation and semantic segmentation IN PARALLEL,
+     * then fuses results for enhanced quality.
      */
     async estimateDepth() {
         if (!this.app.state.hasImage) {
@@ -303,7 +473,10 @@ export class RelightingManager {
         try {
             // Show progress
             if (progressContainer) progressContainer.hidden = false;
-            if (btnEstimate) btnEstimate.disabled = true;
+            if (btnEstimate) {
+                btnEstimate.disabled = true;
+                btnEstimate.textContent = 'Analyzing...';
+            }
 
             // Get image with dataURL for depth estimation
             const img = this.app.state.originalImage;
@@ -319,33 +492,74 @@ export class RelightingManager {
                 height: img.height
             };
 
-            // Try ONNX Runtime first (WebGPU zero-copy), fallback to Transformers.js
-            let depthEstimationMethod = 'unknown';
             const startTime = performance.now();
+            console.log('🧠 Starting Multi-Modal Image Intelligence Analysis...');
 
-            if (this.useONNX) {
-                try {
-                    console.log('🚀 Attempting ONNX Runtime depth estimation...');
-                    this.depthMap = await this.onnxDepthEstimator.estimate(imageData);
-                    depthEstimationMethod = this.onnxDepthEstimator.getProvider();
-                } catch (onnxError) {
-                    console.warn('⚠️ ONNX depth estimation failed, falling back to Transformers.js:', onnxError.message);
-                    this.depthMap = await this.depthEstimator.estimate(imageData);
-                    depthEstimationMethod = 'transformers-wasm';
-                }
-            } else {
-                this.depthMap = await this.depthEstimator.estimate(imageData);
-                depthEstimationMethod = 'transformers-wasm';
+            // =====================================================
+            // PHASE 1: Run depth and segmentation IN PARALLEL
+            // =====================================================
+            const analysisPromises = [
+                this._runDepthEstimation(imageData),
+            ];
+
+            // Add segmentation if enabled
+            if (this.useSegmentation) {
+                analysisPromises.push(this._runSegmentation(img));
             }
 
-            const estimationTime = performance.now() - startTime;
-            console.log(`✅ Depth map generated: ${this.depthMap.width}×${this.depthMap.height} via ${depthEstimationMethod} (${estimationTime.toFixed(0)}ms)`);
+            const results = await Promise.all(analysisPromises);
 
-            // Generate normal map from depth
-            this.normalMap = this.depthEstimator.generateNormalMap(this.depthMap, 3.0);
+            const rawDepthMap = results[0];
+            const segmentationResult = this.useSegmentation ? results[1] : null;
+
+            const phase1Time = performance.now() - startTime;
+            console.log(`✅ Phase 1 complete: Depth + Segmentation (${phase1Time.toFixed(0)}ms)`);
+
+            // =====================================================
+            // PHASE 2: Fusion - Combine depth + segmentation
+            // =====================================================
+            if (segmentationResult && this.fusionEngine) {
+                console.log('🔀 Starting fusion...');
+                const fusionStart = performance.now();
+
+                try {
+                    const fusionResult = await this.fusionEngine.fuse(
+                        rawDepthMap,
+                        segmentationResult,
+                        { normalStrength: 3.0 }
+                    );
+
+                    // Use enhanced outputs
+                    this.depthMap = fusionResult.refinedDepth;
+                    this.normalMap = fusionResult.normalMap;
+                    this.materialMap = fusionResult.materialMap;
+                    this.segmentationResult = segmentationResult;
+
+                    const fusionTime = performance.now() - fusionStart;
+                    console.log(`✅ Fusion complete: Enhanced depth, normals, materials (${fusionTime.toFixed(0)}ms)`);
+
+                } catch (fusionError) {
+                    console.warn('⚠️ Fusion failed, using raw depth:', fusionError.message);
+                    this.depthMap = rawDepthMap;
+                    this.normalMap = this.depthEstimator.generateNormalMap(rawDepthMap, 3.0);
+                    this.materialMap = null;
+                }
+            } else {
+                // No segmentation, use raw depth
+                this.depthMap = rawDepthMap;
+                this.normalMap = this.depthEstimator.generateNormalMap(rawDepthMap, 3.0);
+                this.materialMap = null;
+            }
+
+            console.log(`✅ Depth map: ${this.depthMap.width}×${this.depthMap.height}`);
             console.log('✅ Normal map generated');
+            if (this.materialMap) {
+                console.log('✅ Material map generated (150 classes)');
+            }
 
-            // Generate HBAO ambient occlusion if enabled
+            // =====================================================
+            // PHASE 3: Generate HBAO ambient occlusion
+            // =====================================================
             if (this.useHBAO) {
                 try {
                     const aoCanvas = this.hbaoProcessor.compute(this.depthMap, {
@@ -365,17 +579,48 @@ export class RelightingManager {
                     this.aoMap = null;
                 }
             }
+            // =====================================================
+            // PHASE 4: Extract Albedo for PBR Relighting
+            // =====================================================
+            console.log('🎨 Extracting albedo (intrinsic decomposition)...');
+            const albedoStart = performance.now();
+
+            try {
+                // Prepare scene for the new relighting engine
+                const sceneResult = this.relightingEngine.prepareScene(
+                    this.app.state.originalImage,
+                    {
+                        depthMap: this.depthMap,
+                        normalMap: this.normalMap,
+                        materialMap: this.materialMap
+                    }
+                );
+
+                this.albedoMap = sceneResult.albedo;
+                const albedoTime = performance.now() - albedoStart;
+                console.log(`✅ Albedo extracted (${albedoTime.toFixed(0)}ms)`);
+            } catch (albedoError) {
+                console.warn('⚠️ Albedo extraction failed:', albedoError.message);
+                this.albedoMap = null;
+            }
+
+            const totalTime = performance.now() - startTime;
+            console.log(`🎉 Multi-Modal Analysis complete in ${(totalTime / 1000).toFixed(1)}s`);
 
             // Show relighting controls
             const controls = document.getElementById('relight-controls');
             if (controls) controls.style.display = 'block';
+
+            // Show debug visualization controls
+            const debugViz = document.getElementById('debug-viz-controls');
+            if (debugViz) debugViz.style.display = 'block';
 
             // Enable relighting automatically
             this.enableRelight();
 
             // Update UI
             if (btnEstimate) {
-                btnEstimate.textContent = 'Re-estimate Depth';
+                btnEstimate.textContent = 'Re-analyze Image';
                 btnEstimate.disabled = false;
             }
 
@@ -384,11 +629,31 @@ export class RelightingManager {
             }, 1000);
 
         } catch (error) {
-            console.error('Depth estimation failed:', error);
+            console.error('Multi-modal analysis failed:', error);
             if (progressContainer) progressContainer.hidden = true;
             if (btnEstimate) btnEstimate.disabled = false;
-            alert('Depth estimation failed: ' + error.message);
+            alert('Analysis failed: ' + error.message);
         }
+    }
+
+    /**
+     * Run depth estimation (internal helper)
+     */
+    async _runDepthEstimation(imageData) {
+        console.log('📊 Running depth estimation...');
+        const depthMap = await this.depthEstimator.estimate(imageData);
+        console.log(`✅ Depth: ${depthMap.width}×${depthMap.height}`);
+        return depthMap;
+    }
+
+    /**
+     * Run semantic segmentation (internal helper)
+     */
+    async _runSegmentation(image) {
+        console.log('🏷️ Running semantic segmentation...');
+        const result = await this.segmentationEstimator.segment(image);
+        console.log(`✅ Segmentation: ${result.segments.length} segments`);
+        return result;
     }
 
     /**
