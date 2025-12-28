@@ -306,13 +306,23 @@ export class HealingModule {
             const imageDataUrl = this.healingTool.getImageDataUrl();
             const maskDataUrl = this.healingTool.getMaskDataUrl();
 
+            // Store original alpha channel before sending to API
+            const originalAlpha = this._extractAlphaChannel();
+
             console.log('🩹 Sending to LaMa API...');
             const result = await this.replicate.inpaint(imageDataUrl, maskDataUrl);
+
+            if (!result) {
+                throw new Error('No result received from API');
+            }
 
             console.log('🩹 Healing result received');
 
             // Load the result image
-            this.healedImage = await this._loadImageAsync(result);
+            const healedImg = await this._loadImageAsync(result);
+
+            // Restore original alpha channel (LaMa doesn't preserve transparency)
+            this.healedImage = await this._restoreAlphaChannel(healedImg, originalAlpha);
 
             // Show result on canvas
             const ctx = this.healingCanvas.getContext('2d');
@@ -328,9 +338,51 @@ export class HealingModule {
             console.error('Healing failed:', error);
             alert(`Healing failed: ${error.message}`);
             btn.textContent = originalText;
+
+            // Re-render the preview to show the original image (don't lose the image)
+            this._renderPreview();
         } finally {
             btn.disabled = false;
         }
+    }
+
+    /**
+     * Extract alpha channel from current image
+     */
+    _extractAlphaChannel() {
+        const imageData = this.gpu.toImageData();
+        if (!imageData) return null;
+
+        const alpha = new Uint8Array(imageData.width * imageData.height);
+        for (let i = 0; i < alpha.length; i++) {
+            alpha[i] = imageData.data[i * 4 + 3];
+        }
+        return { alpha, width: imageData.width, height: imageData.height };
+    }
+
+    /**
+     * Restore alpha channel to healed image
+     */
+    async _restoreAlphaChannel(healedImg, originalAlpha) {
+        if (!originalAlpha) return healedImg;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = originalAlpha.width;
+        canvas.height = originalAlpha.height;
+        const ctx = canvas.getContext('2d');
+
+        // Draw healed image
+        ctx.drawImage(healedImg, 0, 0, canvas.width, canvas.height);
+
+        // Restore alpha channel
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < originalAlpha.alpha.length; i++) {
+            imageData.data[i * 4 + 3] = originalAlpha.alpha[i];
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Convert back to image - wait for it to load
+        return await this._loadImageAsync(canvas.toDataURL('image/png'));
     }
 
     /**
@@ -359,9 +411,22 @@ export class HealingModule {
             // Update histogram
             setTimeout(() => this.editor.renderHistogram(), 100);
 
-            // Reinitialize healing tool with new image
+            // Detect and preserve transparency (checkerboard background)
+            if (this.editor._detectAndShowTransparency) {
+                this.editor._detectAndShowTransparency(this.state.originalImage);
+            }
+
+            // Hide the healing overlay canvas so GPU canvas is visible
+            if (this.healingCanvas) {
+                const ctx = this.healingCanvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, this.healingCanvas.width, this.healingCanvas.height);
+                }
+            }
+
+            // Reinitialize healing tool with new image for next use
             this.healingTool.setImage(this.elements.canvas);
-            this._renderPreview();
+            this.healingTool.clearMask();
 
             console.log('✅ Healing applied successfully');
 
@@ -451,7 +516,7 @@ export class HealingModule {
             ctx.drawImage(this.elements.canvas, 0, 0);
             const imageDataUrl = tempCanvas.toDataURL('image/png');
 
-            console.log('🎭 Sending to rembg API...');
+            console.log('🎭 Sending to 851-labs/background-remover API...');
             const result = await this.replicate.removeBackground(imageDataUrl);
 
             console.log('🎭 Background removal result received');

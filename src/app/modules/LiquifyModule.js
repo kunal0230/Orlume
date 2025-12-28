@@ -311,6 +311,11 @@ export class LiquifyModule {
             // Update histogram
             setTimeout(() => this.editor.renderHistogram(), 100);
 
+            // Detect and preserve transparency (checkerboard background)
+            if (this.editor._detectAndShowTransparency) {
+                this.editor._detectAndShowTransparency(img);
+            }
+
             console.log('✅ Liquify applied successfully');
 
             // Reset liquify tool for next use but stay in liquify mode

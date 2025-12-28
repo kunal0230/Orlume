@@ -1364,33 +1364,105 @@
                             Automatically remove the background from your image using AI.
                         </p>
                         <button class="btn btn-primary" id="btn-remove-background" style="width: 100%;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                                <circle cx="6" cy="6" r="3" />
+                                <circle cx="6" cy="18" r="3" />
+                                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                            </svg>
                             Remove Background
                         </button>
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Background Options</div>
+                        <div class="section-header">Replace Background</div>
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Choose a new background after removal
+                        </p>
                         <div class="bg-options-grid"
-                            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
                             <button class="bg-option-btn active" data-bg="transparent"
-                                style="width: 100%; aspect-ratio: 1; background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px; border: 2px solid var(--accent); border-radius: 8px; cursor: pointer;"
-                                title="Transparent"></button>
+                                style="width: 100%; aspect-ratio: 1; background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px; border: 2px solid var(--accent); border-radius: 8px; cursor: pointer; position: relative;"
+                                title="Transparent">
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: #666;">Trans</span>
+                            </button>
                             <button class="bg-option-btn" data-bg="white"
-                                style="width: 100%; aspect-ratio: 1; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
-                                title="White"></button>
+                                style="width: 100%; aspect-ratio: 1; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative;"
+                                title="White">
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: #666;">White</span>
+                            </button>
                             <button class="bg-option-btn" data-bg="black"
-                                style="width: 100%; aspect-ratio: 1; background: black; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
-                                title="Black"></button>
+                                style="width: 100%; aspect-ratio: 1; background: black; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative;"
+                                title="Black">
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: #fff;">Black</span>
+                            </button>
                             <button class="bg-option-btn" data-bg="custom"
-                                style="width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #ff6b6b, #4ecdc4); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;"
-                                title="Custom Color"></button>
+                                style="width: 100%; aspect-ratio: 1; background: #4ecdc4; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative;"
+                                title="Custom Color">
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: #fff;">Color</span>
+                            </button>
+                            <button class="bg-option-btn" data-bg="gradient"
+                                style="width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #ff6b6b, #4ecdc4); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative;"
+                                title="Gradient">
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: #fff;">Gradient</span>
+                            </button>
+                            <button class="bg-option-btn" data-bg="upload"
+                                style="width: 100%; aspect-ratio: 1; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center;"
+                                title="Upload Image">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                                    stroke="var(--text-secondary)" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                <span
+                                    style="position: absolute; bottom: 2px; left: 0; right: 0; font-size: 8px; color: var(--text-secondary);">Upload</span>
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- Transform Controls -->
+                    <div class="section">
+                        <div class="section-header">Transform Object</div>
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Drag to move • Corner handles to resize • Top handle to rotate
+                        </p>
+
+                        <div class="slider-group" style="margin-bottom: 12px;">
+                            <div class="slider-label">
+                                <span>Scale</span>
+                                <span id="bg-scale-value">100%</span>
+                            </div>
+                            <input type="range" class="slider" id="bg-scale-slider" min="0.1" max="3" step="0.01"
+                                value="1">
+                        </div>
+
+                        <div class="slider-group" style="margin-bottom: 12px;">
+                            <div class="slider-label">
+                                <span>Rotation</span>
+                                <span id="bg-rotation-value">0°</span>
+                            </div>
+                            <input type="range" class="slider" id="bg-rotation-slider" min="-180" max="180" step="1"
+                                value="0">
+                        </div>
+
+                        <button class="btn" id="btn-bg-reset-transform" style="width: 100%; margin-bottom: 8px;">
+                            Reset Transform
+                        </button>
                     </div>
 
                     <div class="section">
                         <div class="btn-row" style="gap: 8px;">
                             <button class="btn" id="btn-bg-remove-cancel" style="flex: 1;">Cancel</button>
-                            <button class="btn btn-primary" id="btn-bg-remove-apply" style="flex: 1;">Apply</button>
+                            <button class="btn btn-primary" id="btn-bg-remove-apply" style="flex: 1;"
+                                disabled>Apply</button>
                         </div>
                     </div>
                 </div>

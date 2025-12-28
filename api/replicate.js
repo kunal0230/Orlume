@@ -35,6 +35,30 @@ export default async function handler(req, res) {
             // Check prediction status
             url = `https://api.replicate.com/v1/predictions/${payload.predictionId}`;
             method = 'GET';
+        } else if (action === 'fetch-image') {
+            // Fetch image and return as base64 to bypass CORS
+            const imageUrl = payload.imageUrl;
+            if (!imageUrl) {
+                return res.status(400).json({ error: 'imageUrl required' });
+            }
+
+            console.log('Fetching image from:', imageUrl);
+            const imageResponse = await fetch(imageUrl);
+
+            if (!imageResponse.ok) {
+                return res.status(imageResponse.status).json({ error: 'Failed to fetch image' });
+            }
+
+            const arrayBuffer = await imageResponse.arrayBuffer();
+            const base64 = Buffer.from(arrayBuffer).toString('base64');
+            const contentType = imageResponse.headers.get('content-type') || 'image/png';
+            const dataUrl = `data:${contentType};base64,${base64}`;
+
+            return res.status(200).json({
+                dataUrl,
+                contentType,
+                size: arrayBuffer.byteLength
+            });
         } else {
             return res.status(400).json({ error: 'Invalid action' });
         }

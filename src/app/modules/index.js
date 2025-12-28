@@ -13,4 +13,5 @@ export { UpscaleModule } from './UpscaleModule.js';
 export { KeyboardModule } from './KeyboardModule.js';
 export { ComparisonModule } from './ComparisonModule.js';
 export { LayersModule } from './LayersModule.js';
+export { BackgroundRemovalModule } from './BackgroundRemovalModule.js';
 
