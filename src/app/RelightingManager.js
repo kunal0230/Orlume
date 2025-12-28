@@ -1,11 +1,16 @@
 /**
  * RelightingManager - Full 3D features integration (Depth, Relighting, 3D View, Parallax)
- * Properly bridges new modular architecture with existing effect classes
+ * Enhanced with ONNX Runtime depth estimation, raymarching shadows, and HBAO
+ * 
+ * v4.8.0: Added high-performance ONNX depth, raymarching shadows, HBAO ambient occlusion
  */
 import { DepthEstimator } from '../ml/DepthEstimator.js';
+import { ONNXDepthEstimator } from '../ml/ONNXDepthEstimator.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
 import { ParallaxEffect } from '../effects/ParallaxEffect.js';
 import { SceneManager } from '../renderer/SceneManager.js';
+import { RaymarchingShadowProcessor } from '../effects/RaymarchingShadowShader.js';
+import { HBAOProcessor } from '../effects/HBAOShader.js';
 
 export class RelightingManager {
     constructor(app) {
@@ -13,7 +18,14 @@ export class RelightingManager {
 
         // State
         this.depthMap = null;
+        this.normalMap = null;
+        this.aoMap = null;
         this.currentMode = null; // 'relight', '3d', 'parallax'
+
+        // Enhanced mode flags
+        this.useONNX = false;      // Disabled - conflicts with Transformers.js ONNX runtime
+        this.useRaymarching = true;
+        this.useHBAO = true;
 
         // Setup DOM elements needed by effects
         this._setupDOMElements();
@@ -21,13 +33,22 @@ export class RelightingManager {
         // Create app adapter that mimics old OrlumeApp interface
         this.appAdapter = this._createAppAdapter();
 
-        // Initialize components with adapter
+        // Initialize depth estimators (ONNX primary, Transformers.js fallback)
+        this.onnxDepthEstimator = new ONNXDepthEstimator(this.appAdapter);
         this.depthEstimator = new DepthEstimator(this.appAdapter);
+
+        // Initialize enhanced processors
+        this.shadowProcessor = new RaymarchingShadowProcessor();
+        this.hbaoProcessor = new HBAOProcessor();
+
+        // Initialize other components with adapter
         this.relightingEffect = new RelightingEffect(this.appAdapter);
         this.parallaxEffect = new ParallaxEffect(this.appAdapter);
         this.sceneManager = new SceneManager(this.appAdapter);
 
         this._initUI();
+
+        console.log('🔦 RelightingManager v4.8.0 initialized (ONNX + Raymarching + HBAO)');
     }
 
     /**
@@ -245,6 +266,12 @@ export class RelightingManager {
         if (btnDisable) {
             btnDisable.addEventListener('click', () => this.disableRelight());
         }
+
+        // Apply relighting button
+        const btnApply = document.getElementById('btn-apply-relight');
+        if (btnApply) {
+            btnApply.addEventListener('click', () => this.applyRelighting());
+        }
     }
 
     /**
@@ -264,6 +291,7 @@ export class RelightingManager {
 
     /**
      * Estimate depth from the current image
+     * Uses ONNX Runtime (WebGPU) for best performance, falls back to Transformers.js
      */
     async estimateDepth() {
         if (!this.app.state.hasImage) {
@@ -293,10 +321,52 @@ export class RelightingManager {
                 height: img.height
             };
 
-            // Estimate depth
-            this.depthMap = await this.depthEstimator.estimate(imageData);
+            // Try ONNX Runtime first (WebGPU zero-copy), fallback to Transformers.js
+            let depthEstimationMethod = 'unknown';
+            const startTime = performance.now();
 
-            console.log('✅ Depth map generated:', this.depthMap.width, '×', this.depthMap.height);
+            if (this.useONNX) {
+                try {
+                    console.log('🚀 Attempting ONNX Runtime depth estimation...');
+                    this.depthMap = await this.onnxDepthEstimator.estimate(imageData);
+                    depthEstimationMethod = this.onnxDepthEstimator.getProvider();
+                } catch (onnxError) {
+                    console.warn('⚠️ ONNX depth estimation failed, falling back to Transformers.js:', onnxError.message);
+                    this.depthMap = await this.depthEstimator.estimate(imageData);
+                    depthEstimationMethod = 'transformers-wasm';
+                }
+            } else {
+                this.depthMap = await this.depthEstimator.estimate(imageData);
+                depthEstimationMethod = 'transformers-wasm';
+            }
+
+            const estimationTime = performance.now() - startTime;
+            console.log(`✅ Depth map generated: ${this.depthMap.width}×${this.depthMap.height} via ${depthEstimationMethod} (${estimationTime.toFixed(0)}ms)`);
+
+            // Generate normal map from depth
+            this.normalMap = this.onnxDepthEstimator.generateNormalMap(this.depthMap, 3.0);
+            console.log('✅ Normal map generated');
+
+            // Generate HBAO ambient occlusion if enabled
+            if (this.useHBAO) {
+                try {
+                    const aoCanvas = this.hbaoProcessor.compute(this.depthMap, {
+                        u_radius: 0.03,
+                        u_intensity: 1.5,
+                        u_numDirections: 8,
+                        u_numSteps: 6
+                    });
+                    this.aoMap = {
+                        canvas: aoCanvas,
+                        width: aoCanvas.width,
+                        height: aoCanvas.height
+                    };
+                    console.log('✅ HBAO ambient occlusion generated');
+                } catch (aoError) {
+                    console.warn('⚠️ HBAO generation failed:', aoError.message);
+                    this.aoMap = null;
+                }
+            }
 
             // Show relighting controls
             const controls = document.getElementById('relight-controls');
@@ -361,6 +431,88 @@ export class RelightingManager {
         }
 
         console.log('🔦 Relighting disabled');
+    }
+
+    /**
+     * Apply relighting effect permanently to the image
+     * Bakes the current lighting into a new image
+     */
+    async applyRelighting() {
+        if (!this.relightingEffect || !this.relightingEffect.enabled) {
+            console.warn('No relighting effect active');
+            return;
+        }
+
+        const btnApply = document.getElementById('btn-apply-relight');
+        const originalText = btnApply?.textContent;
+        if (btnApply) {
+            btnApply.textContent = '⏳ Applying...';
+            btnApply.disabled = true;
+        }
+
+        try {
+            // Get the canvas with lighting applied
+            const exportCanvas = this.relightingEffect.getExportCanvas();
+
+            if (!exportCanvas) {
+                throw new Error('Could not get export canvas');
+            }
+
+            // Convert to data URL
+            const dataURL = exportCanvas.toDataURL('image/png');
+
+            // Disable relighting effect first
+            this.disableRelight();
+
+            // Reset depth map and related data since we're applying new image
+            this.depthMap = null;
+            this.normalMap = null;
+            this.aoMap = null;
+
+            // Load the relit image as the new original using dataURL
+            await this.app.loadImageFromURL(dataURL);
+
+            // Force GPU to re-render the image (fixes black canvas)
+            if (this.app.ui) {
+                // Use requestAnimationFrame for proper timing
+                requestAnimationFrame(() => {
+                    if (this.app.gpu) this.app.gpu.render();
+                    this.app.ui.renderWithMask(false);
+                    // Second render to ensure textures are ready
+                    requestAnimationFrame(() => {
+                        if (this.app.gpu) this.app.gpu.render();
+                        this.app.ui.renderWithMask(false);
+                    });
+                });
+            }
+
+            // Hide relight controls until new depth is estimated
+            const controls = document.getElementById('relight-controls');
+            if (controls) controls.style.display = 'none';
+
+            // Update button
+            const btnEstimate = document.getElementById('btn-estimate-depth');
+            if (btnEstimate) btnEstimate.textContent = 'Estimate Depth';
+
+            console.log('✅ Relighting applied successfully');
+
+            if (btnApply) {
+                btnApply.textContent = '✅ Applied!';
+                setTimeout(() => {
+                    btnApply.textContent = originalText;
+                    btnApply.disabled = false;
+                }, 2000);
+            }
+
+        } catch (error) {
+            console.error('Failed to apply relighting:', error);
+            alert('Failed to apply relighting: ' + error.message);
+
+            if (btnApply) {
+                btnApply.textContent = originalText;
+                btnApply.disabled = false;
+            }
+        }
     }
 
     /**
