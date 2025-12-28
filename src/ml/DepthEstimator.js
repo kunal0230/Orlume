@@ -19,9 +19,7 @@ export class DepthEstimator {
         try {
             const { pipeline, env } = await import('@huggingface/transformers');
 
-            // Configure ONNX Runtime WASM paths (Transformers.js uses ONNX internally)
-            env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/';
-
+            // Let Transformers.js use its bundled WASM files (no external CDN)
             env.allowLocalModels = false;
             env.useBrowserCache = true;
 
