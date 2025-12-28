@@ -1,6 +1,40 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
+import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+
+/**
+ * Plugin to copy ONNX Runtime WASM files from @huggingface/transformers
+ * This ensures WASM files are available at runtime for depth estimation
+ */
+const copyWasmPlugin = () => ({
+  name: 'copy-onnx-wasm',
+  buildStart() {
+    const srcDir = 'node_modules/@huggingface/transformers/dist';
+    const destDir = 'public/assets';
+
+    try {
+      if (!existsSync(destDir)) {
+        mkdirSync(destDir, { recursive: true });
+      }
+
+      // Copy WASM and MJS files (ONNX Runtime needs both)
+      if (existsSync(srcDir)) {
+        const files = readdirSync(srcDir).filter(f =>
+          f.endsWith('.wasm') || f.includes('ort-wasm') && f.endsWith('.mjs')
+        );
+        files.forEach(file => {
+          const srcPath = resolve(srcDir, file);
+          const destPath = resolve(destDir, file);
+          copyFileSync(srcPath, destPath);
+          console.log(`📦 Copied: ${file}`);
+        });
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not copy WASM files:', e.message);
+    }
+  }
+});
 
 export default defineConfig({
   server: {
@@ -21,6 +55,10 @@ export default defineConfig({
       }
     }
   },
+
+  // Include WASM and ONNX files as assets
+  assetsInclude: ['**/*.wasm', '**/*.onnx'],
+
   build: {
     target: 'esnext',
     minify: 'esbuild',
@@ -31,10 +69,11 @@ export default defineConfig({
       }
     }
   },
-  optimizeDeps: {
-    exclude: ['@huggingface/transformers']
-  },
+
+  // Note: Don't exclude @huggingface/transformers - let Vite pre-bundle it
+
   plugins: [
+    copyWasmPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],

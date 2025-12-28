@@ -79,7 +79,11 @@ export class GPUProcessor {
     }
 
     /**
-     * Load image into GPU texture
+     * Load image into GPU texture using Safe Handoff pattern
+     * 
+     * Uses "Create, Swap, then Destroy" to ensure inputTexture always
+     * points to a valid GPU resource. This prevents "destroyed texture"
+     * errors from stale render commands.
      */
     loadImage(imageElement) {
         if (!this.backend?.isReady) {
@@ -93,21 +97,31 @@ export class GPUProcessor {
         // Set canvas and backend size
         this.backend.setSize(this.width, this.height);
 
-        // Delete old textures
-        if (this.inputTexture) {
-            this.backend.deleteTexture(this.inputTexture);
-        }
-        if (this._processedFBO) {
-            this.backend.deleteFramebuffer?.(this._processedFBO);
-        }
+        // === SAFE HANDOFF PATTERN ===
 
-        // Create input texture
-        this.inputTexture = this.backend.createTextureFromSource(imageElement);
+        // Step 1: Create NEW texture first (don't touch inputTexture yet)
+        const newTexture = this.backend.createTextureFromSource(imageElement);
+
+        // Step 2: Store reference to OLD texture
+        const oldTexture = this.inputTexture;
+        const oldFBO = this._processedFBO;
+
+        // Step 3: ATOMIC SWAP - inputTexture now points to valid new texture
+        this.inputTexture = newTexture;
+        this._processedFBO = null; // Will be recreated on demand
+
+        // Step 4: Render with new texture (synchronous, no requestAnimationFrame)
+        this.render();
+
+        // Step 5: NOW it's safe to delete old resources
+        if (oldTexture) {
+            this.backend.deleteTexture(oldTexture);
+        }
+        if (oldFBO) {
+            this.backend.deleteFramebuffer?.(oldFBO);
+        }
 
         console.log(`📷 Image loaded: ${this.width}x${this.height}`);
-
-        // Initial render
-        this.render();
     }
 
     /**

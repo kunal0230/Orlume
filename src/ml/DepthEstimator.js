@@ -19,22 +19,48 @@ export class DepthEstimator {
         try {
             const { pipeline, env } = await import('@huggingface/transformers');
 
-            // Let Transformers.js use its bundled WASM files (no external CDN)
+            // Configure environment for browser usage
             env.allowLocalModels = false;
             env.useBrowserCache = true;
 
-            console.log('Loading Depth Anything V2 model (WASM backend)...');
+            // Note: Don't override wasmPaths - let Transformers.js handle ONNX internally
 
-            // Use WASM directly to avoid WebGPU conflicts
-            this.model = await pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
-                device: 'wasm',
-                dtype: 'fp32',
-                progress_callback: progressCallback,
-            });
+            console.log('Loading Depth Anything V2 model...');
 
+            // Robust fallback chain: WebGPU → WASM
+            const devices = ['webgpu', 'wasm'];
+            let lastError = null;
+
+            for (const device of devices) {
+                try {
+                    console.log(`Trying ${device} backend...`);
+
+                    // Check WebGPU availability before trying
+                    if (device === 'webgpu' && !navigator.gpu) {
+                        console.log('WebGPU not supported, skipping...');
+                        continue;
+                    }
+
+                    this.model = await pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
+                        device: device,
+                        dtype: 'fp32',
+                        progress_callback: progressCallback,
+                    });
+
+                    this.isLoading = false;
+                    console.log(`✅ Depth model loaded (${device})`);
+                    return this.model;
+
+                } catch (deviceError) {
+                    console.warn(`${device} backend failed:`, deviceError.message);
+                    lastError = deviceError;
+                    // Continue to next device
+                }
+            }
+
+            // All backends failed
             this.isLoading = false;
-            console.log('✅ Depth model loaded (WASM)');
-            return this.model;
+            throw lastError || new Error('All backends failed');
 
         } catch (error) {
             this.isLoading = false;

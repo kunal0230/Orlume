@@ -5,7 +5,6 @@
  * v4.8.0: Added high-performance ONNX depth, raymarching shadows, HBAO ambient occlusion
  */
 import { DepthEstimator } from '../ml/DepthEstimator.js';
-import { ONNXDepthEstimator } from '../ml/ONNXDepthEstimator.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
 import { ParallaxEffect } from '../effects/ParallaxEffect.js';
 import { SceneManager } from '../renderer/SceneManager.js';
@@ -33,8 +32,7 @@ export class RelightingManager {
         // Create app adapter that mimics old OrlumeApp interface
         this.appAdapter = this._createAppAdapter();
 
-        // Initialize depth estimators (ONNX primary, Transformers.js fallback)
-        this.onnxDepthEstimator = new ONNXDepthEstimator(this.appAdapter);
+        // Initialize depth estimator (has built-in WebGPU → WASM fallback)
         this.depthEstimator = new DepthEstimator(this.appAdapter);
 
         // Initialize enhanced processors
@@ -344,7 +342,7 @@ export class RelightingManager {
             console.log(`✅ Depth map generated: ${this.depthMap.width}×${this.depthMap.height} via ${depthEstimationMethod} (${estimationTime.toFixed(0)}ms)`);
 
             // Generate normal map from depth
-            this.normalMap = this.onnxDepthEstimator.generateNormalMap(this.depthMap, 3.0);
+            this.normalMap = this.depthEstimator.generateNormalMap(this.depthMap, 3.0);
             console.log('✅ Normal map generated');
 
             // Generate HBAO ambient occlusion if enabled
@@ -470,21 +468,9 @@ export class RelightingManager {
             this.aoMap = null;
 
             // Load the relit image as the new original using dataURL
+            // Note: GPUProcessor.loadImage() now uses Safe Handoff pattern
+            // and renders synchronously - no need for requestAnimationFrame hacks
             await this.app.loadImageFromURL(dataURL);
-
-            // Force GPU to re-render the image (fixes black canvas)
-            if (this.app.ui) {
-                // Use requestAnimationFrame for proper timing
-                requestAnimationFrame(() => {
-                    if (this.app.gpu) this.app.gpu.render();
-                    this.app.ui.renderWithMask(false);
-                    // Second render to ensure textures are ready
-                    requestAnimationFrame(() => {
-                        if (this.app.gpu) this.app.gpu.render();
-                        this.app.ui.renderWithMask(false);
-                    });
-                });
-            }
 
             // Hide relight controls until new depth is estimated
             const controls = document.getElementById('relight-controls');
