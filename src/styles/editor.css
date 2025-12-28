@@ -107,6 +107,18 @@ body {
     justify-content: center;
 }
 
+/* Transparency checkerboard pattern - indicates transparent areas */
+.canvas-container.transparency-bg {
+    background-image:
+        linear-gradient(45deg, #808080 25%, transparent 25%),
+        linear-gradient(-45deg, #808080 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #808080 75%),
+        linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: #c0c0c0;
+}
+
 #gpu-canvas {
     max-width: 100%;
     max-height: calc(100vh - 40px);

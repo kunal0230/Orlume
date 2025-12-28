@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -52,6 +52,7 @@ export class EditorUI {
         this.keyboardModule = new KeyboardModule(this);
         this.comparisonModule = new ComparisonModule(this);
         this.layersModule = new LayersModule(this);
+        this.bgRemovalModule = new BackgroundRemovalModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -101,6 +102,7 @@ export class EditorUI {
         this.upscaleModule.init();
         this.keyboardModule.init();
         this.comparisonModule.init();
+        this.bgRemovalModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -851,13 +853,14 @@ export class EditorUI {
     }
 
     /**
-     * Deactivate ALL overlay tools (liquify, healing, clone)
+     * Deactivate ALL overlay tools (liquify, healing, clone, bg-remove)
      * Called at the start of every mode switch to prevent image overlap
      */
     _deactivateAllOverlayTools() {
         this.liquifyModule?.deactivate();
         this.healingModule?.deactivate();
         this.cloneModule?.deactivate();
+        this.backgroundRemovalModule?.deactivate();
     }
 
     /**
@@ -1080,6 +1083,9 @@ export class EditorUI {
                 this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.renderHistogram(), 100);
 
+                // Detect transparency and show checkerboard if needed
+                this._detectAndShowTransparency(img);
+
                 // Push initial state to history for undo support
                 this.history.clear();
                 this._pushHistoryDebounced();
@@ -1087,6 +1093,41 @@ export class EditorUI {
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    }
+
+    /**
+     * Detect if image has transparency and show/hide checkerboard background
+     */
+    _detectAndShowTransparency(img) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(img.width, 100); // Sample a smaller area for performance
+        canvas.height = Math.min(img.height, 100);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        let hasTransparency = false;
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] < 250) { // Alpha less than ~98% = transparent
+                hasTransparency = true;
+                break;
+            }
+        }
+
+        const canvasContainer = document.querySelector('.canvas-container');
+        if (canvasContainer) {
+            if (hasTransparency) {
+                canvasContainer.classList.add('transparency-bg');
+                console.log('🔲 Transparent image detected - showing checkerboard');
+            } else {
+                canvasContainer.classList.remove('transparency-bg');
+            }
+        }
+
+        // Store transparency state
+        this.state.hasTransparency = hasTransparency;
     }
 
     /**

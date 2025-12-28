@@ -37,7 +37,7 @@ export class WebGL2Backend extends GPUBackend {
      */
     async init() {
         this.gl = this.canvas.getContext('webgl2', {
-            alpha: false,
+            alpha: true,  // Enable alpha for transparent PNG support
             antialias: false,
             depth: false,
             stencil: false,
@@ -56,6 +56,10 @@ export class WebGL2Backend extends GPUBackend {
         gl.getExtension('EXT_color_buffer_float');
         gl.getExtension('OES_texture_float_linear');
 
+        // Enable blending for proper alpha compositing
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
         // Create quad buffers
         this._createQuadBuffers();
 
@@ -63,7 +67,7 @@ export class WebGL2Backend extends GPUBackend {
         this._compileShaders();
 
         this.isReady = true;
-        console.log('🎮 WebGL2 initialized');
+        console.log('🎮 WebGL2 initialized with alpha support');
         return true;
     }
 

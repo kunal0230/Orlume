@@ -442,6 +442,11 @@ export class CropModule {
             this.elements.perfIndicator.textContent = `${croppedImage.width}×${croppedImage.height}`;
             setTimeout(() => this.editor.renderHistogram(), 100);
 
+            // Detect and preserve transparency (checkerboard background)
+            if (this.editor._detectAndShowTransparency) {
+                this.editor._detectAndShowTransparency(croppedImage);
+            }
+
             // Clear applied crop (it's been applied)
             this.appliedCrop = null;
 

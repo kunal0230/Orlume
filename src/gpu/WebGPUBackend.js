@@ -73,7 +73,7 @@ export class WebGPUBackend extends GPUBackend {
             this.context.configure({
                 device: this.device,
                 format: this.format,
-                alphaMode: 'opaque'
+                alphaMode: 'premultiplied'  // Support transparent PNG
             });
 
             // Create sampler
@@ -117,7 +117,7 @@ export class WebGPUBackend extends GPUBackend {
             this.context.configure({
                 device: this.device,
                 format: this.format,
-                alphaMode: 'opaque'
+                alphaMode: 'premultiplied'  // Support transparent PNG
             });
             console.log(`📐 WebGPU context reconfigured: ${width}×${height}`);
         }

@@ -39,9 +39,9 @@ export class ReplicateService {
                 version: 'cc4956dd26fa5a7185d5660cc9100fab1b8070a1d1654a8bb5eb6d443b020bb2'
             },
             rembg: {
-                owner: 'cjwbw',
-                name: 'rembg',
-                version: 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003'
+                owner: '851-labs',
+                name: 'background-remover',
+                version: 'a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc'
             }
         };
 
@@ -174,6 +174,50 @@ export class ReplicateService {
      */
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Fetch an image URL and return as data URL (bypasses CORS)
+     */
+    async fetchImageAsDataUrl(imageUrl) {
+        console.log('🎭 Fetching image via proxy to bypass CORS...');
+
+        if (this.isDev) {
+            // In dev mode, try direct fetch first (might work with some URLs)
+            try {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                console.log('🎭 Direct fetch failed, falling back to proxy');
+            }
+        }
+
+        // Use serverless proxy
+        const response = await fetch(this.isDev ? `${this.proxyUrl.replace('/v1', '')}/fetch-image` : this.proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.isDev && { 'Authorization': `Token ${this.apiToken}` })
+            },
+            body: JSON.stringify({
+                action: 'fetch-image',
+                imageUrl: imageUrl
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('🎭 Image fetched via proxy, size:', data.size, 'bytes');
+        return data.dataUrl;
     }
 
     // ==================== Feature Methods ====================

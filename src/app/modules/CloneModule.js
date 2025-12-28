@@ -407,6 +407,11 @@ export class CloneModule {
             // Update histogram
             setTimeout(() => this.editor.renderHistogram(), 100);
 
+            // Detect and preserve transparency (checkerboard background)
+            if (this.editor._detectAndShowTransparency) {
+                this.editor._detectAndShowTransparency(img);
+            }
+
             console.log('✅ Clone applied successfully');
 
             // Reset clone tool for next use but stay in clone mode
