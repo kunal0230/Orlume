@@ -2,9 +2,14 @@
  * Relighting Effect - Advanced (GPU-Accelerated)
  * Realistic lighting with proper directional shadows, draggable and deletable lights
  * Uses WebGL for 60fps performance
+ * 
+ * TIER 3: Now includes true 3D vertex displacement with real shadow mapping
+ * PHASE F: Three.js 3D model with ray-marched shadows
  */
 
 import { RelightingShader } from './RelightingShader.js';
+import { Displacement3DShader } from './Displacement3DShader.js';
+import { ThreeJS3DRenderer } from './ThreeJS3DRenderer.js';
 
 export class RelightingEffect {
     constructor(app) {
@@ -38,6 +43,15 @@ export class RelightingEffect {
         this.gpuShader = null;
         this.gpuCanvas = null;
         this.texturesUploaded = false;
+
+        // TIER 3: True 3D displacement rendering
+        this.use3D = false;  // Disabled - replaced by Phase F
+        this.gpu3DShader = null;
+        this.extrusion3D = 0.25;  // Depth extrusion amount
+
+        // PHASE F: Three.js with ray-marched shadows
+        this.useThreeJS = true;  // Enable Three.js by default!
+        this.threeRenderer = null;
 
         // Drag state
         this.isDragging = false;
@@ -194,6 +208,86 @@ export class RelightingEffect {
 
             this.texturesUploaded = true;
             console.log('🚀 GPU Relighting active');
+
+            // ========================================
+            // TIER 3: Initialize 3D Displacement Shader
+            // ========================================
+            if (this.use3D) {
+                try {
+                    this.gpu3DShader = new Displacement3DShader();
+                    const success3D = this.gpu3DShader.init(this.gpuCanvas);
+
+                    if (success3D) {
+                        // Upload textures to 3D shader
+                        this.gpu3DShader.uploadImage(image.imageData.data, image.width, image.height);
+                        this.gpu3DShader.uploadNormals(new Uint8Array(this.normalMap.data), this.normalMap.width, this.normalMap.height);
+                        this.gpu3DShader.uploadDepth(new Uint8Array(depthMap.data), depthMap.width, depthMap.height);
+
+                        // Upload materials if available
+                        const materialMap = this.app.relightingManager?.pbrMaterialMap;
+                        if (materialMap) {
+                            const matCtx = materialMap.canvas.getContext('2d');
+                            const matData = matCtx.getImageData(0, 0, materialMap.width, materialMap.height);
+                            this.gpu3DShader.uploadMaterials(new Uint8Array(matData.data), materialMap.width, materialMap.height);
+                        }
+
+                        console.log('🎮 TIER 3: 3D Displacement active (256x256 mesh, real shadows)');
+                    } else {
+                        console.warn('⚠️ 3D shader init failed, using 2D fallback');
+                        this.use3D = false;
+                    }
+                } catch (e3d) {
+                    console.warn('⚠️ 3D shader error:', e3d.message);
+                    this.use3D = false;
+                }
+            }
+
+            // ========================================
+            // PHASE F: Initialize Three.js 3D Renderer
+            // ========================================
+            if (this.useThreeJS) {
+                try {
+                    this.threeRenderer = new ThreeJS3DRenderer(null);  // No container, we'll use overlay
+                    this.threeRenderer.init(this.canvas.width, this.canvas.height);
+
+                    // Upload textures to Three.js renderer
+                    // Albedo (original image)
+                    const albedoCanvas = document.createElement('canvas');
+                    albedoCanvas.width = image.width;
+                    albedoCanvas.height = image.height;
+                    const albedoCtx = albedoCanvas.getContext('2d');
+                    albedoCtx.putImageData(image.imageData, 0, 0);
+                    this.threeRenderer.uploadAlbedo(albedoCanvas);
+
+                    // Depth map
+                    const depthCanvas = document.createElement('canvas');
+                    depthCanvas.width = depthMap.width;
+                    depthCanvas.height = depthMap.height;
+                    const depthCtx = depthCanvas.getContext('2d');
+                    depthCtx.putImageData(new ImageData(new Uint8ClampedArray(depthMap.data), depthMap.width, depthMap.height), 0, 0);
+                    this.threeRenderer.uploadDepth(depthCanvas);
+
+                    // Normal map
+                    const normalCanvas = document.createElement('canvas');
+                    normalCanvas.width = this.normalMap.width;
+                    normalCanvas.height = this.normalMap.height;
+                    const normalCtx = normalCanvas.getContext('2d');
+                    normalCtx.putImageData(this.normalMap, 0, 0);
+                    this.threeRenderer.uploadNormals(normalCanvas);
+
+                    // Materials if available
+                    const materialMap = this.app.relightingManager?.pbrMaterialMap;
+                    if (materialMap) {
+                        this.threeRenderer.uploadMaterials(materialMap.canvas);
+                    }
+
+                    this.threeRenderer.startAnimation();
+                    console.log('🎬 PHASE F: Three.js 3D Renderer active (512x512 mesh, ray-marched shadows)');
+                } catch (e3js) {
+                    console.warn('⚠️ Three.js init failed:', e3js.message, e3js);
+                    this.useThreeJS = false;
+                }
+            }
 
         } catch (e) {
             console.warn('⚠️ GPU init error:', e.message);
@@ -614,6 +708,68 @@ export class RelightingEffect {
                 this.ctx.shadowBlur = 0;
             }
             return;
+        }
+
+        // ===== PHASE F: THREE.JS RAY-MARCHED PATH (Best Quality) =====
+        if (this.useThreeJS && this.threeRenderer) {
+            try {
+                // Update light position from first light
+                if (this.lights.length > 0) {
+                    const light = this.lights[0];
+                    this.threeRenderer.setLightPosition(light.x, light.y, light.z || 0.8);
+                    this.threeRenderer.setLightColor(light.color || '#ffffff');
+                    this.threeRenderer.setLightIntensity(this.intensity);
+                }
+
+                // Update ambient
+                this.threeRenderer.setAmbient(this.ambient);
+
+                // Render Three.js scene
+                this.threeRenderer.render();
+
+                // Copy Three.js canvas to our display canvas
+                const threeCanvas = this.threeRenderer.getCanvas();
+                if (threeCanvas) {
+                    this.ctx.drawImage(threeCanvas, 0, 0, width, height);
+                }
+
+                // Draw light indicators on top
+                if (!skipIndicators) {
+                    this.drawLightIndicators();
+                }
+                return;
+
+            } catch (e3js) {
+                console.warn('⚠️ Three.js render failed, falling back to Tier 3:', e3js.message);
+                this.useThreeJS = false;
+            }
+        }
+
+        // ===== TIER 3: 3D DISPLACEMENT PATH =====
+        if (this.use3D && this.gpu3DShader && this.texturesUploaded) {
+            try {
+                // Render with true 3D displacement and real shadow mapping
+                this.gpu3DShader.render(this.lights, {
+                    brightness: this.brightness,
+                    shadowStrength: this.shadowStrength,
+                    ambient: this.ambient,
+                    extrusion: this.extrusion3D
+                });
+
+                // Copy GPU result to display canvas
+                const gpuImageData = this.gpu3DShader.getImageData();
+                this.ctx.putImageData(gpuImageData, 0, 0);
+
+                // Draw light indicators on top
+                if (!skipIndicators) {
+                    this.drawLightIndicators();
+                }
+                return;
+
+            } catch (e3d) {
+                console.warn('⚠️ 3D render failed, falling back to 2D:', e3d.message);
+                this.use3D = false;
+            }
         }
 
         // ===== GPU PATH (100x+ faster) =====

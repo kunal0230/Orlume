@@ -547,9 +547,9 @@ void main() {
         }
         
         // ========================================
-        // TIER 1: 4x LIGHT MULTIPLIER
+        // LIGHT POWER (reduced from 4x to 2x to prevent over-brightness)
         // ========================================
-        float lightPower = 4.0;  // Was 1.5, now 4.0!
+        float lightPower = 2.0;  // Was 4.0, now 2.0!
         
         vec3 lightContrib = light.color * light.intensity * attenuation * shadow * lightPower;
         totalDiffuse += diffuse * NdotL * lightContrib;
@@ -557,26 +557,24 @@ void main() {
     }
     
     // ========================================
-    // TIER 1: MULTIPLICATIVE PBR BLEND
+    // MULTIPLICATIVE PBR BLEND
     // ========================================
     // Final = Ambient + (Albedo * Diffuse) + Specular
-    // Albedo MULTIPLIES with light, not additive!
     vec3 finalColor = ambientLight + totalDiffuse + totalSpecular;
     
-    // Add rim lighting
-    finalColor += albedo * fresnel * ao * 0.5;
+    // Add rim lighting (reduced)
+    finalColor += albedo * fresnel * ao * 0.2;
     
-    // Add emissive (unaffected by lighting)
-    finalColor += albedo * emissive * 2.0;
+    // Add emissive
+    finalColor += albedo * emissive;
     
     // ========================================
-    // TIER 1: IMPROVED TONE MAPPING x/(x+0.5)
+    // SOFT TONE MAPPING x/(x+0.8) - preserves original better
     // ========================================
-    // This allows brighter highlights than x/(x+1)
-    finalColor = finalColor / (finalColor + vec3(0.5));
+    finalColor = finalColor / (finalColor + vec3(0.8));
     
-    // Gamma correction
-    finalColor = pow(finalColor, vec3(0.9));
+    // Minimal gamma correction
+    finalColor = pow(finalColor, vec3(0.98));
     
     // Apply brightness control
     finalColor *= u_brightness;
