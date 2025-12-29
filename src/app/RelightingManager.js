@@ -11,6 +11,7 @@
 import { DepthEstimator } from '../ml/DepthEstimator.js';
 import { NormalEstimator } from '../ml/NormalEstimator.js';
 import { SegmentationEstimator } from '../ml/SegmentationEstimator.js';
+import { MaterialEstimator } from '../ml/MaterialEstimator.js';
 import { DepthModelComparison, DEPTH_MODELS } from '../ml/DepthModelComparison.js';
 import { FusionEngine } from '../effects/FusionEngine.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
@@ -49,12 +50,14 @@ export class RelightingManager {
         this.depthEstimator = new DepthEstimator(this.appAdapter);
         this.normalEstimator = new NormalEstimator(this.appAdapter);
         this.segmentationEstimator = new SegmentationEstimator(this.appAdapter);
+        this.materialEstimator = new MaterialEstimator(this.appAdapter);
 
         // Initialize fusion engine for combining depth + segmentation
         this.fusionEngine = new FusionEngine();
 
         // Additional outputs from fusion
         this.materialMap = null;
+        this.pbrMaterialMap = null;  // Enhanced PBR material map from MaterialEstimator
         this.segmentationResult = null;
 
 
@@ -672,6 +675,33 @@ export class RelightingManager {
                 console.warn('⚠️ Advanced shadow computation failed:', shadowError.message);
                 this.shadowMap = null;
             }
+
+            // =====================================================
+            // PHASE 3.7: Generate PBR Material Map (roughness, metallic, SSS)
+            // =====================================================
+            if (this.segmentationResult) {
+                console.log('🎨 Generating PBR material map...');
+                const materialStart = performance.now();
+
+                try {
+                    this.pbrMaterialMap = this.materialEstimator.generateMaterialMap(
+                        this.segmentationResult,
+                        this.app.state.originalImage
+                    );
+
+                    const materialTime = performance.now() - materialStart;
+                    const materials = Object.keys(this.pbrMaterialMap.classToMaterial || {});
+                    console.log(`✅ PBR materials generated (${materialTime.toFixed(0)}ms) - ${materials.length} classes detected`);
+
+                    // Log detected materials for debugging
+                    if (materials.length <= 10) {
+                        console.log('📦 Materials:', materials.join(', '));
+                    }
+                } catch (materialError) {
+                    console.warn('⚠️ PBR material generation failed:', materialError.message);
+                    this.pbrMaterialMap = null;
+                }
+            }
             // =====================================================
             // PHASE 4: Extract Albedo for PBR Relighting
             // =====================================================
@@ -764,6 +794,51 @@ export class RelightingManager {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(original, 0, 0);
         return canvas;
+    }
+
+    /**
+     * Update shadow map for new light position
+     * Call this when light moves for dynamic shadows
+     */
+    updateShadowMap(lightPos) {
+        if (!this.depthMap || !this.normalMap || !this.advancedShadowProcessor) {
+            return;
+        }
+
+        // Throttle updates during drag for performance
+        const now = Date.now();
+        if (this._lastShadowUpdate && now - this._lastShadowUpdate < 50) {
+            return; // Max 20fps for shadow updates
+        }
+        this._lastShadowUpdate = now;
+
+        try {
+            const imageCanvas = this._getImageCanvas();
+
+            const shadowCanvas = this.advancedShadowProcessor.compute(
+                this.depthMap,
+                this.normalMap,
+                imageCanvas,
+                this.aoMap,
+                {
+                    lightPos: [lightPos.x, lightPos.y, lightPos.z || 0.8],
+                    lightRadius: 0.08,         // Larger for more visible soft shadows
+                    shadowIntensity: 0.95,     // Very strong shadows
+                    contactDistance: 0.12,     // Larger contact shadow reach
+                    pcfSamples: 8,
+                    raymarchSteps: 20,         // More steps for quality
+                    colorBleedAmount: 0.15
+                }
+            );
+
+            this.shadowMap = {
+                canvas: shadowCanvas,
+                width: shadowCanvas.width,
+                height: shadowCanvas.height
+            };
+        } catch (e) {
+            console.warn('⚠️ Shadow update failed:', e.message);
+        }
     }
 
     /**

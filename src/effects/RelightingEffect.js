@@ -360,6 +360,16 @@ export class RelightingEffect {
             // Update light position
             this.draggedLight.x = Math.max(0, Math.min(1, pos.x));
             this.draggedLight.y = Math.max(0, Math.min(1, pos.y));
+
+            // Update shadow map dynamically for the new light position
+            if (this.app.relightingManager?.updateShadowMap) {
+                this.app.relightingManager.updateShadowMap({
+                    x: this.draggedLight.x,
+                    y: this.draggedLight.y,
+                    z: this.draggedLight.z || 0.8
+                });
+            }
+
             this.render();
         } else {
             // Check for hover
@@ -609,11 +619,29 @@ export class RelightingEffect {
         // ===== GPU PATH (100x+ faster) =====
         if (this.useGPU && this.gpuShader && this.texturesUploaded) {
             try {
-                // Render using GPU shader
+                // Upload shadow map if available (from RelightingManager)
+                const shadowMap = this.app.relightingManager?.shadowMap;
+                if (shadowMap && this.gpuShader.uploadShadowMap) {
+                    const shadowCtx = shadowMap.canvas.getContext('2d');
+                    const shadowData = shadowCtx.getImageData(0, 0, shadowMap.width, shadowMap.height);
+                    this.gpuShader.uploadShadowMap(new Uint8Array(shadowData.data), shadowMap.width, shadowMap.height);
+                }
+
+                // Upload PBR material map if available (from RelightingManager)
+                const materialMap = this.app.relightingManager?.pbrMaterialMap;
+                if (materialMap && this.gpuShader.uploadMaterialMap) {
+                    const materialCtx = materialMap.canvas.getContext('2d');
+                    const materialData = materialCtx.getImageData(0, 0, materialMap.width, materialMap.height);
+                    this.gpuShader.uploadMaterialMap(new Uint8Array(materialData.data), materialMap.width, materialMap.height);
+                }
+
+                // Render using GPU shader with advanced shadows and PBR materials
                 this.gpuShader.render(this.lights, {
                     brightness: this.brightness,
                     shadowStrength: this.shadowStrength,
-                    ambient: this.ambient
+                    ambient: this.ambient,
+                    useShadowMap: !!shadowMap,       // Enable advanced shadows
+                    useMaterialMap: !!materialMap   // Enable PBR materials (roughness, metallic, SSS)
                 });
 
                 // Copy GPU result to display canvas
