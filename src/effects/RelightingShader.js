@@ -399,62 +399,90 @@ vec3 F_Schlick(float VdotH, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
 }
 
-// Simple SSS approximation (diffuse transmission)
-vec3 subsurfaceScattering(vec3 color, vec3 lightDir, vec3 normal, float sss) {
-    // Wrap lighting for soft subsurface look
+// SSS approximation
+vec3 subsurfaceScattering(vec3 albedo, vec3 lightDir, vec3 normal, float sss) {
     float wrap = 0.5;
     float NdotL = dot(normal, lightDir);
-    float wrappedNdotL = (NdotL + wrap) / (1.0 + wrap);
-    wrappedNdotL = max(0.0, wrappedNdotL);
+    float wrappedNdotL = max(0.0, (NdotL + wrap) / (1.0 + wrap));
+    float transmit = exp(-2.0 * (1.0 - wrappedNdotL));
+    vec3 sssColor = albedo * vec3(1.2, 0.9, 0.7);
+    return mix(albedo, sssColor * transmit, sss * 0.5);
+}
+
+// ========================================
+// TIER 2: Smooth Normal Sampling (3x3)
+// ========================================
+vec3 getSmoothNormal(sampler2D normalTex, vec2 uv, vec2 texelSize) {
+    vec3 n = vec3(0.0);
     
-    // Transmittance through the surface
-    float transmittance = exp(-2.0 * (1.0 - wrappedNdotL));
+    // Sample 3x3 neighborhood
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            vec4 sample = texture2D(normalTex, uv + offset);
+            n += sample.rgb * 2.0 - 1.0;
+        }
+    }
     
-    // Warmer color for subsurface (skin-like red shift)
-    vec3 sssColor = color * vec3(1.2, 0.9, 0.7);
-    
-    return mix(color, sssColor * transmittance, sss * 0.5);
+    return normalize(n / 9.0);
 }
 
 void main() {
-    // Sample textures
-    vec4 color = texture2D(u_image, v_texCoord);
-    vec4 normalSample = texture2D(u_normals, v_texCoord);
+    // ========================================
+    // TEXTURE SAMPLING
+    // ========================================
+    vec4 originalColor = texture2D(u_image, v_texCoord);
     float depth = texture2D(u_depth, v_texCoord).r;
     
-    // Shadow map (R=PCF, G=contact, B=AO)
+    // Shadow map
     vec4 shadowSample = u_useShadowMap ? texture2D(u_shadowMap, v_texCoord) : vec4(1.0);
     float pcfShadow = shadowSample.r;
     float contactShadow = shadowSample.g;
     float ao = shadowSample.b;
     
-    // Material properties (R=roughness, G=metallic, B=subsurface, A=emissive)
+    // Material properties
     vec4 materialSample = u_useMaterialMap ? texture2D(u_materialMap, v_texCoord) : vec4(0.5, 0.0, 0.0, 0.0);
-    float roughness = max(0.04, materialSample.r);  // Minimum roughness to avoid singularities
+    float roughness = max(0.04, materialSample.r);
     float metallic = materialSample.g;
     float subsurface = materialSample.b;
     float emissive = materialSample.a;
     
-    // Decode normal
-    vec3 normal = normalize(normalSample.rgb * 2.0 - 1.0);
+    // ========================================
+    // TIER 2: Smooth Normals (3x3 sampling)
+    // ========================================
+    vec2 texelSize = vec2(1.0 / 1024.0);  // Approximate texel size
+    vec3 normal = getSmoothNormal(u_normals, v_texCoord, texelSize);
     
-    // View direction
     vec3 viewDir = vec3(0.0, 0.0, 1.0);
+    float NdotV = max(0.001, dot(normal, viewDir));
     
-    // Base reflectivity (F0) - metals use albedo color, dielectrics use 0.04
-    vec3 F0 = mix(vec3(0.04), color.rgb, metallic);
+    // ========================================
+    // TIER 1: ALBEDO (Intrinsic Reflectance)
+    // ========================================
+    // The albedo is the "true color" of the surface without lighting
+    // In a full system, this would come from intrinsic decomposition
+    // For now, we approximate: albedo ≈ originalColor (assumes neutral original lighting)
+    vec3 albedo = originalColor.rgb;
+    
+    // Base reflectivity (F0) - metals use albedo, dielectrics use 0.04
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
     
     // Fresnel for rim lighting
-    float NdotV = max(0.001, dot(normal, viewDir));
-    float fresnel = pow(1.0 - NdotV, 3.0) * 0.2;
+    float fresnel = pow(1.0 - NdotV, 4.0) * 0.3;
     
-    // Start with ambient
-    vec3 finalLight = vec3(u_ambient) * ao * (1.0 - metallic * 0.5);
+    // ========================================
+    // TIER 1: VERY LOW AMBIENT (0.15)
+    // ========================================
+    // This creates dark shadows for contrast
+    float ambientStrength = 0.15;  // Was 0.8, now 0.15!
+    vec3 ambientLight = albedo * ambientStrength * ao;
     
-    // Add emissive contribution
-    finalLight += color.rgb * emissive * 2.0;
+    // ========================================
+    // ACCUMULATE LIGHT (Multiplicative PBR)
+    // ========================================
+    vec3 totalDiffuse = vec3(0.0);
+    vec3 totalSpecular = vec3(0.0);
     
-    // Accumulate light contributions
     for (int i = 0; i < 8; i++) {
         if (i >= u_lightCount) break;
         
@@ -463,66 +491,96 @@ void main() {
         float attenuation = 1.0;
         
         if (light.type == 1) {
+            // Directional light
             lightDir = normalize(vec3(light.position.xy, 0.5));
         } else {
+            // Point light with realistic falloff
             vec3 toLight = vec3(light.position.xy - v_texCoord, light.position.z);
             float dist = length(toLight);
             lightDir = normalize(toLight);
-            // Softer attenuation for brighter lighting
-            attenuation = 1.0 / (1.0 + dist * 1.5 + dist * dist * 2.0);
+            // Inverse square falloff (physically accurate)
+            attenuation = 1.0 / (1.0 + dist * 3.0 + dist * dist * 8.0);
         }
         
-        vec3 halfDir = normalize(lightDir + viewDir);
-        
+        // Core lighting calculations
         float NdotL = max(0.0, dot(normal, lightDir));
+        vec3 halfDir = normalize(lightDir + viewDir);
         float NdotH = max(0.0, dot(normal, halfDir));
         float VdotH = max(0.0, dot(viewDir, halfDir));
         
-        // Cook-Torrance BRDF
+        // ========================================
+        // SHADOW CALCULATION
+        // ========================================
+        float shadow = 1.0;
+        
+        // Normal-based shadow (facing away = dark)
+        float normalShadow = smoothstep(-0.1, 0.3, NdotL);
+        
+        // Depth-based shadow (further objects receive less direct light)
+        float depthShadow = 1.0 - (1.0 - depth) * u_shadowStrength * 0.8;
+        
+        // PCF + Contact shadows from shadow map
+        if (u_useShadowMap) {
+            shadow = pcfShadow * contactShadow;
+            shadow = mix(1.0, shadow, u_shadowStrength);
+        }
+        
+        // Combine all shadow factors
+        shadow *= normalShadow * depthShadow;
+        
+        // ========================================
+        // PBR BRDF (Cook-Torrance)
+        // ========================================
+        // Specular
         float D = D_GGX(NdotH, roughness);
         float G = G_SchlickGGX(NdotV, roughness) * G_SchlickGGX(NdotL, roughness);
         vec3 F = F_Schlick(VdotH, F0);
-        
-        // Specular term
         vec3 specular = (D * G * F) / (4.0 * NdotV * NdotL + 0.001);
         
-        // Energy conservation: specular + diffuse should not exceed 1
+        // Diffuse (Lambert with energy conservation)
         vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+        vec3 diffuse = kD * albedo / 3.14159265;
         
-        // Diffuse term (Lambert)
-        vec3 diffuse = kD * color.rgb / 3.14159265;
-        
-        // Subsurface scattering for skin/organic materials
+        // SSS for skin/organic
         if (subsurface > 0.0) {
             diffuse = subsurfaceScattering(diffuse, lightDir, normal, subsurface);
         }
         
-        // Shadow
-        float shadow = 1.0;
-        if (u_useShadowMap) {
-            shadow = pcfShadow * contactShadow;
-            shadow = mix(1.0, shadow, u_shadowStrength);
-        } else {
-            float normalShadow = smoothstep(-0.2, 0.3, NdotL);
-            float depthShadow = 1.0 - (1.0 - depth) * u_shadowStrength * 0.5;
-            shadow = mix(normalShadow, depthShadow, 0.5);
-        }
+        // ========================================
+        // TIER 1: 4x LIGHT MULTIPLIER
+        // ========================================
+        float lightPower = 4.0;  // Was 1.5, now 4.0!
         
-        // Combine - multiply by 2.5 for brighter lighting
-        vec3 lightContrib = (diffuse + specular) * NdotL * attenuation * light.intensity * light.color * shadow * 2.5;
-        finalLight += lightContrib;
+        vec3 lightContrib = light.color * light.intensity * attenuation * shadow * lightPower;
+        totalDiffuse += diffuse * NdotL * lightContrib;
+        totalSpecular += specular * NdotL * lightContrib;
     }
     
-    // Add fresnel rim light (reduced for metals which already have Fresnel in BRDF)
-    finalLight += vec3(fresnel * ao * (1.0 - metallic * 0.7));
+    // ========================================
+    // TIER 1: MULTIPLICATIVE PBR BLEND
+    // ========================================
+    // Final = Ambient + (Albedo * Diffuse) + Specular
+    // Albedo MULTIPLIES with light, not additive!
+    vec3 finalColor = ambientLight + totalDiffuse + totalSpecular;
     
-    // Apply lighting
-    vec3 exposedColor = color.rgb * exp2((finalLight - 1.0) * 0.5);
+    // Add rim lighting
+    finalColor += albedo * fresnel * ao * 0.5;
     
-    // Highlight compression
-    exposedColor = mix(exposedColor, vec3(1.0), smoothstep(0.85, 1.3, exposedColor) * 0.25);
+    // Add emissive (unaffected by lighting)
+    finalColor += albedo * emissive * 2.0;
     
-    gl_FragColor = vec4(clamp(exposedColor * u_brightness, 0.0, 1.0), color.a);
+    // ========================================
+    // TIER 1: IMPROVED TONE MAPPING x/(x+0.5)
+    // ========================================
+    // This allows brighter highlights than x/(x+1)
+    finalColor = finalColor / (finalColor + vec3(0.5));
+    
+    // Gamma correction
+    finalColor = pow(finalColor, vec3(0.9));
+    
+    // Apply brightness control
+    finalColor *= u_brightness;
+    
+    gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), originalColor.a);
 }
 `;
-

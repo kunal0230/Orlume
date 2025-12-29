@@ -21,6 +21,7 @@ import { RaymarchingShadowProcessor } from '../effects/RaymarchingShadowShader.j
 import { HBAOProcessor } from '../effects/HBAOShader.js';
 import { AdvancedShadowProcessor } from '../effects/AdvancedShadowShader.js';
 import { RelightingEngine } from '../effects/RelightingEngine.js';
+import { LightIntelligence } from '../effects/LightIntelligence.js';
 
 export class RelightingManager {
     constructor(app) {
@@ -65,11 +66,13 @@ export class RelightingManager {
         this.shadowProcessor = new RaymarchingShadowProcessor();
         this.hbaoProcessor = new HBAOProcessor();
         this.advancedShadowProcessor = new AdvancedShadowProcessor(); // Phase B: Advanced shadows
+        this.lightIntelligence = new LightIntelligence(this.appAdapter); // Phase D: Light analysis
 
         // Initialize new PBR-based relighting engine
         this.relightingEngine = new RelightingEngine(this.appAdapter);
         this.albedoMap = null;  // Albedo (unlit color) from intrinsic decomposition
         this.shadowMap = null;  // Advanced shadow map (PCF + contact + color bleed)
+        this.lightAnalysis = null;  // Phase D: Detected lights and environment map
 
         // Initialize other components with adapter
         this.relightingEffect = new RelightingEffect(this.appAdapter);
@@ -725,6 +728,39 @@ export class RelightingManager {
             } catch (albedoError) {
                 console.warn('⚠️ Albedo extraction failed:', albedoError.message);
                 this.albedoMap = null;
+            }
+
+            // =====================================================
+            // PHASE 5: Light Intelligence (Detect lights, environment map)
+            // =====================================================
+            console.log('🔦 Analyzing scene lighting...');
+            const lightStart = performance.now();
+
+            try {
+                this.lightAnalysis = this.lightIntelligence.analyzeLight(
+                    this.app.state.originalImage,
+                    this.depthMap,
+                    this.normalMap
+                );
+
+                const lightTime = performance.now() - lightStart;
+                const detected = this.lightAnalysis.lights.length;
+                const temp = this.lightAnalysis.illumination?.colorTemperature?.toFixed(0) || 'N/A';
+
+                console.log(`✅ Light analysis complete (${lightTime.toFixed(0)}ms)`);
+                console.log(`   📍 ${detected} light sources detected`);
+                console.log(`   🌡️ Color temperature: ~${temp}K`);
+                console.log(`   🌍 Environment map: ${this.lightAnalysis.envMap?.width}x${this.lightAnalysis.envMap?.height}`);
+
+                // Log detected lights
+                if (detected > 0 && detected <= 5) {
+                    this.lightAnalysis.lights.forEach((l, i) => {
+                        console.log(`   💡 Light ${i + 1}: (${(l.x * 100).toFixed(0)}%, ${(l.y * 100).toFixed(0)}%) intensity=${l.intensity.toFixed(2)}`);
+                    });
+                }
+            } catch (lightError) {
+                console.warn('⚠️ Light analysis failed:', lightError.message);
+                this.lightAnalysis = null;
             }
 
             const totalTime = performance.now() - startTime;
