@@ -12,6 +12,7 @@
 import { AlbedoEstimator } from './AlbedoEstimator.js';
 import { PBRShader } from './PBRShader.js';
 import { ShadowCaster } from './ShadowCaster.js';
+import { PBRPreviewShader } from './PBRPreviewShader.js';
 
 export class RelightingEngine {
     constructor(app) {
@@ -21,12 +22,16 @@ export class RelightingEngine {
         this.albedoEstimator = new AlbedoEstimator();
         this.pbrShader = new PBRShader();
         this.shadowCaster = new ShadowCaster();
+        this.previewShader = new PBRPreviewShader();  // GPU-accelerated preview
 
         // Cached maps
         this.albedoMap = null;
         this.shadingMap = null;
         this.shadowMap = null;
         this.outputCanvas = null;
+
+        // GPU preview state
+        this.gpuPreviewReady = false;
 
         // Light sources
         this.lights = [];
@@ -77,6 +82,9 @@ export class RelightingEngine {
         this.albedoMap = albedoResult.albedo;
         this.shadingMap = albedoResult.shading;
 
+        // Initialize GPU preview shader
+        this._initGPUPreview();
+
         const elapsed = performance.now() - startTime;
         console.log(`✅ Scene prepared (${elapsed.toFixed(0)}ms)`);
 
@@ -84,6 +92,53 @@ export class RelightingEngine {
             albedo: this.albedoMap,
             shading: this.shadingMap
         };
+    }
+
+    /**
+     * Initialize GPU-accelerated preview
+     */
+    _initGPUPreview() {
+        if (!this.albedoMap) return;
+
+        const width = this.albedoMap.width;
+        const height = this.albedoMap.height;
+
+        // Initialize WebGL shader
+        this.gpuPreviewReady = this.previewShader.init(width, height);
+
+        if (this.gpuPreviewReady) {
+            // Convert and upload textures to GPU
+            const normalCanvas = this._ensureCanvas(this.normalMap);
+            const depthCanvas = this._ensureCanvas(this.depthMap);
+            const materialCanvas = this.materialMap ? this._ensureCanvas(this.materialMap) : null;
+
+            this.previewShader.uploadTextures(
+                this.albedoMap,
+                normalCanvas,
+                depthCanvas,
+                materialCanvas
+            );
+
+            console.log('🎮 GPU preview ready');
+        }
+    }
+
+    /**
+     * Render real-time preview using GPU (60fps capable)
+     * 
+     * @param {Array} lights - Array of { x, y, z, color, intensity }
+     * @returns {HTMLCanvasElement}
+     */
+    renderGPUPreview(lights) {
+        if (!this.gpuPreviewReady) {
+            // Fallback to CPU preview
+            return this.renderPreview();
+        }
+
+        return this.previewShader.render(lights, {
+            ambientIntensity: this.options.ambientIntensity,
+            ambientColor: this.options.ambientColor
+        });
     }
 
     /**
@@ -155,17 +210,20 @@ export class RelightingEngine {
 
         // Render with PBR
         if (this.options.enablePBR) {
+            // Use original image as albedo (intrinsic extraction is experimental)
+            const albedoSource = this._ensureCanvas(this.originalImage);
+
             this.outputCanvas = this.pbrShader.render(
-                this.albedoMap,
+                albedoSource,
                 this.normalMap,
                 this.depthMap,
                 this.materialMap,
                 this.lights,
                 {
-                    ambientColor: this.options.ambientColor,
-                    ambientIntensity: this.options.ambientIntensity,
-                    aoMap: this.shadowMap,
-                    shadowStrength: 0.5
+                    ambientLight: 0.15,
+                    shadowStrength: this.options.shadowSoftness,
+                    aoStrength: 0.3,
+                    aoMap: this.shadowMap
                 }
             );
         } else {
@@ -315,6 +373,15 @@ export class RelightingEngine {
      */
     _ensureCanvas(map) {
         if (map instanceof HTMLCanvasElement) return map;
+
+        // Handle HTMLImageElement
+        if (map instanceof HTMLImageElement) {
+            const canvas = document.createElement('canvas');
+            canvas.width = map.naturalWidth || map.width;
+            canvas.height = map.naturalHeight || map.height;
+            canvas.getContext('2d').drawImage(map, 0, 0);
+            return canvas;
+        }
 
         if (map.canvas instanceof HTMLCanvasElement) return map.canvas;
 

@@ -189,8 +189,9 @@ export class SegmentationEstimator {
             const originalHeight = image.naturalHeight || image.height;
 
             // Resize large images to prevent OOM during post-processing
-            // SegFormer works well at 512-1024px, larger causes memory issues
-            const MAX_DIM = 1024;
+            // SegFormer works well at 512-768px, larger causes memory issues
+            // during Transformers.js interpolation step
+            const MAX_DIM = 768;
             let targetWidth = originalWidth;
             let targetHeight = originalHeight;
 

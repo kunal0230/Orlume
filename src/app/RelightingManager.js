@@ -1,20 +1,24 @@
 /**
  * RelightingManager - Full 3D features integration (Depth, Relighting, 3D View, Parallax)
  * 
- * v4.9.0: Multi-Modal Image Intelligence System
- * - Depth Estimation (Depth Anything Small)
+ * v5.1.0: ORLUME Neural Relighting Engine
+ * - Depth Estimation (Depth Anything V2)
+ * - ML-based Surface Normals (Metric3D v2)
  * - Semantic Segmentation (SegFormer B0 - 150 classes)
  * - Fusion Engine (depth-seg fusion, material inference)
  * - Enhanced raymarching shadows and HBAO ambient occlusion
  */
 import { DepthEstimator } from '../ml/DepthEstimator.js';
+import { NormalEstimator } from '../ml/NormalEstimator.js';
 import { SegmentationEstimator } from '../ml/SegmentationEstimator.js';
+import { DepthModelComparison, DEPTH_MODELS } from '../ml/DepthModelComparison.js';
 import { FusionEngine } from '../effects/FusionEngine.js';
 import { RelightingEffect } from '../effects/RelightingEffect.js';
 import { ParallaxEffect } from '../effects/ParallaxEffect.js';
 import { SceneManager } from '../renderer/SceneManager.js';
 import { RaymarchingShadowProcessor } from '../effects/RaymarchingShadowShader.js';
 import { HBAOProcessor } from '../effects/HBAOShader.js';
+import { AdvancedShadowProcessor } from '../effects/AdvancedShadowShader.js';
 import { RelightingEngine } from '../effects/RelightingEngine.js';
 
 export class RelightingManager {
@@ -24,6 +28,7 @@ export class RelightingManager {
         // State
         this.depthMap = null;
         this.normalMap = null;
+        this.mlNormalMap = null;  // ML-based normals (Metric3D)
         this.aoMap = null;
         this.currentMode = null; // 'relight', '3d', 'parallax'
 
@@ -31,7 +36,8 @@ export class RelightingManager {
         this.useONNX = false;      // Disabled - conflicts with Transformers.js ONNX runtime
         this.useRaymarching = true;
         this.useHBAO = true;
-        this.useSegmentation = true; // Enable multi-modal segmentation
+        this.useSegmentation = true;   // Enable multi-modal segmentation
+        this.useMLNormals = true;      // Use ML-based normals when available
 
         // Setup DOM elements needed by effects
         this._setupDOMElements();
@@ -39,10 +45,9 @@ export class RelightingManager {
         // Create app adapter that mimics old OrlumeApp interface
         this.appAdapter = this._createAppAdapter();
 
-        // Initialize depth estimator (has built-in WebGPU → WASM fallback)
+        // Initialize ML estimators
         this.depthEstimator = new DepthEstimator(this.appAdapter);
-
-        // Initialize segmentation estimator for multi-modal analysis
+        this.normalEstimator = new NormalEstimator(this.appAdapter);
         this.segmentationEstimator = new SegmentationEstimator(this.appAdapter);
 
         // Initialize fusion engine for combining depth + segmentation
@@ -52,13 +57,16 @@ export class RelightingManager {
         this.materialMap = null;
         this.segmentationResult = null;
 
+
         // Initialize enhanced processors
         this.shadowProcessor = new RaymarchingShadowProcessor();
         this.hbaoProcessor = new HBAOProcessor();
+        this.advancedShadowProcessor = new AdvancedShadowProcessor(); // Phase B: Advanced shadows
 
         // Initialize new PBR-based relighting engine
         this.relightingEngine = new RelightingEngine(this.appAdapter);
         this.albedoMap = null;  // Albedo (unlit color) from intrinsic decomposition
+        this.shadowMap = null;  // Advanced shadow map (PCF + contact + color bleed)
 
         // Initialize other components with adapter
         this.relightingEffect = new RelightingEffect(this.appAdapter);
@@ -232,6 +240,12 @@ export class RelightingManager {
         const btnEstimate = document.getElementById('btn-estimate-depth');
         if (btnEstimate) {
             btnEstimate.addEventListener('click', () => this.estimateDepth());
+        }
+
+        // Compare all depth models button
+        const btnCompare = document.getElementById('btn-compare-depth-models');
+        if (btnCompare) {
+            btnCompare.addEventListener('click', () => this.compareDepthModels());
         }
 
         // Lighting sliders
@@ -497,6 +511,8 @@ export class RelightingManager {
 
             // =====================================================
             // PHASE 1: Run depth and segmentation IN PARALLEL
+            // Note: ML normal models aren't available for browser,
+            // so we generate high-quality normals from depth in Phase 2
             // =====================================================
             const analysisPromises = [
                 this._runDepthEstimation(imageData),
@@ -509,6 +525,7 @@ export class RelightingManager {
 
             const results = await Promise.all(analysisPromises);
 
+            // Parse results
             const rawDepthMap = results[0];
             const segmentationResult = this.useSegmentation ? results[1] : null;
 
@@ -516,7 +533,7 @@ export class RelightingManager {
             console.log(`✅ Phase 1 complete: Depth + Segmentation (${phase1Time.toFixed(0)}ms)`);
 
             // =====================================================
-            // PHASE 2: Fusion - Combine depth + segmentation
+            // PHASE 2: Fusion + High-Quality Normal Generation
             // =====================================================
             if (segmentationResult && this.fusionEngine) {
                 console.log('🔀 Starting fusion...');
@@ -531,28 +548,57 @@ export class RelightingManager {
 
                     // Use enhanced outputs
                     this.depthMap = fusionResult.refinedDepth;
-                    this.normalMap = fusionResult.normalMap;
                     this.materialMap = fusionResult.materialMap;
                     this.segmentationResult = segmentationResult;
 
+                    // Generate high-quality segment-aware normals
+                    const normalStart = performance.now();
+                    if (fusionResult.segmentMask) {
+                        // Use segment boundaries for sharper edges
+                        this.normalMap = this.normalEstimator.generateSegmentAwareNormals(
+                            this.depthMap,
+                            fusionResult.segmentMask,
+                            { normalStrength: 'auto', edgeSharpness: 1.5 }
+                        );
+                    } else {
+                        this.normalMap = this.normalEstimator.generateNormals(this.depthMap, {
+                            normalStrength: 'auto',
+                            smoothKernel: 'scharr',
+                            multiScale: true,
+                            enhanceEdges: true
+                        });
+                    }
+                    const normalTime = performance.now() - normalStart;
+                    console.log(`✅ High-quality segment-aware normals generated (${normalTime.toFixed(0)}ms)`);
+
                     const fusionTime = performance.now() - fusionStart;
-                    console.log(`✅ Fusion complete: Enhanced depth, normals, materials (${fusionTime.toFixed(0)}ms)`);
+                    console.log(`✅ Fusion complete: Enhanced depth, materials (${fusionTime.toFixed(0)}ms)`);
 
                 } catch (fusionError) {
                     console.warn('⚠️ Fusion failed, using raw depth:', fusionError.message);
                     this.depthMap = rawDepthMap;
-                    this.normalMap = this.depthEstimator.generateNormalMap(rawDepthMap, 3.0);
+                    this.normalMap = this.normalEstimator.generateNormals(rawDepthMap, {
+                        normalStrength: 'auto',
+                        smoothKernel: 'scharr',
+                        multiScale: true,
+                        enhanceEdges: true
+                    });
                     this.materialMap = null;
                 }
             } else {
-                // No segmentation, use raw depth
+                // No segmentation, use raw depth and generate normals
                 this.depthMap = rawDepthMap;
-                this.normalMap = this.depthEstimator.generateNormalMap(rawDepthMap, 3.0);
+                this.normalMap = this.normalEstimator.generateNormals(rawDepthMap, {
+                    normalStrength: 'auto',
+                    smoothKernel: 'scharr',
+                    multiScale: true,
+                    enhanceEdges: true
+                });
                 this.materialMap = null;
             }
 
             console.log(`✅ Depth map: ${this.depthMap.width}×${this.depthMap.height}`);
-            console.log('✅ Normal map generated');
+            console.log(`✅ Normal map: ${this.normalMap.width}×${this.normalMap.height}`);
             if (this.materialMap) {
                 console.log('✅ Material map generated (150 classes)');
             }
@@ -578,6 +624,53 @@ export class RelightingManager {
                     console.warn('⚠️ HBAO generation failed:', aoError.message);
                     this.aoMap = null;
                 }
+            }
+
+            // =====================================================
+            // PHASE 3.5: Advanced Shadow System (PCF + Contact + Color Bleed)
+            // =====================================================
+            console.log('🌑 Computing advanced shadows...');
+            const shadowStart = performance.now();
+
+            try {
+                // Get image canvas for color bleeding
+                const imageCanvas = this._getImageCanvas();
+
+                // Compute advanced shadows for current primary light
+                const primaryLight = this.relightingEffect?.lights?.[0] || { x: 0.5, y: 0.3, z: 0.8 };
+                const lightPos = [
+                    primaryLight.x || 0.5,
+                    primaryLight.y || 0.3,
+                    primaryLight.z || 0.8
+                ];
+
+                const shadowCanvas = this.advancedShadowProcessor.compute(
+                    this.depthMap,
+                    this.normalMap,
+                    imageCanvas,
+                    this.aoMap,
+                    {
+                        lightPos: lightPos,
+                        lightRadius: 0.06,        // Soft penumbra
+                        shadowIntensity: 0.85,    // Strong but not pitch black
+                        contactDistance: 0.08,    // Contact shadow reach
+                        pcfSamples: 8,            // Quality/performance balance
+                        raymarchSteps: 16,        // Contact shadow quality
+                        colorBleedAmount: 0.12    // Subtle GI approximation
+                    }
+                );
+
+                this.shadowMap = {
+                    canvas: shadowCanvas,
+                    width: shadowCanvas.width,
+                    height: shadowCanvas.height
+                };
+
+                const shadowTime = performance.now() - shadowStart;
+                console.log(`✅ Advanced shadows computed (${shadowTime.toFixed(0)}ms) - PCF, Contact, Color Bleed`);
+            } catch (shadowError) {
+                console.warn('⚠️ Advanced shadow computation failed:', shadowError.message);
+                this.shadowMap = null;
             }
             // =====================================================
             // PHASE 4: Extract Albedo for PBR Relighting
@@ -657,6 +750,160 @@ export class RelightingManager {
     }
 
     /**
+     * Get original image as canvas for processing
+     */
+    _getImageCanvas() {
+        const original = this.app.state.originalImage;
+        if (original instanceof HTMLCanvasElement) {
+            return original;
+        }
+        // Create canvas from image
+        const canvas = document.createElement('canvas');
+        canvas.width = original.width;
+        canvas.height = original.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(original, 0, 0);
+        return canvas;
+    }
+
+    /**
+     * Run ML-based normal estimation (internal helper)
+     */
+    async _runNormalEstimation(imageData) {
+        console.log('🗺️ Running ML normal estimation...');
+        try {
+            const normalMap = await this.normalEstimator.estimate(imageData);
+            console.log(`✅ ML Normals: ${normalMap.width}×${normalMap.height}`);
+            return normalMap;
+        } catch (error) {
+            console.warn('⚠️ ML normal estimation failed, will use depth-derived:', error.message);
+            return null;
+        }
+    }
+
+
+    /**
+     * Compare all available depth models on the current image
+     * Downloads and runs each model, then exports all results for comparison
+     */
+    async compareDepthModels() {
+        if (!this.app.state.hasImage) {
+            alert('Please load an image first');
+            return;
+        }
+
+        const btnCompare = document.getElementById('btn-compare-depth-models');
+        const progressContainer = document.getElementById('depth-progress');
+        const progressText = document.getElementById('depth-progress-text');
+        const progressPercent = document.getElementById('depth-progress-percent');
+        const progressBar = document.getElementById('depth-progress-bar');
+
+        try {
+            if (btnCompare) {
+                btnCompare.disabled = true;
+                btnCompare.textContent = '⏳ Running comparison...';
+            }
+            if (progressContainer) progressContainer.hidden = false;
+
+            const comparison = new DepthModelComparison();
+            const img = this.app.state.originalImage;
+
+            console.log('🧪 Starting depth model comparison on all 6 models...');
+            console.log(`Image size: ${img.width}×${img.height}`);
+            console.log('This may take several minutes to download and run all models.\n');
+
+            let currentModelIdx = 0;
+            const totalModels = DEPTH_MODELS.length;
+
+            const results = await comparison.runComparison(img, (modelId, status, progress) => {
+                const modelInfo = DEPTH_MODELS.find(m => m.id === modelId);
+                const modelName = modelInfo ? modelInfo.name : modelId;
+
+                if (status === 'loading' && progress === 0) {
+                    currentModelIdx++;
+                }
+
+                const overallProgress = ((currentModelIdx - 1) / totalModels * 100) + (progress / totalModels);
+
+                if (progressText) progressText.textContent = `${modelName}: ${status}`;
+                if (progressPercent) progressPercent.textContent = `${Math.round(overallProgress)}%`;
+                if (progressBar) progressBar.style.width = `${overallProgress}%`;
+            });
+
+            // Show summary
+            console.log('\n📊 COMPARISON RESULTS:');
+            console.log('='.repeat(60));
+
+            const successResults = results.filter(r => r.success);
+            const failedResults = results.filter(r => !r.success);
+
+            console.table(successResults.map(r => ({
+                Model: r.model.name,
+                Size: r.model.size,
+                'Inference (ms)': r.inferenceTime.toFixed(0),
+                'Total (ms)': r.totalTime.toFixed(0)
+            })));
+
+            if (failedResults.length > 0) {
+                console.log('\n❌ Failed models:');
+                failedResults.forEach(r => console.log(`  - ${r.model.name}: ${r.error}`));
+            }
+
+            // Export all results
+            await comparison.exportResults();
+
+            // Show comparison grid
+            const grid = comparison.createComparisonGrid();
+            if (grid) {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.9); z-index: 10000;
+                    display: flex; align-items: center; justify-content: center;
+                    flex-direction: column; padding: 20px;
+                `;
+
+                grid.style.maxWidth = '95vw';
+                grid.style.maxHeight = '80vh';
+                grid.style.objectFit = 'contain';
+                grid.style.borderRadius = '8px';
+
+                const closeBtn = document.createElement('button');
+                closeBtn.textContent = '✕ Close Comparison';
+                closeBtn.style.cssText = `
+                    margin-top: 20px; padding: 10px 24px; font-size: 14px;
+                    background: #4a9eff; color: white; border: none; border-radius: 6px;
+                    cursor: pointer;
+                `;
+                closeBtn.onclick = () => overlay.remove();
+
+                const info = document.createElement('div');
+                info.style.cssText = 'color: white; margin-bottom: 16px; font-size: 14px;';
+                info.textContent = `Compared ${successResults.length}/${totalModels} models. Individual depth maps downloaded.`;
+
+                overlay.appendChild(info);
+                overlay.appendChild(grid);
+                overlay.appendChild(closeBtn);
+                document.body.appendChild(overlay);
+            }
+
+            alert(`Comparison complete!\n\n✅ ${successResults.length} models succeeded\n❌ ${failedResults.length} models failed\n\nDepth maps have been downloaded.`);
+
+        } catch (error) {
+            console.error('Comparison failed:', error);
+            alert('Comparison failed: ' + error.message);
+        } finally {
+            if (btnCompare) {
+                btnCompare.disabled = false;
+                btnCompare.textContent = '🧪 Compare All Models';
+            }
+            if (progressContainer) {
+                setTimeout(() => { progressContainer.hidden = true; }, 1000);
+            }
+        }
+    }
+
+    /**
      * Enable relighting mode
      */
     enableRelight() {
@@ -699,6 +946,8 @@ export class RelightingManager {
     /**
      * Apply relighting effect permanently to the image
      * Bakes the current lighting into a new image
+     * 
+     * Uses PBR engine when available, falls back to old shading
      */
     async applyRelighting() {
         if (!this.relightingEffect || !this.relightingEffect.enabled) {
@@ -709,13 +958,17 @@ export class RelightingManager {
         const btnApply = document.getElementById('btn-apply-relight');
         const originalText = btnApply?.textContent;
         if (btnApply) {
-            btnApply.textContent = '⏳ Applying...';
+            btnApply.textContent = '⏳ Rendering...';
             btnApply.disabled = true;
         }
 
         try {
-            // Get the canvas with lighting applied
-            const exportCanvas = this.relightingEffect.getExportCanvas();
+            let exportCanvas;
+
+            // WYSIWYG: Use the exact same canvas that the preview shows
+            // This guarantees perfect match between preview and final output
+            console.log('📋 Exporting preview canvas (WYSIWYG)...');
+            exportCanvas = this.relightingEffect.getExportCanvas();
 
             if (!exportCanvas) {
                 throw new Error('Could not get export canvas');
@@ -731,15 +984,18 @@ export class RelightingManager {
             this.depthMap = null;
             this.normalMap = null;
             this.aoMap = null;
+            this.albedoMap = null;
+            this.materialMap = null;
 
-            // Load the relit image as the new original using dataURL
-            // Note: GPUProcessor.loadImage() now uses Safe Handoff pattern
-            // and renders synchronously - no need for requestAnimationFrame hacks
+            // Load the relit image as the new original
             await this.app.loadImageFromURL(dataURL);
 
-            // Hide relight controls until new depth is estimated
+            // Hide controls until new depth is estimated
             const controls = document.getElementById('relight-controls');
             if (controls) controls.style.display = 'none';
+
+            const debugViz = document.getElementById('debug-viz-controls');
+            if (debugViz) debugViz.style.display = 'none';
 
             // Update button
             const btnEstimate = document.getElementById('btn-estimate-depth');

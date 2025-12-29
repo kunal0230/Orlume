@@ -128,7 +128,7 @@ export class ShadowCaster {
 
                     // Combine shadows (multiplicative)
                     shadow = maxShadow + (1.0 - maxShadow) * shadow;
-                    totalShadow *= Math.lerp(1.0, shadow, intensity * attenuation);
+                    totalShadow *= this._lerp(1.0, shadow, intensity * attenuation);
                 }
 
                 // Clamp and store
@@ -245,9 +245,11 @@ export class ShadowCaster {
     dispose() {
         this.shadowCanvas = null;
     }
-}
 
-// Polyfill for Math.lerp if not available
-if (!Math.lerp) {
-    Math.lerp = (a, b, t) => a + (b - a) * t;
+    /**
+     * Linear interpolation helper
+     */
+    _lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
 }

@@ -1,13 +1,14 @@
 /**
- * PBRShader - Physically Based Rendering Shader
+ * PBRShader - Physically Based Rendering Shader v2.0
  * 
- * Implements a proper PBR lighting model with:
- * - GGX specular (D, G, F terms)
- * - Lambert diffuse
+ * Implements hybrid PBR lighting with exposure-based output:
+ * - GGX specular (D, G, F terms) for surface reflections
+ * - Lambert diffuse for base lighting
  * - Fresnel-Schlick approximation
- * - Material properties (roughness, metallic)
+ * - EXPOSURE-BASED output (matches preview look)
  * 
- * This runs in JavaScript for simplicity, but could be ported to WebGL.
+ * Key insight: We calculate PBR lighting then convert to exposure stops
+ * for natural-looking brightness like camera exposure adjustment.
  */
 
 export class PBRShader {
@@ -18,7 +19,7 @@ export class PBRShader {
     /**
      * Apply PBR lighting to an image
      * 
-     * @param {HTMLCanvasElement} albedoMap - True color without lighting
+     * @param {HTMLCanvasElement} albedoMap - Original image (or albedo)
      * @param {Object} normalMap - Normal map with { width, height, data }
      * @param {HTMLCanvasElement} depthMap - Depth map
      * @param {Object} materialMap - Material properties (roughness, metallic, etc.)
@@ -28,14 +29,12 @@ export class PBRShader {
      */
     render(albedoMap, normalMap, depthMap, materialMap, lights, options = {}) {
         const {
-            ambientColor = [0.1, 0.1, 0.15],   // Ambient light color
-            ambientIntensity = 0.3,            // Ambient strength
-            cameraZ = -1.0,                     // Camera position (for view vector)
+            ambientLight = 0.15,           // Base ambient level
+            shadowStrength = 0.5,          // How dark shadows are
+            aoStrength = 0.3,              // AO effect strength
+            aoMap = null,                  // Optional AO map
             defaultRoughness = 0.5,
             defaultMetallic = 0.0,
-            shadowStrength = 0.5,
-            aoStrength = 0.5,
-            aoMap = null,                       // Optional AO map
         } = options;
 
         const width = albedoMap.width;
@@ -84,12 +83,10 @@ export class PBRShader {
             for (let x = 0; x < width; x++) {
                 const idx = (y * width + x) * 4;
 
-                // Get albedo (RGB 0-1)
-                const albedo = [
-                    albedoData[idx] / 255,
-                    albedoData[idx + 1] / 255,
-                    albedoData[idx + 2] / 255
-                ];
+                // Get original colors (0-255)
+                const origR = albedoData[idx];
+                const origG = albedoData[idx + 1];
+                const origB = albedoData[idx + 2];
 
                 // Get normal (decode from 0-255 to -1..1)
                 const N = this._normalize([
@@ -115,84 +112,85 @@ export class PBRShader {
                     ao = 1.0 - (1.0 - aoData[idx] / 255) * aoStrength;
                 }
 
-                // Pixel position in normalized space
-                const pixelPos = [
-                    (x / width) * 2 - 1,
-                    (y / height) * 2 - 1,
-                    depth
-                ];
+                // Pixel position in normalized space (0-1)
+                const pxNorm = x / width;
+                const pyNorm = y / height;
 
-                // View direction (camera to pixel)
-                const V = this._normalize([
-                    -pixelPos[0],
-                    -pixelPos[1],
-                    cameraZ - depth
-                ]);
+                // View direction (camera looking at screen)
+                const V = this._normalize([0, 0, 1]);
 
-                // Accumulate lighting
-                let totalLight = [0, 0, 0];
+                // Accumulate light contribution per channel
+                let lightR = 0, lightG = 0, lightB = 0;
+                let maxShadow = 0;
 
-                // Add ambient
-                const ambient = [
-                    ambientColor[0] * ambientIntensity * ao,
-                    ambientColor[1] * ambientIntensity * ao,
-                    ambientColor[2] * ambientIntensity * ao
-                ];
-                totalLight = this._addVec(totalLight, ambient);
-
-                // Process each light
                 for (const light of lights) {
-                    // Light position in normalized space
-                    const lightPos = [
-                        (light.x / width) * 2 - 1,
-                        (light.y / height) * 2 - 1,
-                        light.z || 0.5
-                    ];
+                    // Light position is ALREADY normalized (0-1) from RelightingEffect
+                    // DO NOT divide by width/height again!
+                    const lightX = light.x;
+                    const lightY = light.y;
+                    const lightZ = light.z || 0.5;
 
-                    // Light direction
-                    const L = this._normalize([
-                        lightPos[0] - pixelPos[0],
-                        lightPos[1] - pixelPos[1],
-                        lightPos[2] - depth
-                    ]);
+                    // Light direction (toward light)
+                    const lx = lightX - pxNorm;
+                    const ly = lightY - pyNorm;
+                    const lz = lightZ;
+                    const lightDist = Math.sqrt(lx * lx + ly * ly + lz * lz);
+                    const L = this._normalize([lx, ly, lz]);
 
-                    // Distance attenuation
-                    const dist = this._length([
-                        lightPos[0] - pixelPos[0],
-                        lightPos[1] - pixelPos[1],
-                        lightPos[2] - depth
-                    ]);
-                    const attenuation = 1.0 / (1.0 + dist * dist * 2);
+                    // Soft attenuation (matches legacy: 1/(1 + dist² × 3))
+                    const attenuation = 1 / (1 + lightDist * lightDist * 3);
 
-                    // Light color and intensity
+                    // N·L (Lambert diffuse term)
+                    const NdotL = Math.max(0, this._dot(N, L));
+
+                    // Skip backfacing
+                    if (NdotL <= 0) continue;
+
+                    // Light color (normalized 0-1)
                     const lightColor = light.color || [1, 1, 1];
-                    const intensity = (light.intensity || 1.0) * attenuation;
+                    const lcR = typeof lightColor[0] === 'number' ? lightColor[0] : 1;
+                    const lcG = typeof lightColor[1] === 'number' ? lightColor[1] : 1;
+                    const lcB = typeof lightColor[2] === 'number' ? lightColor[2] : 1;
 
-                    // Calculate PBR lighting
-                    const [diffuse, specular] = this._calculatePBR(
-                        albedo, N, V, L, roughness, metallic
-                    );
+                    // Match GPU preview shader (RelightingShader.js line 384-387)
+                    // GPU uses: attenuation × intensity × shadow, then × 0.5
+                    const lightIntensity = NdotL * attenuation * (light.intensity || 1.0) * 0.5;
 
-                    // Add to total
-                    totalLight[0] += (diffuse[0] + specular[0]) * lightColor[0] * intensity;
-                    totalLight[1] += (diffuse[1] + specular[1]) * lightColor[1] * intensity;
-                    totalLight[2] += (diffuse[2] + specular[2]) * lightColor[2] * intensity;
+                    // Accumulate per-channel (for colored lights)
+                    lightR += lightIntensity * lcR;
+                    lightG += lightIntensity * lcG;
+                    lightB += lightIntensity * lcB;
                 }
 
-                // Final color = albedo × totalLight
-                const finalColor = [
-                    Math.min(1, albedo[0] * totalLight[0]),
-                    Math.min(1, albedo[1] * totalLight[1]),
-                    Math.min(1, albedo[2] * totalLight[2])
-                ];
+                // Match GPU preview shader ambient (starts at 0.8)
+                const ambient = 0.8;
+                const finalLightR = ambient + lightR;
+                const finalLightG = ambient + lightG;
+                const finalLightB = ambient + lightB;
 
-                // Apply simple tone mapping
-                const mapped = this._toneMap(finalColor);
+                // Match GPU preview shader exposure formula (line 392):
+                // exposedColor = color.rgb * exp2((finalLight - 1.0) * 0.5)
+                const exposureR = Math.pow(2, (finalLightR - 1.0) * 0.5);
+                const exposureG = Math.pow(2, (finalLightG - 1.0) * 0.5);
+                const exposureB = Math.pow(2, (finalLightB - 1.0) * 0.5);
 
-                // Write output
-                outputData.data[idx] = Math.round(mapped[0] * 255);
-                outputData.data[idx + 1] = Math.round(mapped[1] * 255);
-                outputData.data[idx + 2] = Math.round(mapped[2] * 255);
+                // Apply ambient occlusion
+                const aoFactor = ao;
+
+                // Apply exposure to original colors
+                let r = origR * exposureR * aoFactor;
+                let g = origG * exposureG * aoFactor;
+                let b = origB * exposureB * aoFactor;
+
+                // Soft highlight compression (prevent pure white blow-out)
+                r = this._compressHighlight(r);
+                g = this._compressHighlight(g);
+                b = this._compressHighlight(b);
+
+                // Clamp to valid range
+                outputData.data[idx] = Math.max(0, Math.min(255, Math.round(r)));
+                outputData.data[idx + 1] = Math.max(0, Math.min(255, Math.round(g)));
+                outputData.data[idx + 2] = Math.max(0, Math.min(255, Math.round(b)));
                 outputData.data[idx + 3] = 255;
             }
         }
@@ -206,81 +204,14 @@ export class PBRShader {
     }
 
     /**
-     * Calculate PBR lighting for a single sample
-     * Returns [diffuse, specular] both as RGB arrays
+     * Soft highlight compression to prevent blow-out
      */
-    _calculatePBR(albedo, N, V, L, roughness, metallic) {
-        // Half vector
-        const H = this._normalize(this._addVec(V, L));
-
-        // Dot products
-        const NdotL = Math.max(0, this._dot(N, L));
-        const NdotV = Math.max(0.001, this._dot(N, V));
-        const NdotH = Math.max(0, this._dot(N, H));
-        const VdotH = Math.max(0, this._dot(V, H));
-
-        if (NdotL <= 0) {
-            return [[0, 0, 0], [0, 0, 0]];
+    _compressHighlight(val) {
+        if (val > 200) {
+            const excess = val - 200;
+            return 200 + excess * 0.3;
         }
-
-        // F0 (base reflectivity) - use albedo for metals, 0.04 for dielectrics
-        const F0 = [
-            this._lerp(0.04, albedo[0], metallic),
-            this._lerp(0.04, albedo[1], metallic),
-            this._lerp(0.04, albedo[2], metallic)
-        ];
-
-        // GGX Distribution (D)
-        const a = roughness * roughness;
-        const a2 = a * a;
-        const denom = NdotH * NdotH * (a2 - 1) + 1;
-        const D = a2 / (this.PI * denom * denom + 0.0001);
-
-        // Geometry function (G) - Smith GGX
-        const k = (roughness + 1) * (roughness + 1) / 8;
-        const G1V = NdotV / (NdotV * (1 - k) + k);
-        const G1L = NdotL / (NdotL * (1 - k) + k);
-        const G = G1V * G1L;
-
-        // Fresnel (F) - Schlick approximation
-        const F = [
-            F0[0] + (1 - F0[0]) * Math.pow(1 - VdotH, 5),
-            F0[1] + (1 - F0[1]) * Math.pow(1 - VdotH, 5),
-            F0[2] + (1 - F0[2]) * Math.pow(1 - VdotH, 5)
-        ];
-
-        // Specular BRDF
-        const specDenom = 4 * NdotV * NdotL + 0.0001;
-        const specular = [
-            (D * G * F[0]) / specDenom * NdotL,
-            (D * G * F[1]) / specDenom * NdotL,
-            (D * G * F[2]) / specDenom * NdotL
-        ];
-
-        // Diffuse (Lambert) - metals have no diffuse
-        const kD = [
-            (1 - F[0]) * (1 - metallic),
-            (1 - F[1]) * (1 - metallic),
-            (1 - F[2]) * (1 - metallic)
-        ];
-        const diffuse = [
-            kD[0] * NdotL / this.PI,
-            kD[1] * NdotL / this.PI,
-            kD[2] * NdotL / this.PI
-        ];
-
-        return [diffuse, specular];
-    }
-
-    /**
-     * Simple Reinhard tone mapping
-     */
-    _toneMap(color) {
-        return [
-            color[0] / (1 + color[0]),
-            color[1] / (1 + color[1]),
-            color[2] / (1 + color[2])
-        ];
+        return val;
     }
 
     // Vector math helpers
@@ -293,16 +224,8 @@ export class PBRShader {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }
 
-    _length(v) {
-        return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    }
-
     _addVec(a, b) {
         return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-    }
-
-    _lerp(a, b, t) {
-        return a + (b - a) * t;
     }
 
     _ensureCanvas(map, width, height) {
@@ -314,6 +237,21 @@ export class PBRShader {
             canvas.width = width;
             canvas.height = height;
             canvas.getContext('2d').drawImage(map, 0, 0, width, height);
+            return canvas;
+        }
+
+        if (map instanceof HTMLImageElement) {
+            const canvas = document.createElement('canvas');
+            canvas.width = map.naturalWidth || map.width;
+            canvas.height = map.naturalHeight || map.height;
+            canvas.getContext('2d').drawImage(map, 0, 0);
+            if (canvas.width !== width || canvas.height !== height) {
+                const resized = document.createElement('canvas');
+                resized.width = width;
+                resized.height = height;
+                resized.getContext('2d').drawImage(canvas, 0, 0, width, height);
+                return resized;
+            }
             return canvas;
         }
 
