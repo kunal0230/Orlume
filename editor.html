@@ -61,7 +61,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-3d" title="3D Relight">
+            <button class="tool-btn" id="tool-relight2" title="3D Relight 2.0 (L)">
                 <!-- Lightbulb icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 18h6" />
@@ -251,6 +251,11 @@
             <!-- God Rays Mode Header -->
             <div class="panel-header mode-header" id="godrays-mode-header" style="display: none;">
                 <span class="panel-title">☀️ Volumetric Lighting</span>
+            </div>
+
+            <!-- Relight 2.0 Mode Header -->
+            <div class="panel-header mode-header" id="relight2-mode-header" style="display: none;">
+                <span class="panel-title">💡 3D Relight 2.0</span>
             </div>
 
             <div class="panel-content">
@@ -654,6 +659,136 @@
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
                             Click a button to see how the AI understands your image
                         </p>
+                    </div>
+                </div>
+
+                <!-- Relighting 2.0 Panel (New Architecture) -->
+                <div class="panel-section" id="panel-relight2">
+                    <!-- Stage 1: Depth -->
+                    <div class="section">
+                        <div class="section-header">📐 Depth Estimation</div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                            Choose a model. Larger = better quality but slower.
+                        </p>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                            <label class="model-option"
+                                style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px; cursor: pointer;">
+                                <input type="radio" name="depth-model" id="depth-model-small" value="small" checked>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 500;">DA V2 Small</div>
+                                    <div style="font-size: 10px; color: var(--text-secondary);">~50MB • Fast (3-5s)
+                                    </div>
+                                </div>
+                                <span id="cache-status-small" style="font-size: 10px;">⏳</span>
+                            </label>
+                            <label class="model-option"
+                                style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px; cursor: pointer;">
+                                <input type="radio" name="depth-model" id="depth-model-base" value="base">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 500;">DA V2 Base</div>
+                                    <div style="font-size: 10px; color: var(--text-secondary);">~150MB • Quality (8-15s)
+                                    </div>
+                                </div>
+                                <span id="cache-status-base" style="font-size: 10px;">⏳</span>
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary" id="btn-relight2-depth" style="width: 100%;">
+                            Estimate Depth
+                        </button>
+
+                        <div id="relight2-progress" style="margin-top: 12px; display: none;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                                <span id="relight2-progress-text">Loading...</span>
+                            </div>
+                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
+                                <div id="relight2-progress-bar"
+                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 12px;">
+                            <button class="btn" id="btn-relight2-clear-cache" style="width: 100%; font-size: 11px;">
+                                🗑️ Clear Model Cache
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2: 3D Mesh -->
+                    <div class="section">
+                        <div class="section-header">🏔️ 3D Model</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn" id="btn-relight2-view-depth" style="flex: 1;" disabled>
+                                📐 View Depth
+                            </button>
+                            <button class="btn" id="btn-relight2-view-3d" style="flex: 1;" disabled>
+                                🔮 3D Mesh
+                            </button>
+                        </div>
+
+                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
+                            🖱️ Drag to rotate • Scroll to zoom • Dbl-click to place light
+                        </p>
+
+                        <div class="control-group" style="margin-top: 12px;">
+                            <div class="control-label">
+                                <span>Displacement</span>
+                                <span id="val-relight2-displacement">30</span>
+                            </div>
+                            <input type="range" id="slider-relight2-displacement" min="0" max="100" step="1" value="30">
+                        </div>
+                    </div>
+
+                    <!-- Stage 3: Lighting -->
+                    <div class="section">
+                        <div class="section-header">💡 Lighting</div>
+                        <p
+                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
+                            Click on image to place light
+                        </p>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Ambient</span>
+                                <span id="val-relight2-ambient">25</span>
+                            </div>
+                            <input type="range" id="slider-relight2-ambient" min="0" max="100" step="1" value="25">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow Strength</span>
+                                <span id="val-relight2-shadow">60</span>
+                            </div>
+                            <input type="range" id="slider-relight2-shadow" min="0" max="100" step="1" value="60">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow Softness</span>
+                                <span id="val-relight2-softness">50</span>
+                            </div>
+                            <input type="range" id="slider-relight2-softness" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Brightness</span>
+                                <span id="val-relight2-brightness">50</span>
+                            </div>
+                            <input type="range" id="slider-relight2-brightness" min="0" max="100" step="1" value="50">
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-relight2-reset" style="flex: 1;">Reset</button>
+                            <button class="btn btn-primary" id="btn-relight2-apply" style="flex: 1;">Apply</button>
+                        </div>
                     </div>
                 </div>
 

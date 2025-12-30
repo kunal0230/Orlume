@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, Relighting2Module } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -202,6 +202,7 @@ export class EditorUI {
         document.getElementById('presets-mode-header').style.display = 'none';
         document.getElementById('bg-remove-mode-header').style.display = 'none';
         document.getElementById('godrays-mode-header').style.display = 'none';
+        document.getElementById('relight2-mode-header')?.style.setProperty('display', 'none');
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -282,6 +283,13 @@ export class EditorUI {
                 document.getElementById('panel-godrays').classList.add('active');
                 // Activate god rays tool
                 this._activateGodRaysTool();
+                break;
+
+            case 'relight2':
+                document.getElementById('relight2-mode-header').style.display = 'block';
+                document.getElementById('panel-relight2').classList.add('active');
+                // Activate new relighting module
+                this._activateRelight2Tool();
                 break;
         }
     }
@@ -930,6 +938,26 @@ export class EditorUI {
      */
     _deactivateGodRaysTool() {
         this.godRaysModule.deactivate();
+    }
+
+    /**
+     * Activate relight2 tool
+     */
+    _activateRelight2Tool() {
+        if (!this.relight2Module) {
+            this.relight2Module = new Relighting2Module(this);
+            this.relight2Module.init();
+        }
+        this.relight2Module.activate();
+    }
+
+    /**
+     * Deactivate relight2 tool
+     */
+    _deactivateRelight2Tool() {
+        if (this.relight2Module) {
+            this.relight2Module.deactivate();
+        }
     }
 
     /**

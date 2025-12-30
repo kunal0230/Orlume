@@ -15,4 +15,4 @@ export { ComparisonModule } from './ComparisonModule.js';
 export { LayersModule } from './LayersModule.js';
 export { BackgroundRemovalModule } from './BackgroundRemovalModule.js';
 export { GodRaysModule } from './GodRaysModule.js';
-
+export { Relighting2Module } from './Relighting2Module.js';
