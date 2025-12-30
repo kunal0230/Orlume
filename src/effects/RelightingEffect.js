@@ -724,6 +724,16 @@ export class RelightingEffect {
                 // Update ambient
                 this.threeRenderer.setAmbient(this.ambient);
 
+                // Phase G: Smooth brightness control
+                if (this.threeRenderer.setBrightness) {
+                    this.threeRenderer.setBrightness(this.brightness);
+                }
+
+                // Phase G: Shadow sharpness (use shadowStrength as sharpness: 0=soft, 1=hard)
+                if (this.threeRenderer.setShadowSharpness) {
+                    this.threeRenderer.setShadowSharpness(this.shadowStrength);
+                }
+
                 // Render Three.js scene
                 this.threeRenderer.render();
 

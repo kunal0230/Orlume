@@ -53,16 +53,16 @@ export class ThreeJS3DRenderer {
     init(width, height) {
         // Scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x1a1a1a);
+        this.scene.background = null; // Transparent background
 
         // Camera (orthographic for 2D-like view with 3D depth)
         const aspect = width / height;
         this.camera = new THREE.OrthographicCamera(
-            -aspect, aspect, 1, -1, 0.1, 10
+            -aspect, aspect, 1, -1, 0.1, 20
         );
-        this.camera.position.z = 2;
+        this.camera.position.z = 5;
 
-        // Renderer
+        // Renderer with shadow support
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true,
@@ -72,31 +72,67 @@ export class ThreeJS3DRenderer {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.setClearColor(0x000000, 0);
 
         // Add canvas to container
         if (this.container) {
             this.container.appendChild(this.renderer.domElement);
         }
 
-        // Create the displacement mesh
+        // Create the displacement mesh (object)
         this._createMesh();
 
-        // Add a point light for shadow casting
-        this.light = new THREE.PointLight(0xffffff, 2);
-        this.light.position.copy(this.lightPosition);
+        // Create shadow-receiving ground plane
+        this._createShadowPlane();
+
+        // Directional light for shadow casting (better than point light for shadows)
+        this.light = new THREE.DirectionalLight(0xffffff, 2);
+        this.light.position.set(0, 0, 3);
         this.light.castShadow = true;
+
+        // Shadow camera settings (orthographic for directional light)
         this.light.shadow.mapSize.width = 2048;
         this.light.shadow.mapSize.height = 2048;
+        this.light.shadow.camera.near = 0.1;
+        this.light.shadow.camera.far = 20;  // Cover full scene depth
+        this.light.shadow.camera.left = -3;
+        this.light.shadow.camera.right = 3;
+        this.light.shadow.camera.top = 3;
+        this.light.shadow.camera.bottom = -3;
+        this.light.shadow.bias = -0.0005;  // Reduce shadow acne
+        this.light.shadow.normalBias = 0.01;
+
         this.scene.add(this.light);
 
-        // Ambient light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+        // Ambient light for base illumination
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
         this.scene.add(ambientLight);
 
-        console.log('🎮 Three.js 3D Renderer initialized');
+        console.log('🎮 Three.js 3D Renderer with Shadow Mapping initialized');
         console.log(`   📐 Mesh: ${this.meshResolution}x${this.meshResolution} = ${this.meshResolution * this.meshResolution} vertices`);
+        console.log(`   🌑 Shadow Map: 2048x2048`);
 
         return this;
+    }
+
+    /**
+     * Create shadow-receiving ground plane behind the mesh
+     */
+    _createShadowPlane() {
+        // Large plane to catch all shadows
+        const planeGeometry = new THREE.PlaneGeometry(8, 8);
+
+        // Shadow-only material (receives shadows but otherwise transparent)
+        const planeMaterial = new THREE.ShadowMaterial({
+            opacity: 0.6,  // Visible shadows
+            color: 0x000000
+        });
+
+        this.shadowPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+        this.shadowPlane.position.z = -0.5;  // Further behind for shadow room
+        this.shadowPlane.receiveShadow = true;
+        this.scene.add(this.shadowPlane);
+        console.log('🌑 Shadow plane created at z=-0.5');
     }
 
     /**
@@ -108,7 +144,7 @@ export class ThreeJS3DRenderer {
         // Create plane geometry
         const geometry = new THREE.PlaneGeometry(2, 2, res - 1, res - 1);
 
-        // Custom shader material with ray-marched shadows
+        // Custom shader material for rendering
         this.uniforms = {
             u_albedo: { value: null },
             u_depth: { value: null },
@@ -121,7 +157,10 @@ export class ThreeJS3DRenderer {
             u_extrusion: { value: this.extrusionDepth },
             u_shadowSteps: { value: this.shadowSteps },
             u_shadowSoftness: { value: this.shadowSoftness },
-            u_resolution: { value: new THREE.Vector2(res, res) }
+            u_resolution: { value: new THREE.Vector2(res, res) },
+            u_shadowSharpness: { value: 0.8 },
+            u_brightness: { value: 1.0 },
+            u_lightRadius: { value: 0.05 }
         };
 
         const material = new THREE.ShaderMaterial({
@@ -132,9 +171,90 @@ export class ThreeJS3DRenderer {
         });
 
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.receiveShadow = true;
-        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = false;
+        this.mesh.castShadow = false;  // Custom shader can't cast shadows
         this.scene.add(this.mesh);
+
+        // Create SEPARATE shadow-casting mesh
+        // This mesh is invisible but casts shadows via Three.js shadow system
+        this._createShadowCastingMesh();
+    }
+
+    /**
+     * Create invisible mesh that casts shadows
+     */
+    _createShadowCastingMesh() {
+        const res = 128;  // Lower res for performance
+        this.shadowMeshRes = res;
+        const geometry = new THREE.PlaneGeometry(2, 2, res - 1, res - 1);
+
+        // Store reference to displace vertices later
+        this.shadowGeometry = geometry;
+        this.shadowVertexPositions = geometry.attributes.position.array.slice();
+
+        // Use MeshStandardMaterial for proper shadow casting
+        // Make it nearly invisible but still cast shadows
+        const shadowMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.01,  // Nearly invisible
+            side: THREE.DoubleSide
+        });
+
+        this.shadowMesh = new THREE.Mesh(geometry, shadowMaterial);
+        this.shadowMesh.castShadow = true;
+        this.shadowMesh.receiveShadow = false;
+        this.shadowMesh.position.z = 0.01;  // Slightly in front
+        this.scene.add(this.shadowMesh);
+        console.log('🔲 Shadow-casting mesh created (128x128)');
+    }
+
+    /**
+     * Update shadow mesh vertices based on depth map
+     */
+    updateShadowMeshFromDepth(depthCanvas) {
+        if (!this.shadowGeometry || !depthCanvas) return;
+
+        try {
+            const ctx = depthCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, depthCanvas.width, depthCanvas.height);
+            const data = imageData.data;
+
+            const positions = this.shadowGeometry.attributes.position.array;
+            const res = this.shadowMeshRes || 128;
+            const verticesPerRow = res;
+
+            // PlaneGeometry vertices are arranged row by row
+            for (let row = 0; row < res; row++) {
+                for (let col = 0; col < res; col++) {
+                    const vertexIndex = row * verticesPerRow + col;
+
+                    // Map to UV coordinates (0-1)
+                    const u = col / (res - 1);
+                    const v = 1 - row / (res - 1);  // Flip Y for image coords
+
+                    // Map to image coordinates
+                    const imgX = Math.floor(u * (depthCanvas.width - 1));
+                    const imgY = Math.floor(v * (depthCanvas.height - 1));
+                    const pixelIndex = (imgY * depthCanvas.width + imgX) * 4;
+
+                    // Get depth value (0-255 -> 0-1)
+                    const depth = data[pixelIndex] / 255;
+
+                    // Displace Z based on depth (closer = higher Z)
+                    // Use larger multiplier for visible shadows
+                    positions[vertexIndex * 3 + 2] = depth * this.extrusionDepth * 2.0;
+                }
+            }
+
+            this.shadowGeometry.attributes.position.needsUpdate = true;
+            this.shadowGeometry.computeVertexNormals();
+            this.needsUpdate = true;
+
+            console.log('📐 Shadow mesh displaced from depth map');
+        } catch (e) {
+            console.error('Error updating shadow mesh:', e);
+        }
     }
 
     /**
@@ -155,6 +275,11 @@ export class ThreeJS3DRenderer {
         texture.magFilter = THREE.LinearFilter;
         this.uniforms.u_depth.value = texture;
         this.depthTexture = texture;
+        this.depthCanvas = canvas;  // Store for shadow mesh update
+
+        // Update shadow-casting mesh with depth displacement
+        this.updateShadowMeshFromDepth(canvas);
+
         this.needsUpdate = true;
     }
 
@@ -180,15 +305,22 @@ export class ThreeJS3DRenderer {
      * Set light position (normalized 0-1 coordinates)
      */
     setLightPosition(x, y, z = 0.8) {
-        // Convert from 0-1 to -1 to 1
-        this.lightPosition.set(
-            (x - 0.5) * 2,
-            -(y - 0.5) * 2,  // Flip Y
-            z
-        );
+        // Convert from 0-1 to -1 to 1 (screen space)
+        const worldX = (x - 0.5) * 4;  // Wider range for directional light
+        const worldY = -(y - 0.5) * 4;  // Flip Y, wider range
+        const worldZ = 3;  // Keep light in front for proper shadow projection
+
+        this.lightPosition.set(worldX, worldY, worldZ);
         this.uniforms.u_lightPos.value = this.lightPosition;
+
         if (this.light) {
-            this.light.position.copy(this.lightPosition);
+            // Position directional light for shadow projection
+            this.light.position.set(worldX, worldY, worldZ);
+
+            // Update shadow camera
+            if (this.light.shadow) {
+                this.light.shadow.camera.updateProjectionMatrix();
+            }
         }
         this.needsUpdate = true;
     }
@@ -232,6 +364,26 @@ export class ThreeJS3DRenderer {
     setExtrusion(depth) {
         this.extrusionDepth = depth;
         this.uniforms.u_extrusion.value = depth;
+        this.needsUpdate = true;
+    }
+
+    /**
+     * Set shadow sharpness (0.0 = soft, 1.0 = razor sharp)
+     */
+    setShadowSharpness(sharpness) {
+        this.uniforms.u_shadowSharpness.value = Math.max(0, Math.min(1, sharpness));
+        // Smaller light radius = sharper shadows
+        this.uniforms.u_lightRadius.value = 0.2 * (1 - sharpness) + 0.01;
+        this.needsUpdate = true;
+    }
+
+    /**
+     * Set brightness with smooth curve
+     */
+    setBrightness(brightness) {
+        // Apply smooth curve for natural perception (gamma-like)
+        const smoothed = Math.pow(brightness, 1.2);
+        this.uniforms.u_brightness.value = smoothed;
         this.needsUpdate = true;
     }
 
@@ -371,121 +523,63 @@ uniform float u_extrusion;
 uniform int u_shadowSteps;
 uniform float u_shadowSoftness;
 uniform vec2 u_resolution;
+// Phase G: Advanced light physics uniforms
+uniform float u_shadowSharpness;
+uniform float u_brightness;
+uniform float u_lightRadius;
 
 varying vec2 vUv;
 varying vec3 vWorldPos;
 varying float vDepth;
 
 // ========================================
-// ADVANCED RAY-MARCH SHADOWS (64 steps)
+// SIMPLE FAST SHADOW SYSTEM
 // ========================================
-// Traces a ray from surface toward light, detecting occlusion
-// Uses soft penumbra based on distance to occluder
+// Minimal, working approach:
+// Trace toward light, check if higher depth blocks us
 
-float rayMarchShadow(vec3 startPos, vec3 lightPos) {
-    vec3 rayDir = normalize(lightPos - startPos);
-    float totalDist = length(lightPos - startPos);
+float calculateShadow(vec2 uv, vec3 lightPos) {
+    float ourDepth = texture2D(u_depth, uv).r;
     
-    // Use 64 steps for higher accuracy
-    const int MAX_STEPS = 64;
-    float baseStepSize = totalDist / float(MAX_STEPS);
+    // Convert light to UV
+    vec2 lightUV = vec2(lightPos.x * 0.5 + 0.5, -lightPos.y * 0.5 + 0.5);
+    vec2 toLightDir = normalize(lightUV - uv);
     
+    // Simple trace: 24 steps toward light
     float shadow = 1.0;
-    float minShadow = 1.0;
-    float t = baseStepSize * 1.5;  // Start slightly away from surface
     
-    // For soft penumbra calculation
-    float lightRadius = 0.15;  // Virtual light size for soft shadows
-    float penumbraFactor = 0.0;
-    
-    for (int i = 0; i < MAX_STEPS; i++) {
-        if (t >= totalDist * 0.95) break;  // Stop before light
+    for (int i = 1; i <= 24; i++) {
+        float t = float(i) * 0.015;  // Smaller steps
+        vec2 sampleUV = uv + toLightDir * t;
         
-        vec3 samplePos = startPos + rayDir * t;
+        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 ||
+            sampleUV.y < 0.0 || sampleUV.y > 1.0) break;
         
-        // Convert world pos back to UV
-        vec2 sampleUV = vec2(
-            samplePos.x * 0.5 + 0.5,
-            -samplePos.y * 0.5 + 0.5
-        );
+        float sampleDepth = texture2D(u_depth, sampleUV).r;
         
-        // Boundary check with margin
-        if (sampleUV.x < 0.01 || sampleUV.x > 0.99 || 
-            sampleUV.y < 0.01 || sampleUV.y > 0.99) {
-            t += baseStepSize;
-            continue;
+        // If sample is higher (closer to camera), it blocks light
+        // VERY aggressive threshold for visibility
+        if (sampleDepth > ourDepth + 0.02) {
+            shadow = 0.1;  // Very dark shadow for visibility
+            break;
         }
-        
-        // Sample depth at this point (bilinear filtered)
-        float sampledDepth = texture2D(u_depth, sampleUV).r;
-        float surfaceZ = (1.0 - sampledDepth) * u_extrusion;
-        
-        // Height of our ray above/below the surface
-        float heightDiff = samplePos.z - surfaceZ;
-        
-        // ========================================
-        // OCCLUSION DETECTION
-        // ========================================
-        if (heightDiff < -0.002) {
-            // We're below the surface = occluded
-            float occlusionDepth = abs(heightDiff);
-            
-            // Penumbra: further from surface = softer shadow
-            // Uses distance to occluder for realistic soft shadows
-            float distToLight = totalDist - t;
-            float softness = (lightRadius * t) / max(distToLight, 0.01);
-            
-            // Accumulate shadow (darker = more occluded)
-            float occlusionFactor = clamp(occlusionDepth / (softness + 0.01), 0.0, 1.0);
-            minShadow = min(minShadow, 1.0 - occlusionFactor);
-        }
-        
-        // ========================================
-        // HORIZON-BASED ENHANCEMENT
-        // ========================================
-        // Check if ray is grazing the surface (creates contact shadows)
-        if (abs(heightDiff) < 0.02) {
-            float grazingFactor = 1.0 - abs(heightDiff) / 0.02;
-            // Slight darkening for grazing rays (contact shadow)
-            minShadow = min(minShadow, 1.0 - grazingFactor * 0.2);
-        }
-        
-        // Adaptive step size: smaller steps near surface
-        float adaptiveStep = baseStepSize * (1.0 + abs(heightDiff) * 2.0);
-        t += clamp(adaptiveStep, baseStepSize * 0.5, baseStepSize * 2.0);
     }
     
-    // ========================================
-    // CONTACT SHADOW ENHANCEMENT
-    // ========================================
-    // Add contact shadow based on depth difference with neighbors
-    vec2 texelSize = 1.0 / u_resolution;
-    float centerDepth = texture2D(u_depth, vUv).r;
-    float contactShadow = 0.0;
+    return shadow;
+}
+
+// Simple AO - just check neighbors
+float calcAO() {
+    float ao = 0.0;
+    float d = texture2D(u_depth, vUv).r;
+    vec2 ts = 1.0 / u_resolution;
     
-    // Sample 4 neighbors for contact detection
-    float leftDepth = texture2D(u_depth, vUv - vec2(texelSize.x, 0.0)).r;
-    float rightDepth = texture2D(u_depth, vUv + vec2(texelSize.x, 0.0)).r;
-    float topDepth = texture2D(u_depth, vUv - vec2(0.0, texelSize.y)).r;
-    float bottomDepth = texture2D(u_depth, vUv + vec2(0.0, texelSize.y)).r;
+    ao += max(0.0, texture2D(u_depth, vUv + vec2(ts.x, 0.0)).r - d);
+    ao += max(0.0, texture2D(u_depth, vUv - vec2(ts.x, 0.0)).r - d);
+    ao += max(0.0, texture2D(u_depth, vUv + vec2(0.0, ts.y)).r - d);
+    ao += max(0.0, texture2D(u_depth, vUv - vec2(0.0, ts.y)).r - d);
     
-    // Depth discontinuity = contact shadow region
-    float depthDiff = max(
-        max(abs(centerDepth - leftDepth), abs(centerDepth - rightDepth)),
-        max(abs(centerDepth - topDepth), abs(centerDepth - bottomDepth))
-    );
-    
-    // Light direction influence on contact shadow
-    vec2 lightDir2D = normalize(vec2(lightPos.x, -lightPos.y) - vUv);
-    float lightAngle = dot(lightDir2D, vec2(1.0, 0.0));
-    
-    // Contact shadow intensity
-    contactShadow = smoothstep(0.01, 0.1, depthDiff) * 0.3;
-    
-    // Combine ray-march shadow with contact shadow
-    float finalShadow = minShadow * (1.0 - contactShadow);
-    
-    return clamp(finalShadow, 0.0, 1.0);
+    return clamp(1.0 - ao * 2.0, 0.3, 1.0);
 }
 
 // ========================================
@@ -522,59 +616,125 @@ void main() {
     float subsurface = material.b;
     
     // ========================================
-    // RAY-MARCHED SHADOW
+    // OBJECT-SHAPED SHADOW PROJECTION
     // ========================================
-    float shadow = rayMarchShadow(vWorldPos, u_lightPos);
+    // Uses silhouette detection: ground pixels check for elevated objects
+    // between them and the light, creating true object-shaped shadows
+    float shadow = calculateShadow(vUv, u_lightPos);
+    
+    // Ambient occlusion: darkens crevices
+    float ao = calcAO();
     
     // ========================================
-    // LIGHTING CALCULATION
+    // PHYSICALLY CORRECT LIGHTING
     // ========================================
     vec3 lightDir = normalize(u_lightPos - vWorldPos);
     vec3 viewDir = vec3(0.0, 0.0, 1.0);
     vec3 halfDir = normalize(lightDir + viewDir);
     
-    float NdotL = max(0.0, dot(normal, lightDir));
+    // Lambert diffuse (only light surfaces facing the light)
+    float NdotL = dot(normal, lightDir);
+    
+    // CRITICAL: Surfaces facing away get NO light (not gradual falloff)
+    // This prevents the "white gradient" effect
+    float facingLight = step(0.0, NdotL);  // Binary: facing or not
+    float diffuseFactor = max(0.0, NdotL) * facingLight;
+    
+    // Add slight wrap for smoother transition (but not too much)
+    float wrapAmount = 0.1;  // Very small wrap to prevent hard line
+    diffuseFactor = max(0.0, (NdotL + wrapAmount) / (1.0 + wrapAmount)) * facingLight;
+    
     float NdotH = max(0.0, dot(normal, halfDir));
     float NdotV = max(0.001, dot(normal, viewDir));
     
-    // Distance attenuation
+    // ========================================
+    // INVERSE-SQUARE FALLOFF (Physically Correct)
+    // ========================================
     float dist = length(u_lightPos - vWorldPos);
-    float attenuation = 1.0 / (1.0 + dist * 2.0 + dist * dist * 2.0);
     
-    // Specular (GGX-like)
-    float spec = pow(NdotH, 64.0 / roughness) * (1.0 - roughness * 0.5);
+    // Proper inverse-square with soft cutoff to prevent infinity at center
+    float lightRadius = 0.3;  // Effective light radius
+    float falloffStart = 0.1;  // Where falloff begins
     
-    // SSS for skin
-    float sssWrap = max(0.0, (dot(normal, lightDir) + 0.5) / 1.5);
-    vec3 sssColor = albedo.rgb * vec3(1.1, 0.95, 0.9);
+    // Smooth falloff that doesn't blow out at center
+    float normalizedDist = max(dist, falloffStart);
+    float attenuation = 1.0 / (normalizedDist * normalizedDist + 0.1);
+    
+    // Clamp attenuation to prevent over-brightness
+    attenuation = min(attenuation, 2.0);
+    
+    // Distance-based falloff cutoff (light doesn't reach far away)
+    float falloffDistance = 3.0;
+    float distanceFade = smoothstep(falloffDistance, 0.0, dist);
+    attenuation *= distanceFade;
+    
+    // ========================================
+    // SPECULAR (SUBTLE, NOT WHITE)
+    // ========================================
+    // Use albedo-tinted specular to avoid white highlights
+    float spec = pow(NdotH, 128.0 / roughness) * (1.0 - roughness);
+    vec3 specColor = mix(vec3(0.04), albedo.rgb, metallic);
+    vec3 specular = specColor * spec * shadow * 0.5;
+    
+    // ========================================
+    // SSS FOR SKIN (SUBTLE)
+    // ========================================
+    float sssWrap = max(0.0, (NdotL + 0.3) / 1.3);
+    vec3 sssColor = albedo.rgb * vec3(1.05, 0.98, 0.95);
+    
+    // ========================================
+    // COLOR-PRESERVING ILLUMINATION
+    // ========================================
+    // CRITICAL: Light MODULATES albedo, doesn't ADD white
+    // This is the key to avoiding washed-out white gradients
+    
+    // Diffuse: Albedo color * light contribution
+    vec3 diffuse = albedo.rgb * diffuseFactor * shadow;
+    
+    // Apply SSS (subtle)
+    diffuse = mix(diffuse, sssColor * sssWrap * shadow, subsurface * 0.3);
+    
+    // Tint diffuse by light color (subtle coloring, not white addition)
+    vec3 lightTint = mix(vec3(1.0), u_lightColor, 0.3);  // Light color influence capped at 30%
+    diffuse *= lightTint;
+    
+    // Scale by intensity and attenuation
+    vec3 Lo = (diffuse + specular) * u_lightIntensity * attenuation;
+    
+    // ========================================
+    // AMBIENT (ORIGINAL IMAGE PRESERVATION)
+    // ========================================
+    // Ambient is the base - shows original image
+    vec3 ambient = albedo.rgb * u_ambient;
+    
+    // Apply ambient occlusion to darken crevices
+    ambient *= ao;
+    
+    // Shadow darkening on ambient (subtle)
+    float ambientShadow = mix(1.0, shadow, 0.3);
+    ambient *= ambientShadow;
     
     // ========================================
     // FINAL COMPOSITION
     // ========================================
-    // Diffuse with shadow
-    vec3 diffuse = albedo.rgb * NdotL * shadow;
-    diffuse = mix(diffuse, sssColor * sssWrap * shadow, subsurface * 0.4);
+    vec3 finalColor = ambient + Lo;
     
-    // Specular with shadow
-    vec3 specular = u_lightColor * spec * shadow * 0.3;
+    // Rim lighting (very subtle, uses albedo color not white)
+    float fresnel = pow(1.0 - NdotV, 5.0) * 0.1;
+    finalColor += albedo.rgb * fresnel * attenuation * 0.2;
     
-    // Light contribution
-    vec3 Lo = (diffuse + specular) * u_lightColor * u_lightIntensity * attenuation;
+    // ========================================
+    // BRIGHTNESS CONTROL (Smooth Curve)
+    // ========================================
+    finalColor *= u_brightness;
     
-    // Ambient (preserves original image)
-    vec3 ambient = albedo.rgb * u_ambient;
+    // ========================================
+    // TONE MAPPING (Preserve Colors)
+    // ========================================
+    // Use very soft tone mapping to preserve original colors
+    finalColor = finalColor / (finalColor + vec3(1.0));
     
-    // Rim lighting
-    float fresnel = pow(1.0 - NdotV, 4.0) * 0.15;
-    vec3 rim = albedo.rgb * fresnel * u_lightColor * attenuation * 0.3;
-    
-    // Combine
-    vec3 finalColor = ambient + Lo + rim;
-    
-    // Tone mapping (preserve original)
-    finalColor = finalColor / (finalColor + vec3(0.9));
-    
-    // Output
+    // Output - no extra gamma that would wash out colors
     gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), albedo.a);
 }
 `;

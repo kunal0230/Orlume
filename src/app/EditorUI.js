@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -53,6 +53,7 @@ export class EditorUI {
         this.comparisonModule = new ComparisonModule(this);
         this.layersModule = new LayersModule(this);
         this.bgRemovalModule = new BackgroundRemovalModule(this);
+        this.godRaysModule = new GodRaysModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -103,6 +104,7 @@ export class EditorUI {
         this.keyboardModule.init();
         this.comparisonModule.init();
         this.bgRemovalModule.init();
+        this.godRaysModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -176,6 +178,11 @@ export class EditorUI {
             }
         }
 
+        // Deactivate god rays when leaving godrays mode
+        if (previousMode === 'godrays' && mode !== 'godrays') {
+            this._deactivateGodRaysTool();
+        }
+
         this.state.setTool(mode);
 
         // Update toolbar button UI
@@ -194,6 +201,7 @@ export class EditorUI {
         document.getElementById('hsl-mode-header').style.display = 'none';
         document.getElementById('presets-mode-header').style.display = 'none';
         document.getElementById('bg-remove-mode-header').style.display = 'none';
+        document.getElementById('godrays-mode-header').style.display = 'none';
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -268,6 +276,13 @@ export class EditorUI {
                 document.getElementById('bg-remove-mode-header').style.display = 'block';
                 document.getElementById('panel-bg-remove').classList.add('active');
                 break;
+
+            case 'godrays':
+                document.getElementById('godrays-mode-header').style.display = 'block';
+                document.getElementById('panel-godrays').classList.add('active');
+                // Activate god rays tool
+                this._activateGodRaysTool();
+                break;
         }
     }
 
@@ -311,7 +326,7 @@ export class EditorUI {
      * Legacy setTool for backward compatibility with keyboard shortcuts
      */
     setTool(tool) {
-        if (['develop', '3d', 'export', 'crop', 'upscale', 'liquify'].includes(tool)) {
+        if (['develop', '3d', 'export', 'crop', 'upscale', 'liquify', 'healing', 'godrays'].includes(tool)) {
             this.setMode(tool);
         } else if (['brush', 'radial', 'gradient'].includes(tool)) {
             // Switch to develop mode and masks tab, then select the tool
@@ -901,6 +916,20 @@ export class EditorUI {
      */
     _deactivateHealingTool() {
         this.healingModule.deactivate();
+    }
+
+    /**
+     * Activate god rays tool
+     */
+    _activateGodRaysTool() {
+        this.godRaysModule.activate();
+    }
+
+    /**
+     * Deactivate god rays tool
+     */
+    _deactivateGodRaysTool() {
+        this.godRaysModule.deactivate();
     }
 
     /**

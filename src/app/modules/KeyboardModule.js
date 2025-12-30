@@ -69,6 +69,7 @@ export class KeyboardModule {
         if (e.code === 'KeyU' && !e.metaKey && !e.ctrlKey) this.editor.setTool('upscale');
         if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) this.editor.setTool('liquify');
         if (e.code === 'KeyH' && !e.metaKey && !e.ctrlKey) this.editor.setTool('healing');
+        if (e.code === 'KeyV' && !e.metaKey && !e.ctrlKey) this.editor.setTool('godrays');
 
         // Brush mode toggle
         if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
