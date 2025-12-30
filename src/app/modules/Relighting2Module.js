@@ -314,7 +314,7 @@ export class Relighting2Module {
      * Estimate depth
      */
     async _estimateDepth() {
-        if (!this.ui.app.gpu) return;
+        if (!this.ui.gpu) return;
 
         const progressEl = document.getElementById('relight2-progress');
         const progressText = document.getElementById('relight2-progress-text');
@@ -324,7 +324,7 @@ export class Relighting2Module {
 
         try {
             // Store original image data
-            this.originalImageData = this.ui.app.gpu.toImageData();
+            this.originalImageData = this.ui.gpu.toImageData();
             const { width, height } = this.originalImageData;
 
             // Create image canvas for depth estimation
@@ -584,65 +584,80 @@ export class Relighting2Module {
             return;
         }
 
-        // Ensure we have a render before reading
-        this._renderPreview();
+        try {
+            // Ensure we have a render before reading
+            this._renderPreview();
 
-        // Use the existing WebGL context from lightingSystem
-        const gl = lightingSystem.gl;
-        if (!gl) {
-            console.error('Failed to get WebGL context from lightingSystem');
-            return;
-        }
-
-        const width = this.overlayCanvas.width;
-        const height = this.overlayCanvas.height;
-        console.log(`📐 Reading pixels: ${width}x${height}`);
-
-        const pixels = new Uint8Array(width * height * 4);
-
-        // Read pixels from WebGL framebuffer
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-        // WebGL has origin at bottom-left, but ImageData expects top-left
-        // Flip vertically
-        const flippedPixels = new Uint8ClampedArray(width * height * 4);
-        for (let y = 0; y < height; y++) {
-            const srcRow = (height - 1 - y) * width * 4;
-            const dstRow = y * width * 4;
-            for (let x = 0; x < width * 4; x++) {
-                flippedPixels[dstRow + x] = pixels[srcRow + x];
+            // Use the existing WebGL context from lightingSystem
+            const gl = lightingSystem.gl;
+            if (!gl) {
+                console.error('Failed to get WebGL context from lightingSystem');
+                return;
             }
+
+            const width = this.overlayCanvas.width;
+            const height = this.overlayCanvas.height;
+            console.log(`📐 Reading pixels: ${width}x${height}`);
+
+            const pixels = new Uint8Array(width * height * 4);
+
+            // Read pixels from WebGL framebuffer
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+            // WebGL has origin at bottom-left, but ImageData expects top-left
+            // Flip vertically
+            const flippedPixels = new Uint8ClampedArray(width * height * 4);
+            for (let y = 0; y < height; y++) {
+                const srcRow = (height - 1 - y) * width * 4;
+                const dstRow = y * width * 4;
+                for (let x = 0; x < width * 4; x++) {
+                    flippedPixels[dstRow + x] = pixels[srcRow + x];
+                }
+            }
+
+            const resultData = new ImageData(flippedPixels, width, height);
+            console.log('✅ ImageData created', resultData.width, resultData.height);
+
+            // Convert ImageData to canvas for GPUProcessor.loadImage()
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = width;
+            resultCanvas.height = height;
+            const ctx = resultCanvas.getContext('2d');
+            ctx.putImageData(resultData, 0, 0);
+
+            // Apply to main canvas via GPU
+            const gpu = this.ui.gpu;
+            if (gpu) {
+                gpu.loadImage(resultCanvas);
+                console.log('✅ Loaded to GPU');
+
+                // Update state - setImage expects HTMLImageElement or canvas
+                if (this.ui.state) {
+                    this.ui.state.setImage(resultCanvas);
+                }
+
+                // Push to history using the module's debounced method
+                if (this.ui.historyModule) {
+                    this.ui.historyModule.pushDebounced();
+                    console.log('✅ Pushed to history');
+                }
+            } else {
+                console.error('GPU not available');
+            }
+
+            // Clean up - remove click handler from overlay
+            if (this.overlayCanvas && this._canvasClickHandler) {
+                this.overlayCanvas.removeEventListener('click', this._canvasClickHandler);
+            }
+
+            this._hideOverlay();
+            this._hideLightIndicator();
+            this.hasDepth = false;
+            this.ui.setMode('develop');
+            console.log('🎨 Apply complete');
+        } catch (error) {
+            console.error('❌ Apply effect failed:', error);
         }
-
-        const resultData = new ImageData(flippedPixels, width, height);
-        console.log('✅ ImageData created', resultData.width, resultData.height);
-
-        // Apply to main canvas via GPU
-        const gpu = this.ui.app.gpu;
-        if (gpu) {
-            gpu.loadImageData(resultData);
-            console.log('✅ Loaded to GPU');
-
-            // Update state
-            this.ui.app.state.updateOriginalImage(resultData);
-
-            // Push to history
-            this.ui.app.history.push(resultData);
-            console.log('✅ Pushed to history');
-        } else {
-            console.error('GPU not available');
-        }
-
-        // Clean up - remove click handler from overlay
-        if (this.overlayCanvas && this._canvasClickHandler) {
-            this.overlayCanvas.removeEventListener('click', this._canvasClickHandler);
-        }
-
-        this._hideOverlay();
-        this._hideLightIndicator();
-        this.hasDepth = false;
-        this.ui.setMode('develop');
-        console.log('🎨 Apply complete');
     }
 
     /**
@@ -686,8 +701,8 @@ export class Relighting2Module {
         }
 
         // Restore original image
-        if (this.originalImageData && this.ui.app.gpu) {
-            this.ui.app.gpu.loadImageData(this.originalImageData);
+        if (this.originalImageData && this.ui.gpu) {
+            this.ui.gpu.loadImageData(this.originalImageData);
         }
     }
 

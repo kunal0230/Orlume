@@ -483,6 +483,33 @@ uniform float u_lightIntensity[4];
 
 varying vec2 v_uv;
 
+// Sample normal with 9-tap Gaussian-weighted smoothing for ultra-smooth lighting
+vec3 sampleNormalSmooth(vec2 uv) {
+    vec2 texel = 2.0 / u_resolution; // Use 2x texel size for wider sampling
+    
+    // Sample 9-tap pattern (3x3 grid) with Gaussian weights
+    // Center: 4, Adjacent: 2, Corners: 1
+    vec3 n00 = texture2D(u_normal, uv + vec2(-texel.x, -texel.y)).rgb;
+    vec3 n10 = texture2D(u_normal, uv + vec2(0.0, -texel.y)).rgb;
+    vec3 n20 = texture2D(u_normal, uv + vec2(texel.x, -texel.y)).rgb;
+    vec3 n01 = texture2D(u_normal, uv + vec2(-texel.x, 0.0)).rgb;
+    vec3 n11 = texture2D(u_normal, uv).rgb;  // Center
+    vec3 n21 = texture2D(u_normal, uv + vec2(texel.x, 0.0)).rgb;
+    vec3 n02 = texture2D(u_normal, uv + vec2(-texel.x, texel.y)).rgb;
+    vec3 n12 = texture2D(u_normal, uv + vec2(0.0, texel.y)).rgb;
+    vec3 n22 = texture2D(u_normal, uv + vec2(texel.x, texel.y)).rgb;
+    
+    // Gaussian weights (1, 2, 1 / 2, 4, 2 / 1, 2, 1) = total 16
+    vec3 avgNormal = (
+        n00 * 1.0 + n10 * 2.0 + n20 * 1.0 +
+        n01 * 2.0 + n11 * 4.0 + n21 * 2.0 +
+        n02 * 1.0 + n12 * 2.0 + n22 * 1.0
+    ) / 16.0;
+    
+    // Convert back to normal space and normalize
+    return normalize(avgNormal * 2.0 - 1.0);
+}
+
 // Calculate shadow for a single light
 float calculateShadow(vec2 uv, vec2 lightPos) {
     if (u_shadowStrength < 0.01) return 1.0;
@@ -514,10 +541,12 @@ float calculateShadow(vec2 uv, vec2 lightPos) {
 
 void main() {
     vec4 color = texture2D(u_image, v_uv);
-    vec3 normal = texture2D(u_normal, v_uv).rgb * 2.0 - 1.0;
+    
+    // Use smoothed normal sampling to reduce contour artifacts
+    vec3 normal = sampleNormalSmooth(v_uv);
     float depth = texture2D(u_depth, v_uv).r;
     
-    // Start with ambient
+    // Start with ambient (higher base to preserve original image)
     vec3 lighting = vec3(u_ambient);
     
     // Add each light's contribution
@@ -533,17 +562,19 @@ void main() {
         float dist = length(toLight);
         vec3 lightDir = normalize(vec3(toLight * 2.0, 0.5));
         
-        // Diffuse lighting
+        // Diffuse lighting with softer falloff
         float ndotl = max(dot(normal, lightDir), 0.0);
+        // Apply smoothstep for softer lighting transitions
+        ndotl = smoothstep(0.0, 1.0, ndotl);
         
-        // Distance falloff
-        float falloff = 1.0 / (1.0 + dist * 2.0);
+        // Distance falloff (softer)
+        float falloff = 1.0 / (1.0 + dist * 1.5);
         
         // Shadow
         float shadow = calculateShadow(v_uv, lightPos);
         
-        // Combine
-        lighting += lightColor * intensity * ndotl * falloff * shadow;
+        // Combine with reduced intensity for more natural results
+        lighting += lightColor * intensity * ndotl * falloff * shadow * 0.8;
     }
     
     // Apply lighting

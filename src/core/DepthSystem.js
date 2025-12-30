@@ -286,25 +286,40 @@ export class DepthSystem {
     }
 
     /**
-     * Generate normal map from depth map
-     * @param {Object} depthMap - { width, height, data }
-     * @param {number} strength - Normal intensity (default 50)
-     */
-    generateNormalMap(depthMap, strength = 50.0) {
+ * Generate normal map from depth map with smoothing
+ * @param {Object} depthMap - { width, height, data }
+ * @param {number} strength - Normal intensity (default 25, reduced for smoother results)
+ */
+    generateNormalMap(depthMap, strength = 12.0) {
         const { width, height, data } = depthMap;
+
+        // Step 1: Apply multi-pass Gaussian blur to depth data for very smooth normals
+        // First pass: initial blur with radius 6
+        const blurPass1 = this._gaussianBlurDepth(data, width, height, 6);
+        // Second pass: blur again for extra smoothness (create RGBA data for it)
+        const tempRGBA = new Uint8ClampedArray(width * height * 4);
+        for (let i = 0; i < width * height; i++) {
+            const v = Math.floor(blurPass1[i] * 255);
+            tempRGBA[i * 4] = v;
+            tempRGBA[i * 4 + 1] = v;
+            tempRGBA[i * 4 + 2] = v;
+            tempRGBA[i * 4 + 3] = 255;
+        }
+        const blurredDepth = this._gaussianBlurDepth(tempRGBA, width, height, 4);
+
         const normalData = new Uint8ClampedArray(width * height * 4);
 
         const getDepth = (px, py) => {
             px = Math.max(0, Math.min(width - 1, px));
             py = Math.max(0, Math.min(height - 1, py));
-            return data[(py * width + px) * 4] / 255.0;
+            return blurredDepth[py * width + px];
         };
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const idx = (y * width + x) * 4;
 
-                // Sobel gradient
+                // Sobel gradient with 3x3 kernel
                 const left = getDepth(x - 1, y);
                 const right = getDepth(x + 1, y);
                 const top = getDepth(x, y - 1);
@@ -347,6 +362,66 @@ export class DepthSystem {
         };
     }
 
+    /**
+     * Apply Gaussian blur to depth data
+     * @param {Uint8ClampedArray} data - RGBA depth data
+     * @param {number} width
+     * @param {number} height
+     * @param {number} radius - Blur radius
+     * @returns {Float32Array} Blurred depth values (0-1)
+     */
+    _gaussianBlurDepth(data, width, height, radius = 2) {
+        // Extract depth channel (R) and normalize to 0-1
+        const depthIn = new Float32Array(width * height);
+        for (let i = 0; i < width * height; i++) {
+            depthIn[i] = data[i * 4] / 255.0;
+        }
+
+        // Create Gaussian kernel
+        const kernelSize = radius * 2 + 1;
+        const kernel = new Float32Array(kernelSize);
+        const sigma = radius / 2;
+        let sum = 0;
+
+        for (let i = 0; i < kernelSize; i++) {
+            const x = i - radius;
+            kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+            sum += kernel[i];
+        }
+
+        // Normalize kernel
+        for (let i = 0; i < kernelSize; i++) {
+            kernel[i] /= sum;
+        }
+
+        // Horizontal pass
+        const temp = new Float32Array(width * height);
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let value = 0;
+                for (let k = 0; k < kernelSize; k++) {
+                    const sx = Math.max(0, Math.min(width - 1, x + k - radius));
+                    value += depthIn[y * width + sx] * kernel[k];
+                }
+                temp[y * width + x] = value;
+            }
+        }
+
+        // Vertical pass
+        const depthOut = new Float32Array(width * height);
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let value = 0;
+                for (let k = 0; k < kernelSize; k++) {
+                    const sy = Math.max(0, Math.min(height - 1, y + k - radius));
+                    value += temp[sy * width + x] * kernel[k];
+                }
+                depthOut[y * width + x] = value;
+            }
+        }
+
+        return depthOut;
+    }
     /**
      * Clear cache for a specific model
      */
