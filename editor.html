@@ -10,7 +10,7 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://editor.orlume.io/">
+    <meta property="og:url" content="https://orlume.io/editor">
     <meta property="og:title" content="Orlume Editor | Professional AI Photo Editing">
     <meta property="og:description"
         content="Free online AI photo editor with realtime 3D relighting, background removal, and GPU-accelerated tools. No login required.">
@@ -18,13 +18,13 @@
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://editor.orlume.io/">
+    <meta property="twitter:url" content="https://orlume.io/editor">
     <meta property="twitter:title" content="Orlume Editor | Professional AI Photo Editing">
     <meta property="twitter:description"
         content="Free online AI photo editor with realtime 3D relighting, background removal, and GPU-accelerated tools. No login required.">
     <meta property="twitter:image" content="https://orlume.io/og-editor.jpg">
 
-    <link rel="canonical" href="https://editor.orlume.io/">
+    <link rel="canonical" href="https://orlume.io/editor">
 
     <!-- WebApplication Schema -->
     <script type="application/ld+json">
@@ -32,7 +32,7 @@
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Orlume Editor",
-      "url": "https://editor.orlume.io/",
+      "url": "https://orlume.io/editor",
       "applicationCategory": "PhotoEditor",
       "operatingSystem": "Any (Web Browser)",
       "browserRequirements": "WebGL 2.0 capable browser",
@@ -771,8 +771,21 @@
                             </button>
                         </div>
 
+                        <div style="display: flex; gap: 6px; margin-top: 8px;">
+                            <button class="btn" id="btn-relight2-export-3d-lit"
+                                style="flex: 1; font-size: 10px; padding: 8px 4px;" disabled
+                                title="Export with baked lighting and shadows">
+                                🔦 Export Lit
+                            </button>
+                            <button class="btn" id="btn-relight2-export-3d-original"
+                                style="flex: 1; font-size: 10px; padding: 8px 4px;" disabled
+                                title="Export with original image texture">
+                                📷 Export Original
+                            </button>
+                        </div>
+
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            🖱️ Drag to rotate • Scroll to zoom • Dbl-click to place light
+                            Click on image to add light • Dbl-click to remove
                         </p>
 
                         <div class="control-group" style="margin-top: 12px;">
@@ -822,6 +835,30 @@
                                 <span id="val-relight2-brightness">50</span>
                             </div>
                             <input type="range" id="slider-relight2-brightness" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Light Height</span>
+                                <span id="val-relight2-height">50</span>
+                            </div>
+                            <input type="range" id="slider-relight2-height" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Specular</span>
+                                <span id="val-relight2-specular">30</span>
+                            </div>
+                            <input type="range" id="slider-relight2-specular" min="0" max="100" step="1" value="30">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>SSAO (Depth Shading)</span>
+                                <span id="val-relight2-ssao">40</span>
+                            </div>
+                            <input type="range" id="slider-relight2-ssao" min="0" max="100" step="1" value="40">
                         </div>
                     </div>
 

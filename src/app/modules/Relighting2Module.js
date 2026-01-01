@@ -141,6 +141,9 @@ export class Relighting2Module {
             { id: 'relight2-shadow', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setShadowStrength(v / 100); } },
             { id: 'relight2-softness', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setShadowSoftness(v / 100); } },
             { id: 'relight2-brightness', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setBrightness(0.5 + v / 100); } },
+            { id: 'relight2-height', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setLightHeight(0.1 + v / 100 * 0.9); } },
+            { id: 'relight2-specular', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setSpecularIntensity(v / 100); } },
+            { id: 'relight2-ssao', setter: (v) => { if (lightingSystem.isInitialized) lightingSystem.setSSAOStrength(v / 100); } },
             {
                 id: 'relight2-displacement', setter: (v) => {
                     if (meshSystem.isInitialized) {
@@ -186,6 +189,18 @@ export class Relighting2Module {
         const view3DBtn = document.getElementById('btn-relight2-view-3d');
         if (view3DBtn) {
             view3DBtn.addEventListener('click', () => this._toggle3DMeshView());
+        }
+
+        // Export 3D buttons - Lit version (with lighting baked)
+        const export3DLitBtn = document.getElementById('btn-relight2-export-3d-lit');
+        if (export3DLitBtn) {
+            export3DLitBtn.addEventListener('click', () => this._export3DModel(true));
+        }
+
+        // Export 3D buttons - Original version (without lighting)
+        const export3DOrigBtn = document.getElementById('btn-relight2-export-3d-original');
+        if (export3DOrigBtn) {
+            export3DOrigBtn.addEventListener('click', () => this._export3DModel(false));
         }
 
         // Apply button
@@ -358,8 +373,12 @@ export class Relighting2Module {
             // Enable buttons
             const viewDepthBtn = document.getElementById('btn-relight2-view-depth');
             const view3DBtn = document.getElementById('btn-relight2-view-3d');
+            const export3DLitBtn = document.getElementById('btn-relight2-export-3d-lit');
+            const export3DOrigBtn = document.getElementById('btn-relight2-export-3d-original');
             if (viewDepthBtn) viewDepthBtn.disabled = false;
             if (view3DBtn) view3DBtn.disabled = false;
+            if (export3DLitBtn) export3DLitBtn.disabled = false;
+            if (export3DOrigBtn) export3DOrigBtn.disabled = false;
 
             // Show overlay and attach click handler
             if (this.overlayCanvas) {
@@ -371,6 +390,9 @@ export class Relighting2Module {
 
             // Initial render
             this._renderPreview();
+
+            // Pre-build mesh for instant 3D toggle
+            this._preBuildMesh();
 
             console.log('✅ Depth estimation complete');
 
@@ -402,9 +424,7 @@ export class Relighting2Module {
         lightingSystem.setDepth(this.depthMap);
         lightingSystem.setNormals(this.normalMap);
 
-        // Add initial light at center-top
-        lightingSystem.addLight(0.5, 0.3, '#ffffff', 1.5);
-        this._updateLightIndicator(0.5, 0.3);
+        // Note: No default light added - user clicks to place lights
     }
 
     /**
@@ -416,6 +436,36 @@ export class Relighting2Module {
 
         // Render lighting to overlay canvas
         lightingSystem.render();
+    }
+
+    /**
+     * Pre-build mesh for instant 3D toggle (call after depth estimation)
+     */
+    _preBuildMesh() {
+        if (!this.depthMap || !this.threeCanvas) return;
+
+        const width = this.depthMap.width;
+        const height = this.depthMap.height;
+
+        // Initialize MeshSystem if needed
+        if (!meshSystem.isInitialized) {
+            meshSystem.init(width, height);
+        }
+
+        // Create image canvas for texture
+        const imageCanvas = document.createElement('canvas');
+        imageCanvas.width = width;
+        imageCanvas.height = height;
+        const ctx = imageCanvas.getContext('2d');
+        ctx.putImageData(this.originalImageData, 0, 0);
+
+        // Upload textures and build mesh in background
+        meshSystem.uploadTexture(imageCanvas);
+        meshSystem.uploadDepth(this.depthMap.canvas);
+        meshSystem.uploadNormals(this.normalMap.canvas);
+        meshSystem.buildMesh();
+
+        console.log('🔮 Mesh pre-built for instant 3D toggle');
     }
 
     /**
@@ -483,29 +533,19 @@ export class Relighting2Module {
             this.threeCanvas.width = width;
             this.threeCanvas.height = height;
 
-            // Initialize MeshSystem if needed
+            // Initialize MeshSystem if not done yet (fallback)
             if (!meshSystem.isInitialized) {
                 meshSystem.init(width, height);
             }
-
-            // Create image canvas for texture
-            const imageCanvas = document.createElement('canvas');
-            imageCanvas.width = width;
-            imageCanvas.height = height;
-            const ctx = imageCanvas.getContext('2d');
-            ctx.putImageData(this.originalImageData, 0, 0);
-
-            // Upload textures
-            meshSystem.uploadTexture(imageCanvas);
-            meshSystem.uploadDepth(this.depthMap.canvas);
-            meshSystem.uploadNormals(this.normalMap.canvas);
 
             // Setup inline renderer on our canvas
             meshSystem.setupInlineRenderer(this.threeCanvas);
             meshSystem.setupControls(this.threeCanvas);
 
-            // Build and render mesh
-            meshSystem.buildMesh();
+            // Build mesh only if not already built (mesh is pre-built after depth estimation)
+            if (!meshSystem.mesh) {
+                meshSystem.buildMesh();
+            }
             meshSystem.startAnimation();
 
             // Setup 3D click handler for light placement
@@ -531,6 +571,71 @@ export class Relighting2Module {
 
             this._renderPreview();
             if (view3DBtn) view3DBtn.textContent = '🔮 3D Mesh';
+        }
+    }
+
+    /**
+     * Export 3D model as GLB file
+     * If lights are applied, bakes the lit image as texture
+     * @param {boolean} withLighting - If true, bakes current lighting into texture
+     */
+    async _export3DModel(withLighting = false) {
+        if (!meshSystem.mesh) {
+            // Ensure mesh is built before export
+            this._preBuildMesh();
+        }
+
+        // Determine which button was clicked for feedback
+        const btnId = withLighting ? 'btn-relight2-export-3d-lit' : 'btn-relight2-export-3d-original';
+        const btnText = withLighting ? '🔦 Export Lit' : '📷 Export Original';
+
+        try {
+            const exportBtn = document.getElementById(btnId);
+            if (exportBtn) {
+                exportBtn.textContent = '⏳ ...';
+                exportBtn.disabled = true;
+            }
+
+            // Generate filename from timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const filename = withLighting
+                ? `orlume-3d-lit-${timestamp}`
+                : `orlume-3d-original-${timestamp}`;
+
+            // If withLighting and lights exist, capture the lit canvas as texture
+            let litCanvas = null;
+            if (withLighting && this.overlayCanvas) {
+                // Render to ensure latest lighting is applied
+                lightingSystem.render();
+
+                // Create a canvas with the lit image
+                litCanvas = document.createElement('canvas');
+                litCanvas.width = this.overlayCanvas.width;
+                litCanvas.height = this.overlayCanvas.height;
+                const ctx = litCanvas.getContext('2d');
+                ctx.drawImage(this.overlayCanvas, 0, 0);
+
+                console.log('🔦 Exporting with baked lighting');
+            } else {
+                console.log('📷 Exporting with original texture');
+            }
+
+            await meshSystem.exportGLB(filename, litCanvas);
+
+            if (exportBtn) {
+                exportBtn.textContent = btnText;
+                exportBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Export failed:', error);
+            const exportBtn = document.getElementById(btnId);
+            if (exportBtn) {
+                exportBtn.textContent = '❌ Failed';
+                setTimeout(() => {
+                    exportBtn.textContent = btnText;
+                    exportBtn.disabled = false;
+                }, 2000);
+            }
         }
     }
 

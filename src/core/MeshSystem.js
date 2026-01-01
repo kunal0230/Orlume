@@ -19,6 +19,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 export class MeshSystem {
     constructor() {
@@ -36,7 +37,7 @@ export class MeshSystem {
 
         // Settings
         this.settings = {
-            resolution: 256,        // Mesh vertices (64-512)
+            resolution: 128,        // Mesh vertices (64-512) - lower default for speed
             displacement: 0.3,      // Depth extrusion (0-1)
             smoothing: 2,           // Smooth passes (0-5)
             wireframe: false
@@ -299,17 +300,15 @@ export class MeshSystem {
         this.controls.dampingFactor = 0.08;
         this.controls.rotateSpeed = 0.5;
         this.controls.zoomSpeed = 0.8;
-        this.controls.panSpeed = 0.5;
-        this.controls.minDistance = 0.5;
+        this.controls.panSpeed = 0.8;
+        this.controls.enablePan = true; // Enable panning for centering
+        this.controls.minDistance = 0.3;
         this.controls.maxDistance = 5;
+        this.controls.screenSpacePanning = true; // Pan in screen space
 
         // Track interaction for adaptive quality
         this.controls.addEventListener('start', () => {
             this.isInteracting = true;
-            // Lower resolution during interaction for performance
-            if (this.mesh && this.settings.resolution > 128) {
-                // We'll keep the mesh as-is but could reduce update frequency
-            }
         });
 
         this.controls.addEventListener('end', () => {
@@ -321,9 +320,12 @@ export class MeshSystem {
             this.needsRender = true;
         });
 
-        // Reset camera position
-        this.camera.position.set(0, 0, 1.5);
+        // Auto-fit camera to mesh based on aspect ratio
+        const distance = Math.max(1.2, 1.0 / Math.min(this.aspectRatio, 1));
+        this.camera.position.set(0, 0, distance);
         this.camera.lookAt(0, 0, 0);
+        this.controls.target.set(0, 0, 0);
+        this.controls.update();
 
         return this.controls;
     }
@@ -688,6 +690,200 @@ export class MeshSystem {
         if (!this.renderer) return null;
         this.render();
         return this.renderer.domElement.toDataURL('image/png');
+    }
+
+    /**
+     * Export the 3D mesh as GLB file with baked displacement
+     * @param {string} filename - Name for the exported file (without extension)
+     * @param {HTMLCanvasElement} litCanvas - Optional canvas with baked lighting to use as texture
+     */
+    exportGLB(filename = 'orlume-3d-model', litCanvas = null) {
+        if (!this.mesh || !this.depthTexture) {
+            console.warn('No mesh or depth map to export');
+            return Promise.reject(new Error('No mesh or depth map to export'));
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                // Create a new mesh with baked displacement for export
+                const exportMesh = this._createExportMesh(litCanvas);
+
+                const exporter = new GLTFExporter();
+
+                // Export options
+                const options = {
+                    binary: true,  // Export as GLB (binary GLTF)
+                    includeCustomExtensions: false
+                };
+
+                exporter.parse(
+                    exportMesh,
+                    (result) => {
+                        // Create blob and trigger download
+                        const blob = new Blob([result], { type: 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `${filename}.glb`;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        URL.revokeObjectURL(url);
+
+                        // Clean up export mesh
+                        exportMesh.geometry.dispose();
+                        exportMesh.material.dispose();
+
+                        console.log('✅ 3D model exported as GLB with baked displacement');
+                        resolve();
+                    },
+                    (error) => {
+                        console.error('GLB export failed:', error);
+                        reject(error);
+                    },
+                    options
+                );
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Create a mesh with baked vertex displacement for export
+     * This reads the depth texture and applies displacement to actual vertex positions
+     * @param {HTMLCanvasElement} litCanvas - Optional canvas with baked lighting to use as texture
+     */
+    _createExportMesh(litCanvas = null) {
+        // Clone geometry from original mesh
+        const originalGeometry = this.mesh.geometry;
+        const geometry = originalGeometry.clone();
+
+        // Get position and UV attributes
+        const positions = geometry.attributes.position;
+        const uvs = geometry.attributes.uv;
+
+        // Read depth texture into a canvas to sample pixel values
+        const depthCanvas = document.createElement('canvas');
+        const depthImage = this.depthTexture.image;
+        depthCanvas.width = depthImage.width;
+        depthCanvas.height = depthImage.height;
+        const depthCtx = depthCanvas.getContext('2d');
+        depthCtx.drawImage(depthImage, 0, 0);
+        const depthData = depthCtx.getImageData(0, 0, depthCanvas.width, depthCanvas.height);
+
+        // Bake displacement into vertex positions
+        for (let i = 0; i < positions.count; i++) {
+            const u = uvs.getX(i);
+            const v = uvs.getY(i);
+
+            // Sample depth at UV coordinates
+            const px = Math.floor(u * (depthCanvas.width - 1));
+            const py = Math.floor((1 - v) * (depthCanvas.height - 1)); // Flip V
+            const idx = (py * depthCanvas.width + px) * 4;
+            const depth = depthData.data[idx] / 255; // Normalize to 0-1
+
+            // Apply displacement to Z coordinate
+            const currentZ = positions.getZ(i);
+            positions.setZ(i, currentZ + depth * this.settings.displacement);
+        }
+
+        positions.needsUpdate = true;
+
+        // Recompute normals for proper lighting in external viewers
+        geometry.computeVertexNormals();
+
+        // Create material with texture (use lit canvas if provided, otherwise albedo)
+        let material;
+        if (litCanvas) {
+            // Use the baked lit canvas as texture
+            const litTexture = new THREE.CanvasTexture(litCanvas);
+            litTexture.flipY = false; // WebGL textures are flipped
+            material = new THREE.MeshBasicMaterial({
+                map: litTexture
+            });
+            console.log('Using baked lighting texture for export');
+        } else if (this.albedoTexture) {
+            material = new THREE.MeshStandardMaterial({
+                map: this.albedoTexture.clone(),
+                metalness: 0,
+                roughness: 0.8
+            });
+        } else {
+            material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                metalness: 0,
+                roughness: 0.8
+            });
+        }
+
+        return new THREE.Mesh(geometry, material);
+    }
+
+    /**
+     * Export the 3D mesh as OBJ file (simpler format)
+     * @param {string} filename - Name for the exported file (without extension)
+     */
+    exportOBJ(filename = 'orlume-3d-model') {
+        if (!this.mesh) {
+            console.warn('No mesh to export');
+            return;
+        }
+
+        const geometry = this.mesh.geometry;
+        const position = geometry.attributes.position;
+        const uv = geometry.attributes.uv;
+        const index = geometry.index;
+
+        let objContent = '# Orlume 3D Model Export\n';
+        objContent += `# Vertices: ${position.count}\n\n`;
+
+        // Vertices
+        for (let i = 0; i < position.count; i++) {
+            objContent += `v ${position.getX(i).toFixed(6)} ${position.getY(i).toFixed(6)} ${position.getZ(i).toFixed(6)}\n`;
+        }
+
+        objContent += '\n';
+
+        // UVs
+        if (uv) {
+            for (let i = 0; i < uv.count; i++) {
+                objContent += `vt ${uv.getX(i).toFixed(6)} ${uv.getY(i).toFixed(6)}\n`;
+            }
+            objContent += '\n';
+        }
+
+        // Faces
+        if (index) {
+            for (let i = 0; i < index.count; i += 3) {
+                const a = index.getX(i) + 1;
+                const b = index.getX(i + 1) + 1;
+                const c = index.getX(i + 2) + 1;
+                if (uv) {
+                    objContent += `f ${a}/${a} ${b}/${b} ${c}/${c}\n`;
+                } else {
+                    objContent += `f ${a} ${b} ${c}\n`;
+                }
+            }
+        }
+
+        // Download
+        const blob = new Blob([objContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.obj`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
+        console.log('✅ 3D model exported as OBJ');
     }
 
     /**

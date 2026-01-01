@@ -39,7 +39,10 @@ export class LightingSystem {
             ambient: 0.25,
             shadowStrength: 0.6,
             shadowSoftness: 0.5,
-            brightness: 1.0
+            brightness: 1.0,
+            lightHeight: 0.5,
+            specularIntensity: 0.3,
+            ssaoStrength: 0.4
         };
 
         // Buffers
@@ -102,6 +105,9 @@ export class LightingSystem {
             u_shadowStrength: gl.getUniformLocation(this.program, 'u_shadowStrength'),
             u_shadowSoftness: gl.getUniformLocation(this.program, 'u_shadowSoftness'),
             u_brightness: gl.getUniformLocation(this.program, 'u_brightness'),
+            u_lightHeight: gl.getUniformLocation(this.program, 'u_lightHeight'),
+            u_specularIntensity: gl.getUniformLocation(this.program, 'u_specularIntensity'),
+            u_ssaoStrength: gl.getUniformLocation(this.program, 'u_ssaoStrength'),
             u_numLights: gl.getUniformLocation(this.program, 'u_numLights'),
             // Light arrays
             u_lightPos: gl.getUniformLocation(this.program, 'u_lightPos'),
@@ -344,6 +350,30 @@ export class LightingSystem {
     }
 
     /**
+     * Set light height (Z position)
+     */
+    setLightHeight(value) {
+        this.settings.lightHeight = Math.max(0.1, Math.min(1.0, value));
+        this.needsRender = true;
+    }
+
+    /**
+     * Set specular intensity
+     */
+    setSpecularIntensity(value) {
+        this.settings.specularIntensity = Math.max(0, Math.min(1, value));
+        this.needsRender = true;
+    }
+
+    /**
+     * Set SSAO strength
+     */
+    setSSAOStrength(value) {
+        this.settings.ssaoStrength = Math.max(0, Math.min(1, value));
+        this.needsRender = true;
+    }
+
+    /**
      * Render the scene
      */
     render() {
@@ -376,6 +406,9 @@ export class LightingSystem {
         gl.uniform1f(this.uniforms.u_shadowStrength, this.settings.shadowStrength);
         gl.uniform1f(this.uniforms.u_shadowSoftness, this.settings.shadowSoftness);
         gl.uniform1f(this.uniforms.u_brightness, this.settings.brightness);
+        gl.uniform1f(this.uniforms.u_lightHeight, this.settings.lightHeight);
+        gl.uniform1f(this.uniforms.u_specularIntensity, this.settings.specularIntensity);
+        gl.uniform1f(this.uniforms.u_ssaoStrength, this.settings.ssaoStrength);
         gl.uniform1i(this.uniforms.u_numLights, this.lights.length);
 
         // Pass light data as arrays
@@ -460,7 +493,7 @@ void main() {
 `;
 
 // ============================================
-// FRAGMENT SHADER - Depth-aware lighting
+// FRAGMENT SHADER - Advanced lighting with SSAO, soft shadows, specular
 // ============================================
 const FRAGMENT_SHADER = `
 precision highp float;
@@ -474,6 +507,9 @@ uniform float u_ambient;
 uniform float u_shadowStrength;
 uniform float u_shadowSoftness;
 uniform float u_brightness;
+uniform float u_lightHeight;
+uniform float u_specularIntensity;
+uniform float u_ssaoStrength;
 
 // Lights (max 4)
 uniform int u_numLights;
@@ -483,73 +519,173 @@ uniform float u_lightIntensity[4];
 
 varying vec2 v_uv;
 
-// Sample normal with 9-tap Gaussian-weighted smoothing for ultra-smooth lighting
-vec3 sampleNormalSmooth(vec2 uv) {
-    vec2 texel = 2.0 / u_resolution; // Use 2x texel size for wider sampling
+// ============================================
+// SSAO - Screen Space Ambient Occlusion
+// ============================================
+float calculateSSAO(vec2 uv, float depth) {
+    if (u_ssaoStrength < 0.01) return 1.0;
     
-    // Sample 9-tap pattern (3x3 grid) with Gaussian weights
-    // Center: 4, Adjacent: 2, Corners: 1
+    vec2 texel = 1.0 / u_resolution;
+    float ao = 0.0;
+    
+    // 8-sample hemisphere around fragment
+    const int SAMPLES = 8;
+    vec2 offsets[8];
+    offsets[0] = vec2(1.0, 0.0);
+    offsets[1] = vec2(-1.0, 0.0);
+    offsets[2] = vec2(0.0, 1.0);
+    offsets[3] = vec2(0.0, -1.0);
+    offsets[4] = vec2(0.707, 0.707);
+    offsets[5] = vec2(-0.707, 0.707);
+    offsets[6] = vec2(0.707, -0.707);
+    offsets[7] = vec2(-0.707, -0.707);
+    
+    float radius = 8.0; // Sample radius in pixels
+    
+    for (int i = 0; i < 8; i++) {
+        vec2 sampleUV = uv + offsets[i] * texel * radius;
+        float sampleDepth = texture2D(u_depth, sampleUV).r;
+        
+        // Occlusion if nearby sample is in front of us
+        float depthDiff = depth - sampleDepth;
+        ao += smoothstep(0.0, 0.05, depthDiff);
+    }
+    
+    ao /= float(SAMPLES);
+    return 1.0 - ao * u_ssaoStrength;
+}
+
+// ============================================
+// Sample normal with 9-tap Gaussian smoothing
+// ============================================
+vec3 sampleNormalSmooth(vec2 uv) {
+    vec2 texel = 2.0 / u_resolution;
+    
     vec3 n00 = texture2D(u_normal, uv + vec2(-texel.x, -texel.y)).rgb;
     vec3 n10 = texture2D(u_normal, uv + vec2(0.0, -texel.y)).rgb;
     vec3 n20 = texture2D(u_normal, uv + vec2(texel.x, -texel.y)).rgb;
     vec3 n01 = texture2D(u_normal, uv + vec2(-texel.x, 0.0)).rgb;
-    vec3 n11 = texture2D(u_normal, uv).rgb;  // Center
+    vec3 n11 = texture2D(u_normal, uv).rgb;
     vec3 n21 = texture2D(u_normal, uv + vec2(texel.x, 0.0)).rgb;
     vec3 n02 = texture2D(u_normal, uv + vec2(-texel.x, texel.y)).rgb;
     vec3 n12 = texture2D(u_normal, uv + vec2(0.0, texel.y)).rgb;
     vec3 n22 = texture2D(u_normal, uv + vec2(texel.x, texel.y)).rgb;
     
-    // Gaussian weights (1, 2, 1 / 2, 4, 2 / 1, 2, 1) = total 16
     vec3 avgNormal = (
         n00 * 1.0 + n10 * 2.0 + n20 * 1.0 +
         n01 * 2.0 + n11 * 4.0 + n21 * 2.0 +
         n02 * 1.0 + n12 * 2.0 + n22 * 1.0
     ) / 16.0;
     
-    // Convert back to normal space and normalize
     return normalize(avgNormal * 2.0 - 1.0);
 }
 
-// Calculate shadow for a single light
-float calculateShadow(vec2 uv, vec2 lightPos) {
+// ============================================
+// Pseudo-random hash for dithering (breaks up banding)
+// ============================================
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+// ============================================
+// Sample depth with 9-tap Gaussian blur (radius 3px) for smooth shadows
+// ============================================
+float sampleDepthSmooth(vec2 uv) {
+    vec2 texel = 3.0 / u_resolution; // 3 pixel radius
+    
+    // 9-tap Gaussian kernel
+    float d = texture2D(u_depth, uv).r * 0.25;
+    d += texture2D(u_depth, uv + vec2(texel.x, 0.0)).r * 0.125;
+    d += texture2D(u_depth, uv - vec2(texel.x, 0.0)).r * 0.125;
+    d += texture2D(u_depth, uv + vec2(0.0, texel.y)).r * 0.125;
+    d += texture2D(u_depth, uv - vec2(0.0, texel.y)).r * 0.125;
+    d += texture2D(u_depth, uv + vec2(texel.x, texel.y)).r * 0.0625;
+    d += texture2D(u_depth, uv - vec2(texel.x, texel.y)).r * 0.0625;
+    d += texture2D(u_depth, uv + vec2(texel.x, -texel.y)).r * 0.0625;
+    d += texture2D(u_depth, uv - vec2(texel.x, -texel.y)).r * 0.0625;
+    return d;
+}
+
+// ============================================
+// Soft Shadows - Dithered ray marching with gradient accumulation
+// ============================================
+float calculateSoftShadow(vec2 uv, vec2 lightPos, float lightHeight) {
     if (u_shadowStrength < 0.01) return 1.0;
     
-    float ourDepth = texture2D(u_depth, uv).r;
-    vec2 dir = normalize(lightPos - uv);
-    float dist = length(lightPos - uv);
+    float ourDepth = sampleDepthSmooth(uv);
+    vec2 toLight = lightPos - uv;
+    vec2 dir = normalize(toLight);
+    float dist = length(toLight);
     
-    float shadow = 1.0;
-    int steps = 12;
-    float stepSize = min(dist, 0.3) / float(steps);
+    // Dither offset to break up banding (varies per pixel)
+    float dither = hash(uv * u_resolution) * 0.5;
     
-    for (int i = 1; i <= 12; i++) {
-        vec2 samplePos = uv + dir * float(i) * stepSize;
+    // Accumulate shadow gradually instead of binary check
+    float shadowAccum = 0.0;
+    float totalWeight = 0.0;
+    
+    // More steps for smoother shadows (48 steps)
+    const int MAX_STEPS = 48;
+    float maxDist = min(dist, 0.5);
+    
+    for (int i = 0; i < MAX_STEPS; i++) {
+        // Variable step size with dither offset
+        float t = (float(i) + dither) / float(MAX_STEPS);
+        if (t > 1.0) break;
+        
+        // Quadratic stepping - denser near origin, sparser far away
+        float stepT = t * t;
+        vec2 samplePos = uv + dir * stepT * maxDist;
         
         if (samplePos.x < 0.0 || samplePos.x > 1.0 || samplePos.y < 0.0 || samplePos.y > 1.0) break;
         
-        float sampleDepth = texture2D(u_depth, samplePos).r;
+        // Sample with smooth depth
+        float sampleDepth = sampleDepthSmooth(samplePos);
         
-        // If something closer blocks the light
-        if (sampleDepth < ourDepth - 0.02) {
-            float blockAmount = smoothstep(0.02, 0.1 + u_shadowSoftness * 0.1, ourDepth - sampleDepth);
-            shadow = min(shadow, 1.0 - blockAmount * u_shadowStrength);
-        }
+        // Height-aware expected depth along ray
+        float expectedDepth = mix(ourDepth, 1.0, stepT * lightHeight);
+        
+        // Soft depth comparison with gradient (no sharp threshold)
+        float depthDiff = expectedDepth - sampleDepth;
+        float softBlock = smoothstep(0.0, 0.03 + u_shadowSoftness * 0.05, depthDiff);
+        
+        // Weight by distance from fragment (closer samples matter more)
+        float weight = 1.0 - stepT;
+        weight *= weight; // Quadratic falloff
+        
+        shadowAccum += softBlock * weight;
+        totalWeight += weight;
     }
     
-    return shadow;
+    // Normalize and apply softness
+    float shadow = shadowAccum / max(totalWeight, 0.001);
+    shadow = smoothstep(0.0, 0.5 + u_shadowSoftness * 0.5, shadow);
+    
+    // Invert (1 = fully lit, 0 = fully shadowed) and blend with strength
+    return mix(1.0, 1.0 - shadow, u_shadowStrength);
 }
 
+// ============================================
+// MAIN
+// ============================================
 void main() {
     vec4 color = texture2D(u_image, v_uv);
-    
-    // Use smoothed normal sampling to reduce contour artifacts
     vec3 normal = sampleNormalSmooth(v_uv);
     float depth = texture2D(u_depth, v_uv).r;
     
-    // Start with ambient (higher base to preserve original image)
-    vec3 lighting = vec3(u_ambient);
+    // Calculate SSAO
+    float ao = calculateSSAO(v_uv, depth);
     
-    // Add each light's contribution
+    // Start with ambient light modulated by AO
+    vec3 lighting = vec3(u_ambient) * ao;
+    
+    // Accumulate specular separately
+    vec3 specularTotal = vec3(0.0);
+    
+    // View direction (camera looking at screen)
+    vec3 viewDir = vec3(0.0, 0.0, 1.0);
+    
+    // Process each light
     for (int i = 0; i < 4; i++) {
         if (i >= u_numLights) break;
         
@@ -557,28 +693,37 @@ void main() {
         vec3 lightColor = u_lightColor[i];
         float intensity = u_lightIntensity[i];
         
-        // Light direction
+        // 3D light direction (using lightHeight for Z)
         vec2 toLight = lightPos - v_uv;
         float dist = length(toLight);
-        vec3 lightDir = normalize(vec3(toLight * 2.0, 0.5));
+        vec3 lightDir = normalize(vec3(toLight * 2.0, u_lightHeight));
         
-        // Diffuse lighting with softer falloff
+        // Diffuse lighting (Lambertian)
         float ndotl = max(dot(normal, lightDir), 0.0);
-        // Apply smoothstep for softer lighting transitions
-        ndotl = smoothstep(0.0, 1.0, ndotl);
+        ndotl = smoothstep(0.0, 1.0, ndotl); // Softened
         
-        // Distance falloff (softer)
-        float falloff = 1.0 / (1.0 + dist * 1.5);
+        // Specular lighting (Blinn-Phong)
+        vec3 halfDir = normalize(lightDir + viewDir);
+        float spec = pow(max(dot(normal, halfDir), 0.0), 32.0);
         
-        // Shadow
-        float shadow = calculateShadow(v_uv, lightPos);
+        // Distance falloff (inverse square with bias)
+        float falloff = 1.0 / (1.0 + dist * dist * 3.0);
         
-        // Combine with reduced intensity for more natural results
-        lighting += lightColor * intensity * ndotl * falloff * shadow * 0.8;
+        // Soft shadow with height-aware ray marching
+        float shadow = calculateSoftShadow(v_uv, lightPos, u_lightHeight);
+        
+        // Combine diffuse
+        lighting += lightColor * intensity * ndotl * falloff * shadow;
+        
+        // Accumulate specular (not affected by AO)
+        specularTotal += lightColor * spec * intensity * falloff * shadow * u_specularIntensity;
     }
     
-    // Apply lighting
+    // Final color composition
     vec3 result = color.rgb * lighting * u_brightness;
+    
+    // Add specular highlights on top
+    result += specularTotal;
     
     // Clamp
     result = clamp(result, 0.0, 1.0);
