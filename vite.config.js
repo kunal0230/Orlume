@@ -65,7 +65,15 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        editor: resolve(__dirname, 'editor.html')
+        editor: resolve(__dirname, 'editor.html'),
+        docs: resolve(__dirname, 'docs.html'),
+        tutorials: resolve(__dirname, 'tutorials.html'),
+        blog: resolve(__dirname, 'blog.html'),
+        changelog: resolve(__dirname, 'changelog.html'),
+        about: resolve(__dirname, 'about.html'),
+        careers: resolve(__dirname, 'careers.html'),
+        privacy: resolve(__dirname, 'privacy.html'),
+        terms: resolve(__dirname, 'terms.html')
       }
     }
   },

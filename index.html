@@ -8,7 +8,7 @@
     <meta name="description"
         content="Professional free online AI photo editor by Orlume Vision Labs. Features realtime 3D relighting, background removal, AI upscaling, and color grading. 100% browser-based, privacy-first editing with WebGPU.">
     <meta name="keywords"
-        content="orlume, orlume vision labs, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor">
+        content="orlume, orlume vision labs, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor, online photo editor, browser image editor">
     <meta name="author" content="Orlume Vision Labs">
     <meta name="robots" content="index, follow">
     <meta name="google-site-verification" content="ly0IpTZOJMFte338_hSPAAbQfwfD5zF08tLdEffyo0c" />
@@ -21,6 +21,7 @@
     <meta property="og:description"
         content="Transform photos with neural precision. Free browser-based AI editor with 3D relighting, background removal, and smart upscaling. No sign-up required.">
     <meta property="og:image" content="https://orlume.io/og-image.jpg">
+    <meta property="og:site_name" content="Orlume">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -56,13 +57,26 @@
           "AI Background Removal",
           "Smart Upscaling",
           "Generative Eraser",
-          "Color Grading"
+          "Color Grading",
+          "HSL Color Mixer",
+          "Professional Presets"
         ],
         "aggregateRating": {
           "@type": "AggregateRating",
           "ratingValue": "4.8",
           "ratingCount": "1250"
         }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Orlume Vision Labs",
+        "url": "https://orlume.io",
+        "logo": "https://orlume.io/logo.png",
+        "sameAs": [
+          "https://twitter.com/orlume",
+          "https://github.com/orlume"
+        ]
       },
       {
         "@context": "https://schema.org/",
@@ -110,6 +124,10 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="./src/styles/landing.css">
+    <link rel="stylesheet" href="./src/styles/pages.css">
+
+    <!-- Vercel Analytics -->
+    <script type="module" src="./src/analytics.js"></script>
 
     <!-- Favicons - Multiple formats for browser & search visibility -->
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -132,11 +150,146 @@
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="/" class="nav-logo">Orlume</a>
-            <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#tools">Tools</a></li>
-                <li><a href="#pricing">Pricing</a></li>
-            </ul>
+
+            <!-- Desktop Navigation -->
+            <div class="nav-menu" id="nav-menu">
+                <div class="nav-item">
+                    <a href="#features">Features</a>
+                </div>
+
+                <div class="nav-item">
+                    <button type="button">
+                        Resources
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new in Orlume</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-item">
+                    <button type="button">
+                        Company
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story and mission</div>
+                            </div>
+                        </a>
+                        <a href="/careers">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Careers</div>
+                                <div class="nav-dropdown-desc">Join our team</div>
+                            </div>
+                        </a>
+                        <a href="/privacy">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Privacy</div>
+                                <div class="nav-dropdown-desc">How we protect your data</div>
+                            </div>
+                        </a>
+                        <a href="/terms">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Terms</div>
+                                <div class="nav-dropdown-desc">Terms of service</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-item">
+                    <a href="#pricing">Pricing</a>
+                </div>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="nav-mobile-toggle" id="nav-toggle" aria-label="Toggle navigation">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+            </button>
+
             <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
     </nav>
@@ -145,17 +298,17 @@
     <section class="hero">
         <div class="hero-badge">
             <span></span>
-            Introducing 3D AI Relighting
+            Now with Professional Presets & HSL Color Mixer
         </div>
 
         <h1 class="hero-title">
-            <span class="line">The Next Gen <span class="gradient-text">AI Image Editor</span></span>
-            <span class="line">3D Relighting & More</span>
+            <span class="line">The Future of</span>
+            <span class="line"><span class="gradient-text">AI Photo Editing</span></span>
         </h1>
 
         <p class="hero-subtitle">
-            Professional-grade AI editing tools that run entirely in your browser.
-            Relight portraits, remove backgrounds, and enhance images in seconds.
+            Professional-grade AI tools that run entirely in your browser.
+            3D relighting, background removal, and cinematic color grading — all for free.
         </p>
 
         <div class="hero-buttons">
@@ -166,8 +319,21 @@
                 </svg>
             </a>
             <a href="#features" class="btn btn-secondary">
-                Watch Demo
+                See Features
             </a>
+        </div>
+
+        <!-- Trusted By Section -->
+        <div class="trusted-by reveal" style="margin-top: 60px; text-align: center;">
+            <p
+                style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
+                Trusted by creators worldwide</p>
+            <div style="display: flex; justify-content: center; gap: 48px; align-items: center; opacity: 0.5;">
+                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Photographers</span>
+                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Designers</span>
+                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Marketers</span>
+                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Creators</span>
+            </div>
         </div>
 
         <!-- Hero Demo -->
@@ -215,6 +381,46 @@
                             </svg>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works"
+        style="padding: 120px 24px; background: linear-gradient(180deg, transparent, var(--bg-secondary), transparent);">
+        <div class="container">
+            <div class="section-header reveal">
+                <div class="section-eyebrow">How It Works</div>
+                <h2 class="section-title">Edit in three simple steps</h2>
+                <p class="section-desc">No downloads. No sign-ups. Just powerful editing.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; max-width: 1000px; margin: 60px auto 0;"
+                class="reveal">
+                <div style="text-align: center;">
+                    <div
+                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
+                        1</div>
+                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Upload Your Image</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">Drag and drop any image or paste from
+                        clipboard. Supports JPG, PNG, WebP up to 50MB.</p>
+                </div>
+                <div style="text-align: center;">
+                    <div
+                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
+                        2</div>
+                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Apply AI Magic</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">Use 3D relighting, background removal,
+                        presets, or any of our 50+ professional tools.</p>
+                </div>
+                <div style="text-align: center;">
+                    <div
+                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
+                        3</div>
+                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Export & Share</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">Download in multiple formats including 4K
+                        resolution. Share directly or save to cloud.</p>
                 </div>
             </div>
         </div>
@@ -313,18 +519,20 @@
 
                 <div class="feature-card">
                     <div class="feature-card-media">
-                        <img src="/bg_remove_before.png" alt="Liquify">
+                        <img src="/bg_remove_before.png" alt="Professional Presets">
                     </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <line x1="3" y1="9" x2="21" y2="9" />
+                                <line x1="9" y1="21" x2="9" y2="9" />
                             </svg>
                         </div>
-                        <h3>Liquify Tool</h3>
-                        <p>Push, pull, and reshape any part of your image. Perfect for subtle adjustments or creative
-                            effects.</p>
-                        <a href="/editor?tool=liquify" class="feature-link">Try Liquify →</a>
+                        <h3>Professional Presets</h3>
+                        <p>40+ cinematic presets across 6 categories. Portrait, landscape, urban, creative, B&W, and
+                            golden hour looks.</p>
+                        <a href="/editor?tool=presets" class="feature-link">Try Presets →</a>
                     </div>
                 </div>
 
@@ -421,7 +629,7 @@
                     <h3>Privacy First</h3>
                     <p>Your photos are processed locally on your device. We never see, store, or train on your images.
                     </p>
-                    <a href="#" class="bento-link">Learn More →</a>
+                    <a href="/privacy" class="bento-link">Learn More →</a>
                 </div>
 
                 <div class="bento-card reveal">
@@ -709,6 +917,18 @@
         </div>
     </section>
 
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+        <div class="newsletter-container reveal">
+            <h3>Stay in the loop</h3>
+            <p>Get the latest updates, tutorials, and tips delivered to your inbox.</p>
+            <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Thanks for subscribing!');">
+                <input type="email" class="newsletter-input" placeholder="Enter your email" required>
+                <button type="submit" class="newsletter-btn">Subscribe</button>
+            </form>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-grid">
@@ -724,33 +944,33 @@
                     <li><a href="#features">Features</a></li>
                     <li><a href="#pricing">Pricing</a></li>
                     <li><a href="/editor">Editor</a></li>
-                    <li><a href="#">API</a></li>
+                    <li><a href="/docs">API</a></li>
                 </ul>
             </div>
 
             <div class="footer-column">
                 <h4>Resources</h4>
                 <ul>
-                    <li><a href="#">Documentation</a></li>
-                    <li><a href="#">Tutorials</a></li>
-                    <li><a href="#">Blog</a></li>
-                    <li><a href="#">Changelog</a></li>
+                    <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/tutorials">Tutorials</a></li>
+                    <li><a href="/blog">Blog</a></li>
+                    <li><a href="/changelog">Changelog</a></li>
                 </ul>
             </div>
 
             <div class="footer-column">
                 <h4>Company</h4>
                 <ul>
-                    <li><a href="#">About</a></li>
-                    <li><a href="#">Careers</a></li>
-                    <li><a href="#">Privacy</a></li>
-                    <li><a href="#">Terms</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/careers">Careers</a></li>
+                    <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="footer-bottom">
-            <span>© 2024 Orlume Inc. All rights reserved.</span>
+            <span>© 2024 Orlume Vision Labs. All rights reserved.</span>
             <div class="footer-social">
                 <a href="#" aria-label="Twitter">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -780,6 +1000,23 @@
         const nav = document.getElementById('nav');
         window.addEventListener('scroll', () => {
             nav.classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // Mobile menu toggle
+        const navToggle = document.getElementById('nav-toggle');
+        const navMenu = document.getElementById('nav-menu');
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('open');
+        });
+
+        // Mobile dropdown toggles
+        document.querySelectorAll('.nav-item > button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (window.innerWidth <= 1024) {
+                    e.preventDefault();
+                    btn.parentElement.classList.toggle('open');
+                }
+            });
         });
 
         // Comparison slider

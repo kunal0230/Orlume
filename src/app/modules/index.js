@@ -17,3 +17,4 @@ export { BackgroundRemovalModule } from './BackgroundRemovalModule.js';
 export { GodRaysModule } from './GodRaysModule.js';
 export { Relighting2Module } from './Relighting2Module.js';
 export { HSLModule } from './HSLModule.js';
+export { PresetsModule } from './PresetsModule.js';
