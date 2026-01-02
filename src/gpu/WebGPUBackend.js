@@ -184,7 +184,7 @@ export class WebGPUBackend extends GPUBackend {
             }
         `;
 
-        // Develop shader with all adjustments
+        // Develop shader with all adjustments including HSL
         const developCode = /* wgsl */`
             struct VertexOutput {
                 @builtin(position) position: vec4f,
@@ -203,7 +203,15 @@ export class WebGPUBackend extends GPUBackend {
                 vibrance: f32,
                 saturation: f32,
                 clarity: f32,
-                _pad: f32,
+                _pad1: f32,
+                // HSL Per-Channel packed as vec4s for 16-byte alignment
+                // Each array stores 8 values in 2 vec4s: [0-3] and [4-7]
+                hslHue0: vec4f,    // Red, Orange, Yellow, Green
+                hslHue1: vec4f,    // Aqua, Blue, Purple, Magenta
+                hslSat0: vec4f,
+                hslSat1: vec4f,
+                hslLum0: vec4f,
+                hslLum1: vec4f,
             }
 
             @vertex
@@ -217,6 +225,9 @@ export class WebGPUBackend extends GPUBackend {
             @group(0) @binding(0) var texSampler: sampler;
             @group(0) @binding(1) var tex: texture_2d<f32>;
             @group(0) @binding(2) var<uniform> u: Uniforms;
+
+            // Color center hues for HSL (in degrees)
+            const COLOR_HUES = array<f32, 8>(0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
 
             // sRGB to Linear
             fn sRGBtoLinear(c: f32) -> f32 {
@@ -237,6 +248,156 @@ export class WebGPUBackend extends GPUBackend {
             // Luminance (Rec. 709)
             fn luminance(c: vec3f) -> f32 {
                 return dot(c, vec3f(0.2126, 0.7152, 0.0722));
+            }
+
+            // RGB to HSL
+            fn rgbToHsl(rgb: vec3f) -> vec3f {
+                let maxC = max(rgb.r, max(rgb.g, rgb.b));
+                let minC = min(rgb.r, min(rgb.g, rgb.b));
+                let l = (maxC + minC) * 0.5;
+                
+                if (maxC == minC) {
+                    return vec3f(0.0, 0.0, l);
+                }
+                
+                let d = maxC - minC;
+                var s: f32;
+                if (l > 0.5) {
+                    s = d / (2.0 - maxC - minC);
+                } else {
+                    s = d / (maxC + minC);
+                }
+                
+                var h: f32;
+                if (maxC == rgb.r) {
+                    var offset: f32 = 0.0;
+                    if (rgb.g < rgb.b) { offset = 6.0; }
+                    h = (rgb.g - rgb.b) / d + offset;
+                } else if (maxC == rgb.g) {
+                    h = (rgb.b - rgb.r) / d + 2.0;
+                } else {
+                    h = (rgb.r - rgb.g) / d + 4.0;
+                }
+                h = h / 6.0;
+                
+                return vec3f(h * 360.0, s, l);
+            }
+
+            // Helper for HSL to RGB
+            fn hueToRgb(p: f32, q: f32, t_in: f32) -> f32 {
+                var t = t_in;
+                if (t < 0.0) { t = t + 1.0; }
+                if (t > 1.0) { t = t - 1.0; }
+                if (t < 1.0/6.0) { return p + (q - p) * 6.0 * t; }
+                if (t < 1.0/2.0) { return q; }
+                if (t < 2.0/3.0) { return p + (q - p) * (2.0/3.0 - t) * 6.0; }
+                return p;
+            }
+
+            // HSL to RGB
+            fn hslToRgb(hsl: vec3f) -> vec3f {
+                let h = hsl.x / 360.0;
+                let s = hsl.y;
+                let l = hsl.z;
+                
+                if (s == 0.0) {
+                    return vec3f(l, l, l);
+                }
+                
+                var q: f32;
+                if (l < 0.5) {
+                    q = l * (1.0 + s);
+                } else {
+                    q = l + s - l * s;
+                }
+                let p = 2.0 * l - q;
+                
+                return vec3f(
+                    hueToRgb(p, q, h + 1.0/3.0),
+                    hueToRgb(p, q, h),
+                    hueToRgb(p, q, h - 1.0/3.0)
+                );
+            }
+
+            // Get weight for how much a hue belongs to a color channel
+            fn getColorWeight(hue: f32, colorIndex: i32) -> f32 {
+                let centerHue = COLOR_HUES[colorIndex];
+                var dist = abs(hue - centerHue);
+                if (dist > 180.0) { dist = 360.0 - dist; }
+                return smoothstep(30.0, 0.0, dist);
+            }
+
+            // Get HSL hue value for a color index (0-7)
+            fn getHslHue(idx: i32) -> f32 {
+                if (idx == 0) { return u.hslHue0.x; }
+                if (idx == 1) { return u.hslHue0.y; }
+                if (idx == 2) { return u.hslHue0.z; }
+                if (idx == 3) { return u.hslHue0.w; }
+                if (idx == 4) { return u.hslHue1.x; }
+                if (idx == 5) { return u.hslHue1.y; }
+                if (idx == 6) { return u.hslHue1.z; }
+                return u.hslHue1.w;
+            }
+            
+            fn getHslSat(idx: i32) -> f32 {
+                if (idx == 0) { return u.hslSat0.x; }
+                if (idx == 1) { return u.hslSat0.y; }
+                if (idx == 2) { return u.hslSat0.z; }
+                if (idx == 3) { return u.hslSat0.w; }
+                if (idx == 4) { return u.hslSat1.x; }
+                if (idx == 5) { return u.hslSat1.y; }
+                if (idx == 6) { return u.hslSat1.z; }
+                return u.hslSat1.w;
+            }
+            
+            fn getHslLum(idx: i32) -> f32 {
+                if (idx == 0) { return u.hslLum0.x; }
+                if (idx == 1) { return u.hslLum0.y; }
+                if (idx == 2) { return u.hslLum0.z; }
+                if (idx == 3) { return u.hslLum0.w; }
+                if (idx == 4) { return u.hslLum1.x; }
+                if (idx == 5) { return u.hslLum1.y; }
+                if (idx == 6) { return u.hslLum1.z; }
+                return u.hslLum1.w;
+            }
+
+            // Apply HSL adjustments
+            fn applyHSLAdjustments(hsl: vec3f) -> vec3f {
+                var hue = hsl.x;
+                let sat = hsl.y;
+                var lum = hsl.z;
+                
+                if (sat < 0.05) { return hsl; }
+                
+                var totalHueShift: f32 = 0.0;
+                var satMultiplier: f32 = 1.0;
+                var lumShift: f32 = 0.0;
+                var totalWeight: f32 = 0.0;
+                
+                for (var i: i32 = 0; i < 8; i = i + 1) {
+                    let weight = getColorWeight(hue, i);
+                    if (weight > 0.001) {
+                        totalWeight = totalWeight + weight;
+                        totalHueShift = totalHueShift + getHslHue(i) * 0.6 * weight;
+                        satMultiplier = satMultiplier + (getHslSat(i) / 100.0) * weight;
+                        lumShift = lumShift + (getHslLum(i) / 100.0) * 0.5 * weight;
+                    }
+                }
+                
+                if (totalWeight > 0.001) {
+                    totalHueShift = totalHueShift / totalWeight;
+                    var newHue = hue + totalHueShift;
+                    if (newHue < 0.0) { newHue = newHue + 360.0; }
+                    if (newHue >= 360.0) { newHue = newHue - 360.0; }
+                    
+                    return vec3f(
+                        newHue,
+                        clamp(sat * satMultiplier, 0.0, 1.0),
+                        clamp(lum + lumShift, 0.0, 1.0)
+                    );
+                }
+                
+                return hsl;
             }
 
             // Zone weights
@@ -295,12 +456,28 @@ export class WebGPUBackend extends GPUBackend {
             @fragment
             fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
                 let pixel = textureSample(tex, texSampler, texCoord);
+                var srgb = pixel.rgb;
+                
+                // === HSL PER-CHANNEL ADJUSTMENTS ===
+                var hasHSL = false;
+                for (var i: i32 = 0; i < 8; i = i + 1) {
+                    if (getHslHue(i) != 0.0 || getHslSat(i) != 0.0 || getHslLum(i) != 0.0) {
+                        hasHSL = true;
+                        break;
+                    }
+                }
+                
+                if (hasHSL) {
+                    var hsl = rgbToHsl(srgb);
+                    hsl = applyHSLAdjustments(hsl);
+                    srgb = hslToRgb(hsl);
+                }
                 
                 // Convert to linear
                 var linear = vec3f(
-                    sRGBtoLinear(pixel.r),
-                    sRGBtoLinear(pixel.g),
-                    sRGBtoLinear(pixel.b)
+                    sRGBtoLinear(srgb.r),
+                    sRGBtoLinear(srgb.g),
+                    sRGBtoLinear(srgb.b)
                 );
                 
                 var L = luminance(linear);
@@ -416,13 +593,13 @@ export class WebGPUBackend extends GPUBackend {
                 }
                 
                 // Convert back to sRGB
-                let srgb = vec3f(
+                let finalSrgb = vec3f(
                     linearToSRGB(clamp(linear.r, 0.0, 1.0)),
                     linearToSRGB(clamp(linear.g, 0.0, 1.0)),
                     linearToSRGB(clamp(linear.b, 0.0, 1.0))
                 );
                 
-                return vec4f(srgb, pixel.a);
+                return vec4f(finalSrgb, pixel.a);
             }
         `;
 
@@ -547,7 +724,7 @@ export class WebGPUBackend extends GPUBackend {
         const pipeline = this.pipelines.get('develop');
         const bindGroupLayout = this.bindGroupLayouts.get('develop');
 
-        // Create uniform buffer
+        // Create uniform buffer (12 base floats + 24 HSL floats = 36 floats)
         const uniformData = new Float32Array([
             uniforms.exposure || 0,
             (uniforms.contrast || 0) / 100,
@@ -560,7 +737,34 @@ export class WebGPUBackend extends GPUBackend {
             (uniforms.vibrance || 0) / 100,
             (uniforms.saturation || 0) / 100,
             (uniforms.clarity || 0) / 100,
-            0 // padding
+            0, // padding
+            // HSL Hue (8 floats) - Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
+            uniforms.hslHueRed || 0,
+            uniforms.hslHueOrange || 0,
+            uniforms.hslHueYellow || 0,
+            uniforms.hslHueGreen || 0,
+            uniforms.hslHueAqua || 0,
+            uniforms.hslHueBlue || 0,
+            uniforms.hslHuePurple || 0,
+            uniforms.hslHueMagenta || 0,
+            // HSL Saturation (8 floats)
+            uniforms.hslSatRed || 0,
+            uniforms.hslSatOrange || 0,
+            uniforms.hslSatYellow || 0,
+            uniforms.hslSatGreen || 0,
+            uniforms.hslSatAqua || 0,
+            uniforms.hslSatBlue || 0,
+            uniforms.hslSatPurple || 0,
+            uniforms.hslSatMagenta || 0,
+            // HSL Luminance (8 floats)
+            uniforms.hslLumRed || 0,
+            uniforms.hslLumOrange || 0,
+            uniforms.hslLumYellow || 0,
+            uniforms.hslLumGreen || 0,
+            uniforms.hslLumAqua || 0,
+            uniforms.hslLumBlue || 0,
+            uniforms.hslLumPurple || 0,
+            uniforms.hslLumMagenta || 0
         ]);
 
         const uniformBuffer = this.device.createBuffer({

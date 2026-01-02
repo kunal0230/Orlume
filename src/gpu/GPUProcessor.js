@@ -32,7 +32,38 @@ export class GPUProcessor {
             vibrance: 0,
             saturation: 0,
             clarity: 0,
-            texture: 0
+            texture: 0,
+
+            // HSL Per-Channel Adjustments (8 colors × 3 channels = 24 params)
+            // Hue shifts (-100 to +100 = -180° to +180°)
+            hslHueRed: 0,
+            hslHueOrange: 0,
+            hslHueYellow: 0,
+            hslHueGreen: 0,
+            hslHueAqua: 0,
+            hslHueBlue: 0,
+            hslHuePurple: 0,
+            hslHueMagenta: 0,
+
+            // Saturation adjustments (-100 to +100)
+            hslSatRed: 0,
+            hslSatOrange: 0,
+            hslSatYellow: 0,
+            hslSatGreen: 0,
+            hslSatAqua: 0,
+            hslSatBlue: 0,
+            hslSatPurple: 0,
+            hslSatMagenta: 0,
+
+            // Luminance adjustments (-100 to +100)
+            hslLumRed: 0,
+            hslLumOrange: 0,
+            hslLumYellow: 0,
+            hslLumGreen: 0,
+            hslLumAqua: 0,
+            hslLumBlue: 0,
+            hslLumPurple: 0,
+            hslLumMagenta: 0
         };
 
         // Processing framebuffer

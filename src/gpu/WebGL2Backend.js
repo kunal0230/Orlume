@@ -134,6 +134,7 @@ export class WebGL2Backend extends GPUBackend {
             uniform sampler2D u_texture;
             out vec4 fragColor;
             
+            // Basic adjustments
             uniform float u_exposure;
             uniform float u_contrast;
             uniform float u_highlights;
@@ -146,6 +147,14 @@ export class WebGL2Backend extends GPUBackend {
             uniform float u_saturation;
             uniform float u_clarity;
             
+            // HSL Per-Channel (8 colors × 3 channels = 24 uniforms)
+            uniform float u_hslHue[8];    // Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
+            uniform float u_hslSat[8];
+            uniform float u_hslLum[8];
+            
+            // Color center hues (in degrees out of 360)
+            const float COLOR_HUES[8] = float[8](0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
+            
             float sRGBtoLinear(float c) {
                 return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4);
             }
@@ -156,6 +165,123 @@ export class WebGL2Backend extends GPUBackend {
             
             float luminance(vec3 c) {
                 return dot(c, vec3(0.2126, 0.7152, 0.0722));
+            }
+            
+            // RGB to HSL conversion
+            vec3 rgbToHsl(vec3 rgb) {
+                float maxC = max(rgb.r, max(rgb.g, rgb.b));
+                float minC = min(rgb.r, min(rgb.g, rgb.b));
+                float l = (maxC + minC) * 0.5;
+                
+                if (maxC == minC) {
+                    return vec3(0.0, 0.0, l); // Achromatic
+                }
+                
+                float d = maxC - minC;
+                float s = l > 0.5 ? d / (2.0 - maxC - minC) : d / (maxC + minC);
+                
+                float h;
+                if (maxC == rgb.r) {
+                    h = (rgb.g - rgb.b) / d + (rgb.g < rgb.b ? 6.0 : 0.0);
+                } else if (maxC == rgb.g) {
+                    h = (rgb.b - rgb.r) / d + 2.0;
+                } else {
+                    h = (rgb.r - rgb.g) / d + 4.0;
+                }
+                h /= 6.0;
+                
+                return vec3(h * 360.0, s, l); // H in degrees, S and L in 0-1
+            }
+            
+            // Helper function for HSL to RGB (must be outside main function in GLSL)
+            float hueToRgb(float p, float q, float t) {
+                if (t < 0.0) t += 1.0;
+                if (t > 1.0) t -= 1.0;
+                if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+                if (t < 1.0/2.0) return q;
+                if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+                return p;
+            }
+            
+            // HSL to RGB conversion
+            vec3 hslToRgb(vec3 hsl) {
+                float h = hsl.x / 360.0; // Convert back to 0-1
+                float s = hsl.y;
+                float l = hsl.z;
+                
+                if (s == 0.0) {
+                    return vec3(l, l, l); // Achromatic
+                }
+                
+                float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+                float p = 2.0 * l - q;
+                
+                return vec3(
+                    hueToRgb(p, q, h + 1.0/3.0),
+                    hueToRgb(p, q, h),
+                    hueToRgb(p, q, h - 1.0/3.0)
+                );
+            }
+            
+            // Get weight for how much a given hue belongs to a color channel
+            float getColorWeight(float hue, int colorIndex) {
+                float centerHue = COLOR_HUES[colorIndex];
+                float dist = abs(hue - centerHue);
+                
+                // Handle wraparound (e.g., red at 0° and 360°)
+                if (dist > 180.0) dist = 360.0 - dist;
+                
+                // Smooth falloff - each color affects ~45° range
+                float width = 30.0;
+                return smoothstep(width, 0.0, dist);
+            }
+            
+            // Apply per-channel HSL adjustments
+            vec3 applyHSLAdjustments(vec3 hsl) {
+                float hue = hsl.x;
+                float sat = hsl.y;
+                float lum = hsl.z;
+                
+                // Skip if too desaturated (adjustments won't be visible)
+                if (sat < 0.05) return hsl;
+                
+                float totalHueShift = 0.0;
+                float satMultiplier = 1.0;
+                float lumShift = 0.0;
+                float totalWeight = 0.0;
+                
+                for (int i = 0; i < 8; i++) {
+                    float weight = getColorWeight(hue, i);
+                    if (weight > 0.001) {
+                        totalWeight += weight;
+                        
+                        // Hue shift: map -100..+100 to -60°..+60°
+                        totalHueShift += u_hslHue[i] * 0.6 * weight;
+                        
+                        // Saturation: map -100..+100 to 0..2 multiplier
+                        float satAdj = u_hslSat[i] / 100.0;
+                        satMultiplier += satAdj * weight;
+                        
+                        // Luminance: map -100..+100 to -0.5..+0.5
+                        lumShift += (u_hslLum[i] / 100.0) * 0.5 * weight;
+                    }
+                }
+                
+                if (totalWeight > 0.001) {
+                    // Normalize adjustments by total weight
+                    totalHueShift /= totalWeight;
+                    
+                    // Apply hue shift
+                    hsl.x = mod(hue + totalHueShift, 360.0);
+                    
+                    // Apply saturation
+                    hsl.y = clamp(sat * satMultiplier, 0.0, 1.0);
+                    
+                    // Apply luminance
+                    hsl.z = clamp(lum + lumShift, 0.0, 1.0);
+                }
+                
+                return hsl;
             }
             
             float shadowWeight(float L) { return smoothstep(0.3, 0.0, L); }
@@ -196,7 +322,25 @@ export class WebGL2Backend extends GPUBackend {
             
             void main() {
                 vec4 pixel = texture(u_texture, v_texCoord);
-                vec3 linear = vec3(sRGBtoLinear(pixel.r), sRGBtoLinear(pixel.g), sRGBtoLinear(pixel.b));
+                vec3 srgb = pixel.rgb;
+                
+                // === STEP 1: Apply HSL per-channel adjustments (in sRGB/perceptual space) ===
+                bool hasHSL = false;
+                for (int i = 0; i < 8; i++) {
+                    if (u_hslHue[i] != 0.0 || u_hslSat[i] != 0.0 || u_hslLum[i] != 0.0) {
+                        hasHSL = true;
+                        break;
+                    }
+                }
+                
+                if (hasHSL) {
+                    vec3 hsl = rgbToHsl(srgb);
+                    hsl = applyHSLAdjustments(hsl);
+                    srgb = hslToRgb(hsl);
+                }
+                
+                // === STEP 2: Convert to linear for remaining adjustments ===
+                vec3 linear = vec3(sRGBtoLinear(srgb.r), sRGBtoLinear(srgb.g), sRGBtoLinear(srgb.b));
                 
                 float L = luminance(linear);
                 float midW = midtoneWeight(L);
@@ -265,8 +409,8 @@ export class WebGL2Backend extends GPUBackend {
                     linear = max(OKLabToLinearRGB(lab), vec3(0.0));
                 }
                 
-                vec3 srgb = vec3(linearToSRGB(clamp(linear.r, 0.0, 1.0)), linearToSRGB(clamp(linear.g, 0.0, 1.0)), linearToSRGB(clamp(linear.b, 0.0, 1.0)));
-                fragColor = vec4(srgb, pixel.a);
+                vec3 finalSrgb = vec3(linearToSRGB(clamp(linear.r, 0.0, 1.0)), linearToSRGB(clamp(linear.g, 0.0, 1.0)), linearToSRGB(clamp(linear.b, 0.0, 1.0)));
+                fragColor = vec4(finalSrgb, pixel.a);
             }
         `;
 
@@ -288,6 +432,11 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_vibrance = gl.getUniformLocation(dev, 'u_vibrance');
             dev.u_saturation = gl.getUniformLocation(dev, 'u_saturation');
             dev.u_clarity = gl.getUniformLocation(dev, 'u_clarity');
+
+            // HSL per-channel uniforms (arrays of 8 floats each)
+            dev.u_hslHue = gl.getUniformLocation(dev, 'u_hslHue');
+            dev.u_hslSat = gl.getUniformLocation(dev, 'u_hslSat');
+            dev.u_hslLum = gl.getUniformLocation(dev, 'u_hslLum');
         }
 
         console.log('✅ WebGL2 shaders compiled');
@@ -398,6 +547,43 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_vibrance, (uniforms.vibrance || 0) / 100);
         gl.uniform1f(program.u_saturation, (uniforms.saturation || 0) / 100);
         gl.uniform1f(program.u_clarity, (uniforms.clarity || 0) / 100);
+
+        // HSL per-channel uniforms (arrays of 8 floats)
+        // Order: Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
+        const hslHue = new Float32Array([
+            uniforms.hslHueRed || 0,
+            uniforms.hslHueOrange || 0,
+            uniforms.hslHueYellow || 0,
+            uniforms.hslHueGreen || 0,
+            uniforms.hslHueAqua || 0,
+            uniforms.hslHueBlue || 0,
+            uniforms.hslHuePurple || 0,
+            uniforms.hslHueMagenta || 0
+        ]);
+        const hslSat = new Float32Array([
+            uniforms.hslSatRed || 0,
+            uniforms.hslSatOrange || 0,
+            uniforms.hslSatYellow || 0,
+            uniforms.hslSatGreen || 0,
+            uniforms.hslSatAqua || 0,
+            uniforms.hslSatBlue || 0,
+            uniforms.hslSatPurple || 0,
+            uniforms.hslSatMagenta || 0
+        ]);
+        const hslLum = new Float32Array([
+            uniforms.hslLumRed || 0,
+            uniforms.hslLumOrange || 0,
+            uniforms.hslLumYellow || 0,
+            uniforms.hslLumGreen || 0,
+            uniforms.hslLumAqua || 0,
+            uniforms.hslLumBlue || 0,
+            uniforms.hslLumPurple || 0,
+            uniforms.hslLumMagenta || 0
+        ]);
+
+        gl.uniform1fv(program.u_hslHue, hslHue);
+        gl.uniform1fv(program.u_hslSat, hslSat);
+        gl.uniform1fv(program.u_hslLum, hslLum);
 
         // Bind texture
         gl.activeTexture(gl.TEXTURE0);
