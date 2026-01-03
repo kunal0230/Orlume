@@ -20,8 +20,8 @@
     position: relative;
 }
 
-.nav-item > a,
-.nav-item > button {
+.nav-item>a,
+.nav-item>button {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -36,8 +36,8 @@
     border-radius: 8px;
 }
 
-.nav-item > a:hover,
-.nav-item > button:hover {
+.nav-item>a:hover,
+.nav-item>button:hover {
     color: var(--text-primary);
     background: var(--bg-glass);
 }
@@ -58,7 +58,7 @@
     top: calc(100% + 8px);
     left: 0;
     min-width: 240px;
-    background: rgba(17, 17, 24, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
     border-radius: 16px;
@@ -67,7 +67,7 @@
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
     z-index: 1001;
 }
 
@@ -142,11 +142,11 @@
     .nav-menu {
         display: none;
     }
-    
+
     .nav-mobile-toggle {
         display: flex;
     }
-    
+
     .nav-menu.open {
         display: flex;
         flex-direction: column;
@@ -154,11 +154,11 @@
         top: 100%;
         left: 0;
         right: 0;
-        background: rgba(17, 17, 24, 0.98);
+        background: rgba(255, 255, 255, 0.98);
         border-top: 1px solid var(--border-glass);
         padding: 16px;
     }
-    
+
     .nav-menu.open .nav-dropdown {
         position: static;
         opacity: 1;
@@ -170,7 +170,7 @@
         padding: 8px 0 8px 16px;
         display: none;
     }
-    
+
     .nav-item.open .nav-dropdown {
         display: block;
     }
@@ -888,17 +888,17 @@
     .docs-layout {
         grid-template-columns: 1fr;
     }
-    
+
     .docs-sidebar {
         position: static;
         margin-bottom: 32px;
     }
-    
+
     .about-grid {
         grid-template-columns: 1fr;
         gap: 40px;
     }
-    
+
     .values-grid {
         grid-template-columns: 1fr;
     }
@@ -908,11 +908,11 @@
     .cards-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .newsletter-form {
         flex-direction: column;
     }
-    
+
     .page-header {
         padding: 60px 24px 40px;
     }
