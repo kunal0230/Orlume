@@ -73,7 +73,13 @@ export default defineConfig({
         about: resolve(__dirname, 'about.html'),
         careers: resolve(__dirname, 'careers.html'),
         privacy: resolve(__dirname, 'privacy.html'),
-        terms: resolve(__dirname, 'terms.html')
+        terms: resolve(__dirname, 'terms.html'),
+        // Blog Posts
+        blogIntroduction: resolve(__dirname, 'blog/orlume-ai-photo-editor-introduction.html'),
+        blogRelighting: resolve(__dirname, 'blog/3d-relighting-guide.html'),
+        blogBackground: resolve(__dirname, 'blog/ai-background-removal-tutorial.html'),
+        blogBrowser: resolve(__dirname, 'blog/browser-based-photo-editing.html'),
+        blogColorGrading: resolve(__dirname, 'blog/color-grading-hsl-tutorial.html')
       }
     }
   },

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Future of Browser-Based Photo Editing: WebGPU, AI, and Beyond | Orlume</title>
+    <meta name="description"
+        content="Explore how WebGPU, transformer models, and on-device AI are revolutionizing browser-based photo editing. The future of image editing is in your browser.">
+    <meta name="keywords"
+        content="browser photo editor, online photo editor, WebGPU photo editing, browser-based editing, web photo editor, cloud photo editor, Orlume">
+    <meta name="author" content="Orlume Vision Labs">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://orlume.io/blog/browser-based-photo-editing">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://orlume.io/blog/browser-based-photo-editing">
+    <meta property="og:title" content="The Future of Browser-Based Photo Editing">
+    <meta property="og:description"
+        content="How WebGPU and AI are making professional photo editing possible entirely in your web browser.">
+    <meta property="og:image" content="https://orlume.io/og-image.jpg">
+    <meta property="article:published_time" content="2025-12-22T00:00:00Z">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "The Future of Browser-Based Photo Editing: WebGPU, AI, and Beyond",
+        "image": "https://orlume.io/og-image.jpg",
+        "datePublished": "2025-12-22T00:00:00Z",
+        "author": {
+            "@type": "Organization",
+            "name": "Orlume Vision Labs"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Orlume Vision Labs",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://orlume.io/logo.png"
+            }
+        },
+        "description": "Technical exploration of how WebGPU, transformer models, and on-device AI are revolutionizing browser-based photo editing."
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/landing.css">
+    <link rel="stylesheet" href="/src/styles/pages.css">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <script type="module" src="/src/analytics.js"></script>
+</head>
+
+<body>
+    <div class="mesh-gradient">
+        <div class="mesh-orb"></div>
+    </div>
+
+    <nav class="nav scrolled" id="nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">Orlume</a>
+            <div class="nav-menu">
+                <div class="nav-item"><a href="/#features">Features</a></div>
+                <div class="nav-item"><a href="/blog">Blog</a></div>
+                <div class="nav-item"><a href="/docs">Docs</a></div>
+            </div>
+            <a href="/editor" class="nav-cta">Open Editor</a>
+        </div>
+    </nav>
+
+    <article class="blog-article">
+        <header class="article-header">
+            <div class="article-meta">
+                <span class="article-tag">Technology</span>
+                <time datetime="2025-12-22">December 22, 2025</time>
+            </div>
+            <h1 class="article-title">The Future of Browser-Based Photo Editing: WebGPU, AI, and Beyond</h1>
+            <p class="article-subtitle">How modern web technologies are enabling professional-grade photo editing
+                without downloads or installations.</p>
+        </header>
+
+        <div class="article-content">
+            <p class="article-lead">For decades, professional photo editing meant expensive desktop software, powerful
+                hardware, and complicated installations. But the landscape is changing rapidly. With WebGPU, on-device
+                AI, and modern browser capabilities, we're entering an era where your browser is as powerful as any
+                desktop application.</p>
+
+            <h2>The Limitations of Traditional Web Editors</h2>
+            <p>Early online photo editors were severely limited. Without access to GPU acceleration, they relied on slow
+                JavaScript processing. Complex operations took seconds or minutes. Real-time previews were impossible.
+                Users accepted these limitations because the convenience of browser-based tools outweighed the
+                performance penalties.</p>
+
+            <p>Some tools worked around this by uploading images to servers for processing. This introduced privacy
+                concerns, required internet connectivity, and added latency to every operation. It was a compromise, not
+                a solution.</p>
+
+            <h2>Enter WebGPU: GPU Power in the Browser</h2>
+            <p>WebGPU is a game-changer. It provides web applications with direct access to modern GPU hardware — the
+                same chips that power desktop graphics applications and AI workloads. For photo editing, this means:</p>
+
+            <ul>
+                <li><strong>Real-time image processing:</strong> Apply filters, adjustments, and effects instantaneously
+                </li>
+                <li><strong>Large image support:</strong> Edit high-resolution photos without lag</li>
+                <li><strong>AI inference:</strong> Run sophisticated neural networks directly in the browser</li>
+                <li><strong>Parallel processing:</strong> Apply multiple effects simultaneously</li>
+            </ul>
+
+            <p>At Orlume, we utilize WebGPU to deliver features that were previously impossible in browsers. Our 3D
+                relighting, background removal, and AI upscaling all run on your device's GPU, providing instant results
+                without compromising your privacy.</p>
+
+            <h2>On-Device AI: Power Without Privacy Compromise</h2>
+            <p>The AI revolution brought powerful image editing capabilities — but initially, they required cloud
+                processing. Your photos would be uploaded, processed on remote servers, and returned. This creates
+                obvious privacy concerns, especially for sensitive personal or professional images.</p>
+
+            <p>Modern browser technologies enable on-device AI inference. Using frameworks like ONNX Runtime Web and
+                TensorFlow.js, we can run sophisticated neural networks entirely in your browser. Your photos never
+                leave your device.</p>
+
+            <h3>What This Means for You</h3>
+            <ul>
+                <li><strong>Complete privacy:</strong> Your images are processed locally, never uploaded</li>
+                <li><strong>Works offline:</strong> Once loaded, the app functions without internet</li>
+                <li><strong>No account required:</strong> No sign-ups, no tracking, just editing</li>
+                <li><strong>Instant processing:</strong> No upload/download latency</li>
+            </ul>
+
+            <h2>The Technology Stack Behind Orlume</h2>
+
+            <h3>Depth Estimation for 3D Relighting</h3>
+            <p>Our flagship 3D relighting feature uses monocular depth estimation — predicting 3D structure from a
+                single 2D image. We run a transformer-based model that analyzes your photo and generates a detailed
+                depth map. This enables realistic lighting simulation that understands the geometry of faces, objects,
+                and environments.</p>
+
+            <h3>Semantic Segmentation for Background Removal</h3>
+            <p>Background removal uses a U-Net architecture trained on millions of images. The model classifies each
+                pixel as foreground or background, with special attention to challenging edges like hair, fur, and
+                semi-transparent elements. Edge refinement algorithms then smooth the mask for professional results.</p>
+
+            <h3>Super-Resolution for Upscaling</h3>
+            <p>Our upscaling uses a neural network trained on paired low/high-resolution images. It learns to predict
+                missing details, reconstructing textures and sharpening edges as it increases resolution. The result is
+                enlargement that adds detail rather than just blurring.</p>
+
+            <h2>What's Next for Browser-Based Editing</h2>
+            <p>The capabilities we're seeing today are just the beginning. As hardware improves and web standards
+                evolve, expect:</p>
+
+            <ul>
+                <li><strong>Larger AI models:</strong> More sophisticated models will enable even more powerful features
+                </li>
+                <li><strong>Video editing:</strong> The same techniques will extend to video processing</li>
+                <li><strong>Collaborative editing:</strong> Real-time multi-user editing in the browser</li>
+                <li><strong>AR integration:</strong> Combining photo editing with augmented reality previews</li>
+            </ul>
+
+            <h2>Try Browser-Based AI Editing</h2>
+            <p>Experience the future of photo editing today. <a href="/editor">Open the Orlume Editor</a> and see what's
+                possible when professional AI tools meet the convenience of your web browser — completely free,
+                completely private.</p>
+        </div>
+
+        <footer class="article-footer">
+            <div class="article-cta">
+                <h3>Experience the future of photo editing</h3>
+                <p>Professional AI tools that run entirely in your browser.</p>
+                <a href="/editor" class="btn btn-primary">Open Editor →</a>
+            </div>
+        </footer>
+    </article>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">Orlume</div>
+                <p class="footer-desc">AI-powered photo editing that runs entirely in your browser.</p>
+            </div>
+            <div class="footer-column">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="/#features">Features</a></li>
+                    <li><a href="/editor">Editor</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/blog">Blog</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/privacy">Privacy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom"><span>© 2026 Orlume Vision Labs. All rights reserved.</span></div>
+    </footer>
+</body>
+
+</html>

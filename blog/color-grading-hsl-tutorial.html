@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Color Grading with HSL: Complete Tutorial | Orlume</title>
+    <meta name="description"
+        content="Master color grading with our 8-channel HSL color mixer. Learn professional techniques for hue, saturation, and luminance adjustments. Free online tutorial.">
+    <meta name="keywords"
+        content="color grading, HSL color mixer, color correction, photo color grading, hue saturation luminance, color editing tutorial, Orlume, Lightroom alternative">
+    <meta name="author" content="Orlume Vision Labs">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://orlume.io/blog/color-grading-hsl-tutorial">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://orlume.io/blog/color-grading-hsl-tutorial">
+    <meta property="og:title" content="Professional Color Grading with HSL: Complete Tutorial">
+    <meta property="og:description"
+        content="Master color grading with HSL controls. Professional techniques for stunning color in your photos.">
+    <meta property="og:image" content="https://orlume.io/grading_after.png">
+    <meta property="article:published_time" content="2025-12-28T00:00:00Z">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Color Grade Photos with HSL Controls",
+        "description": "Professional color grading tutorial using the HSL (Hue, Saturation, Luminance) color mixer",
+        "image": "https://orlume.io/grading_after.png",
+        "step": [
+            {
+                "@type": "HowToStep",
+                "name": "Understand HSL channels",
+                "text": "Learn what Hue, Saturation, and Luminance control for each color range."
+            },
+            {
+                "@type": "HowToStep",
+                "name": "Adjust skin tones",
+                "text": "Use the Orange and Red channels to perfect skin tones in portraits."
+            },
+            {
+                "@type": "HowToStep",
+                "name": "Enhance skies and foliage",
+                "text": "Adjust Blue and Green channels to make landscapes pop."
+            },
+            {
+                "@type": "HowToStep",
+                "name": "Create a cohesive look",
+                "text": "Use multiple channel adjustments together for a unified color grade."
+            }
+        ],
+        "author": {
+            "@type": "Organization",
+            "name": "Orlume Vision Labs"
+        }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/landing.css">
+    <link rel="stylesheet" href="/src/styles/pages.css">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <script type="module" src="/src/analytics.js"></script>
+</head>
+
+<body>
+    <div class="mesh-gradient">
+        <div class="mesh-orb"></div>
+    </div>
+
+    <nav class="nav scrolled" id="nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">Orlume</a>
+            <div class="nav-menu">
+                <div class="nav-item"><a href="/#features">Features</a></div>
+                <div class="nav-item"><a href="/blog">Blog</a></div>
+                <div class="nav-item"><a href="/docs">Docs</a></div>
+            </div>
+            <a href="/editor" class="nav-cta">Open Editor</a>
+        </div>
+    </nav>
+
+    <article class="blog-article">
+        <header class="article-header">
+            <div class="article-meta">
+                <span class="article-tag">Tutorial</span>
+                <time datetime="2025-12-28">December 28, 2025</time>
+            </div>
+            <h1 class="article-title">Professional Color Grading with HSL: Complete Tutorial</h1>
+            <p class="article-subtitle">Master the 8-channel HSL color mixer for Lightroom-level control over your photo
+                colors.</p>
+        </header>
+
+        <figure class="article-hero-image">
+            <img src="/grading_after.png" alt="Color grading example showing before and after HSL adjustments">
+            <figcaption>Professional color grading transforms ordinary photos into cinematic images</figcaption>
+        </figure>
+
+        <div class="article-content">
+            <p class="article-lead">Color grading separates good photos from great ones. It's how filmmakers create
+                mood, how fashion photographers create their signature look, and how you can transform your images from
+                snapshots into art. Orlume's HSL color mixer gives you precise control over every color in your image.
+            </p>
+
+            <h2>Understanding HSL</h2>
+            <p>HSL stands for Hue, Saturation, and Luminance — three properties that together define any color:</p>
+
+            <ul>
+                <li><strong>Hue:</strong> The actual color — red, orange, yellow, green, etc. Shifting hue changes
+                    colors to adjacent colors on the color wheel.</li>
+                <li><strong>Saturation:</strong> The intensity or purity of the color. High saturation means vibrant
+                    colors; low saturation moves toward gray.</li>
+                <li><strong>Luminance:</strong> The brightness of the color. Affects how light or dark specific colors
+                    appear.</li>
+            </ul>
+
+            <h2>The 8 Color Channels</h2>
+            <p>Orlume's HSL mixer provides independent control for 8 color ranges:</p>
+
+            <ol>
+                <li><strong>Red:</strong> Affects reds, some skin tones, lips, red clothing</li>
+                <li><strong>Orange:</strong> The most important channel for skin tones, also affects warm elements</li>
+                <li><strong>Yellow:</strong> Yellow elements, some foliage, warm highlights</li>
+                <li><strong>Green:</strong> Grass, trees, foliage, green objects</li>
+                <li><strong>Aqua:</strong> Teal tones, some skies, water</li>
+                <li><strong>Blue:</strong> Skies, blue clothing, shadows often have blue tones</li>
+                <li><strong>Purple:</strong> Lavender, violet flowers, some twilight skies</li>
+                <li><strong>Magenta:</strong> Pink tones, some flowers, certain skin undertones</li>
+            </ol>
+
+            <h2>Essential Color Grading Techniques</h2>
+
+            <h3>Perfecting Skin Tones</h3>
+            <p>Skin tones primarily fall in the Orange and Red channels. For natural-looking skin:</p>
+            <ul>
+                <li>Reduce Orange saturation slightly to avoid overly warm skin</li>
+                <li>Shift Orange hue slightly toward yellow for a healthier glow</li>
+                <li>Increase Orange luminance to brighten skin without affecting other colors</li>
+                <li>Be gentle with Red — aggressive changes affect lips and can look unnatural</li>
+            </ul>
+
+            <h3>Cinematic Teal and Orange</h3>
+            <p>The classic Hollywood look uses complementary colors — teal shadows and orange highlights:</p>
+            <ul>
+                <li>Shift Blue hue toward Aqua (teal)</li>
+                <li>Increase Aqua saturation</li>
+                <li>Push Orange saturation up and shift slightly toward yellow</li>
+                <li>Reduce Green saturation to keep the palette focused</li>
+            </ul>
+
+            <h3>Enhancing Landscapes</h3>
+            <p>For impactful nature photos:</p>
+            <ul>
+                <li>Shift Green hue slightly toward yellow for warmer foliage</li>
+                <li>Increase Blue saturation for dramatic skies</li>
+                <li>Reduce Blue luminance to deepen sky colors</li>
+                <li>Boost Yellow luminance for glowing golden hour effects</li>
+            </ul>
+
+            <h3>Moody Desaturation</h3>
+            <p>For a muted, editorial look:</p>
+            <ul>
+                <li>Reduce saturation across all channels by 10-20%</li>
+                <li>Shift greens toward yellow or aqua</li>
+                <li>Keep one accent color saturated for visual interest</li>
+                <li>Adjust luminance to maintain contrast</li>
+            </ul>
+
+            <h2>Using Orlume Presets</h2>
+            <p>Want a starting point? Orlume includes 40+ professional presets across 6 categories:</p>
+
+            <ul>
+                <li><strong>Portrait:</strong> Optimized for skin tones and flattering color</li>
+                <li><strong>Landscape:</strong> Enhanced greens, blues, and natural tones</li>
+                <li><strong>Urban:</strong> Contrasty looks for street and city photography</li>
+                <li><strong>Creative:</strong> Bold, artistic color treatments</li>
+                <li><strong>Black & White:</strong> Monochrome conversions with various tonal qualities</li>
+                <li><strong>Golden Hour:</strong> Warm, sunset-inspired looks</li>
+            </ul>
+
+            <p>Apply a preset, then use the HSL mixer to fine-tune to your taste. Presets are a starting point, not a
+                destination.</p>
+
+            <h2>Pro Tips</h2>
+            <ul>
+                <li><strong>Work in order:</strong> Adjust hue first, then saturation, then luminance</li>
+                <li><strong>Make small changes:</strong> Subtle adjustments often look more professional than dramatic
+                    shifts</li>
+                <li><strong>Check skin tones:</strong> After any adjustment, verify that skin still looks natural</li>
+                <li><strong>Use the color picker:</strong> Not sure which channel affects a color? Use the picker to
+                    identify it</li>
+                <li><strong>Compare often:</strong> Toggle the effect on and off to evaluate your changes</li>
+            </ul>
+
+            <h2>Start Color Grading</h2>
+            <p>Ready to master color? <a href="/editor?tool=hsl">Open the Orlume Editor</a> with the HSL panel and start
+                experimenting. It's completely free, runs in your browser, and your photos stay private on your device.
+            </p>
+        </div>
+
+        <footer class="article-footer">
+            <div class="article-cta">
+                <h3>Master color grading</h3>
+                <p>Try our professional HSL color mixer — completely free.</p>
+                <a href="/editor?tool=hsl" class="btn btn-primary">Open Color Panel →</a>
+            </div>
+        </footer>
+    </article>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">Orlume</div>
+                <p class="footer-desc">AI-powered photo editing that runs entirely in your browser.</p>
+            </div>
+            <div class="footer-column">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="/#features">Features</a></li>
+                    <li><a href="/editor">Editor</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/blog">Blog</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/privacy">Privacy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom"><span>© 2026 Orlume Vision Labs. All rights reserved.</span></div>
+    </footer>
+</body>
+
+</html>
