@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, Relighting2Module, HSLModule, PresetsModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -56,6 +56,8 @@ export class EditorUI {
         this.godRaysModule = new GodRaysModule(this);
         this.hslModule = new HSLModule(this);
         this.presetsModule = new PresetsModule(this);
+        this.textModule = new TextModule(this);
+        this.relightingModule = new RelightingModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -109,6 +111,8 @@ export class EditorUI {
         this.godRaysModule.init();
         this.hslModule.init();
         this.presetsModule.init();
+        this.textModule.init();
+        this.relightingModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -175,16 +179,20 @@ export class EditorUI {
             this._clearTransformPreview();
         }
 
-        // Disable relighting when leaving 3d mode to clean up light indicators
-        if (previousMode === '3d' && mode !== '3d') {
-            if (this.app?.relighting) {
-                this.app.relighting.disableRelight();
-            }
-        }
 
         // Deactivate god rays when leaving godrays mode
         if (previousMode === 'godrays' && mode !== 'godrays') {
             this._deactivateGodRaysTool();
+        }
+
+        // Deactivate text tool when leaving text mode
+        if (previousMode === 'text' && mode !== 'text') {
+            this.textModule.deactivate();
+        }
+
+        // Deactivate relighting when leaving relight/3d mode
+        if ((previousMode === '3d' || previousMode === 'relight') && mode !== '3d' && mode !== 'relight') {
+            this.relightingModule.deactivate();
         }
 
         this.state.setTool(mode);
@@ -195,7 +203,6 @@ export class EditorUI {
 
         // Hide all mode headers
         document.getElementById('develop-mode-tabs').style.display = 'none';
-        document.getElementById('3d-mode-header').style.display = 'none';
         document.getElementById('export-mode-header').style.display = 'none';
         document.getElementById('crop-mode-header').style.display = 'none';
         document.getElementById('upscale-mode-header').style.display = 'none';
@@ -206,7 +213,8 @@ export class EditorUI {
         document.getElementById('presets-mode-header').style.display = 'none';
         document.getElementById('bg-remove-mode-header').style.display = 'none';
         document.getElementById('godrays-mode-header').style.display = 'none';
-        document.getElementById('relight2-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('relight-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('text-mode-header')?.style.setProperty('display', 'none');
 
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
@@ -221,10 +229,11 @@ export class EditorUI {
                 break;
 
             case '3d':
-                document.getElementById('3d-mode-header').style.display = 'block';
+            case 'relight':
+                document.getElementById('relight-mode-header').style.display = 'block';
                 document.getElementById('panel-relight').classList.add('active');
+                this.relightingModule.activate();
                 break;
-
             case 'export':
                 document.getElementById('export-mode-header').style.display = 'block';
                 document.getElementById('panel-export').classList.add('active');
@@ -289,11 +298,12 @@ export class EditorUI {
                 this._activateGodRaysTool();
                 break;
 
-            case 'relight2':
-                document.getElementById('relight2-mode-header').style.display = 'block';
-                document.getElementById('panel-relight2').classList.add('active');
-                // Activate new relighting module
-                this._activateRelight2Tool();
+
+            case 'text':
+                document.getElementById('text-mode-header').style.display = 'block';
+                document.getElementById('panel-text').classList.add('active');
+                // Activate text tool
+                this.textModule.activate();
                 break;
         }
     }
@@ -944,25 +954,6 @@ export class EditorUI {
         this.godRaysModule.deactivate();
     }
 
-    /**
-     * Activate relight2 tool
-     */
-    _activateRelight2Tool() {
-        if (!this.relight2Module) {
-            this.relight2Module = new Relighting2Module(this);
-            this.relight2Module.init();
-        }
-        this.relight2Module.activate();
-    }
-
-    /**
-     * Deactivate relight2 tool
-     */
-    _deactivateRelight2Tool() {
-        if (this.relight2Module) {
-            this.relight2Module.deactivate();
-        }
-    }
 
     /**
      * Update healing brush cursor size

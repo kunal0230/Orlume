@@ -73,38 +73,40 @@ export class DepthEstimator {
         const progressContainer = document.getElementById('depth-progress');
         const estimateBtn = document.getElementById('btn-estimate-depth');
 
-        progressContainer.hidden = false;
-        estimateBtn.disabled = true;
+        if (progressContainer) progressContainer.hidden = false;
+        if (estimateBtn) estimateBtn.disabled = true;
 
         try {
             await this.loadModel((progress) => {
                 if (progress.status === 'progress') {
                     const percent = Math.round(progress.progress);
-                    this.app.updateProgress(percent, `Loading model: ${percent}%`);
+                    this.app.updateProgress?.(percent, `Loading model: ${percent}%`);
                 } else if (progress.status === 'ready') {
-                    this.app.updateProgress(100, 'Model ready');
+                    this.app.updateProgress?.(100, 'Model ready');
                 }
             });
 
-            this.app.updateProgress(0, 'Estimating depth...');
+            this.app.updateProgress?.(0, 'Estimating depth...');
 
             const result = await this.model(image.dataURL);
             const depthMap = await this.processDepthOutput(result, image.width, image.height);
 
-            this.app.updateProgress(100, 'Complete!');
+            this.app.updateProgress?.(100, 'Complete!');
 
             setTimeout(() => {
-                progressContainer.hidden = true;
-                estimateBtn.disabled = false;
-                estimateBtn.textContent = 'Re-estimate Depth';
+                if (progressContainer) progressContainer.hidden = true;
+                if (estimateBtn) {
+                    estimateBtn.disabled = false;
+                    estimateBtn.textContent = 'Re-estimate Depth';
+                }
             }, 1000);
 
             return depthMap;
 
         } catch (error) {
             console.error('Depth estimation failed:', error);
-            progressContainer.hidden = true;
-            estimateBtn.disabled = false;
+            if (progressContainer) progressContainer.hidden = true;
+            if (estimateBtn) estimateBtn.disabled = false;
             throw error;
         }
     }

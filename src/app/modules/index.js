@@ -15,6 +15,7 @@ export { ComparisonModule } from './ComparisonModule.js';
 export { LayersModule } from './LayersModule.js';
 export { BackgroundRemovalModule } from './BackgroundRemovalModule.js';
 export { GodRaysModule } from './GodRaysModule.js';
-export { Relighting2Module } from './Relighting2Module.js';
 export { HSLModule } from './HSLModule.js';
 export { PresetsModule } from './PresetsModule.js';
+export { TextModule } from './TextModule.js';
+export { RelightingModule } from './RelightingModule.js';

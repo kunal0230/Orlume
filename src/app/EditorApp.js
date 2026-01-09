@@ -6,7 +6,7 @@ import { GPUProcessor } from '../gpu/GPUProcessor.js';
 import { createMaskSystem } from '../gpu/MaskSystemFactory.js';
 import { EditorState } from './EditorState.js';
 import { EditorUI } from './EditorUI.js';
-import { RelightingManager } from './RelightingManager.js';
+import { TextLayerManager } from './TextLayerManager.js';
 
 export class EditorApp {
     constructor() {
@@ -15,7 +15,7 @@ export class EditorApp {
         this.masks = null;
         this.state = null;
         this.ui = null;
-        this.relighting = null;
+        this.textLayers = null;
     }
 
     /**
@@ -38,11 +38,12 @@ export class EditorApp {
             // Initialize UI
             this.ui = new EditorUI(this.state, this.gpu, this.masks);
 
-            // Initialize 3D Relighting
-            this.relighting = new RelightingManager(this);
-
-            // Give UI access to app for relighting control
+            // Give UI access to app
             this.ui.app = this;
+
+            // Initialize Text Layer Manager
+            this.textLayers = new TextLayerManager(this);
+            this.ui.textModule.setTextManager(this.textLayers);
 
             // Subscribe to state events
             this._bindStateEvents();
@@ -145,7 +146,7 @@ export async function initApp() {
         const toolParam = urlParams.get('tool');
         if (toolParam) {
             // Valid tools that can be deep-linked
-            const validTools = ['develop', '3d', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export'];
+            const validTools = ['develop', '3d', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export', 'text'];
             if (validTools.includes(toolParam)) {
                 console.log(`🔗 Deep link detected: switching to ${toolParam} tool`);
                 // Small delay to ensure UI is fully ready

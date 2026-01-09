@@ -1317,8 +1317,8 @@ img {
    Scroll Reveal Animations
    ======================================== */
 .reveal {
-    opacity: 0;
-    transform: translateY(40px);
+    opacity: 1;
+    transform: none;
     transition: all 0.8s var(--ease-out-expo);
 }
 

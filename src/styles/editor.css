@@ -1279,4 +1279,116 @@ kbd {
 /* Pan cursor states */
 .canvas-area.panning {
     cursor: grabbing !important;
-}@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   Text Tool
+   ======================================== */
+.text-layer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.text-layer-item:hover {
+    background: var(--bg-hover);
+}
+
+.text-layer-item.active {
+    background: var(--accent);
+    color: white;
+}
+
+.text-layer-icon {
+    width: 24px;
+    height: 24px;
+    background: var(--bg-surface);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+}
+
+.text-layer-item.active .text-layer-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.text-layer-name {
+    flex: 1;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.text-layer-delete {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--red, #ef4444);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+    transition: opacity 0.15s;
+}
+
+.text-layer-item:hover .text-layer-delete {
+    opacity: 1;
+}
+
+.text-layer-item.active .text-layer-delete {
+    color: white;
+}
+
+.empty-layers-msg {
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-align: center;
+    padding: 16px 12px;
+}
+
+/* Text Edit Overlay */
+.text-edit-overlay {
+    position: absolute;
+    min-width: 100px;
+    min-height: 30px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    outline: none;
+    color: inherit;
+    font: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+    z-index: 100;
+}
+
+/* Toggle button active state for text styling */
+#text-italic.active,
+#text-underline.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}

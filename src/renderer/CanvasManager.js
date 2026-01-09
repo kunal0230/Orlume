@@ -261,21 +261,7 @@ export class CanvasManager {
 
     // Sync all effect canvases with main canvas size
     syncEffectCanvases() {
-        const mainCanvas = this.mainCanvas;
-        const displayWidth = mainCanvas.style.width;
-        const displayHeight = mainCanvas.style.height;
-
-        // Sync relighting canvas
-        if (this.app.components.relighting?.enabled && this.app.components.relighting.canvas) {
-            this.app.components.relighting.canvas.style.width = displayWidth;
-            this.app.components.relighting.canvas.style.height = displayHeight;
-        }
-
-        // Sync parallax canvas if active
-        if (this.app.components.parallax?.enabled && this.app.components.parallax.canvas) {
-            this.app.components.parallax.canvas.style.width = displayWidth;
-            this.app.components.parallax.canvas.style.height = displayHeight;
-        }
+        // Currently no effect canvases to sync
     }
 
     clear() {

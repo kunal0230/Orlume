@@ -106,15 +106,6 @@
                     <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-relight2" title="3D Relight 2.0 (L)">
-                <!-- Lightbulb icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18h6" />
-                    <path d="M10 22h4" />
-                    <path
-                        d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-                </svg>
-            </button>
             <button class="tool-btn" id="tool-godrays" title="Volumetric Light (V)">
                 <!-- Sun rays icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -127,6 +118,17 @@
                     <line x1="19" y1="12" x2="22" y2="12" />
                     <line x1="4.22" y1="19.78" x2="6.34" y2="17.66" />
                     <line x1="17.66" y1="6.34" x2="19.78" y2="4.22" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-3d" title="3D Relighting (3)">
+                <!-- Lightbulb with 3D effect icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="8" r="5" />
+                    <path d="M9 13v2a3 3 0 0 0 6 0v-2" />
+                    <line x1="12" y1="18" x2="12" y2="21" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <path d="M5 8l-2 -2" />
+                    <path d="M19 8l2 -2" />
                 </svg>
             </button>
 
@@ -186,6 +188,14 @@
                     <line x1="20" y1="4" x2="8.12" y2="15.88" />
                     <line x1="14.47" y1="14.48" x2="20" y2="20" />
                     <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                </svg>
+            </button>
+            <button class="tool-btn" id="tool-text" title="Add Text (T)">
+                <!-- Text/Type icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 7 4 4 20 4 20 7" />
+                    <line x1="9" y1="20" x2="15" y2="20" />
+                    <line x1="12" y1="4" x2="12" y2="20" />
                 </svg>
             </button>
 
@@ -293,14 +303,19 @@
                 <span class="panel-title">Remove Background</span>
             </div>
 
+            <!-- Text Mode Header -->
+            <div class="panel-header mode-header" id="text-mode-header" style="display: none;">
+                <span class="panel-title">✏️ Add Text</span>
+            </div>
+
             <!-- God Rays Mode Header -->
             <div class="panel-header mode-header" id="godrays-mode-header" style="display: none;">
                 <span class="panel-title">☀️ Volumetric Lighting</span>
             </div>
 
-            <!-- Relight 2.0 Mode Header -->
-            <div class="panel-header mode-header" id="relight2-mode-header" style="display: none;">
-                <span class="panel-title">💡 3D Relight 2.0</span>
+            <!-- 3D Relighting Mode Header -->
+            <div class="panel-header mode-header" id="relight-mode-header" style="display: none;">
+                <span class="panel-title">💡 3D Relighting</span>
             </div>
 
             <div class="panel-content">
@@ -569,307 +584,6 @@
                                 <span id="val-mask-saturation">0</span>
                             </div>
                             <input type="range" id="slider-mask-saturation" min="-100" max="100" step="1" value="0">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3D Relighting Panel -->
-                <div class="panel-section" id="panel-relight">
-                    <div class="section">
-                        <div class="section-header">Depth Estimation</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Generate depth map using AI to enable 3D relighting effects.
-                        </p>
-                        <button class="btn btn-primary" id="btn-estimate-depth" style="width: 100%;">
-                            Estimate Depth
-                        </button>
-                        <button class="btn" id="btn-compare-depth-models"
-                            style="width: 100%; margin-top: 8px; font-size: 11px;">
-                            🧪 Compare All Models
-                        </button>
-                        <div id="depth-progress" hidden style="margin-top: 12px;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                                <span id="depth-progress-text">Loading model...</span>
-                                <span id="depth-progress-percent">0%</span>
-                            </div>
-                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
-                                <div id="depth-progress-bar"
-                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section" id="relight-controls" style="display: none;">
-                        <div class="section-header">Lighting</div>
-
-                        <div
-                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
-                            Click on image to add lights<br>
-                            Drag to reposition • Double-click to remove
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Intensity</span>
-                                <span id="val-light-intensity">1.5</span>
-                            </div>
-                            <input type="range" id="slider-light-intensity" min="0" max="5" step="0.1" value="1.5">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Ambient</span>
-                                <span id="val-light-ambient">30</span>
-                            </div>
-                            <input type="range" id="slider-light-ambient" min="0" max="100" step="1" value="30">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow</span>
-                                <span id="val-light-shadow">50</span>
-                            </div>
-                            <input type="range" id="slider-light-shadow" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Temperature</span>
-                                <span id="val-light-temperature">5500K</span>
-                            </div>
-                            <input type="range" id="slider-light-temperature" min="2000" max="10000" step="100"
-                                value="5500">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Brightness</span>
-                                <span id="val-light-brightness">0</span>
-                            </div>
-                            <input type="range" id="slider-light-brightness" min="-100" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="btn-row" style="margin-top: 16px;">
-                            <button class="btn" id="btn-reset-lights">Reset Lights</button>
-                            <button class="btn" id="btn-disable-relight">Disable</button>
-                        </div>
-
-                        <button class="btn btn-primary" id="btn-apply-relight" style="width: 100%; margin-top: 12px;">
-                            ✨ Apply Relighting
-                        </button>
-                    </div>
-
-                    <!-- Debug Visualization Section -->
-                    <div class="section" id="debug-viz-controls" style="display: none;">
-                        <div class="section-header"
-                            style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>🔍 Debug Maps</span>
-                            <span style="font-size: 10px; color: var(--text-secondary);">View Analysis</span>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                            <button class="btn viz-btn" id="btn-viz-original" data-viz="original"
-                                style="padding: 8px; font-size: 11px;">
-                                🖼️ Original
-                            </button>
-                            <button class="btn viz-btn" id="btn-viz-depth" data-viz="depth"
-                                style="padding: 8px; font-size: 11px;">
-                                📊 Depth
-                            </button>
-                            <button class="btn viz-btn" id="btn-viz-normals" data-viz="normals"
-                                style="padding: 8px; font-size: 11px;">
-                                🧭 Normals
-                            </button>
-                            <button class="btn viz-btn" id="btn-viz-albedo" data-viz="albedo"
-                                style="padding: 8px; font-size: 11px;">
-                                🌈 Albedo
-                            </button>
-                            <button class="btn viz-btn" id="btn-viz-materials" data-viz="materials"
-                                style="padding: 8px; font-size: 11px; grid-column: span 2;">
-                                🎨 Materials
-                            </button>
-                        </div>
-
-                        <div id="viz-preview"
-                            style="background: var(--bg-dark); border-radius: 8px; padding: 8px; display: none;">
-                            <div id="viz-label"
-                                style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; text-align: center;">
-                                Preview
-                            </div>
-                            <canvas id="viz-canvas" style="width: 100%; border-radius: 4px; display: block;"></canvas>
-                        </div>
-
-                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            Click a button to see how the AI understands your image
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Relighting 2.0 Panel (New Architecture) -->
-                <div class="panel-section" id="panel-relight2">
-                    <!-- Stage 1: Depth -->
-                    <div class="section">
-                        <div class="section-header">📐 Depth Estimation</div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Choose a model. Larger = better quality but slower.
-                        </p>
-
-                        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-                            <label class="model-option"
-                                style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px; cursor: pointer;">
-                                <input type="radio" name="depth-model" id="depth-model-small" value="small" checked>
-                                <div style="flex: 1;">
-                                    <div style="font-size: 12px; font-weight: 500;">DA V2 Small</div>
-                                    <div style="font-size: 10px; color: var(--text-secondary);">~50MB • Fast (3-5s)
-                                    </div>
-                                </div>
-                                <span id="cache-status-small" style="font-size: 10px;">⏳</span>
-                            </label>
-                            <label class="model-option"
-                                style="display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px; cursor: pointer;">
-                                <input type="radio" name="depth-model" id="depth-model-base" value="base">
-                                <div style="flex: 1;">
-                                    <div style="font-size: 12px; font-weight: 500;">DA V2 Base</div>
-                                    <div style="font-size: 10px; color: var(--text-secondary);">~150MB • Quality (8-15s)
-                                    </div>
-                                </div>
-                                <span id="cache-status-base" style="font-size: 10px;">⏳</span>
-                            </label>
-                        </div>
-
-                        <button class="btn btn-primary" id="btn-relight2-depth" style="width: 100%;">
-                            Estimate Depth
-                        </button>
-
-                        <div id="relight2-progress" style="margin-top: 12px; display: none;">
-                            <div
-                                style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                                <span id="relight2-progress-text">Loading...</span>
-                            </div>
-                            <div style="background: var(--bg-dark); border-radius: 4px; height: 4px; overflow: hidden;">
-                                <div id="relight2-progress-bar"
-                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.2s;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 12px;">
-                            <button class="btn" id="btn-relight2-clear-cache" style="width: 100%; font-size: 11px;">
-                                🗑️ Clear Model Cache
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Stage 2: 3D Mesh -->
-                    <div class="section">
-                        <div class="section-header">🏔️ 3D Model</div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn" id="btn-relight2-view-depth" style="flex: 1;" disabled>
-                                📐 View Depth
-                            </button>
-                            <button class="btn" id="btn-relight2-view-3d" style="flex: 1;" disabled>
-                                🔮 3D Mesh
-                            </button>
-                        </div>
-
-                        <div style="display: flex; gap: 6px; margin-top: 8px;">
-                            <button class="btn" id="btn-relight2-export-3d-lit"
-                                style="flex: 1; font-size: 10px; padding: 8px 4px;" disabled
-                                title="Export with baked lighting and shadows">
-                                🔦 Export Lit
-                            </button>
-                            <button class="btn" id="btn-relight2-export-3d-original"
-                                style="flex: 1; font-size: 10px; padding: 8px 4px;" disabled
-                                title="Export with original image texture">
-                                📷 Export Original
-                            </button>
-                        </div>
-
-                        <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            Click on image to add light • Dbl-click to remove
-                        </p>
-
-                        <div class="control-group" style="margin-top: 12px;">
-                            <div class="control-label">
-                                <span>Displacement</span>
-                                <span id="val-relight2-displacement">30</span>
-                            </div>
-                            <input type="range" id="slider-relight2-displacement" min="0" max="100" step="1" value="30">
-                        </div>
-                    </div>
-
-                    <!-- Stage 3: Lighting -->
-                    <div class="section">
-                        <div class="section-header">💡 Lighting</div>
-                        <p
-                            style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
-                            Click on image to place light
-                        </p>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Ambient</span>
-                                <span id="val-relight2-ambient">25</span>
-                            </div>
-                            <input type="range" id="slider-relight2-ambient" min="0" max="100" step="1" value="25">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow Strength</span>
-                                <span id="val-relight2-shadow">60</span>
-                            </div>
-                            <input type="range" id="slider-relight2-shadow" min="0" max="100" step="1" value="60">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow Softness</span>
-                                <span id="val-relight2-softness">50</span>
-                            </div>
-                            <input type="range" id="slider-relight2-softness" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Brightness</span>
-                                <span id="val-relight2-brightness">50</span>
-                            </div>
-                            <input type="range" id="slider-relight2-brightness" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Light Height</span>
-                                <span id="val-relight2-height">50</span>
-                            </div>
-                            <input type="range" id="slider-relight2-height" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Specular</span>
-                                <span id="val-relight2-specular">30</span>
-                            </div>
-                            <input type="range" id="slider-relight2-specular" min="0" max="100" step="1" value="30">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>SSAO (Depth Shading)</span>
-                                <span id="val-relight2-ssao">40</span>
-                            </div>
-                            <input type="range" id="slider-relight2-ssao" min="0" max="100" step="1" value="40">
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="section">
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-relight2-reset" style="flex: 1;">Reset</button>
-                            <button class="btn btn-primary" id="btn-relight2-apply" style="flex: 1;">Apply</button>
                         </div>
                     </div>
                 </div>
@@ -1957,6 +1671,337 @@
                             <button class="btn" id="btn-godrays-reset" style="flex: 1;">Reset</button>
                             <button class="btn btn-primary" id="btn-godrays-apply" style="flex: 1;">Apply</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 3D Relighting Panel -->
+                <div class="panel-section" id="panel-relight">
+                    <div class="section">
+                        <div class="section-header">3D Relighting</div>
+                        <p
+                            style="font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+                            Add realistic 3D lighting to your photos. Click on the image to position the light source.
+                        </p>
+
+                        <!-- Depth Estimation Button -->
+                        <button class="btn btn-primary" id="btn-relight-depth"
+                            style="width: 100%; margin-bottom: 16px;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                                <circle cx="12" cy="12" r="5" />
+                                <line x1="12" y1="1" x2="12" y2="3" />
+                                <line x1="12" y1="21" x2="12" y2="23" />
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                                <line x1="1" y1="12" x2="3" y2="12" />
+                                <line x1="21" y1="12" x2="23" y2="12" />
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                            </svg>
+                            Estimate Depth
+                        </button>
+
+                        <p id="relight-depth-status"
+                            style="font-size: 10px; color: var(--text-secondary); margin-bottom: 16px; text-align: center;">
+                            ℹ️ Click "Estimate Depth" to start
+                        </p>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Light Settings</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Intensity</span>
+                                <span id="val-relight-intensity">100</span>
+                            </div>
+                            <input type="range" id="slider-relight-intensity" min="0" max="200" step="1" value="100">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Ambient</span>
+                                <span id="val-relight-ambient">30</span>
+                            </div>
+                            <input type="range" id="slider-relight-ambient" min="0" max="100" step="1" value="30">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Surface Softness</span>
+                                <span id="val-relight-softness">0</span>
+                            </div>
+                            <input type="range" id="slider-relight-softness" min="0" max="100" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Specular</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Specularity</span>
+                                <span id="val-relight-specularity">0</span>
+                            </div>
+                            <input type="range" id="slider-relight-specularity" min="0" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Glossiness</span>
+                                <span id="val-relight-glossiness">32</span>
+                            </div>
+                            <input type="range" id="slider-relight-glossiness" min="1" max="128" step="1" value="32">
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Blend Mode</div>
+                        <select id="relight-blend-mode"
+                            style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                            <option value="softLight" selected>Soft Light (Natural)</option>
+                            <option value="normal">Normal (Replace)</option>
+                            <option value="additive">Additive (Bright)</option>
+                            <option value="screen">Screen (Lighter)</option>
+                            <option value="multiply">Multiply (Darker)</option>
+                        </select>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Light Type</div>
+                        <div class="btn-row" style="gap: 4px;">
+                            <button class="btn btn-primary" id="btn-light-directional"
+                                style="flex: 1; font-size: 11px; padding: 8px;">
+                                ☀️ Directional
+                            </button>
+                            <button class="btn" id="btn-light-point" style="flex: 1; font-size: 11px; padding: 8px;">
+                                💡 Point
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Debug Visualization</div>
+                        <div class="btn-row" style="gap: 4px; margin-bottom: 8px;">
+                            <button class="btn" id="btn-show-normals" style="flex: 1; font-size: 9px; padding: 6px;">
+                                Normals
+                            </button>
+                            <button class="btn" id="btn-show-depth" style="flex: 1; font-size: 9px; padding: 6px;">
+                                Height
+                            </button>
+                            <button class="btn" id="btn-show-lighting" style="flex: 1; font-size: 9px; padding: 6px;">
+                                Albedo
+                            </button>
+                            <button class="btn" id="btn-show-result" style="flex: 1; font-size: 9px; padding: 6px;">
+                                Result
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn" id="btn-relight-reset" style="flex: 1;">Reset</button>
+                            <button class="btn btn-primary" id="btn-relight-apply" style="flex: 1;">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Tool Panel -->
+                <div class="panel-section" id="panel-text">
+                    <div class="section">
+                        <div class="section-header">Add Text</div>
+                        <button class="btn btn-primary" id="add-text-btn" style="width: 100%;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            Add Text Layer
+                        </button>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Text Layers</div>
+                        <div id="text-layers-list" style="max-height: 120px; overflow-y: auto;">
+                            <div class="empty-layers-msg"
+                                style="color: var(--text-secondary); font-size: 11px; text-align: center; padding: 12px;">
+                                No text layers. Click "Add Text" to create one.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="text-panel" style="display: none;">
+                        <div class="section-header">Typography</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Font</span>
+                            </div>
+                            <select id="text-font-family"
+                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                                <option value="Inter">Inter</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Size</span>
+                                <span id="text-font-size-value">48</span>
+                            </div>
+                            <input type="range" id="text-font-size" min="8" max="400" step="1" value="48">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Weight</span>
+                            </div>
+                            <select id="text-font-weight"
+                                style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
+                                <option value="100">Thin</option>
+                                <option value="200">Extra Light</option>
+                                <option value="300">Light</option>
+                                <option value="400" selected>Regular</option>
+                                <option value="500">Medium</option>
+                                <option value="600">Semi Bold</option>
+                                <option value="700">Bold</option>
+                                <option value="800">Extra Bold</option>
+                                <option value="900">Black</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <button class="btn" id="text-italic" style="flex: 1;" title="Italic">𝐼</button>
+                            <button class="btn" id="text-underline" style="flex: 1;" title="Underline">U̲</button>
+                        </div>
+
+                        <div style="display: flex; gap: 4px; margin-bottom: 12px;">
+                            <button class="btn active" data-align="left" style="flex: 1; padding: 8px;"
+                                title="Align Left">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="4" y1="6" x2="20" y2="6" />
+                                    <line x1="4" y1="12" x2="14" y2="12" />
+                                    <line x1="4" y1="18" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                            <button class="btn" data-align="center" style="flex: 1; padding: 8px;" title="Align Center">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="4" y1="6" x2="20" y2="6" />
+                                    <line x1="7" y1="12" x2="17" y2="12" />
+                                    <line x1="5" y1="18" x2="19" y2="18" />
+                                </svg>
+                            </button>
+                            <button class="btn" data-align="right" style="flex: 1; padding: 8px;" title="Align Right">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="4" y1="6" x2="20" y2="6" />
+                                    <line x1="10" y1="12" x2="20" y2="12" />
+                                    <line x1="6" y1="18" x2="20" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Line Height</span>
+                                <span id="text-line-height-value">1.40</span>
+                            </div>
+                            <input type="range" id="text-line-height" min="0.5" max="3" step="0.1" value="1.4">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Letter Spacing</span>
+                                <span id="text-letter-spacing-value">0</span>
+                            </div>
+                            <input type="range" id="text-letter-spacing" min="-10" max="50" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <div class="section" id="text-colors-section" style="display: none;">
+                        <div class="section-header">Colors</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10px; color: var(--text-secondary);">Fill Color</label>
+                                <input type="color" id="text-fill-color" value="#ffffff"
+                                    style="width: 100%; height: 32px; border: none; border-radius: 4px; cursor: pointer;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; color: var(--text-secondary);">Opacity</label>
+                                <input type="range" id="text-opacity" min="0" max="1" step="0.01" value="1"
+                                    style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="text-effects-section" style="display: none;">
+                        <div class="section-header">Effects</div>
+
+                        <!-- Stroke -->
+                        <div style="margin-bottom: 12px;">
+                            <label
+                                style="display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer;">
+                                <input type="checkbox" id="text-stroke-enabled">
+                                <span>Stroke / Outline</span>
+                            </label>
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <input type="color" id="text-stroke-color" value="#000000"
+                                    style="width: 32px; height: 32px; border: none; border-radius: 4px;">
+                                <input type="range" id="text-stroke-width" min="1" max="20" step="1" value="2"
+                                    style="flex: 1;">
+                            </div>
+                        </div>
+
+                        <!-- Background -->
+                        <div style="margin-bottom: 12px;">
+                            <label
+                                style="display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer;">
+                                <input type="checkbox" id="text-bg-enabled">
+                                <span>Background</span>
+                            </label>
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <input type="color" id="text-bg-color" value="#000000"
+                                    style="width: 32px; height: 32px; border: none; border-radius: 4px;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; gap: 4px;">
+                                        <input type="range" id="text-bg-padding" min="0" max="50" step="1" value="8"
+                                            style="flex: 1;" title="Padding">
+                                        <input type="range" id="text-bg-radius" min="0" max="50" step="1" value="4"
+                                            style="flex: 1;" title="Radius">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shadow -->
+                        <div>
+                            <label
+                                style="display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer;">
+                                <input type="checkbox" id="text-shadow-enabled">
+                                <span>Drop Shadow</span>
+                            </label>
+                            <div style="margin-top: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                    <input type="color" id="text-shadow-color" value="#000000"
+                                        style="width: 32px; height: 32px; border: none; border-radius: 4px;">
+                                    <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                                        <input type="range" id="text-shadow-x" min="-50" max="50" step="1" value="4"
+                                            title="X Offset">
+                                        <input type="range" id="text-shadow-y" min="-50" max="50" step="1" value="4"
+                                            title="Y Offset">
+                                    </div>
+                                </div>
+                                <input type="range" id="text-shadow-blur" min="0" max="50" step="1" value="8"
+                                    style="width: 100%;" title="Blur">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <p style="font-size: 10px; color: var(--text-secondary); text-align: center;">
+                            Click to select • Drag to move • Double-click to edit
+                        </p>
                     </div>
                 </div>
             </div>

@@ -48,8 +48,15 @@ export class KeyboardModule {
      * Handle keydown events
      */
     _handleKeyDown(e) {
-        // Ignore shortcuts when typing in inputs
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        // Ignore shortcuts when typing in inputs or contentEditable
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.target.isContentEditable) return;
+
+        // Ignore tool shortcuts when in text mode (except Escape)
+        if (this.state.currentTool === 'text' && e.code !== 'Escape') {
+            // Only allow modifier-based shortcuts (Cmd/Ctrl) in text mode
+            if (!e.metaKey && !e.ctrlKey) return;
+        }
 
         // Space - Before view
         if (e.code === 'Space' && !this.state.showingBefore && this.state.hasImage) {
@@ -70,6 +77,8 @@ export class KeyboardModule {
         if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) this.editor.setTool('liquify');
         if (e.code === 'KeyH' && !e.metaKey && !e.ctrlKey) this.editor.setTool('healing');
         if (e.code === 'KeyV' && !e.metaKey && !e.ctrlKey) this.editor.setTool('godrays');
+        if (e.code === 'KeyT' && !e.metaKey && !e.ctrlKey) this.editor.setTool('text');
+        if (e.code === 'KeyS' && !e.metaKey && !e.ctrlKey) this.editor.setTool('clone');
 
         // Brush mode toggle
         if (e.code === 'KeyX' && this.state.currentTool === 'brush') {

@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.0.0",
+    "@huggingface/transformers": "^3.8.1",
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/drawing_utils": "^0.3.1675466124",
     "@mediapipe/face_mesh": "^0.4.1633559619",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "@upscalerjs/esrgan-slim": "^1.0.0-beta.12",
     "@upscalerjs/esrgan-thick": "^1.0.0-beta.16",
     "@vercel/analytics": "^1.6.1",

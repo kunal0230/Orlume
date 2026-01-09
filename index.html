@@ -9,7 +9,7 @@
         content="Professional free online AI photo editor by Orlume Vision Labs. Features realtime 3D relighting, background removal, AI upscaling, and color grading. 100% browser-based, privacy-first editing with WebGPU.">
     <meta name="keywords"
         content="orlume, orlume vision labs, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor, online photo editor, browser image editor">
-    <meta name="author" content="Orlume Vision Labs">
+    <meta name="author" content="Orlume">
     <meta name="robots" content="index, follow">
     <meta name="google-site-verification" content="ly0IpTZOJMFte338_hSPAAbQfwfD5zF08tLdEffyo0c" />
     <link rel="canonical" href="https://orlume.io/">
@@ -49,7 +49,7 @@
         "description": "Professional AI-powered photo editing tool running entirely in the browser using WebGPU. Features 3D relighting, background removal, and upscaling.",
         "author": {
           "@type": "Organization",
-          "name": "Orlume Vision Labs",
+          "name": "Orlume",
           "url": "https://orlume.io"
         },
         "featureList": [
@@ -70,7 +70,7 @@
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "Orlume Vision Labs",
+        "name": "Orlume",
         "url": "https://orlume.io",
         "logo": "https://orlume.io/logo.png",
         "sameAs": [
@@ -223,7 +223,7 @@
 
                 <div class="nav-item">
                     <button type="button">
-                        Company
+                        Community
                         <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9" />
                         </svg>
@@ -242,16 +242,30 @@
                                 <div class="nav-dropdown-desc">Our story and mission</div>
                             </div>
                         </a>
-                        <a href="/careers">
+                        <a href="https://github.com/AsukaFurukawa/Orlume" target="_blank">
                             <div class="nav-dropdown-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                    <path
+                                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                                 </svg>
                             </div>
                             <div class="nav-dropdown-content">
-                                <div class="nav-dropdown-title">Careers</div>
-                                <div class="nav-dropdown-desc">Join our team</div>
+                                <div class="nav-dropdown-title">GitHub</div>
+                                <div class="nav-dropdown-desc">View source code</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                            </div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join the project</div>
                             </div>
                         </a>
                         <a href="/privacy">
@@ -280,9 +294,7 @@
                     </div>
                 </div>
 
-                <div class="nav-item">
-                    <a href="#pricing">Pricing</a>
-                </div>
+
             </div>
 
             <!-- Mobile Menu Toggle -->
@@ -340,54 +352,7 @@
             </div>
         </div>
 
-        <!-- Hero Demo -->
-        <div class="hero-demo">
-            <div class="demo-container">
-                <!-- Floating UI Elements -->
-                <div class="floating-ui ui-1">
-                    <div class="icon green">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div style="font-weight: 600;">Processing Complete</div>
-                        <div style="font-size: 12px; opacity: 0.6;">Enhanced in 0.8s</div>
-                    </div>
-                </div>
 
-                <div class="floating-ui ui-2">
-                    <div class="icon blue">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path
-                                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div style="font-weight: 600;">AI Depth Analysis</div>
-                        <div style="font-size: 12px; opacity: 0.6;">256 layers detected</div>
-                    </div>
-                </div>
-
-                <!-- Comparison Slider -->
-                <div class="comparison-container" id="hero-comparison">
-                    <span class="comparison-label label-before">Before</span>
-                    <span class="comparison-label label-after">After</span>
-                    <img src="/relight_after.png" class="comparison-image comparison-after" alt="After AI enhancement">
-                    <img src="/relight_after.png" class="comparison-image comparison-before" alt="Before enhancement"
-                        style="filter: brightness(0.7) contrast(0.9) saturate(0.7);">
-                    <div class="comparison-slider" id="hero-slider">
-                        <div class="comparison-handle">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 8L22 12L18 16M6 8L2 12L6 16" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </section>
 
     <!-- How It Works Section -->
@@ -426,6 +391,285 @@
                     <p style="color: var(--text-secondary); line-height: 1.6;">Download in multiple formats including 4K
                         resolution. Share directly or save to cloud.</p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Complete Features List -->
+    <section class="all-features" style="padding: 120px 24px; background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header reveal">
+                <div class="section-eyebrow">Complete Toolkit</div>
+                <h2 class="section-title">Everything you need, nothing you don't</h2>
+                <p class="section-desc">Professional-grade tools that rival desktop applications — all running in your
+                    browser.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 60px;"
+                class="reveal">
+
+                <!-- AI & Machine Learning -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #a855f7, #6366f1); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                                <path d="M12 2a10 10 0 0 1 10 10" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">AI & Machine Learning</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Depth Estimation (Depth Anything V2)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Semantic Segmentation (150 classes)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Background Removal
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> AI Upscaling (Real-ESRGAN)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Face Detection & Mesh
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Material Property Estimation
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 3D & Lighting -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b, #ef4444); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path
+                                    d="M9 18h6M10 22h4M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">3D & Lighting</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> 3D Relighting with Multi-Light
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Normal Map Generation
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Volumetric God Rays
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> PBR Material Rendering
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Shadow Mapping & HBAO
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> 3D Mesh Export (GLB)
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Color & Grading -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981, #06b6d4); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="4" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">Color & Grading</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> HSL Color Mixer (8 Channels)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Professional Light Controls
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> White Balance Correction
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> 40+ Cinematic Presets
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Real-time Histogram
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Non-destructive Editing
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Retouching Tools -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #ec4899, #f43f5e); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+                                <path
+                                    d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">Retouching Tools</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> AI Healing Brush
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Clone Stamp Tool
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Liquify / Warp Tool
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Adjustment Layers
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Brush / Radial / Gradient Masks
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Text Overlays
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Transform & Crop -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M6 2L6 6M6 6L2 6M6 6L6 16a2 2 0 0 0 2 2h10" />
+                                <path d="M18 22L18 18M18 18L22 18M18 18L18 8a2 2 0 0 0-2-2H6" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">Transform & Export</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Crop with Aspect Ratios
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Rotation & Flip
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> JPEG / PNG / 4K Export
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Before/After Comparison
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Undo/Redo History
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Keyboard Shortcuts
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Technical -->
+                <div
+                    style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 28px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #64748b, #475569); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <polyline points="16 18 22 12 16 6" />
+                                <polyline points="8 6 2 12 8 18" />
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 18px; font-weight: 700;">Technical</h3>
+                    </div>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> GPU-Accelerated (WebGL2/WebGPU)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> 100% Client-Side Processing
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> No Upload Required
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> PWA / Installable App
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Open Source (MIT License)
+                        </li>
+                        <li
+                            style="display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px;">
+                            <span style="color: var(--accent);">✓</span> Privacy-First Design
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 48px;" class="reveal">
+                <a href="/editor" class="btn btn-primary" style="padding: 16px 40px; font-size: 16px;">
+                    Try All Features Free
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="margin-left: 8px;">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </a>
             </div>
         </div>
     </section>
@@ -700,213 +944,6 @@
         </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="testimonials-section">
-        <div class="testimonials-track">
-            <div class="testimonial-card">
-                <p class="testimonial-text">"Orlume has completely replaced my desktop photo editing workflow. The 3D
-                    relighting feature is unlike anything I've seen in a browser-based tool."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">Sarah Chen</div>
-                        <div class="testimonial-role">Product Photographer</div>
-                    </div>
-                </div>
-            </div>
-            <div class="testimonial-card">
-                <p class="testimonial-text">"The background removal is incredibly precise. I use it daily for my
-                    e-commerce product shots. Saves me hours every week."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">Marcus Johnson</div>
-                        <div class="testimonial-role">E-commerce Manager</div>
-                    </div>
-                </div>
-            </div>
-            <div class="testimonial-card">
-                <p class="testimonial-text">"Finally, a photo editor that respects my privacy. Processing happens
-                    locally and the results are professional-grade."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">Emily Rodriguez</div>
-                        <div class="testimonial-role">Portrait Photographer</div>
-                    </div>
-                </div>
-            </div>
-            <div class="testimonial-card">
-                <p class="testimonial-text">"The HSL color mixer is incredibly precise. I can match any film look or
-                    create entirely new styles in minutes."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">David Kim</div>
-                        <div class="testimonial-role">Content Creator</div>
-                    </div>
-                </div>
-            </div>
-            <!-- Duplicated for infinite scroll -->
-            <div class="testimonial-card">
-                <p class="testimonial-text">"Orlume has completely replaced my desktop photo editing workflow. The 3D
-                    relighting feature is unlike anything I've seen in a browser-based tool."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">Sarah Chen</div>
-                        <div class="testimonial-role">Product Photographer</div>
-                    </div>
-                </div>
-            </div>
-            <div class="testimonial-card">
-                <p class="testimonial-text">"The background removal is incredibly precise. I use it daily for my
-                    e-commerce product shots. Saves me hours every week."</p>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar"></div>
-                    <div>
-                        <div class="testimonial-name">Marcus Johnson</div>
-                        <div class="testimonial-role">E-commerce Manager</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section class="pricing-section" id="pricing">
-        <div class="container">
-            <div class="section-header reveal">
-                <div class="section-eyebrow">Pricing</div>
-                <h2 class="section-title">Simple, transparent pricing</h2>
-                <p class="section-desc">Start for free, upgrade when you need more.</p>
-            </div>
-
-            <div class="pricing-toggle reveal">
-                <span class="active">Monthly</span>
-                <div class="toggle-switch" id="pricing-toggle"></div>
-                <span>Yearly <span style="color: var(--accent-purple);">(Save 20%)</span></span>
-            </div>
-
-            <div class="pricing-grid">
-                <!-- Free Plan -->
-                <div class="pricing-card reveal">
-                    <div class="pricing-name">Starter</div>
-                    <div class="pricing-price">$0</div>
-                    <div class="pricing-period">Free forever</div>
-                    <ul class="pricing-features">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Unlimited local edits
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            720p export resolution
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            All local tools included
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Community support
-                        </li>
-                    </ul>
-                    <a href="/editor" class="pricing-btn pricing-btn-secondary">Get Started</a>
-                </div>
-
-                <!-- Pro Plan -->
-                <div class="pricing-card featured reveal">
-                    <div class="pricing-badge">Most Popular</div>
-                    <div class="pricing-name">Creator Pro</div>
-                    <div class="pricing-price" id="pro-price">$12</div>
-                    <div class="pricing-period">per month</div>
-                    <ul class="pricing-features">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Everything in Starter
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            4K Ultra HD export
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Cloud AI processing
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Priority support
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            No watermarks
-                        </li>
-                    </ul>
-                    <button class="pricing-btn pricing-btn-primary">Go Pro</button>
-                </div>
-
-                <!-- Business Plan -->
-                <div class="pricing-card reveal">
-                    <div class="pricing-name">Business</div>
-                    <div class="pricing-price" id="business-price">$49</div>
-                    <div class="pricing-period">per month</div>
-                    <ul class="pricing-features">
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Everything in Pro
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            API access
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Team collaboration
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Dedicated support
-                        </li>
-                        <li>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Custom integrations
-                        </li>
-                    </ul>
-                    <button class="pricing-btn pricing-btn-secondary">Contact Sales</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- CTA Section -->
     <section class="cta-section">
         <div class="cta-container reveal">
@@ -946,7 +983,7 @@
                 <h4>Product</h4>
                 <ul>
                     <li><a href="#features">Features</a></li>
-                    <li><a href="#pricing">Pricing</a></li>
+
                     <li><a href="/editor">Editor</a></li>
                     <li><a href="/docs">API</a></li>
                 </ul>
@@ -963,10 +1000,11 @@
             </div>
 
             <div class="footer-column">
-                <h4>Company</h4>
+                <h4>Community</h4>
                 <ul>
                     <li><a href="/about">About</a></li>
-                    <li><a href="/careers">Careers</a></li>
+                    <li><a href="https://github.com/AsukaFurukawa/Orlume" target="_blank">GitHub</a></li>
+                    <li><a href="/contribute">Contribute</a></li>
                     <li><a href="/privacy">Privacy</a></li>
                     <li><a href="/terms">Terms</a></li>
                 </ul>
@@ -974,7 +1012,7 @@
         </div>
 
         <div class="footer-bottom">
-            <span>© 2024 Orlume Vision Labs. All rights reserved.</span>
+            <span>© 2024 Orlume. Open source under MIT License.</span>
             <div class="footer-social">
                 <a href="#" aria-label="Twitter">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -1043,21 +1081,7 @@
         window.addEventListener('touchend', () => isDragging = false);
         comparison.addEventListener('touchmove', (e) => { if (isDragging) updateSlider(e.touches[0].clientX); });
 
-        // Pricing toggle
-        const pricingToggle = document.getElementById('pricing-toggle');
-        const proPrice = document.getElementById('pro-price');
-        const businessPrice = document.getElementById('business-price');
-        let isYearly = false;
 
-        pricingToggle.addEventListener('click', () => {
-            isYearly = !isYearly;
-            pricingToggle.classList.toggle('yearly', isYearly);
-            pricingToggle.parentElement.querySelectorAll('span').forEach((span, i) => {
-                span.classList.toggle('active', i === (isYearly ? 1 : 0));
-            });
-            proPrice.textContent = isYearly ? '$10' : '$12';
-            businessPrice.textContent = isYearly ? '$39' : '$49';
-        });
 
         // Scroll reveal
         const reveals = document.querySelectorAll('.reveal');
@@ -1067,9 +1091,16 @@
                     entry.target.classList.add('visible');
                 }
             });
-        }, { threshold: 0.1 });
+        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
 
-        reveals.forEach(el => revealObserver.observe(el));
+        reveals.forEach(el => {
+            // Check if element is already in viewport on page load
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                el.classList.add('visible');
+            }
+            revealObserver.observe(el);
+        });
 
         // Subdomain routing for production
         (function () {
