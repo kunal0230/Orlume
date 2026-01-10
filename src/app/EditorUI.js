@@ -1172,7 +1172,6 @@ export class EditorUI {
         if (canvasContainer) {
             if (hasTransparency) {
                 canvasContainer.classList.add('transparency-bg');
-                console.log('🔲 Transparent image detected - showing checkerboard');
             } else {
                 canvasContainer.classList.remove('transparency-bg');
             }

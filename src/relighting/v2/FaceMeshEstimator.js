@@ -18,7 +18,6 @@ export class FaceMeshEstimator {
 
     async init() {
         try {
-            console.log('🔮 Initializing MediaPipe Face Mesh...');
 
             const vision = await FilesetResolver.forVisionTasks(
                 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
@@ -36,7 +35,6 @@ export class FaceMeshEstimator {
             });
 
             this.isReady = true;
-            console.log('✅ MediaPipe Face Mesh ready');
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize Face Mesh:', error);
@@ -53,7 +51,6 @@ export class FaceMeshEstimator {
         const width = image.width || image.naturalWidth;
         const height = image.height || image.naturalHeight;
 
-        console.log('🔍 Detecting face mesh...');
 
         const result = this.faceLandmarker.detect(image);
 
@@ -63,7 +60,6 @@ export class FaceMeshEstimator {
         }
 
         const landmarks = result.faceLandmarks[0];
-        console.log(`  Found ${landmarks.length} landmarks`);
 
         // Create smooth face depth from landmarks
         const { depthMap, faceMask } = this._createFaceDepthWithMask(landmarks, width, height);

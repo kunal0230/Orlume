@@ -67,7 +67,6 @@ export class WebGL2Backend extends GPUBackend {
         this._compileShaders();
 
         this.isReady = true;
-        console.log('🎮 WebGL2 initialized with alpha support');
         return true;
     }
 
@@ -439,7 +438,6 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_hslLum = gl.getUniformLocation(dev, 'u_hslLum');
         }
 
-        console.log('✅ WebGL2 shaders compiled');
     }
 
     _compileShader(type, source) {

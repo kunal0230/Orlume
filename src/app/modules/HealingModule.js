@@ -224,7 +224,6 @@ export class HealingModule {
         // Initial render
         this._renderPreview();
 
-        console.log('🩹 Healing tool activated');
     }
 
     /**
@@ -255,7 +254,6 @@ export class HealingModule {
             this.healingBrushCursor.style.display = 'none';
         }
 
-        console.log('🩹 Healing tool deactivated');
     }
 
     /**
@@ -309,14 +307,12 @@ export class HealingModule {
             // Store original alpha channel before sending to API
             const originalAlpha = this._extractAlphaChannel();
 
-            console.log('🩹 Sending to LaMa API...');
             const result = await this.replicate.inpaint(imageDataUrl, maskDataUrl);
 
             if (!result) {
                 throw new Error('No result received from API');
             }
 
-            console.log('🩹 Healing result received');
 
             // Load the result image
             const healedImg = await this._loadImageAsync(result);
@@ -428,7 +424,6 @@ export class HealingModule {
             this.healingTool.setImage(this.elements.canvas);
             this.healingTool.clearMask();
 
-            console.log('✅ Healing applied successfully');
 
         } catch (error) {
             console.error('Failed to apply healing:', error);
@@ -460,10 +455,8 @@ export class HealingModule {
             ctx.drawImage(this.elements.canvas, 0, 0);
             const imageDataUrl = tempCanvas.toDataURL('image/png');
 
-            console.log('✨ Sending to GFPGAN API...');
             const result = await this.replicate.enhanceFace(imageDataUrl);
 
-            console.log('✨ Face enhancement result received');
 
             // Save state for undo
             clearTimeout(this.editor._historyDebounceTimer);
@@ -516,10 +509,8 @@ export class HealingModule {
             ctx.drawImage(this.elements.canvas, 0, 0);
             const imageDataUrl = tempCanvas.toDataURL('image/png');
 
-            console.log('🎭 Sending to 851-labs/background-remover API...');
             const result = await this.replicate.removeBackground(imageDataUrl);
 
-            console.log('🎭 Background removal result received');
 
             // Save state for undo
             clearTimeout(this.editor._historyDebounceTimer);

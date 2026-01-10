@@ -327,7 +327,6 @@ export class CropModule {
         // Stay in crop mode - don't switch to develop mode
         // The crop tool will be reactivated after the image is loaded
 
-        console.log(`✅ Crop applied: ${cropData.width}×${cropData.height}${cropData.rotation ? ` @ ${cropData.rotation}°` : ''}`);
     }
 
     /**

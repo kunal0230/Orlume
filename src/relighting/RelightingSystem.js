@@ -83,7 +83,6 @@ export class RelightingSystem {
         await this.lightingShader.init();
 
         this.isReady = true;
-        console.log('✨ RelightingSystem initialized with offscreen WebGL2');
         return true;
     }
 
@@ -99,7 +98,6 @@ export class RelightingSystem {
             this.width = image.width || image.naturalWidth;
             this.height = image.height || image.naturalHeight;
 
-            console.log(`🔄 Processing image ${this.width}x${this.height} for relighting...`);
 
             // Step 1: Estimate depth using AI
             const depthResult = await depthEstimator.estimate(image);
@@ -120,7 +118,6 @@ export class RelightingSystem {
             // Step 4: Upload textures to GPU
             this._uploadTextures();
 
-            console.log('✅ Relighting processing complete');
             return true;
         } catch (error) {
             console.error('❌ Relighting processing failed:', error);

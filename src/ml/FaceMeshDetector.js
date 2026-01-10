@@ -110,7 +110,6 @@ export class FaceMeshDetector {
             });
 
             this.isLoading = false;
-            console.log('✓ Face Mesh model loaded (478 landmarks with refinement)');
 
             return this.faceMesh;
 

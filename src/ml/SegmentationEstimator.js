@@ -123,18 +123,16 @@ export class SegmentationEstimator {
             env.allowLocalModels = false;
             env.useBrowserCache = true;
 
-            console.log('Loading SegFormer B0 model...');
-
             // Use WebGPU if available, fallback to WASM
             const devices = ['webgpu', 'wasm'];
             let lastError = null;
 
             for (const device of devices) {
                 try {
-                    console.log(`Trying ${device} backend for segmentation...`);
+
 
                     if (device === 'webgpu' && !navigator.gpu) {
-                        console.log('WebGPU not supported, skipping...');
+
                         continue;
                     }
 
@@ -144,7 +142,7 @@ export class SegmentationEstimator {
                     });
 
                     this.isLoading = false;
-                    console.log(`✅ Segmentation model loaded (${device})`);
+
                     return this.model;
 
                 } catch (deviceError) {
@@ -176,7 +174,7 @@ export class SegmentationEstimator {
             if (!this.model) {
                 await this.loadModel((progress) => {
                     if (progress.status === 'progress') {
-                        console.log(`Segmentation: ${Math.round(progress.progress)}%`);
+
                     }
                 });
             }
@@ -199,7 +197,7 @@ export class SegmentationEstimator {
                 const scale = MAX_DIM / Math.max(originalWidth, originalHeight);
                 targetWidth = Math.round(originalWidth * scale);
                 targetHeight = Math.round(originalHeight * scale);
-                console.log(`📐 Resizing for segmentation: ${originalWidth}×${originalHeight} → ${targetWidth}×${targetHeight}`);
+
             }
 
             // Create resized canvas for segmentation
@@ -214,7 +212,7 @@ export class SegmentationEstimator {
             const results = await this.model(imageInput);
 
             const elapsed = performance.now() - startTime;
-            console.log(`✅ Segmentation complete: ${results.length} segments (${elapsed.toFixed(0)}ms)`);
+
 
             return {
                 segments: results,

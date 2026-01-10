@@ -26,7 +26,6 @@ export class HeightmapGenerator {
         this.width = faceMeshData.width;
         this.height = faceMeshData.height;
 
-        console.log('🗻 Generating seamless heightmap from Face Mesh...');
 
         // Extract AI depth as base
         const aiDepth = this._extractDepth(aiDepthData);
@@ -39,14 +38,11 @@ export class HeightmapGenerator {
         const { alignedMesh, alignedAI } = this._alignDepthScales(meshDepth, aiDepth, faceMask);
 
         // Blend using the soft mask
-        console.log('   Seamlessly blending depths...');
         const blendedHeight = this._seamlessBlend(alignedMesh, alignedAI, faceMask, faceMeshInfluence, detailBoost);
 
         // Compute normals
-        console.log('   Computing normals...');
         const finalNormals = this._computeNormalsFromHeight(blendedHeight);
 
-        console.log('✅ Seamless heightmap generated');
 
         return {
             heightmap: blendedHeight,
@@ -72,23 +68,17 @@ export class HeightmapGenerator {
         this.width = originalImage.width;
         this.height = originalImage.height;
 
-        console.log('🗻 Generating unified heightmap (legacy)...');
 
         const baseDepth = this._extractDepth(depthData);
 
-        console.log('   Step 1/4: Extracting structural features...');
         const structuralNormals = this._computeStructuralNormals(originalImage, textureFilterSize);
 
-        console.log('   Step 2/4: Integrating normals to height...');
         const heightDetail = this._integrateNormalsToHeight(structuralNormals, integrationIterations);
 
-        console.log('   Step 3/4: Fusing depth + features...');
         const unifiedHeight = this._fuseDepthAndDetail(baseDepth, heightDetail, featureScale);
 
-        console.log('   Step 4/4: Computing final normals...');
         const finalNormals = this._computeNormalsFromHeight(unifiedHeight);
 
-        console.log('✅ Unified heightmap generated');
 
         return {
             heightmap: unifiedHeight,

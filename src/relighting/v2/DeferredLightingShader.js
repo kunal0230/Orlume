@@ -62,7 +62,6 @@ export class DeferredLightingShader {
         this._createTextures();
 
         this.isReady = true;
-        console.log('✨ DeferredLightingShader v5 (DaVinci-Quality) initialized');
         return true;
     }
 
@@ -119,6 +118,16 @@ export class DeferredLightingShader {
         gl.uniform1f(this.uniforms.u_reach, light.reach || 200.0);
         gl.uniform1f(this.uniforms.u_contrast, light.contrast || 1.0);
         gl.uniform1i(this.uniforms.u_directional, light.directional ? 1 : 0);
+        gl.uniform1i(this.uniforms.u_blendMode, light.blendMode || 0);
+
+        // Rim lighting parameters (new)
+        gl.uniform1f(this.uniforms.u_rimIntensity, light.rimIntensity || 0.0);
+        gl.uniform3f(this.uniforms.u_rimColor,
+            light.rimColor?.r || 1.0,
+            light.rimColor?.g || 1.0,
+            light.rimColor?.b || 1.0
+        );
+        gl.uniform1f(this.uniforms.u_rimWidth, light.rimWidth || 0.5);
 
         gl.bindVertexArray(this.quadVAO);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -163,7 +172,8 @@ export class DeferredLightingShader {
             'u_albedo', 'u_normals', 'u_depth', 'u_resolution',
             'u_lightPos', 'u_lightDir', 'u_lightColor', 'u_lightIntensity',
             'u_ambient', 'u_specularity', 'u_glossiness',
-            'u_reach', 'u_contrast', 'u_directional'
+            'u_reach', 'u_contrast', 'u_directional', 'u_blendMode',
+            'u_rimIntensity', 'u_rimColor', 'u_rimWidth' // Rim lighting
         ];
 
         uniforms.forEach(name => {
@@ -280,6 +290,12 @@ uniform float u_glossiness;
 uniform float u_reach;        // Controls falloff distance
 uniform float u_contrast;     // Terminator sharpness (gamma)
 uniform int u_directional;    // 1 = directional, 0 = point light
+uniform int u_blendMode;      // 0=softLight, 1=normal, 2=additive, 3=screen, 4=multiply
+
+// Rim lighting (backlight/edge glow)
+uniform float u_rimIntensity; // 0 = off, 1 = full
+uniform vec3 u_rimColor;      // Color of rim light
+uniform float u_rimWidth;     // 0 = thin, 1 = wide
 
 // ============================================
 // OVERLAY BLEND MODE (DaVinci-style)
@@ -395,6 +411,16 @@ void main() {
         float NdotH = max(dot(N, H), 0.0);
         specular = pow(NdotH, u_glossiness) * u_specularity;
     }
+
+    // === RIM LIGHTING (Fresnel-based backlight) ===
+    float rimLight = 0.0;
+    if (u_rimIntensity > 0.0) {
+        vec3 V = vec3(0.0, 0.0, 1.0);  // View direction
+        float NdotV = max(dot(N, V), 0.0);
+        // Fresnel effect: stronger at edges where normal is perpendicular to view
+        float fresnelPower = mix(2.0, 6.0, u_rimWidth); // Width controls Fresnel exponent
+        rimLight = pow(1.0 - NdotV, fresnelPower) * u_rimIntensity;
+    }
     
     // === COMBINE LIGHTING ===
     float lighting = diffuse * u_lightIntensity * attenuation;
@@ -402,12 +428,36 @@ void main() {
     // Normalize lighting for blend (0 = shadow, 1 = full light)
     float blendValue = clamp(lighting + u_ambient, 0.0, 1.0);
     
-    // === APPLY USING SOFT LIGHT BLEND ===
-    // This preserves texture while applying structural lighting
-    vec3 litColor = softLightBlend(albedo.rgb, blendValue);
+    // === APPLY BLEND MODE ===
+    vec3 litColor;
+    
+    if (u_blendMode == 0) {
+        // Soft Light (Natural) - default
+        litColor = softLightBlend(albedo.rgb, blendValue);
+    } else if (u_blendMode == 1) {
+        // Normal (Replace) - direct lighting
+        vec3 lit = albedo.rgb * blendValue;
+        litColor = mix(albedo.rgb, lit, u_lightIntensity);
+    } else if (u_blendMode == 2) {
+        // Additive (Bright) - add light on top
+        float additive = (blendValue - 0.5) * 2.0 * u_lightIntensity;
+        litColor = albedo.rgb + vec3(max(0.0, additive));
+    } else if (u_blendMode == 3) {
+        // Screen (Lighter) - screen blend
+        vec3 screenVal = vec3(blendValue);
+        litColor = 1.0 - (1.0 - albedo.rgb) * (1.0 - screenVal * u_lightIntensity);
+    } else if (u_blendMode == 4) {
+        // Multiply (Darker)
+        litColor = albedo.rgb * blendValue;
+    } else {
+        litColor = softLightBlend(albedo.rgb, blendValue);
+    }
     
     // Add specular on top
     litColor += specular * u_lightColor * attenuation;
+
+    // Add rim lighting (backlight glow)
+    litColor += rimLight * u_rimColor;
     
     // Tint with light color (subtle)
     litColor = mix(litColor, litColor * u_lightColor, lighting * 0.3);

@@ -91,7 +91,6 @@ export class WebGPUBackend extends GPUBackend {
             this._compileShaders();
 
             this.isReady = true;
-            console.log('🚀 WebGPU initialized');
             return true;
         } catch (e) {
             console.error('WebGPU initialization failed:', e);
@@ -119,7 +118,6 @@ export class WebGPUBackend extends GPUBackend {
                 format: this.format,
                 alphaMode: 'premultiplied'  // Support transparent PNG
             });
-            console.log(`📐 WebGPU context reconfigured: ${width}×${height}`);
         }
     }
 
@@ -609,7 +607,6 @@ export class WebGPUBackend extends GPUBackend {
         // Create develop pipeline
         this._createPipeline('develop', developCode, true);
 
-        console.log('✅ WebGPU shaders compiled');
     }
 
     /**

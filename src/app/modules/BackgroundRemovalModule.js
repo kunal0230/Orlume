@@ -85,7 +85,6 @@ export class BackgroundRemovalModule {
 
         document.getElementById('btn-bg-reset-transform')?.addEventListener('click', () => this._resetTransform());
 
-        console.log('🎭 BackgroundRemovalModule initialized');
     }
 
     /**
@@ -127,7 +126,6 @@ export class BackgroundRemovalModule {
         this.overlayCanvas.addEventListener('mouseup', this._boundMouseUp);
         this.overlayCanvas.addEventListener('mouseleave', this._boundMouseUp);
 
-        console.log('🎭 Transform overlay created');
     }
 
     /**
@@ -145,7 +143,6 @@ export class BackgroundRemovalModule {
             this.overlayCanvas.remove();
             this.overlayCanvas = null;
             this.overlayCtx = null;
-            console.log('🎭 Transform overlay removed');
         }
     }
 
@@ -366,12 +363,9 @@ export class BackgroundRemovalModule {
             const base64Data = pngDataUrl.split(',')[1];
             const imageDataUrl = `data:application/octet-stream;base64,${base64Data}`;
 
-            console.log('🎭 Image format: PNG as octet-stream, base64 length:', base64Data.length);
 
-            console.log('🎭 Sending to background removal API...');
             const resultUrl = await this.replicate.removeBackground(imageDataUrl);
 
-            console.log('🎭 Background removal result received:', resultUrl);
 
             // Fetch the result image via proxy to bypass CORS
             let imageDataForLoad;
@@ -385,7 +379,6 @@ export class BackgroundRemovalModule {
             // Load the result image (transparent PNG)
             this.removedBgImage = await this._loadImageAsync(imageDataForLoad);
 
-            console.log('🎭 Loaded image dimensions:', this.removedBgImage.width, 'x', this.removedBgImage.height);
 
             // Reset transform for new image
             this._resetTransform();
@@ -824,7 +817,6 @@ export class BackgroundRemovalModule {
             // Switch back to develop mode
             this.editor.setMode('develop');
 
-            console.log('✅ Background removal applied successfully');
 
         } catch (error) {
             console.error('Failed to apply background removal:', error);
@@ -914,12 +906,10 @@ export class BackgroundRemovalModule {
         }
 
         // For remote URLs, fetch as blob first to bypass CORS
-        console.log('🎭 Fetching image as blob to bypass CORS...');
         try {
             const response = await fetch(src);
             const blob = await response.blob();
             const dataUrl = await this._blobToDataUrl(blob);
-            console.log('🎭 Converted to data URL, length:', dataUrl.length);
 
             return new Promise((resolve, reject) => {
                 const img = new Image();

@@ -174,7 +174,6 @@ export async function createBestBackend(canvas) {
     if (await WebGPUBackend.isSupported()) {
         const backend = new WebGPUBackend(canvas);
         if (await backend.init()) {
-            console.log('🚀 Using WebGPU backend');
             return backend;
         }
     }
@@ -184,7 +183,6 @@ export async function createBestBackend(canvas) {
     if (await WebGL2Backend.isSupported()) {
         const backend = new WebGL2Backend(canvas);
         if (await backend.init()) {
-            console.log('🎮 Using WebGL2 backend (fallback)');
             return backend;
         }
     }

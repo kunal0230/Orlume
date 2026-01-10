@@ -58,7 +58,6 @@ export class HealingTool {
         this.previewCanvas.height = this.imageHeight;
 
         this.hasMask = false;
-        console.log(`🖌️ Healing tool initialized: ${this.imageWidth}×${this.imageHeight}`);
     }
 
     /**

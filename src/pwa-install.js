@@ -15,7 +15,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
     // Show the install button
     if (installButton) {
         installButton.style.display = 'flex';
-        console.log('📱 PWA install prompt available');
     }
 });
 
@@ -23,7 +22,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 if (installButton) {
     installButton.addEventListener('click', async () => {
         if (!deferredPrompt) {
-            console.log('No install prompt available');
             return;
         }
 
@@ -31,8 +29,7 @@ if (installButton) {
         deferredPrompt.prompt();
 
         // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`📱 User response to install prompt: ${outcome}`);
+        await deferredPrompt.userChoice;
 
         // Clear the deferred prompt
         deferredPrompt = null;
@@ -44,7 +41,6 @@ if (installButton) {
 
 // Listen for successful installation
 window.addEventListener('appinstalled', () => {
-    console.log('✅ Orlume was installed successfully!');
     // Hide the install button
     if (installButton) {
         installButton.style.display = 'none';
@@ -52,8 +48,3 @@ window.addEventListener('appinstalled', () => {
     // Clear the deferred prompt
     deferredPrompt = null;
 });
-
-// Check if app is already installed (running in standalone mode)
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    console.log('📱 Running as installed PWA');
-}

@@ -28,7 +28,6 @@ export class HSLModule {
     init() {
         this._initTabSwitching();
         this._initSliders();
-        console.log('🎨 HSL Module initialized');
     }
 
     /**

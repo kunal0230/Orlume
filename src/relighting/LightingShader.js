@@ -85,7 +85,6 @@ export class LightingShader {
         this.outputCanvas = document.createElement('canvas');
         this.outputCtx = this.outputCanvas.getContext('2d');
 
-        console.log('💡 LightingShader initialized');
         return true;
     }
 

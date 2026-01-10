@@ -47,7 +47,6 @@ export class SceneManager {
             });
         } catch (e) {
             // Fallback to WebGL
-            console.log('Falling back to WebGL renderer');
             this.renderer = new THREE.WebGLRenderer({
                 canvas: this.canvas,
                 antialias: true,

@@ -71,7 +71,6 @@ export class CloneTool {
         this.sourceSet = false;
         this.offsetSet = false;
 
-        console.log(`🖌️ Clone tool initialized: ${this.imageWidth}×${this.imageHeight}`);
     }
 
     /**
@@ -114,7 +113,6 @@ export class CloneTool {
         this.sourceY = y;
         this.sourceSet = true;
         this.offsetSet = false;  // Reset offset for new source
-        console.log(`📍 Clone source set: (${x.toFixed(0)}, ${y.toFixed(0)})`);
     }
 
     /**

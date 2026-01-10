@@ -85,7 +85,6 @@ export class DepthModelComparison {
 
         for (const model of DEPTH_MODELS) {
             progressCallback(model.id, 'loading', 0);
-            console.log(`\n📊 Testing: ${model.name} (${model.size})`);
 
             try {
                 const startLoad = performance.now();
@@ -132,7 +131,6 @@ export class DepthModelComparison {
                     success: true
                 });
 
-                console.log(`  ✅ ${model.name}: ${inferenceTime.toFixed(0)}ms inference`);
 
             } catch (error) {
                 console.error(`  ❌ ${model.name} failed:`, error.message);
@@ -191,7 +189,6 @@ export class DepthModelComparison {
         a.click();
         URL.revokeObjectURL(url);
 
-        console.log('📦 Exported all depth maps and summary');
     }
 
     /**
@@ -319,14 +316,10 @@ export class DepthModelComparison {
 export async function testAllDepthModels(imageElement) {
     const comparison = new DepthModelComparison();
 
-    console.log('🧪 Starting depth model comparison...');
-    console.log('This may take several minutes to download and run all models.\n');
 
     const results = await comparison.runComparison(imageElement, (modelId, status, progress) => {
-        console.log(`  [${modelId}] ${status}: ${progress.toFixed(0)}%`);
     });
 
-    console.log('\n📊 Results Summary:');
     console.table(results.map(r => ({
         Model: r.model.name,
         Size: r.model.size,

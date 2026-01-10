@@ -25,19 +25,14 @@ export class DepthEstimator {
 
             // Note: Don't override wasmPaths - let Transformers.js handle ONNX internally
 
-            console.log('Loading Depth Anything V2 model...');
-
             // Robust fallback chain: WebGPU → WASM
             const devices = ['webgpu', 'wasm'];
             let lastError = null;
 
             for (const device of devices) {
                 try {
-                    console.log(`Trying ${device} backend...`);
-
                     // Check WebGPU availability before trying
                     if (device === 'webgpu' && !navigator.gpu) {
-                        console.log('WebGPU not supported, skipping...');
                         continue;
                     }
 
@@ -48,7 +43,6 @@ export class DepthEstimator {
                     });
 
                     this.isLoading = false;
-                    console.log(`✅ Depth model loaded (${device})`);
                     return this.model;
 
                 } catch (deviceError) {

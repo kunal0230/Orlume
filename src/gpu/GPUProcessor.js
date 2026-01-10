@@ -76,7 +76,6 @@ export class GPUProcessor {
     async init() {
         try {
             this.backend = await createBestBackend(this.canvas);
-            console.log(`🎮 GPUProcessor initialized (${this.backend.getName()})`);
             return true;
         } catch (e) {
             console.error('GPUProcessor initialization failed:', e);
@@ -152,7 +151,6 @@ export class GPUProcessor {
             this.backend.deleteFramebuffer?.(oldFBO);
         }
 
-        console.log(`📷 Image loaded: ${this.width}x${this.height}`);
     }
 
     /**

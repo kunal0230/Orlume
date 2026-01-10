@@ -36,35 +36,28 @@ export class SurfaceEstimator {
         this.height = depthResult.height;
         this.depthMap = depthResult.data;
 
-        console.log(`📐 Computing enhanced surface map ${this.width}x${this.height}...`);
 
         // Step 1: Extract luminance and prep original image
         this.luminanceMap = this._computeLuminanceMap(originalImage);
 
         // Step 2: Compute base normals from depth (multi-scale)
-        console.log('   Step 1/5: Depth-based normals...');
         const depthNormals = this._computeMultiScaleDepthNormals(normalStrength);
 
         // Step 3: Compute luminance-based surface details
-        console.log('   Step 2/5: Luminance-based details...');
         const luminanceNormals = this._computeLuminanceNormals(detailScale);
 
         // Step 4: Compute color/texture-based details
-        console.log('   Step 3/5: Color-based details...');
         const colorNormals = this._computeColorNormals(originalImage, detailScale * 0.5);
 
         // Step 5: Intelligent fusion of all signals
-        console.log('   Step 4/5: Multi-signal fusion...');
         const fusedNormals = this._fuseNormals(
             depthNormals, luminanceNormals, colorNormals,
             depthWeight, luminanceWeight, colorWeight
         );
 
         // Step 6: Cross-bilateral smoothing using original image as guide
-        console.log('   Step 5/5: Edge-preserving smoothing...');
         this.normalMap = this._crossBilateralSmooth(fusedNormals, originalImage, smoothRadius);
 
-        console.log('✅ Enhanced surface map computed');
 
         return {
             normals: this.normalMap,

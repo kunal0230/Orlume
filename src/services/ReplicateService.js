@@ -68,7 +68,6 @@ export class ReplicateService {
             throw new Error(`Unknown model: ${modelKey}`);
         }
 
-        console.log(`🚀 Starting ${modelKey} prediction...`);
 
         let response;
 
@@ -106,7 +105,7 @@ export class ReplicateService {
         }
 
         const prediction = await response.json();
-        console.log(`📋 Prediction created: ${prediction.id}`);
+
 
         // Poll for result
         return this.pollForResult(prediction.id);
@@ -149,7 +148,6 @@ export class ReplicateService {
             const prediction = await response.json();
 
             if (prediction.status === 'succeeded') {
-                console.log(`✅ Prediction completed!`);
                 return prediction.output;
             }
 
@@ -180,7 +178,7 @@ export class ReplicateService {
      * Fetch an image URL and return as data URL (bypasses CORS)
      */
     async fetchImageAsDataUrl(imageUrl) {
-        console.log('🎭 Fetching image via proxy to bypass CORS...');
+
 
         if (this.isDev) {
             // In dev mode, try direct fetch first (might work with some URLs)
@@ -194,7 +192,7 @@ export class ReplicateService {
                     reader.readAsDataURL(blob);
                 });
             } catch (error) {
-                console.log('🎭 Direct fetch failed, falling back to proxy');
+                // Direct fetch failed, falling back to proxy
             }
         }
 
@@ -216,7 +214,7 @@ export class ReplicateService {
         }
 
         const data = await response.json();
-        console.log('🎭 Image fetched via proxy, size:', data.size, 'bytes');
+
         return data.dataUrl;
     }
 

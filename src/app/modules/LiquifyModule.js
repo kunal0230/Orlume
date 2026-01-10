@@ -274,7 +274,6 @@ export class LiquifyModule {
 
             // Save state BEFORE liquify for undo support
             const snapshot = this.editor._captureFullState();
-            console.log('📸 Liquify: Capturing state. DataURL:', snapshot.imageDataUrl?.length || 0);
             this.history.pushState(snapshot);
 
             // Get the result from the liquify tool's WebGL canvas
@@ -316,7 +315,6 @@ export class LiquifyModule {
                 this.editor._detectAndShowTransparency(img);
             }
 
-            console.log('✅ Liquify applied successfully');
 
             // Reset liquify tool for next use but stay in liquify mode
             this.liquifyTool.resetAll();

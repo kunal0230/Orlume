@@ -22,7 +22,6 @@ export class EditorApp {
      * Initialize the editor application
      */
     async init() {
-        console.log('🚀 Initializing Orlume GPU Editor...');
 
         try {
             // Initialize GPU processor (async - detects WebGPU/WebGL2)
@@ -52,7 +51,6 @@ export class EditorApp {
             this.ui.updateBrushCursor();
             this.ui.updateBrushPreview();
 
-            console.log('✅ GPU Editor initialized successfully');
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize GPU Editor:', error);
@@ -67,17 +65,14 @@ export class EditorApp {
     _bindStateEvents() {
         // React to image load
         this.state.on('imageLoad', ({ image }) => {
-            console.log(`📷 Image loaded: ${image.width}×${image.height}`);
         });
 
         // React to tool changes
         this.state.on('toolChange', ({ tool }) => {
-            console.log(`🔧 Tool changed to: ${tool}`);
         });
 
         // React to reset
         this.state.on('reset', () => {
-            console.log('🔄 Adjustments reset');
         });
     }
 
@@ -148,7 +143,6 @@ export async function initApp() {
             // Valid tools that can be deep-linked
             const validTools = ['develop', '3d', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export', 'text'];
             if (validTools.includes(toolParam)) {
-                console.log(`🔗 Deep link detected: switching to ${toolParam} tool`);
                 // Small delay to ensure UI is fully ready
                 setTimeout(() => {
                     app.ui.setMode(toolParam);

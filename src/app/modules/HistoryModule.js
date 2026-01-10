@@ -84,7 +84,6 @@ export class HistoryModule {
         const state = this.history.undo();
         if (state) {
             this.restoreState(state);
-            console.log('↩️ Undo', this.history.getInfo());
 
             // If in liquify mode, refresh the liquify tool to show the change
             if (this.state.currentTool === 'liquify') {
@@ -100,7 +99,6 @@ export class HistoryModule {
         const state = this.history.redo();
         if (state) {
             this.restoreState(state);
-            console.log('↪️ Redo', this.history.getInfo());
 
             // If in liquify mode, refresh the liquify tool to show the change
             if (this.state.currentTool === 'liquify') {
@@ -114,7 +112,6 @@ export class HistoryModule {
      * Handles image restoration for crop undo
      */
     restoreState(snapshot) {
-        console.log('🔄 Restoring state. DataURL length:', snapshot.imageDataUrl?.length || 0);
 
         // Check if we need to restore a different image (crop or liquify undo)
         // Always restore if imageDataUrl exists - this handles liquify with same dimensions
@@ -141,7 +138,6 @@ export class HistoryModule {
                 // Then restore adjustments
                 this.restoreAdjustments(snapshot);
 
-                console.log(`🖼️ Image restored: ${img.width}×${img.height}`);
             };
             img.src = snapshot.imageDataUrl;
         } else {

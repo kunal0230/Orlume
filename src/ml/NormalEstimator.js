@@ -31,7 +31,6 @@ export class NormalEstimator {
             enhanceEdges = true,
         } = options;
 
-        console.log(`🗺️ Generating high-quality normals...`);
         const startTime = performance.now();
 
         // Get depth data
@@ -51,7 +50,6 @@ export class NormalEstimator {
         }
 
         const depthRange = maxDepth - minDepth;
-        console.log(`   Depth range: ${minDepth.toFixed(3)} - ${maxDepth.toFixed(3)} (range: ${depthRange.toFixed(3)})`);
 
         // Compute adaptive strength if auto
         // The smaller the depth range, the higher the strength needed
@@ -60,7 +58,6 @@ export class NormalEstimator {
             // For typical depth maps with 0-1 range, we need high strength
             // Depth differences are often 0.001-0.1, so we need 50-500x amplification
             strength = Math.max(30, Math.min(200, 5.0 / (depthRange + 0.01)));
-            console.log(`   Auto strength: ${strength.toFixed(1)}`);
         } else {
             strength = normalStrength;
         }
@@ -140,12 +137,10 @@ export class NormalEstimator {
             }
         }
 
-        console.log(`   Max gradient magnitude: ${maxGrad.toFixed(3)}`);
 
         normalCtx.putImageData(normalData, 0, 0);
 
         const elapsed = performance.now() - startTime;
-        console.log(`✅ Normals generated in ${elapsed.toFixed(0)}ms`);
 
         return normalCanvas;
     }
@@ -281,7 +276,6 @@ export class NormalEstimator {
             edgeSharpness = 1.5,
         } = options;
 
-        console.log('🗺️ Generating segment-aware normals...');
         const startTime = performance.now();
 
         // First generate base normals
@@ -369,7 +363,6 @@ export class NormalEstimator {
         ctx.putImageData(normalData, 0, 0);
 
         const elapsed = performance.now() - startTime;
-        console.log(`✅ Segment-aware normals: ${edgePixels} edge pixels refined (${elapsed.toFixed(0)}ms)`);
 
         return baseNormals;
     }

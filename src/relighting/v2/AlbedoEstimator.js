@@ -29,7 +29,6 @@ export class AlbedoEstimator {
         this.width = imageData.width;
         this.height = imageData.height;
 
-        console.log('🎨 Estimating albedo...');
 
         const data = imageData.data;
         const albedo = new ImageData(this.width, this.height);
@@ -85,7 +84,6 @@ export class AlbedoEstimator {
             albedoData[pIdx + 3] = 255;
         }
 
-        console.log('✅ Albedo estimated');
 
         return albedo;
     }

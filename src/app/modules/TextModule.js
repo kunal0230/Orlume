@@ -87,7 +87,6 @@ export class TextModule {
     init() {
         this._initPanel();
         this._initTextLayerList();
-        console.log('✅ TextModule initialized');
     }
 
     /**

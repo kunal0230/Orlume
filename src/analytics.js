@@ -11,4 +11,3 @@ inject();
 // Initialize Speed Insights
 injectSpeedInsights();
 
-console.log('📊 Vercel Analytics initialized');

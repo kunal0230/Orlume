@@ -36,8 +36,6 @@ export class NeuralEstimator {
         this.onProgress = progressCallback;
 
         try {
-            console.log('🧠 Initializing Neural Estimator...');
-            console.log(`   Model: ${this.modelId}`);
 
             // Initialize depth estimation pipeline
             this.depthPipeline = await pipeline('depth-estimation', this.modelId, {
@@ -55,7 +53,6 @@ export class NeuralEstimator {
 
             this.isReady = true;
             this.isLoading = false;
-            console.log('✅ Neural Estimator ready');
             return true;
         } catch (error) {
             console.error('❌ Neural Estimator init failed:', error);
@@ -77,7 +74,6 @@ export class NeuralEstimator {
         const width = image.width || image.naturalWidth;
         const height = image.height || image.naturalHeight;
 
-        console.log('🔍 Running neural depth estimation...');
 
         // Convert image to data URL for pipeline
         const canvas = document.createElement('canvas');
@@ -95,10 +91,8 @@ export class NeuralEstimator {
         const depthData = await this._tensorToDepthMap(depthTensor, width, height);
 
         // Compute high-quality normals from depth
-        console.log('   Computing surface normals...');
         const normals = this._computeDetailedNormals(depthData, width, height);
 
-        console.log('✅ Neural estimation complete');
 
         return {
             depth: depthData,

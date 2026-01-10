@@ -105,7 +105,6 @@ export class GodRaysEffect {
         this._getUniformLocations();
 
         this.enabled = true;
-        console.log('☀️ God Rays Effect initialized');
         return true;
     }
 
@@ -214,7 +213,6 @@ export class GodRaysEffect {
         }
 
         this.imageTexture = this._createTexture(imageData);
-        console.log('📷 God Rays: Image uploaded');
     }
 
     /**
@@ -231,7 +229,6 @@ export class GodRaysEffect {
         }
 
         this.depthTexture = this._createTexture(depthData);
-        console.log('📏 God Rays: Depth map uploaded');
     }
 
     /**
@@ -513,7 +510,6 @@ export class GodRaysEffect {
         }
 
         this.enabled = false;
-        console.log('☀️ God Rays Effect disposed');
     }
 }
 

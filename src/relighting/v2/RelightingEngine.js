@@ -81,7 +81,6 @@ export class RelightingEngine {
         }
 
         this.isReady = true;
-        console.log('✨ RelightingEngine v4 initialized (Neural Network)');
         return true;
     }
 
@@ -98,7 +97,6 @@ export class RelightingEngine {
         this.isProcessing = true;
 
         try {
-            console.log('🔄 Processing image with Neural Network...');
 
             this.width = image.width || image.naturalWidth;
             this.height = image.height || image.naturalHeight;
@@ -117,11 +115,9 @@ export class RelightingEngine {
                 this.onProgress({ stage: 'processing', message: 'Running AI depth estimation...' });
             }
 
-            console.log('  📐 Step 1/2: Neural depth & normal estimation...');
             this.neuralData = await this.neuralEstimator.estimate(image);
 
             // Step 2: Prepare albedo
-            console.log('  📐 Step 2/2: Preparing albedo...');
             this.albedoData = this.albedoEstimator.estimateSimple(this.originalImageData, {
                 contrastReduction: 0.1,
                 brightnessBoost: 0.02,
@@ -134,7 +130,6 @@ export class RelightingEngine {
                 this.onProgress({ stage: 'complete', message: 'Ready' });
             }
 
-            console.log('✅ Neural processing complete');
             return true;
         } catch (error) {
             console.error('❌ Image processing failed:', error);
@@ -190,7 +185,6 @@ export class RelightingEngine {
             z: dirZ / len,
         };
 
-        console.log(`💡 Light pos: (${this.light.position.x.toFixed(2)}, ${this.light.position.y.toFixed(2)}) → dir: (${this.light.direction.x.toFixed(2)}, ${this.light.direction.y.toFixed(2)}, ${this.light.direction.z.toFixed(2)})`);
     }
 
     // === SETTERS ===

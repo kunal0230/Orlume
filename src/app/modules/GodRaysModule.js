@@ -364,7 +364,6 @@ export class GodRaysModule {
         // Show sun indicator
         this._updateSunIndicator();
 
-        console.log('☀️ God Rays mode activated');
     }
 
     /**
@@ -665,7 +664,6 @@ export class GodRaysModule {
             this.ui._pushHistoryDebounced();
         }
 
-        console.log('☀️ God Rays effect applied');
 
         // Switch back to develop mode
         this.ui.setMode('develop');

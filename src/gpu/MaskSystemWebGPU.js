@@ -47,7 +47,6 @@ export class MaskSystemWebGPU {
      */
     async init() {
         await this._compilePipelines();
-        console.log('🎭 MaskSystemWebGPU initialized');
     }
 
     /**
@@ -144,7 +143,6 @@ export class MaskSystemWebGPU {
             ]
         });
 
-        console.log('✅ Mask shaders compiled (WebGPU)');
     }
 
     /**
@@ -260,7 +258,6 @@ export class MaskSystemWebGPU {
         this.layers.push(layer);
         this.activeLayerIndex = this.layers.length - 1;
 
-        console.log(`📝 Created ${type} layer #${layer.id} (WebGPU) at ${width}×${height}`);
         return layer;
     }
 
@@ -314,7 +311,6 @@ export class MaskSystemWebGPU {
 
                 layer.width = width;
                 layer.height = height;
-                console.log(`🔄 Resized layer ${layer.name} to ${width}×${height}`);
             }
         }
     }

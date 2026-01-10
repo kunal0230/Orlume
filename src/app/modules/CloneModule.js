@@ -380,7 +380,6 @@ export class CloneModule {
         try {
             // Save state BEFORE clone for undo support
             const snapshot = this.editor._captureFullState();
-            console.log('📸 Clone: Capturing state.');
             this.history.pushState(snapshot);
 
             // Get the result from the clone tool
@@ -412,7 +411,6 @@ export class CloneModule {
                 this.editor._detectAndShowTransparency(img);
             }
 
-            console.log('✅ Clone applied successfully');
 
             // Reset clone tool for next use but stay in clone mode
             this.cloneTool.reset();

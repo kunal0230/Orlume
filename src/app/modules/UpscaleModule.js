@@ -186,7 +186,6 @@ export class UpscaleModule {
                 // Update dimensions display
                 this.updateDimensions();
 
-                console.log(`✅ Upscale complete: ${img.width}×${img.height}`);
             };
             img.src = upscaledCanvas.toDataURL('image/png');
 

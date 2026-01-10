@@ -222,7 +222,6 @@ export class MaterialEstimator {
     generateMaterialMap(segmentResult, originalImage = null) {
         const { segments, width, height } = segmentResult;
 
-        console.log('🎨 Generating material map...');
         const startTime = performance.now();
 
         // Create output canvas
@@ -294,7 +293,7 @@ export class MaterialEstimator {
         ctx.putImageData(outputData, 0, 0);
 
         const elapsed = performance.now() - startTime;
-        console.log(`✅ Material map generated (${elapsed.toFixed(0)}ms)`);
+
 
         return {
             canvas,

@@ -33,7 +33,6 @@ export class MaskSystem {
 
     _init() {
         this._compilePrograms();
-        console.log('🎭 MaskSystem initialized');
     }
 
     _compilePrograms() {
@@ -226,7 +225,6 @@ export class MaskSystem {
         this.programs.set('maskOverlay', this._createProgram(vertexShader, maskOverlayFragment));
         this.programs.set('maskedAdjustment', this._createProgram(vertexShader, maskedAdjustmentFragment));
 
-        console.log('✅ Mask shaders compiled');
     }
 
     _createProgram(vertexSource, fragmentSource) {
@@ -324,7 +322,6 @@ export class MaskSystem {
         this.layers.push(layer);
         this.activeLayerIndex = this.layers.length - 1;
 
-        console.log(`📝 Created ${type} layer #${layer.id}`);
         return layer;
     }
 

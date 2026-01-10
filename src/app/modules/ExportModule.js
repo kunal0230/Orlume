@@ -99,9 +99,6 @@ export class ExportModule {
             let resultTexture = this.gpu.renderToTexture();
             resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
             this.gpu.blitToCanvas(resultTexture);
-
-            console.log(`⚠️ Exporting at display resolution (${currentWidth}×${currentHeight}). ` +
-                `Original: ${originalWidth}×${originalHeight}`);
         }
 
         // Export to blob
@@ -136,7 +133,6 @@ export class ExportModule {
 
             // Log export info
             const sizeKB = (blob.size / 1024).toFixed(1);
-            console.log(`✅ Exported ${extension.toUpperCase()} (${sizeKB} KB) at ${currentWidth}×${currentHeight}`);
         }, mimeType, quality);
     }
 

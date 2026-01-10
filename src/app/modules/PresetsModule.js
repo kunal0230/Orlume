@@ -27,7 +27,6 @@ export class PresetsModule {
     init() {
         this._renderPresetsUI();
         this._initEventListeners();
-        console.log('🎨 Presets Module initialized with', Presets.length, 'presets');
     }
 
     /**
@@ -236,7 +235,6 @@ export class PresetsModule {
             this.editorUI._pushHistoryDebounced?.();
         }
 
-        console.log(`✨ Applied preset: ${preset.name} at ${this.intensity}%`);
     }
 
     /**
@@ -338,6 +336,5 @@ export class PresetsModule {
         this._updateActivePresetUI();
 
         this.editorUI._pushHistoryDebounced?.();
-        console.log('🔄 All adjustments reset');
     }
 }
