@@ -120,12 +120,22 @@ export class RelightingModule {
         const sliders = [
             { id: 'relight-intensity', param: 'intensity', divisor: 100 },
             { id: 'relight-ambient', param: 'ambient', divisor: 100 },
-            { id: 'relight-softness', param: 'reach', divisor: 1 },  // Repurpose "softness" as "reach"
+            { id: 'relight-softness', param: 'reach', divisor: 1 },
             { id: 'relight-specularity', param: 'specularity', divisor: 100 },
             { id: 'relight-glossiness', param: 'glossiness', divisor: 1 },
-            // Rim lighting controls (new)
+            // Rim lighting
             { id: 'relight-rim-intensity', param: 'rimIntensity', divisor: 100 },
             { id: 'relight-rim-width', param: 'rimWidth', divisor: 100 },
+            // Shadows
+            { id: 'relight-shadow-intensity', param: 'shadowIntensity', divisor: 100 },
+            { id: 'relight-shadow-softness', param: 'shadowSoftness', divisor: 100 },
+            // Spotlight
+            { id: 'relight-spot-angle', param: 'spotAngle', divisor: 1 },
+            { id: 'relight-spot-softness', param: 'spotSoftness', divisor: 100 },
+            // SSS
+            { id: 'relight-sss-intensity', param: 'sssIntensity', divisor: 100 },
+            // Light height
+            { id: 'relight-height', param: 'lightHeight', divisor: 100 },
         ];
 
         sliders.forEach(({ id, param, divisor }) => {
@@ -173,6 +183,24 @@ export class RelightingModule {
             case 'rimWidth':
                 this.engine.setRimWidth(value);
                 break;
+            case 'shadowIntensity':
+                this.engine.setShadowIntensity(value);
+                break;
+            case 'shadowSoftness':
+                this.engine.setShadowSoftness(value);
+                break;
+            case 'spotAngle':
+                this.engine.setSpotAngle(value);
+                break;
+            case 'spotSoftness':
+                this.engine.setSpotSoftness(value);
+                break;
+            case 'sssIntensity':
+                this.engine.setSSSIntensity(value);
+                break;
+            case 'lightHeight':
+                this.engine.setLightHeight(value);
+                break;
         }
 
         this._debouncedRender();
@@ -216,10 +244,41 @@ export class RelightingModule {
             pointBtn.addEventListener('click', () => {
                 if (this.engine) {
                     this.engine.setDirectional(false);
+                    this.engine.setSpotlightEnabled(false);
                     pointBtn.classList.add('btn-primary');
                     if (directionalBtn) directionalBtn.classList.remove('btn-primary');
+                    const spotBtn = document.getElementById('btn-light-spotlight');
+                    if (spotBtn) spotBtn.classList.remove('btn-primary');
+                    this._hideSpotlightControls();
                     this._debouncedRender();
                 }
+            });
+        }
+
+        // Spotlight button
+        const spotBtn = document.getElementById('btn-light-spotlight');
+        const spotlightControls = document.getElementById('spotlight-controls');
+
+        if (spotBtn) {
+            spotBtn.addEventListener('click', () => {
+                if (this.engine) {
+                    this.engine.setDirectional(false);
+                    this.engine.setSpotlightEnabled(true);
+                    spotBtn.classList.add('btn-primary');
+                    if (directionalBtn) directionalBtn.classList.remove('btn-primary');
+                    if (pointBtn) pointBtn.classList.remove('btn-primary');
+                    this._showSpotlightControls();
+                    this._debouncedRender();
+                }
+            });
+        }
+
+        // Also update directional to hide spotlight controls
+        if (directionalBtn) {
+            const originalHandler = directionalBtn.onclick;
+            directionalBtn.addEventListener('click', () => {
+                this.engine?.setSpotlightEnabled(false);
+                this._hideSpotlightControls();
             });
         }
 
@@ -243,6 +302,39 @@ export class RelightingModule {
         if (showResultBtn) {
             showResultBtn.addEventListener('click', () => this._showDebugMap('result'));
         }
+
+        // Light color picker
+        const colorPicker = document.getElementById('relight-color-picker');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', () => {
+                if (this.engine) {
+                    const hex = colorPicker.value;
+                    const r = parseInt(hex.slice(1, 3), 16) / 255;
+                    const g = parseInt(hex.slice(3, 5), 16) / 255;
+                    const b = parseInt(hex.slice(5, 7), 16) / 255;
+                    this.engine.setLightColor(r, g, b);
+                    this._debouncedRender();
+                }
+            });
+        }
+
+        // Light color presets
+        document.querySelectorAll('[data-light-color]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const hex = btn.dataset.lightColor;
+                if (colorPicker) colorPicker.value = hex;
+                if (this.engine) {
+                    const r = parseInt(hex.slice(1, 3), 16) / 255;
+                    const g = parseInt(hex.slice(3, 5), 16) / 255;
+                    const b = parseInt(hex.slice(5, 7), 16) / 255;
+                    this.engine.setLightColor(r, g, b);
+                    this._debouncedRender();
+                }
+            });
+        });
+
+        // Lighting presets
+        this._initLightingPresets();
     }
 
     /**
@@ -883,11 +975,14 @@ export class RelightingModule {
      */
     _resetToDefaults() {
         const defaults = {
-            'relight-intensity': 100,
-            'relight-ambient': 30,
+            'relight-intensity': 80,
+            'relight-ambient': 15,
             'relight-softness': 50,
-            'relight-specularity': 50,
+            'relight-specularity': 0,
             'relight-glossiness': 32,
+            'relight-height': 50,
+            'relight-rim-intensity': 0,
+            'relight-rim-width': 50,
         };
 
         Object.entries(defaults).forEach(([id, value]) => {
@@ -898,16 +993,115 @@ export class RelightingModule {
         });
 
         if (this.engine) {
-            this.engine.setLightIntensity(1.0);
-            this.engine.setAmbient(0.3);
-            this.engine.setShadowSoftness(0.5);
-            this.engine.setSpecularity(0.5);
+            this.engine.setLightIntensity(0.8);
+            this.engine.setAmbient(0.15);
+            this.engine.setReach(50);
+            this.engine.setSpecularity(0.0);
             this.engine.setGlossiness(32);
-            this.engine.setLightPosition(0.5, 0.3);
+            this.engine.setLightPosition(0.5, 0.5);
+            this.engine.setRimIntensity(0.0);
+            this.engine.setShadowEnabled(false);
         }
 
         this._updateLightIndicator();
         this._debouncedRender();
+    }
+
+    /**
+     * Show spotlight controls section
+     */
+    _showSpotlightControls() {
+        const controls = document.getElementById('spotlight-controls');
+        if (controls) controls.style.display = 'block';
+    }
+
+    /**
+     * Hide spotlight controls section
+     */
+    _hideSpotlightControls() {
+        const controls = document.getElementById('spotlight-controls');
+        if (controls) controls.style.display = 'none';
+    }
+
+    /**
+     * Initialize lighting presets
+     */
+    _initLightingPresets() {
+        const presets = {
+            'preset-natural': {
+                intensity: 0.8,
+                ambient: 0.2,
+                position: { x: 0.6, y: 0.4 },
+                color: { r: 1.0, g: 0.98, b: 0.95 },
+                rimIntensity: 0.0,
+                shadowEnabled: false,
+                isSpotlight: false
+            },
+            'preset-studio': {
+                intensity: 1.0,
+                ambient: 0.15,
+                position: { x: 0.3, y: 0.3 },
+                color: { r: 1.0, g: 1.0, b: 1.0 },
+                rimIntensity: 0.3,
+                shadowEnabled: true,
+                isSpotlight: false
+            },
+            'preset-dramatic': {
+                intensity: 1.2,
+                ambient: 0.05,
+                position: { x: 0.1, y: 0.5 },
+                color: { r: 1.0, g: 0.9, b: 0.8 },
+                rimIntensity: 0.0,
+                shadowEnabled: true,
+                isSpotlight: false
+            },
+            'preset-backlit': {
+                intensity: 0.6,
+                ambient: 0.3,
+                position: { x: 0.5, y: 0.2 },
+                color: { r: 1.0, g: 0.95, b: 0.85 },
+                rimIntensity: 0.8,
+                shadowEnabled: false,
+                isSpotlight: false
+            }
+        };
+
+        Object.entries(presets).forEach(([id, settings]) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (!this.engine) return;
+
+                    // Apply preset settings
+                    this.engine.setLightIntensity(settings.intensity);
+                    this.engine.setAmbient(settings.ambient);
+                    this.engine.setLightPosition(settings.position.x, settings.position.y);
+                    this.engine.setLightColor(settings.color.r, settings.color.g, settings.color.b);
+                    this.engine.setRimIntensity(settings.rimIntensity);
+                    this.engine.setShadowEnabled(settings.shadowEnabled);
+                    this.engine.setSpotlightEnabled(settings.isSpotlight);
+
+                    // Update UI sliders
+                    this._updateSliderUI('relight-intensity', settings.intensity * 100);
+                    this._updateSliderUI('relight-ambient', settings.ambient * 100);
+                    this._updateSliderUI('relight-rim-intensity', settings.rimIntensity * 100);
+
+                    // Update light indicator and render
+                    this._updateLightIndicator();
+                    this._debouncedRender();
+                });
+            }
+        });
+    }
+
+    /**
+     * Update slider UI value
+     */
+    _updateSliderUI(id, value) {
+        const slider = document.getElementById(`slider-${id}`);
+        const valueEl = document.getElementById(`val-${id}`);
+        if (slider) slider.value = value;
+        if (valueEl) valueEl.textContent = Math.round(value);
     }
 
     /**

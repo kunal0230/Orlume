@@ -13,6 +13,8 @@ import { NeuralEstimatorV7 } from './NeuralEstimatorV7.js';
 import { AlbedoEstimatorV7 } from './AlbedoEstimatorV7.js';
 import { DeferredLightingShader } from './DeferredLightingShader.js';
 import { LightingCompositor } from './LightingCompositor.js';
+import { ShadowCaster } from './ShadowCaster.js';
+import { SmoothSurfaceGenerator } from './SmoothSurfaceGenerator.js';
 
 // Also import v5 components for fallback/comparison
 import { NeuralEstimator } from './NeuralEstimator.js';
@@ -31,6 +33,8 @@ export class RelightingEngineV7 {
         // Shared Components
         this.lightingShader = new DeferredLightingShader();
         this.compositor = new LightingCompositor();
+        this.shadowCaster = new ShadowCaster();
+        this.smoothSurfaceGenerator = new SmoothSurfaceGenerator();
 
         // Cached data
         this.neuralData = null;
@@ -38,6 +42,9 @@ export class RelightingEngineV7 {
         this.originalImageData = null;
         this.originalImage = null;
         this.confidenceData = null;
+        this.shadowMap = null;           // Shadow map for cast shadows
+        this.shadowMapDirty = true;      // Flag to regenerate shadows on light move
+        this.smoothSurfaceData = null;   // Bilateral-filtered depth and smooth normals
 
         // Dimensions
         this.width = 0;
@@ -45,21 +52,34 @@ export class RelightingEngineV7 {
 
         // Light parameters (DaVinci Resolve-style)
         this.light = {
-            position: { x: 0.5, y: 0.3 },
+            position: { x: 0.5, y: 0.5 },
             direction: { x: 0, y: 0, z: 1 },
             color: { r: 1.0, g: 0.98, b: 0.95 },
-            intensity: 1.0,
-            ambient: 0.35,
+            intensity: 0.8,
+            ambient: 0.15,
             specularity: 0.0,
             glossiness: 32,
             directional: true,
             reach: 200.0,
             contrast: 1.0,
-            blendMode: 0, // 0=softLight, 1=normal, 2=additive, 3=screen, 4=multiply
-            // Rim lighting (new)
-            rimIntensity: 0.0, // 0 = off, 1 = full
+            blendMode: 1, // 0=softLight, 1=normal, 2=additive, 3=screen, 4=multiply
+            // Rim lighting
+            rimIntensity: 0.0,
             rimColor: { r: 1.0, g: 1.0, b: 1.0 },
-            rimWidth: 0.5, // 0 = thin, 1 = wide
+            rimWidth: 0.5,
+            // Shadow controls
+            shadowIntensity: 0.7,
+            shadowSoftness: 0.5,
+            shadowEnabled: true,
+            // Spotlight controls
+            isSpotlight: false,
+            spotAngle: 30.0,
+            spotSoftness: 0.3,
+            // Subsurface scattering (new)
+            sssIntensity: 0.0,         // 0 = off, 1 = full translucency
+            sssColor: { r: 1.0, g: 0.4, b: 0.3 },  // Skin-like warm color
+            // Light height (for 3D effect)
+            lightHeight: 0.5,  // 0 = low, 1 = high
         };
 
         // v7: Quality mode
@@ -184,6 +204,16 @@ export class RelightingEngineV7 {
                 this.confidenceData = null;
             }
 
+            reportProgress(85, 'Generating smooth 3D surface...');
+
+            // Step 1.5: Generate smooth surface from depth (bilateral filter + smooth normals)
+            // This removes texture artifacts while preserving face/body shape for lighting
+            this.smoothSurfaceData = this.smoothSurfaceGenerator.generate(
+                this.neuralData.depthData || this.neuralData.depth,
+                this.width,
+                this.height
+            );
+
             reportProgress(88, 'Preparing albedo...');
 
             // Step 2: Prepare albedo
@@ -231,10 +261,30 @@ export class RelightingEngineV7 {
 
         this._updateLightDirection();
 
+        // Generate shadow map if enabled (regenerate on light position change)
+        let shadowMapData = null;
+        if (this.light.shadowEnabled && this.neuralData?.depthData) {
+            // Configure shadow caster based on current settings
+            this.shadowCaster.setIntensity(this.light.shadowIntensity);
+            this.shadowCaster.setSoftness(this.light.shadowSoftness);
+
+            // Generate shadow map from depth data
+            const shadowMap = this.shadowCaster.generateShadowMap(
+                this.neuralData.depthData,
+                this.light,
+                this.width,
+                this.height
+            );
+
+            // Convert to ImageData for shader
+            shadowMapData = this.shadowCaster.toImageData(shadowMap, this.width, this.height);
+        }
+
         const lightingCanvas = this.lightingShader.render({
             albedo: this.originalImageData,
-            normalMap: this.neuralData.normalImageData,
+            normalMap: this.smoothSurfaceData?.normalImageData || this.neuralData.normalImageData,
             depthMap: this.neuralData.depthImageData,
+            shadowMap: shadowMapData,  // Pass shadow map to shader
             light: this.light,
             width: this.width,
             height: this.height,
@@ -359,6 +409,49 @@ export class RelightingEngineV7 {
 
     setRimWidth(width) {
         this.light.rimWidth = Math.max(0, Math.min(1, width));
+    }
+
+    // === SHADOW SETTERS ===
+
+    setShadowEnabled(enabled) {
+        this.light.shadowEnabled = enabled;
+    }
+
+    setShadowIntensity(intensity) {
+        this.light.shadowIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setShadowSoftness(softness) {
+        this.light.shadowSoftness = Math.max(0, Math.min(1, softness));
+    }
+
+    // === SPOTLIGHT SETTERS ===
+
+    setSpotlightEnabled(enabled) {
+        this.light.isSpotlight = enabled;
+    }
+
+    setSpotAngle(angle) {
+        // Clamp between 5 and 90 degrees
+        this.light.spotAngle = Math.max(5, Math.min(90, angle));
+    }
+
+    setSpotSoftness(softness) {
+        this.light.spotSoftness = Math.max(0, Math.min(1, softness));
+    }
+
+    // === SSS SETTERS ===
+
+    setSSSIntensity(intensity) {
+        this.light.sssIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setSSSColor(r, g, b) {
+        this.light.sssColor = { r, g, b };
+    }
+
+    setLightHeight(height) {
+        this.light.lightHeight = Math.max(0, Math.min(1, height));
     }
 
     // === DEBUG ===

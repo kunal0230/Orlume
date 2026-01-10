@@ -21,8 +21,10 @@ export class NeuralEstimatorV7 {
         this.isReady = false;
         this.isLoading = false;
 
-        // Primary: Depth Anything V2 (proven reliable)
-        this.depthModelId = 'onnx-community/depth-anything-v2-small';
+        // Primary: Depth Anything V2 Base (higher quality than small)
+        // Options: 'onnx-community/depth-anything-v2-small' (faster) 
+        //          'onnx-community/depth-anything-v2-base' (better quality)
+        this.depthModelId = 'onnx-community/depth-anything-v2-base';
 
         // Optional: Omnidata for direct normals (experimental)
         this.normalModelId = null; // Will try 'onnx-community/omnidata-normal' if available
@@ -328,10 +330,11 @@ export class NeuralEstimatorV7 {
     _computeMultiScaleNormals(depth, width, height, confidence = null) {
         const normals = new Float32Array(width * height * 3);
 
-        // Compute normals at 3 scales
-        const fineNormals = this._computeNormalsAtScale(depth, width, height, 1, 8.0);    // 3x3
-        const mediumNormals = this._computeNormalsAtScale(depth, width, height, 2, 5.0);  // 5x5
-        const coarseNormals = this._computeNormalsAtScale(depth, width, height, 3, 3.0);  // 7x7
+        // Compute normals at 3 scales - subtle strength to avoid texture artifacts
+        // These inform lighting direction only, should not create visible patterns
+        const fineNormals = this._computeNormalsAtScale(depth, width, height, 1, 8.0);    // 3x3 - fine detail
+        const mediumNormals = this._computeNormalsAtScale(depth, width, height, 2, 5.0);  // 5x5 - medium
+        const coarseNormals = this._computeNormalsAtScale(depth, width, height, 3, 3.0);  // 7x7 - structure
 
         // Confidence-weighted fusion
         for (let i = 0; i < width * height; i++) {
@@ -426,7 +429,7 @@ export class NeuralEstimatorV7 {
      */
     _computeDetailedNormals(depth, width, height) {
         const normals = new Float32Array(width * height * 3);
-        const strength = 6.0;
+        const strength = 6.0;  // Subtle - informs lighting direction without visible texture
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {

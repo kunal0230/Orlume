@@ -1677,10 +1677,19 @@
                 <!-- 3D Relighting Panel -->
                 <div class="panel-section" id="panel-relight">
                     <div class="section">
-                        <div class="section-header">3D Relighting</div>
+                        <div class="section-header" style="display: flex; align-items: center; gap: 8px;">
+                            3D Relighting
+                            <span
+                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;">BETA</span>
+                        </div>
                         <p
                             style="font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
                             Add realistic 3D lighting to your photos. Click on the image to position the light source.
+                        </p>
+                        <p
+                            style="font-size: 10px; color: var(--accent-primary); line-height: 1.5; margin-bottom: 12px; padding: 8px; background: rgba(102, 126, 234, 0.1); border-radius: 6px; border-left: 3px solid var(--accent-primary);">
+                            ✨ We're actively working to improve this feature. Expect enhanced lighting quality and more
+                            controls in upcoming updates.
                         </p>
 
                         <!-- Depth Estimation Button -->
@@ -1713,17 +1722,17 @@
                         <div class="control-group">
                             <div class="control-label">
                                 <span>Intensity</span>
-                                <span id="val-relight-intensity">100</span>
+                                <span id="val-relight-intensity">80</span>
                             </div>
-                            <input type="range" id="slider-relight-intensity" min="0" max="200" step="1" value="100">
+                            <input type="range" id="slider-relight-intensity" min="0" max="200" step="1" value="80">
                         </div>
 
                         <div class="control-group">
                             <div class="control-label">
                                 <span>Ambient</span>
-                                <span id="val-relight-ambient">30</span>
+                                <span id="val-relight-ambient">15</span>
                             </div>
-                            <input type="range" id="slider-relight-ambient" min="0" max="100" step="1" value="30">
+                            <input type="range" id="slider-relight-ambient" min="0" max="100" step="1" value="15">
                         </div>
 
                         <div class="control-group">
@@ -1732,6 +1741,44 @@
                                 <span id="val-relight-softness">0</span>
                             </div>
                             <input type="range" id="slider-relight-softness" min="0" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Light Height</span>
+                                <span id="val-relight-height">50</span>
+                            </div>
+                            <input type="range" id="slider-relight-height" min="0" max="100" step="1" value="50">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Light Color</span>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="color" id="relight-color-picker" value="#fffaf0"
+                                    style="width: 32px; height: 32px; border: none; border-radius: 4px; cursor: pointer;">
+                                <button class="btn" data-light-color="#fffaf0"
+                                    style="flex: 1; font-size: 10px; padding: 6px;">☀️ Warm</button>
+                                <button class="btn" data-light-color="#ffffff"
+                                    style="flex: 1; font-size: 10px; padding: 6px;">💡 Neutral</button>
+                                <button class="btn" data-light-color="#d0e8ff"
+                                    style="flex: 1; font-size: 10px; padding: 6px;">🌙 Cool</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">🎬 Lighting Presets</div>
+                        <div class="btn-row" style="gap: 4px; flex-wrap: wrap;">
+                            <button class="btn" id="preset-natural" style="flex: 1; font-size: 10px; padding: 8px;"
+                                title="Soft, natural lighting">Natural</button>
+                            <button class="btn" id="preset-studio" style="flex: 1; font-size: 10px; padding: 8px;"
+                                title="Professional studio light">Studio</button>
+                            <button class="btn" id="preset-dramatic" style="flex: 1; font-size: 10px; padding: 8px;"
+                                title="Dramatic side light">Dramatic</button>
+                            <button class="btn" id="preset-backlit" style="flex: 1; font-size: 10px; padding: 8px;"
+                                title="Backlit rim effect">Backlit</button>
                         </div>
                     </div>
 
@@ -1776,11 +1823,45 @@
                     </div>
 
                     <div class="section">
+                        <div class="section-header">🩷 Skin Translucency (SSS)</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>SSS Intensity</span>
+                                <span id="val-relight-sss-intensity">0</span>
+                            </div>
+                            <input type="range" id="slider-relight-sss-intensity" min="0" max="100" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">🌑 Cast Shadows</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow Intensity</span>
+                                <span id="val-relight-shadow-intensity">70</span>
+                            </div>
+                            <input type="range" id="slider-relight-shadow-intensity" min="0" max="100" step="1"
+                                value="70">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Shadow Softness</span>
+                                <span id="val-relight-shadow-softness">50</span>
+                            </div>
+                            <input type="range" id="slider-relight-shadow-softness" min="0" max="100" step="1"
+                                value="50">
+                        </div>
+                    </div>
+
+                    <div class="section">
                         <div class="section-header">Blend Mode</div>
                         <select id="relight-blend-mode"
                             style="width: 100%; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
-                            <option value="softLight" selected>Soft Light (Natural)</option>
-                            <option value="normal">Normal (Replace)</option>
+                            <option value="softLight">Soft Light (Natural)</option>
+                            <option value="normal" selected>Normal (Replace)</option>
                             <option value="additive">Additive (Bright)</option>
                             <option value="screen">Screen (Lighter)</option>
                             <option value="multiply">Multiply (Darker)</option>
@@ -1797,6 +1878,30 @@
                             <button class="btn" id="btn-light-point" style="flex: 1; font-size: 11px; padding: 8px;">
                                 💡 Point
                             </button>
+                            <button class="btn" id="btn-light-spotlight"
+                                style="flex: 1; font-size: 11px; padding: 8px;">
+                                🔦 Spot
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section" id="spotlight-controls" style="display: none;">
+                        <div class="section-header">🔦 Spotlight Settings</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Cone Angle</span>
+                                <span id="val-relight-spot-angle">30°</span>
+                            </div>
+                            <input type="range" id="slider-relight-spot-angle" min="5" max="90" step="1" value="30">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Edge Softness</span>
+                                <span id="val-relight-spot-softness">30</span>
+                            </div>
+                            <input type="range" id="slider-relight-spot-softness" min="0" max="100" step="1" value="30">
                         </div>
                     </div>
 

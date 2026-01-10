@@ -18,6 +18,7 @@ export class DeferredLightingShader {
         this.albedoTexture = null;
         this.normalTexture = null;
         this.depthTexture = null;
+        this.shadowTexture = null;  // Shadow map texture
 
         this.quadVAO = null;
         this.uniforms = {};
@@ -71,6 +72,7 @@ export class DeferredLightingShader {
             albedo,
             normalMap,
             depthMap,
+            shadowMap,  // NEW: Shadow map from ShadowCaster
             light,
             width,
             height
@@ -93,6 +95,14 @@ export class DeferredLightingShader {
         this._uploadTexture(this.normalTexture, normalMap, 1, 'u_normals');
         if (depthMap) {
             this._uploadTexture(this.depthTexture, depthMap, 2, 'u_depth');
+        }
+
+        // Upload shadow map if provided
+        if (shadowMap) {
+            this._uploadTexture(this.shadowTexture, shadowMap, 3, 'u_shadow');
+            gl.uniform1i(this.uniforms.u_shadowEnabled, 1);
+        } else {
+            gl.uniform1i(this.uniforms.u_shadowEnabled, 0);
         }
 
         gl.uniform2f(this.uniforms.u_resolution, width, height);
@@ -120,7 +130,7 @@ export class DeferredLightingShader {
         gl.uniform1i(this.uniforms.u_directional, light.directional ? 1 : 0);
         gl.uniform1i(this.uniforms.u_blendMode, light.blendMode || 0);
 
-        // Rim lighting parameters (new)
+        // Rim lighting parameters
         gl.uniform1f(this.uniforms.u_rimIntensity, light.rimIntensity || 0.0);
         gl.uniform3f(this.uniforms.u_rimColor,
             light.rimColor?.r || 1.0,
@@ -128,6 +138,19 @@ export class DeferredLightingShader {
             light.rimColor?.b || 1.0
         );
         gl.uniform1f(this.uniforms.u_rimWidth, light.rimWidth || 0.5);
+
+        // Spotlight parameters
+        gl.uniform1i(this.uniforms.u_isSpotlight, light.isSpotlight ? 1 : 0);
+        gl.uniform1f(this.uniforms.u_spotAngle, (light.spotAngle || 30.0) * Math.PI / 180.0);
+        gl.uniform1f(this.uniforms.u_spotSoftness, light.spotSoftness || 0.3);
+
+        // SSS parameters
+        gl.uniform1f(this.uniforms.u_sssIntensity, light.sssIntensity || 0.0);
+        gl.uniform3f(this.uniforms.u_sssColor,
+            light.sssColor?.r || 1.0,
+            light.sssColor?.g || 0.4,
+            light.sssColor?.b || 0.3
+        );
 
         gl.bindVertexArray(this.quadVAO);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -169,11 +192,14 @@ export class DeferredLightingShader {
     _getUniformLocations() {
         const { gl, program } = this;
         const uniforms = [
-            'u_albedo', 'u_normals', 'u_depth', 'u_resolution',
+            'u_albedo', 'u_normals', 'u_depth', 'u_shadow', 'u_resolution',
             'u_lightPos', 'u_lightDir', 'u_lightColor', 'u_lightIntensity',
             'u_ambient', 'u_specularity', 'u_glossiness',
             'u_reach', 'u_contrast', 'u_directional', 'u_blendMode',
-            'u_rimIntensity', 'u_rimColor', 'u_rimWidth' // Rim lighting
+            'u_rimIntensity', 'u_rimColor', 'u_rimWidth',
+            'u_shadowEnabled',
+            'u_isSpotlight', 'u_spotAngle', 'u_spotSoftness',
+            'u_sssIntensity', 'u_sssColor' // Subsurface scattering
         ];
 
         uniforms.forEach(name => {
@@ -215,6 +241,7 @@ export class DeferredLightingShader {
         this.albedoTexture = gl.createTexture();
         this.normalTexture = gl.createTexture();
         this.depthTexture = gl.createTexture();
+        this.shadowTexture = gl.createTexture();
 
         [this.albedoTexture, this.normalTexture, this.depthTexture].forEach(tex => {
             gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -278,6 +305,7 @@ out vec4 fragColor;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform sampler2D u_depth;
+uniform sampler2D u_shadow;   // Shadow map from ShadowCaster
 
 uniform vec2 u_resolution;
 uniform vec2 u_lightPos;      // Screen space position (for point light)
@@ -293,9 +321,21 @@ uniform int u_directional;    // 1 = directional, 0 = point light
 uniform int u_blendMode;      // 0=softLight, 1=normal, 2=additive, 3=screen, 4=multiply
 
 // Rim lighting (backlight/edge glow)
-uniform float u_rimIntensity; // 0 = off, 1 = full
-uniform vec3 u_rimColor;      // Color of rim light
-uniform float u_rimWidth;     // 0 = thin, 1 = wide
+uniform float u_rimIntensity;
+uniform vec3 u_rimColor;
+uniform float u_rimWidth;
+
+// Shadow support
+uniform int u_shadowEnabled;
+
+// Spotlight
+uniform int u_isSpotlight;
+uniform float u_spotAngle;
+uniform float u_spotSoftness;
+
+// Subsurface scattering
+uniform float u_sssIntensity; // 0 = off, 1 = full translucency
+uniform vec3 u_sssColor;      // Warm skin-like color
 
 // ============================================
 // OVERLAY BLEND MODE (DaVinci-style)
@@ -331,24 +371,33 @@ vec3 softLightBlend(vec3 base, float blend) {
 
 // ============================================
 // SMOOTH NORMAL SAMPLING
-// Reduces high-frequency noise in normals
+// Heavily smoothed to avoid creating visible texture
+// We only need broad lighting direction, not fine detail
 // ============================================
 vec3 sampleSmoothNormal(vec2 uv) {
     vec2 texelSize = 1.0 / u_resolution;
     vec3 sum = vec3(0.0);
     float weight = 0.0;
     
-    // 3x3 Gaussian-weighted sample
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            vec2 offset = vec2(float(x), float(y)) * texelSize;
-            float w = 1.0 - length(vec2(x, y)) * 0.3;
+    // 5x5 Gaussian-weighted sample for heavy smoothing
+    for (int y = -2; y <= 2; y++) {
+        for (int x = -2; x <= 2; x++) {
+            vec2 offset = vec2(float(x), float(y)) * texelSize * 2.0;  // 2x spacing for broader blur
+            float dist = length(vec2(x, y));
+            float w = exp(-dist * dist / 4.0);  // Gaussian falloff
             sum += texture(u_normals, uv + offset).rgb * w;
             weight += w;
         }
     }
     
-    return sum / weight;
+    vec3 smoothNormal = sum / weight;
+    
+    // Blend towards flat normal to reduce texture artifacts
+    // But keep enough detail for proper lighting direction (face curvature, etc.)
+    vec3 flatNormal = vec3(0.5, 0.5, 1.0);
+    float flatBlend = 0.25;  // 25% flat, 75% detail - preserves lighting direction
+    
+    return mix(smoothNormal, flatNormal, flatBlend);
 }
 
 // ============================================
@@ -402,6 +451,26 @@ void main() {
     // Apply contrast/gamma (terminator sharpness)
     // Higher contrast = sharper transition from lit to shadow
     diffuse = pow(diffuse, u_contrast);
+
+    // === SPOTLIGHT CONE ATTENUATION ===
+    if (u_isSpotlight == 1) {
+        // Calculate distance from light center in screen space (normalized 0-1)
+        vec2 fragPos = v_uv;
+        vec2 lightPosNorm = u_lightPos / u_resolution;
+        
+        // Distance from light center (0 = at light, 1 = at edge of screen)
+        float distFromLight = length(fragPos - lightPosNorm);
+        
+        // Convert cone angle to normalized screen distance
+        // Larger angle = larger cone = more screen coverage
+        float coneRadius = tan(u_spotAngle) * 0.5;  // Scale to reasonable screen space
+        float outerRadius = coneRadius * (1.0 + u_spotSoftness);
+        
+        // Smooth falloff from center to edge of cone
+        float spotAttenuation = 1.0 - smoothstep(coneRadius * 0.5, outerRadius, distFromLight);
+        diffuse *= spotAttenuation;
+        attenuation *= spotAttenuation;
+    }
     
     // === SPECULAR (Blinn-Phong) ===
     float specular = 0.0;
@@ -418,39 +487,86 @@ void main() {
         vec3 V = vec3(0.0, 0.0, 1.0);  // View direction
         float NdotV = max(dot(N, V), 0.0);
         // Fresnel effect: stronger at edges where normal is perpendicular to view
-        float fresnelPower = mix(2.0, 6.0, u_rimWidth); // Width controls Fresnel exponent
+        float fresnelPower = mix(2.0, 6.0, u_rimWidth);
         rimLight = pow(1.0 - NdotV, fresnelPower) * u_rimIntensity;
+    }
+
+    // === SUBSURFACE SCATTERING (Skin Translucency) ===
+    vec3 sssContribution = vec3(0.0);
+    if (u_sssIntensity > 0.0) {
+        // SSS occurs when light passes through thin materials
+        // Approximation: light bleeding through from behind the surface
+        float backLighting = max(0.0, dot(-N, L));  // Light from opposite side
+        float wrapLighting = max(0.0, NdotL + 0.3) / 1.3;  // Wrapped diffuse (softer terminator)
+        
+        // Combine back lighting and wrap for translucency
+        float sss = backLighting * 0.5 + (1.0 - NdotL) * wrapLighting * 0.5;
+        sss = pow(sss, 1.5) * u_sssIntensity;
+        
+        // Apply warm skin-like color
+        sssContribution = sss * u_sssColor * albedo.rgb;
     }
     
     // === COMBINE LIGHTING ===
-    float lighting = diffuse * u_lightIntensity * attenuation;
-    
-    // Normalize lighting for blend (0 = shadow, 1 = full light)
-    float blendValue = clamp(lighting + u_ambient, 0.0, 1.0);
+    // Note: Shadow is handled in the additive lighting section below
     
     // === APPLY BLEND MODE ===
     vec3 litColor;
     
+    // Clamp intensity contribution to prevent artifacts
+    float effectiveIntensity = min(u_lightIntensity, 2.0);
+    
+    // === ADDITIVE LIGHTING MODEL ===
+    // Preserve original brightness, add/subtract light based on angle
+    // diffuse ranges from 0 (shadow) to 1 (fully lit)
+    // We want 0.5 to be neutral (no change), <0.5 darken, >0.5 brighten
+    
+    float lightDelta = (diffuse - 0.5) * 2.0;  // -1 to +1 range
+    lightDelta *= effectiveIntensity * attenuation;
+    
+    // Apply shadow factor
+    float shadowFactor = 1.0;
+    if (u_shadowEnabled == 1) {
+        shadowFactor = texture(u_shadow, v_uv).r;
+        lightDelta *= shadowFactor;
+    }
+    
     if (u_blendMode == 0) {
-        // Soft Light (Natural) - default
-        litColor = softLightBlend(albedo.rgb, blendValue);
+        // Soft Light (Natural) - very subtle relighting
+        vec3 lightContrib = lightDelta * u_lightColor * 0.3;
+        litColor = albedo.rgb + lightContrib;
+        // Darken shadows slightly
+        if (lightDelta < 0.0) {
+            litColor = albedo.rgb * (1.0 + lightDelta * 0.2);
+        }
+        
     } else if (u_blendMode == 1) {
-        // Normal (Replace) - direct lighting
-        vec3 lit = albedo.rgb * blendValue;
-        litColor = mix(albedo.rgb, lit, u_lightIntensity);
+        // Normal (Replace) - full additive lighting
+        vec3 lightContrib = lightDelta * u_lightColor * 0.5;
+        litColor = albedo.rgb + lightContrib;
+        // Apply ambient-controlled shadow darkening
+        float shadowDarken = max(0.0, -lightDelta) * (1.0 - u_ambient);
+        litColor = litColor * (1.0 - shadowDarken * 0.4);
+        
     } else if (u_blendMode == 2) {
-        // Additive (Bright) - add light on top
-        float additive = (blendValue - 0.5) * 2.0 * u_lightIntensity;
-        litColor = albedo.rgb + vec3(max(0.0, additive));
+        // Additive (Bright) - only brighten, never darken
+        vec3 lightContrib = max(0.0, lightDelta) * u_lightColor * 0.5;
+        litColor = albedo.rgb + lightContrib;
+        
     } else if (u_blendMode == 3) {
-        // Screen (Lighter) - screen blend
-        vec3 screenVal = vec3(blendValue);
-        litColor = 1.0 - (1.0 - albedo.rgb) * (1.0 - screenVal * u_lightIntensity);
+        // Screen (Lighter) - screen blend for bright areas
+        float brightAmount = max(0.0, lightDelta);
+        vec3 screenVal = brightAmount * u_lightColor;
+        litColor = 1.0 - (1.0 - albedo.rgb) * (1.0 - screenVal * 0.3);
+        
     } else if (u_blendMode == 4) {
-        // Multiply (Darker)
-        litColor = albedo.rgb * blendValue;
+        // Multiply (Darker) - darken shadow areas more
+        float darkAmount = (1.0 - diffuse) * effectiveIntensity;
+        litColor = albedo.rgb * (1.0 - darkAmount * 0.4 * (1.0 - u_ambient));
+        
     } else {
-        litColor = softLightBlend(albedo.rgb, blendValue);
+        vec3 lightContrib = lightDelta * u_lightColor * 0.5;
+        litColor = albedo.rgb + lightContrib;
     }
     
     // Add specular on top
@@ -458,9 +574,9 @@ void main() {
 
     // Add rim lighting (backlight glow)
     litColor += rimLight * u_rimColor;
-    
-    // Tint with light color (subtle)
-    litColor = mix(litColor, litColor * u_lightColor, lighting * 0.3);
+
+    // Add SSS contribution (skin translucency)
+    litColor += sssContribution;
     
     // Clamp to valid range
     litColor = clamp(litColor, 0.0, 1.0);
