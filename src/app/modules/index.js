@@ -19,3 +19,4 @@ export { HSLModule } from './HSLModule.js';
 export { PresetsModule } from './PresetsModule.js';
 export { TextModule } from './TextModule.js';
 export { RelightingModule } from './RelightingModule.js';
+export { ToneCurveModule } from './ToneCurveModule.js';

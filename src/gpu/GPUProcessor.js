@@ -63,7 +63,13 @@ export class GPUProcessor {
             hslLumAqua: 0,
             hslLumBlue: 0,
             hslLumPurple: 0,
-            hslLumMagenta: 0
+            hslLumMagenta: 0,
+
+            // Tone Curve LUTs (256 entries each, null = identity)
+            curveLutRgb: null,
+            curveLutRed: null,
+            curveLutGreen: null,
+            curveLutBlue: null
         };
 
         // Processing framebuffer

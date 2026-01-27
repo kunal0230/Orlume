@@ -65,7 +65,7 @@
     <link rel="stylesheet" href="/src/styles/editor.css">
 
     <!-- Vercel Analytics -->
-    <script type="module" src="/src/analytics.js"></script>
+    <script type="module" src="/src/utils/analytics.js"></script>
 </head>
 
 <body>
@@ -383,6 +383,20 @@
                             </div>
                             <input type="range" id="slider-blacks" class="slider-blacks" min="-100" max="100" step="1"
                                 value="0">
+                        </div>
+                    </div>
+
+                    <!-- Tone Curve Section -->
+                    <div class="tone-curve-section" id="tone-curve-section">
+                        <div class="tone-curve-section-header" id="tone-curve-toggle">
+                            <span class="tone-curve-section-title">Tone Curve</span>
+                            <svg class="tone-curve-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="tone-curve-section-content" id="tone-curve-container">
+                            <!-- ToneCurveEditor will be mounted here by JavaScript -->
                         </div>
                     </div>
 
@@ -2186,7 +2200,7 @@
 
     <script type="module">
         import { initApp } from './src/app/EditorApp.js';
-        import './src/pwa-install.js';
+        import './src/utils/pwa-install.js';
 
         // Initialize the editor
         initApp().then(app => {

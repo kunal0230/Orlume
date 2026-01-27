@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule, ToneCurveModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -58,6 +58,7 @@ export class EditorUI {
         this.presetsModule = new PresetsModule(this);
         this.textModule = new TextModule(this);
         this.relightingModule = new RelightingModule(this);
+        this.toneCurveModule = new ToneCurveModule(this);
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -113,6 +114,7 @@ export class EditorUI {
         this.presetsModule.init();
         this.textModule.init();
         this.relightingModule.init();
+        this.toneCurveModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -1266,6 +1268,17 @@ export class EditorUI {
         drawChannel(r, 'rgba(239, 68, 68, 0.6)');
         drawChannel(g, 'rgba(34, 197, 94, 0.6)');
         drawChannel(b, 'rgba(59, 130, 246, 0.6)');
+
+        // Update Tone Curve histogram
+        if (this.toneCurveModule) {
+            this.toneCurveModule.setHistogramData({
+                luminosity: lum,
+                rgb: lum,
+                red: r,
+                green: g,
+                blue: b
+            });
+        }
     }
 
     /**

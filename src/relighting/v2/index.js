@@ -16,7 +16,7 @@ export { AlbedoEstimator } from './AlbedoEstimator.js';
 export { SurfaceEstimator } from './SurfaceEstimator.js';
 export { DeferredLightingShader } from './DeferredLightingShader.js';
 export { LightingCompositor } from './LightingCompositor.js';
-export { RelightingEngine } from './RelightingEngine.js';
+// RelightingEngine removed - replaced by RelightingEngineV7
 
 // v7 Enhanced Components
 export { NeuralEstimatorV7 } from './NeuralEstimatorV7.js';

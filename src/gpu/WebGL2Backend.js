@@ -151,6 +151,17 @@ export class WebGL2Backend extends GPUBackend {
             uniform float u_hslSat[8];
             uniform float u_hslLum[8];
             
+            // Tone Curve LUT textures
+            uniform bool u_hasCurveLut;
+            uniform bool u_hasRgbCurve;
+            uniform sampler2D u_curveLutTexRgb;
+            uniform bool u_hasRedCurve;
+            uniform sampler2D u_curveLutTexRed;
+            uniform bool u_hasGreenCurve;
+            uniform sampler2D u_curveLutTexGreen;
+            uniform bool u_hasBlueCurve;
+            uniform sampler2D u_curveLutTexBlue;
+            
             // Color center hues (in degrees out of 360)
             const float COLOR_HUES[8] = float[8](0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
             
@@ -408,8 +419,32 @@ export class WebGL2Backend extends GPUBackend {
                     linear = max(OKLabToLinearRGB(lab), vec3(0.0));
                 }
                 
+                // Convert to sRGB
                 vec3 finalSrgb = vec3(linearToSRGB(clamp(linear.r, 0.0, 1.0)), linearToSRGB(clamp(linear.g, 0.0, 1.0)), linearToSRGB(clamp(linear.b, 0.0, 1.0)));
-                fragColor = vec4(finalSrgb, pixel.a);
+                
+                // Apply Tone Curve (in sRGB space, after all adjustments)
+                if (u_hasCurveLut) {
+                    // RGB composite curve
+                    if (u_hasRgbCurve) {
+                        float rVal = texture(u_curveLutTexRgb, vec2(finalSrgb.r, 0.5)).r;
+                        float gVal = texture(u_curveLutTexRgb, vec2(finalSrgb.g, 0.5)).r;
+                        float bVal = texture(u_curveLutTexRgb, vec2(finalSrgb.b, 0.5)).r;
+                        finalSrgb = vec3(rVal, gVal, bVal);
+                    }
+                    
+                    // Per-channel curves
+                    if (u_hasRedCurve) {
+                        finalSrgb.r = texture(u_curveLutTexRed, vec2(finalSrgb.r, 0.5)).r;
+                    }
+                    if (u_hasGreenCurve) {
+                        finalSrgb.g = texture(u_curveLutTexGreen, vec2(finalSrgb.g, 0.5)).r;
+                    }
+                    if (u_hasBlueCurve) {
+                        finalSrgb.b = texture(u_curveLutTexBlue, vec2(finalSrgb.b, 0.5)).r;
+                    }
+                }
+                
+                fragColor = vec4(clamp(finalSrgb, 0.0, 1.0), pixel.a);
             }
         `;
 
@@ -436,6 +471,17 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_hslHue = gl.getUniformLocation(dev, 'u_hslHue');
             dev.u_hslSat = gl.getUniformLocation(dev, 'u_hslSat');
             dev.u_hslLum = gl.getUniformLocation(dev, 'u_hslLum');
+
+            // Tone curve LUT uniforms
+            dev.u_hasCurveLut = gl.getUniformLocation(dev, 'u_hasCurveLut');
+            dev.u_hasRgbCurve = gl.getUniformLocation(dev, 'u_hasRgbCurve');
+            dev.u_curveLutTexRgb = gl.getUniformLocation(dev, 'u_curveLutTexRgb');
+            dev.u_hasRedCurve = gl.getUniformLocation(dev, 'u_hasRedCurve');
+            dev.u_curveLutTexRed = gl.getUniformLocation(dev, 'u_curveLutTexRed');
+            dev.u_hasGreenCurve = gl.getUniformLocation(dev, 'u_hasGreenCurve');
+            dev.u_curveLutTexGreen = gl.getUniformLocation(dev, 'u_curveLutTexGreen');
+            dev.u_hasBlueCurve = gl.getUniformLocation(dev, 'u_hasBlueCurve');
+            dev.u_curveLutTexBlue = gl.getUniformLocation(dev, 'u_curveLutTexBlue');
         }
 
     }
@@ -583,7 +629,47 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1fv(program.u_hslSat, hslSat);
         gl.uniform1fv(program.u_hslLum, hslLum);
 
-        // Bind texture
+        // Tone Curve LUT textures
+        // Use length check instead of instanceof for robustness
+        const hasRgbCurve = uniforms.curveLutRgb && uniforms.curveLutRgb.length > 0;
+        const hasRedCurve = uniforms.curveLutRed && uniforms.curveLutRed.length > 0;
+        const hasGreenCurve = uniforms.curveLutGreen && uniforms.curveLutGreen.length > 0;
+        const hasBlueCurve = uniforms.curveLutBlue && uniforms.curveLutBlue.length > 0;
+        const hasAnyCurve = hasRgbCurve || hasRedCurve || hasGreenCurve || hasBlueCurve;
+
+        gl.uniform1i(program.u_hasCurveLut, hasAnyCurve ? 1 : 0);
+        gl.uniform1i(program.u_hasRgbCurve, hasRgbCurve ? 1 : 0);
+        gl.uniform1i(program.u_hasRedCurve, hasRedCurve ? 1 : 0);
+        gl.uniform1i(program.u_hasGreenCurve, hasGreenCurve ? 1 : 0);
+        gl.uniform1i(program.u_hasBlueCurve, hasBlueCurve ? 1 : 0);
+
+        // Create/update LUT textures if needed
+        if (hasRgbCurve) {
+            this._curveLutTexRgb = this._updateLutTexture(this._curveLutTexRgb, uniforms.curveLutRgb);
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexRgb);
+            gl.uniform1i(program.u_curveLutTexRgb, 1);
+        }
+        if (hasRedCurve) {
+            this._curveLutTexRed = this._updateLutTexture(this._curveLutTexRed, uniforms.curveLutRed);
+            gl.activeTexture(gl.TEXTURE2);
+            gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexRed);
+            gl.uniform1i(program.u_curveLutTexRed, 2);
+        }
+        if (hasGreenCurve) {
+            this._curveLutTexGreen = this._updateLutTexture(this._curveLutTexGreen, uniforms.curveLutGreen);
+            gl.activeTexture(gl.TEXTURE3);
+            gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexGreen);
+            gl.uniform1i(program.u_curveLutTexGreen, 3);
+        }
+        if (hasBlueCurve) {
+            this._curveLutTexBlue = this._updateLutTexture(this._curveLutTexBlue, uniforms.curveLutBlue);
+            gl.activeTexture(gl.TEXTURE4);
+            gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexBlue);
+            gl.uniform1i(program.u_curveLutTexBlue, 4);
+        }
+
+        // Bind main texture
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, inputTexture._internal);
         gl.uniform1i(program.u_texture, 0);
@@ -601,6 +687,33 @@ export class WebGL2Backend extends GPUBackend {
         gl.bindFramebuffer(gl.FRAMEBUFFER, target?._internal || null);
         gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    /**
+     * Create or update a 1D LUT texture from Float32Array data
+     */
+    _updateLutTexture(existingTexture, lutData) {
+        const gl = this.gl;
+        const ext = gl.getExtension('OES_texture_float_linear');
+        const filter = ext ? gl.LINEAR : gl.NEAREST;
+
+        // Create texture if needed
+        let texture = existingTexture;
+        if (!texture) {
+            texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+        } else {
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+        }
+
+        // Upload LUT data as 256x1 R32F texture
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, 256, 1, 0, gl.RED, gl.FLOAT, lutData);
+
+        return texture;
     }
 
     /**

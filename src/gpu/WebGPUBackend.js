@@ -17,6 +17,13 @@ export class WebGPUBackend extends GPUBackend {
         this.bindGroupLayouts = new Map();
         this.sampler = null;
 
+        // Tone Curve Textures (WebGPU)
+        this._curveLutTexRgb = null;
+        this._curveLutTexRed = null;
+        this._curveLutTexGreen = null;
+        this._curveLutTexBlue = null;
+        this._defaultLutTex = null; // Identity LUT for inactive curves
+
         // Vertex buffer for fullscreen quad
         this.vertexBuffer = null;
         this.texCoordBuffer = null;
@@ -210,6 +217,11 @@ export class WebGPUBackend extends GPUBackend {
                 hslSat1: vec4f,
                 hslLum0: vec4f,
                 hslLum1: vec4f,
+                // Tone Curve Flags
+                hasRgbCurve: f32,
+                hasRedCurve: f32,
+                hasGreenCurve: f32,
+                hasBlueCurve: f32,
             }
 
             @vertex
@@ -223,6 +235,10 @@ export class WebGPUBackend extends GPUBackend {
             @group(0) @binding(0) var texSampler: sampler;
             @group(0) @binding(1) var tex: texture_2d<f32>;
             @group(0) @binding(2) var<uniform> u: Uniforms;
+            @group(0) @binding(3) var curveRgbTex: texture_2d<f32>;
+            @group(0) @binding(4) var curveRedTex: texture_2d<f32>;
+            @group(0) @binding(5) var curveGreenTex: texture_2d<f32>;
+            @group(0) @binding(6) var curveBlueTex: texture_2d<f32>;
 
             // Color center hues for HSL (in degrees)
             const COLOR_HUES = array<f32, 8>(0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
@@ -451,6 +467,15 @@ export class WebGPUBackend extends GPUBackend {
                 );
             }
 
+            fn sampleCurve(tex: texture_2d<f32>, x: f32) -> f32 {
+                let pos = clamp(x, 0.0, 1.0) * 255.0;
+                let index = u32(floor(pos));
+                let f = fract(pos);
+                let v1 = textureLoad(tex, vec2u(index, 0), 0).r;
+                let v2 = textureLoad(tex, vec2u(min(index + 1u, 255u), 0), 0).r;
+                return mix(v1, v2, f);
+            }
+
             @fragment
             fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
                 let pixel = textureSample(tex, texSampler, texCoord);
@@ -591,11 +616,29 @@ export class WebGPUBackend extends GPUBackend {
                 }
                 
                 // Convert back to sRGB
-                let finalSrgb = vec3f(
+                var finalSrgb = vec3f(
                     linearToSRGB(clamp(linear.r, 0.0, 1.0)),
                     linearToSRGB(clamp(linear.g, 0.0, 1.0)),
                     linearToSRGB(clamp(linear.b, 0.0, 1.0))
                 );
+                
+                // === TONE CURVE ===
+                if (u.hasRgbCurve > 0.5) {
+                    let rVal = sampleCurve(curveRgbTex, finalSrgb.r);
+                    let gVal = sampleCurve(curveRgbTex, finalSrgb.g);
+                    let bVal = sampleCurve(curveRgbTex, finalSrgb.b);
+                    finalSrgb = vec3f(rVal, gVal, bVal);
+                }
+                
+                if (u.hasRedCurve > 0.5) {
+                    finalSrgb.r = sampleCurve(curveRedTex, finalSrgb.r);
+                }
+                if (u.hasGreenCurve > 0.5) {
+                    finalSrgb.g = sampleCurve(curveGreenTex, finalSrgb.g);
+                }
+                if (u.hasBlueCurve > 0.5) {
+                    finalSrgb.b = sampleCurve(curveBlueTex, finalSrgb.b);
+                }
                 
                 return vec4f(finalSrgb, pixel.a);
             }
@@ -626,6 +669,15 @@ export class WebGPUBackend extends GPUBackend {
                 visibility: GPUShaderStage.FRAGMENT,
                 buffer: { type: 'uniform' }
             });
+
+            // Bindings for curve textures (3, 4, 5, 6)
+            for (var i = 0; i < 4; i++) {
+                bindGroupLayoutEntries.push({
+                    binding: 3 + i,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'unfilterable-float', viewDimension: '2d' }
+                });
+            }
         }
 
         const bindGroupLayout = this.device.createBindGroupLayout({
@@ -715,6 +767,61 @@ export class WebGPUBackend extends GPUBackend {
     }
 
     /**
+     * Create or update a 1D LUT texture (WebGPU)
+     */
+    /**
+     * Create or update a 1D LUT texture (WebGPU)
+     */
+    _updateLutTexture(existingTexture, lutData) {
+        // Unwrap existing texture if it matches our wrapper format
+        let texture = existingTexture && existingTexture._internal ? existingTexture._internal : existingTexture;
+
+        // Create texture if needed
+        if (!texture) {
+            texture = this.device.createTexture({
+                size: [256, 1],
+                format: 'r32float',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+            });
+        }
+
+        // Upload data
+        this.device.queue.writeTexture(
+            { texture: texture },
+            lutData,
+            { bytesPerRow: 256 * 4 },
+            { width: 256, height: 1 }
+        );
+
+        return { _internal: texture };
+    }
+
+    /**
+     * Get or create a default identity LUT texture
+     */
+    _getOrCreateDefaultLut() {
+        if (!this._defaultLutTex) {
+            const texture = this.device.createTexture({
+                size: [1, 1],
+                format: 'r32float',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+            });
+
+            // Upload 0.0 (or anything)
+            const data = new Float32Array([0.0]);
+            this.device.queue.writeTexture(
+                { texture: texture },
+                data,
+                { bytesPerRow: 4 },
+                { width: 1, height: 1 }
+            );
+
+            this._defaultLutTex = { _internal: texture };
+        }
+        return this._defaultLutTex;
+    }
+
+    /**
      * Render with develop pipeline
      */
     renderDevelop(inputTexture, uniforms, target = null) {
@@ -761,8 +868,50 @@ export class WebGPUBackend extends GPUBackend {
             uniforms.hslLumAqua || 0,
             uniforms.hslLumBlue || 0,
             uniforms.hslLumPurple || 0,
-            uniforms.hslLumMagenta || 0
+            uniforms.hslLumMagenta || 0,
+            // Tone Curve Flags
+            (uniforms.curveLutRgb && uniforms.curveLutRgb.length > 0) ? 1.0 : 0.0,
+            (uniforms.curveLutRed && uniforms.curveLutRed.length > 0) ? 1.0 : 0.0,
+            (uniforms.curveLutGreen && uniforms.curveLutGreen.length > 0) ? 1.0 : 0.0,
+            (uniforms.curveLutBlue && uniforms.curveLutBlue.length > 0) ? 1.0 : 0.0
         ]);
+
+        // Process Tone Curve Textures
+        const hasRgb = uniforms.curveLutRgb && uniforms.curveLutRgb.length > 0;
+        const hasRed = uniforms.curveLutRed && uniforms.curveLutRed.length > 0;
+        const hasGreen = uniforms.curveLutGreen && uniforms.curveLutGreen.length > 0;
+        const hasBlue = uniforms.curveLutBlue && uniforms.curveLutBlue.length > 0;
+
+        // Create/Update textures or use default
+        let texRgb, texRed, texGreen, texBlue;
+
+        if (hasRgb) {
+            this._curveLutTexRgb = this._updateLutTexture(this._curveLutTexRgb, uniforms.curveLutRgb);
+            texRgb = this._curveLutTexRgb._internal;
+        } else {
+            texRgb = this._getOrCreateDefaultLut()._internal;
+        }
+
+        if (hasRed) {
+            this._curveLutTexRed = this._updateLutTexture(this._curveLutTexRed, uniforms.curveLutRed);
+            texRed = this._curveLutTexRed._internal;
+        } else {
+            texRed = this._getOrCreateDefaultLut()._internal;
+        }
+
+        if (hasGreen) {
+            this._curveLutTexGreen = this._updateLutTexture(this._curveLutTexGreen, uniforms.curveLutGreen);
+            texGreen = this._curveLutTexGreen._internal;
+        } else {
+            texGreen = this._getOrCreateDefaultLut()._internal;
+        }
+
+        if (hasBlue) {
+            this._curveLutTexBlue = this._updateLutTexture(this._curveLutTexBlue, uniforms.curveLutBlue);
+            texBlue = this._curveLutTexBlue._internal;
+        } else {
+            texBlue = this._getOrCreateDefaultLut()._internal;
+        }
 
         const uniformBuffer = this.device.createBuffer({
             size: uniformData.byteLength,
@@ -770,13 +919,17 @@ export class WebGPUBackend extends GPUBackend {
         });
         this.device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
-        // Create bind group
+        // Create bind group with all textures
         const bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
             entries: [
                 { binding: 0, resource: this.sampler },
                 { binding: 1, resource: inputTexture._internal.createView() },
-                { binding: 2, resource: { buffer: uniformBuffer } }
+                { binding: 2, resource: { buffer: uniformBuffer } },
+                { binding: 3, resource: texRgb.createView() },
+                { binding: 4, resource: texRed.createView() },
+                { binding: 5, resource: texGreen.createView() },
+                { binding: 6, resource: texBlue.createView() }
             ]
         });
 

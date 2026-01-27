@@ -1392,3 +1392,169 @@ kbd {
     color: white;
     border-color: var(--accent);
 }
+
+/* ========================================
+   Tone Curve Editor
+   ======================================== */
+.tone-curve-editor {
+    background: var(--bg-dark);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.tone-curve-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.tone-curve-channels {
+    display: flex;
+    gap: 4px;
+}
+
+.curve-channel-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    opacity: 0.5;
+}
+
+.curve-channel-btn:hover {
+    opacity: 0.8;
+    background: var(--bg-hover);
+}
+
+.curve-channel-btn.active {
+    opacity: 1;
+    background: var(--bg-surface);
+}
+
+.channel-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.channel-icon.rgb {
+    color: #ffffff;
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+.channel-icon.red {
+    color: #ff6b6b;
+    text-shadow: 0 0 4px rgba(255, 107, 107, 0.5);
+}
+
+.channel-icon.green {
+    color: #6bff6b;
+    text-shadow: 0 0 4px rgba(107, 255, 107, 0.5);
+}
+
+.channel-icon.blue {
+    color: #6b9fff;
+    text-shadow: 0 0 4px rgba(107, 159, 255, 0.5);
+}
+
+.curve-reset-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+
+.curve-reset-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.tone-curve-canvas-container {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.tone-curve-canvas {
+    display: block;
+    cursor: crosshair;
+}
+
+.tone-curve-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 4px;
+}
+
+.curve-io-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+.curve-io-label span {
+    color: var(--text-primary);
+}
+
+/* Tone Curve Section Collapsed State */
+.tone-curve-section {
+    margin-bottom: 16px;
+}
+
+.tone-curve-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+}
+
+.tone-curve-section-header:hover {
+    color: var(--accent);
+}
+
+.tone-curve-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+.tone-curve-section-header:hover .tone-curve-section-title {
+    color: var(--text-primary);
+}
+
+.tone-curve-collapse-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+
+.tone-curve-section.collapsed .tone-curve-collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.tone-curve-section.collapsed .tone-curve-section-content {
+    display: none;
+}

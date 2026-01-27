@@ -66,20 +66,22 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         editor: resolve(__dirname, 'editor.html'),
-        docs: resolve(__dirname, 'docs.html'),
-        tutorials: resolve(__dirname, 'tutorials.html'),
-        blog: resolve(__dirname, 'blog.html'),
-        changelog: resolve(__dirname, 'changelog.html'),
-        about: resolve(__dirname, 'about.html'),
-        careers: resolve(__dirname, 'careers.html'),
-        privacy: resolve(__dirname, 'privacy.html'),
-        terms: resolve(__dirname, 'terms.html'),
+        // Pages
+        docs: resolve(__dirname, 'pages/docs.html'),
+        tutorials: resolve(__dirname, 'pages/tutorials.html'),
+        blog: resolve(__dirname, 'pages/blog.html'),
+        changelog: resolve(__dirname, 'pages/changelog.html'),
+        about: resolve(__dirname, 'pages/about.html'),
+        careers: resolve(__dirname, 'pages/careers.html'),
+        contribute: resolve(__dirname, 'pages/contribute.html'),
+        privacy: resolve(__dirname, 'pages/privacy.html'),
+        terms: resolve(__dirname, 'pages/terms.html'),
         // Blog Posts
-        blogIntroduction: resolve(__dirname, 'blog/orlume-ai-photo-editor-introduction.html'),
-        blogRelighting: resolve(__dirname, 'blog/3d-relighting-guide.html'),
-        blogBackground: resolve(__dirname, 'blog/ai-background-removal-tutorial.html'),
-        blogBrowser: resolve(__dirname, 'blog/browser-based-photo-editing.html'),
-        blogColorGrading: resolve(__dirname, 'blog/color-grading-hsl-tutorial.html')
+        blogIntroduction: resolve(__dirname, 'pages/blog/orlume-ai-photo-editor-introduction.html'),
+        blogRelighting: resolve(__dirname, 'pages/blog/3d-relighting-guide.html'),
+        blogBackground: resolve(__dirname, 'pages/blog/ai-background-removal-tutorial.html'),
+        blogBrowser: resolve(__dirname, 'pages/blog/browser-based-photo-editing.html'),
+        blogColorGrading: resolve(__dirname, 'pages/blog/color-grading-hsl-tutorial.html')
       }
     }
   },
