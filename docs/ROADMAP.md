@@ -4,9 +4,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-##  Completed Features
+## Completed Features
 
 ### Core Editor
+
 - [x] WebGL2 GPU-accelerated canvas rendering
 - [x] Real-time preview with adjustments
 - [x] Undo/Redo with full history
@@ -14,6 +15,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [x] Keyboard shortcuts
 
 ### Adjustments Panel
+
 - [x] Exposure control
 - [x] Contrast adjustment
 - [x] Highlights/Shadows
@@ -24,18 +26,21 @@ A comprehensive list of features for development. Check items as they're complet
 - [x] Sharpening
 
 ### Tone Curve
+
 - [x] RGB composite curve
 - [x] Individual R/G/B curves
 - [x] Bezier curve control points
 - [x] Real-time curve preview
 
 ### HSL Adjustments
+
 - [x] Hue shift per color
 - [x] Saturation per color
 - [x] Luminance per color
 - [x] 8 color channels (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta)
 
 ### Masking & Local Adjustments
+
 - [x] Brush mask tool
 - [x] Radial gradient mask
 - [x] Linear gradient mask
@@ -44,11 +49,13 @@ A comprehensive list of features for development. Check items as they're complet
 - [x] Mask invert
 
 ### Relight Feature
+
 - [x] AI-powered relighting
 - [x] Draggable light source
 - [x] Real-time light preview
 
 ### Crop & Transform
+
 - [x] Free crop
 - [x] Aspect ratio presets (1:1, 4:3, 16:9, etc.)
 - [x] Custom aspect ratio
@@ -57,6 +64,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [x] Straighten tool
 
 ### Zoom & Pan
+
 - [x] Zoom in/out controls
 - [x] Ctrl/Cmd + scroll zoom
 - [x] Space + drag pan
@@ -65,11 +73,13 @@ A comprehensive list of features for development. Check items as they're complet
 - [x] Zoom percentage display
 
 ### Before/After Comparison
+
 - [x] Side-by-side slider
 - [x] Toggle button
 - [x] Keyboard shortcut
 
 ### File Handling
+
 - [x] Import JPG/PNG/WebP
 - [x] Export with quality settings
 - [x] Drag and drop upload
@@ -77,9 +87,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-##  In Progress
+## In Progress
 
 ### AI Image Enhancer
+
 - [x] Upscale panel UI
 - [x] Mode selector (Enhance/Upscale/Both)
 - [x] Face enhancement toggle
@@ -89,11 +100,12 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## 📋 Planned Features
+## Planned Features
 
-###  AI & Enhancement (Priority: High)
+### AI & Enhancement (Priority: High)
 
 #### Image Restoration
+
 - [ ] AI noise reduction (denoise)
 - [ ] AI blur removal (deblur)
 - [ ] AI compression artifact removal
@@ -103,18 +115,21 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] SwinIR integration
 
 #### Background Tools
+
 - [ ] AI background removal
 - [ ] Background blur (Portrait mode)
 - [ ] Background replacement
 - [ ] Transparent background export
 
 #### Object Manipulation
+
 - [ ] AI object removal (inpainting)
 - [ ] Content-aware fill
 - [ ] AI object selection
 - [ ] Smart crop (AI composition)
 
 #### Auto Enhancement
+
 - [ ] One-click auto enhance
 - [ ] Auto white balance
 - [ ] Auto exposure
@@ -123,15 +138,17 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Auto crop (smart framing)
 
 #### Colorization
+
 - [ ] AI colorize B&W photos
 - [ ] Selective colorization
 - [ ] Color transfer from reference
 
 ---
 
-###  Editing Tools (Priority: High)
+### Editing Tools (Priority: High)
 
 #### Selection Tools
+
 - [ ] Rectangular selection
 - [ ] Elliptical selection
 - [ ] Lasso selection (freehand)
@@ -142,6 +159,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Selection invert/expand/contract
 
 #### Layers System
+
 - [ ] Multiple layers support
 - [ ] Layer opacity
 - [ ] Blend modes (Normal, Multiply, Screen, Overlay, etc.)
@@ -152,6 +170,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Merge layers
 
 #### Drawing & Painting
+
 - [ ] Brush tool with pressure sensitivity
 - [ ] Eraser tool
 - [ ] Clone stamp tool
@@ -162,6 +181,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Blur/Sharpen brush
 
 #### Text Tool
+
 - [ ] Add text layers
 - [ ] Font selection (Google Fonts)
 - [ ] Font size/weight/style
@@ -172,6 +192,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Text on path
 
 #### Shapes & Annotations
+
 - [ ] Rectangle/Square
 - [ ] Ellipse/Circle
 - [ ] Line/Arrow
@@ -182,6 +203,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Watermark tool
 
 #### Gradient Tool
+
 - [ ] Linear gradient
 - [ ] Radial gradient
 - [ ] Angle gradient
@@ -190,9 +212,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  Filters & Effects (Priority: Medium)
+### Filters & Effects (Priority: Medium)
 
 #### Preset Filters
+
 - [ ] Cinematic presets
 - [ ] Vintage/Retro presets
 - [ ] Black & White presets
@@ -203,6 +226,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Preset preview thumbnails
 
 #### LUT Support
+
 - [ ] Load .cube LUT files
 - [ ] Load .3dl LUT files
 - [ ] LUT intensity slider
@@ -210,6 +234,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] LUT preview
 
 #### Effects
+
 - [ ] Vignette
 - [ ] Film grain/noise
 - [ ] Chromatic aberration
@@ -222,6 +247,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Double exposure
 
 #### Color Effects
+
 - [ ] Split toning
 - [ ] Color grading wheels
 - [ ] Selective color
@@ -230,6 +256,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Threshold
 
 #### Stylization
+
 - [ ] HDR effect
 - [ ] Orton glow
 - [ ] Soft focus
@@ -243,9 +270,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  Transform & Distortion (Priority: Medium)
+### Transform & Distortion (Priority: Medium)
 
 #### Basic Transform
+
 - [ ] Scale (resize with aspect lock)
 - [ ] Skew
 - [ ] Distort (free transform)
@@ -253,12 +281,14 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Warp tool
 
 #### Lens Corrections
+
 - [ ] Lens distortion correction
 - [ ] Chromatic aberration removal
 - [ ] Vignette removal
 - [ ] Lens profile database
 
 #### Liquify/Warp
+
 - [ ] Push/Pull tool
 - [ ] Bloat/Pinch
 - [ ] Twirl
@@ -267,9 +297,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  File & Project Management (Priority: Medium)
+### File & Project Management (Priority: Medium)
 
 #### File Format Support
+
 - [ ] RAW file support (CR2, NEF, ARW, etc.)
 - [ ] TIFF support
 - [ ] PSD import (basic)
@@ -279,6 +310,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] HEIC/HEIF support
 
 #### Export Options
+
 - [ ] Custom dimensions
 - [ ] Quality presets
 - [ ] Format conversion
@@ -290,6 +322,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Social media presets (Instagram, Facebook, Twitter sizes)
 
 #### Batch Processing
+
 - [ ] Apply edits to multiple images
 - [ ] Batch resize
 - [ ] Batch format conversion
@@ -298,6 +331,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Preset batch apply
 
 #### Project Files
+
 - [ ] Save project with history
 - [ ] Load project file
 - [ ] Auto-save drafts
@@ -305,6 +339,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Non-destructive editing storage
 
 #### Cloud Integration
+
 - [ ] Google Drive sync
 - [ ] Dropbox integration
 - [ ] OneDrive support
@@ -313,9 +348,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  UI/UX Improvements (Priority: Medium)
+### UI/UX Improvements (Priority: Medium)
 
 #### Interface Enhancements
+
 - [ ] Collapsible panels
 - [ ] Customizable workspace layouts
 - [ ] Full-screen edit mode
@@ -326,6 +362,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Favorites/Quick access
 
 #### Themes & Appearance
+
 - [ ] Light theme
 - [ ] Custom accent colors
 - [ ] Icon size options
@@ -333,6 +370,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] High contrast mode
 
 #### Accessibility
+
 - [ ] Keyboard navigation
 - [ ] Screen reader support
 - [ ] High contrast mode
@@ -340,6 +378,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Color blind modes
 
 #### Touch & Mobile
+
 - [ ] Touch gesture support
 - [ ] Tablet optimization
 - [ ] Mobile responsive layout
@@ -347,6 +386,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Two-finger rotate
 
 #### Onboarding & Help
+
 - [ ] Interactive tutorial
 - [ ] Tool tips
 - [ ] Keyboard shortcuts modal
@@ -356,9 +396,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  Performance & Technical (Priority: Low)
+### Performance & Technical (Priority: Low)
 
 #### Rendering
+
 - [ ] WebGPU support (future)
 - [ ] WebGL fallback optimization
 - [ ] Progressive loading for large images
@@ -366,6 +407,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Background processing
 
 #### Memory & Speed
+
 - [ ] Smart memory management
 - [ ] History limit configuration
 - [ ] Preview quality settings
@@ -373,6 +415,7 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] Service worker caching
 
 #### Browser Support
+
 - [ ] Chrome optimization
 - [ ] Firefox support
 - [ ] Safari support
@@ -382,21 +425,24 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  Integrations (Priority: Low)
+### Integrations (Priority: Low)
 
 #### AI Services
+
 - [ ] Replicate API integration
 - [ ] Hugging Face integration
 - [ ] Custom API endpoint support
 - [ ] API key management
 
 #### Social Media
+
 - [ ] Direct share to Instagram
 - [ ] Direct share to Twitter
 - [ ] Direct share to Facebook
 - [ ] Pinterest integration
 
 #### Asset Libraries
+
 - [ ] Unsplash integration
 - [ ] Pexels integration
 - [ ] Custom asset library
@@ -404,9 +450,10 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-###  Advanced Features (Priority: Future)
+### Advanced Features (Priority: Future)
 
 #### Video Support
+
 - [ ] Video import
 - [ ] Frame extraction
 - [ ] Basic video editing
@@ -414,17 +461,20 @@ A comprehensive list of features for development. Check items as they're complet
 - [ ] GIF creation
 
 #### 3D Features
+
 - [ ] 3D LUT visualization
 - [ ] 3D object placement
 - [ ] Depth map generation
 
 #### Collaboration
+
 - [ ] Real-time collaboration
 - [ ] Comments on image
 - [ ] Share for feedback
 - [ ] Team workspaces
 
 #### Print
+
 - [ ] Print layout
 - [ ] Color matching for print
 - [ ] Soft proofing
@@ -432,7 +482,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-##  Feature Statistics
+## Feature Statistics
 
 | Category | Completed | In Progress | Planned |
 |----------|-----------|-------------|---------|
@@ -452,7 +502,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-##  Version History
+## Version History
 
 | Version | Date | Features Added |
 |---------|------|----------------|
@@ -464,7 +514,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-##  Notes
+## Notes
 
 - Features marked with (AI) require external API or local ML server
 - Priority may change based on user feedback
