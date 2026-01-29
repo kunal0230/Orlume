@@ -364,7 +364,7 @@ export class WebGL2Backend extends GPUBackend {
         let blurTexture = inputTexture; // Default fallback if no blur needed
 
         if ((uniforms.clarity && uniforms.clarity !== 0) || (uniforms.structure && uniforms.structure !== 0)) {
-            console.log('[WebGL2Backend] Triggering blur pass. Clarity:', uniforms.clarity, 'Structure:', uniforms.structure);
+
             this._ensureBlurFbos(this.width, this.height);
 
             // Pass 1: Horizontal Blur (Input -> FBO1)
@@ -375,7 +375,7 @@ export class WebGL2Backend extends GPUBackend {
 
             blurTexture = this.blurFbo2.texture;
         } else {
-            console.log('[WebGL2Backend] Skipping blur pass.');
+
         }
 
         // === FINAL PASS ===
@@ -403,7 +403,7 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_clarity, (uniforms.clarity || 0) / 100);
         gl.uniform1f(program.u_structure, (uniforms.structure || 0) / 100);
         gl.uniform1f(program.u_dehaze, (uniforms.dehaze || 0) / 100);
-        console.log('[WebGL2Backend] Setting uniforms - Clarity:', (uniforms.clarity || 0) / 100, 'Structure:', (uniforms.structure || 0) / 100);
+
 
         // HSL per-channel uniforms (arrays of 8 floats)
         // Order: Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta

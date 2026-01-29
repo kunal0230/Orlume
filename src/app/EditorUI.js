@@ -382,7 +382,6 @@ export class EditorUI {
 
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
-                console.log(`[EditorUI] Slider input: ${name} = ${value}`);
                 valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
                 this.state.setAdjustment(name, value);
 
