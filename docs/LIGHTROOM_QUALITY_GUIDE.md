@@ -1,13 +1,13 @@
 # Lightroom-Quality Core Tools - Implementation Guide
 
 > **Version:** 1.0  
-> **Status:** 🚧 In Progress  
+> **Status:**  In Progress  
 > **Last Updated:** 2026-01-27  
 > **Goal:** Match or exceed Adobe Lightroom Classic's Develop module quality
 
 ---
 
-## 📊 Progress Tracker
+##  Progress Tracker
 
 ### Develop Panel
 
@@ -70,7 +70,7 @@
 
 ---
 
-## 🎯 Implementation Priority
+##  Implementation Priority
 
 ### Phase 1: Core Develop (Week 1)
 
@@ -98,7 +98,7 @@
 
 ---
 
-## 🛠️ Technical Implementation
+##  Technical Implementation
 
 ### New Uniforms Required
 
@@ -139,7 +139,7 @@ Pass 2: Develop shader with clarity using blurTexture
 
 ---
 
-## 📁 Files to Create
+##  Files to Create
 
 | File | Purpose |
 |------|---------|
@@ -150,7 +150,7 @@ Pass 2: Develop shader with clarity using blurTexture
 | `src/components/ColorWheel.js` | Color grading wheel UI |
 | `src/presets/FilterPresets.js` | Built-in filter definitions |
 
-## 📁 Files to Modify
+##  Files to Modify
 
 | File | Changes |
 |------|---------|
@@ -162,7 +162,7 @@ Pass 2: Develop shader with clarity using blurTexture
 
 ---
 
-## 🧪 Quality Benchmarks
+##  Quality Benchmarks
 
 After implementation, test these scenarios:
 
@@ -179,7 +179,7 @@ After implementation, test these scenarios:
 
 ---
 
-## 📚 Reference Materials
+##  Reference Materials
 
 ### Color Science
 
@@ -199,7 +199,7 @@ After implementation, test these scenarios:
 
 ---
 
-## 📝 Change Log
+##  Change Log
 
 | Date | Version | Changes |
 |------|---------|---------|
