@@ -18,6 +18,7 @@ export class ToneCurveEditor {
             padding: options.padding || 12,
             pointRadius: options.pointRadius || 6,
             onChange: options.onChange || (() => { }),
+            onInteractionEnd: options.onInteractionEnd || (() => { }),
             ...options
         };
 
@@ -221,6 +222,7 @@ export class ToneCurveEditor {
         if (this.isDragging) {
             this.isDragging = false;
             this.canvas.style.cursor = this.hoveredPointIndex >= 0 ? 'grab' : 'crosshair';
+            this.options.onInteractionEnd();
         }
     }
 
@@ -284,6 +286,7 @@ export class ToneCurveEditor {
 
         this._onCurveChanged();
         this.render();
+        this.options.onInteractionEnd();
     }
 
     _removePoint(index) {
@@ -293,6 +296,7 @@ export class ToneCurveEditor {
             this.selectedPointIndex = -1;
             this._onCurveChanged();
             this.render();
+            this.options.onInteractionEnd();
         }
     }
 
@@ -433,6 +437,7 @@ export class ToneCurveEditor {
         this.selectedPointIndex = -1;
         this._onCurveChanged();
         this.render();
+        this.options.onInteractionEnd();
     }
 
     /**

@@ -304,7 +304,9 @@ export class GodRaysModule {
 
         this.sunIndicator.style.left = `${x}px`;
         this.sunIndicator.style.top = `${y}px`;
-        this.sunIndicator.style.display = 'block';
+
+        // Only show if active
+        this.sunIndicator.style.display = this.isActive ? 'block' : 'none';
     }
 
     /**
@@ -642,9 +644,9 @@ export class GodRaysModule {
             this.ui.gpu.loadImage(imageData);
             this.ui.gpu.render();
 
-            // Update original image reference for before/after comparison
+            // Update original image reference (and generate new ID)
             if (this.ui.state) {
-                this.ui.state.originalImage = imageData;
+                this.ui.state.setImage(imageData);
             }
         }
 
@@ -680,6 +682,128 @@ export class GodRaysModule {
 
         if (this.sunIndicator && this.sunIndicator.parentNode) {
             this.sunIndicator.parentNode.removeChild(this.sunIndicator);
+        }
+    }
+    /**
+     * Get current state for history
+     */
+    getState() {
+        return {
+            isActive: this.isActive,
+            params: this.effect ? {
+                intensity: document.getElementById('slider-godrays-intensity')?.value,
+                decay: document.getElementById('slider-godrays-decay')?.value,
+                density: document.getElementById('slider-godrays-density')?.value,
+                samples: document.getElementById('slider-godrays-samples')?.value,
+                lum: document.getElementById('slider-godrays-lum')?.value,
+                depth: document.getElementById('slider-godrays-depth')?.value,
+                sunRadius: document.getElementById('slider-godrays-radius')?.value,
+                exposure: document.getElementById('slider-godrays-exposure')?.value,
+                chromatic: document.getElementById('slider-godrays-chromatic')?.value,
+                noise: document.getElementById('slider-godrays-noise')?.value,
+                bloom: document.getElementById('slider-godrays-bloom')?.value,
+                scatter: document.getElementById('slider-godrays-scatter')?.value,
+                toneMap: document.getElementById('slider-godrays-tonemap')?.value,
+                shadowIntensity: document.getElementById('slider-godrays-shadowintensity')?.value,
+                shadowSoftness: document.getElementById('slider-godrays-shadowsoftness')?.value,
+                shadowLength: document.getElementById('slider-godrays-shadowlength')?.value
+            } : null,
+            sunPosition: { ...this.sunPosition },
+            color: document.getElementById('godrays-color-picker')?.value
+        };
+    }
+
+    /**
+     * Set state from history
+     */
+    setState(state) {
+        if (!state) return;
+
+        // Restore active state logic FIRST
+        // This ensures the effect exists if we need to set params on it
+        const wasActive = this.isActive;
+        const shouldBeActive = !!state.isActive;
+
+        if (shouldBeActive && !wasActive) {
+            // Safety Check: Only activate if we are actually in godrays mode
+            // This prevents inconsistent history states (e.g. currentTool='develop' but godRays.isActive=true)
+            // from verifying opening the tool.
+            if (this.ui.state.currentTool === 'godrays') {
+                this.activate();
+            } else {
+                console.warn('⚠️ God Rays active in state but current tool is not godrays. Suppressing activation.');
+            }
+        } else if (!shouldBeActive && wasActive) {
+            this.deactivate();
+        }
+
+        // Restore params (Update UI + Internal Effect)
+        if (state.params) {
+            Object.entries(state.params).forEach(([id, value]) => {
+                if (value !== undefined) {
+                    // 1. Update UI Slider (Silent, no event)
+                    const slider = document.getElementById(`slider-godrays-${id}`);
+                    const valueDisplay = document.getElementById(`val-${id}`);
+                    if (slider) {
+                        slider.value = value;
+                        if (valueDisplay) valueDisplay.textContent = value;
+                    }
+
+                    // 2. Update Internal Effect (Directly)
+                    if (this.isActive && this.effect) {
+                        const mapping = {
+                            'intensity': { func: 'setIntensity', divisor: 100 },
+                            'decay': { func: 'setDecay', divisor: 100 },
+                            'density': { func: 'setDensity', divisor: 100 },
+                            'samples': { func: 'setSamples', divisor: 1 },
+                            'lum': { func: 'setLumThreshold', divisor: 100 },
+                            'depth': { func: 'setDepthThreshold', divisor: 100 },
+                            'sunRadius': { func: 'setSunRadius', divisor: 100 }, // Note: param name mismatch in slider init vs here helper
+                            'radius': { func: 'setSunRadius', divisor: 100 },
+                            'exposure': { func: 'setExposure', divisor: 10 },
+                            'chromatic': { func: 'setChromatic', divisor: 100 },
+                            'noise': { func: 'setNoise', divisor: 100 },
+                            'bloom': { func: 'setBloom', divisor: 50 },
+                            'scatter': { func: 'setScatter', divisor: 100 },
+                            'tonemap': { func: 'setToneMap', divisor: 100 },
+                            'shadowintensity': { func: 'setShadowIntensity', divisor: 100 },
+                            'shadowsoftness': { func: 'setShadowSoftness', divisor: 100 },
+                            'shadowlength': { func: 'setShadowLength', divisor: 100 }
+                        };
+
+                        // Map state param key to function
+                        // Note: state.params keys match the slider IDs suffix (e.g. 'intensity', 'decay')
+                        const map = mapping[id] || mapping[id.toLowerCase()];
+
+                        if (map && typeof this.effect[map.func] === 'function') {
+                            this.effect[map.func](value / map.divisor);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Restore Sun Position
+        if (state.sunPosition) {
+            this.sunPosition = { ...state.sunPosition };
+            if (this.isActive && this.effect) {
+                this.effect.setSunPosition(this.sunPosition.x, this.sunPosition.y);
+            }
+            this._updateSunIndicator();
+        }
+
+        // Restore Color
+        if (state.color) {
+            const picker = document.getElementById('godrays-color-picker');
+            if (picker) picker.value = state.color;
+
+            if (this.isActive && this.effect) {
+                this.effect.setRayColor(state.color);
+            }
+        }
+
+        if (this.isActive && this.effect) {
+            this._renderPreview();
         }
     }
 }

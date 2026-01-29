@@ -685,4 +685,71 @@ export class TextModule {
             });
         });
     }
+    /**
+     * Get current state for history
+     */
+    getState() {
+        if (!this.textManager) return null;
+
+        // Serialize all layers
+        return {
+            layers: this.textManager.layers.map(layer => ({
+                id: layer.id,
+                text: layer.text,
+                x: layer.x,
+                y: layer.y,
+                width: layer.width,
+                height: layer.height,
+                rotation: layer.rotation,
+                fontFamily: layer.fontFamily,
+                fontSize: layer.fontSize,
+                fontWeight: layer.fontWeight,
+                fontStyle: layer.fontStyle,
+                textDecoration: layer.textDecoration,
+                textAlign: layer.textAlign,
+                fillColor: layer.fillColor,
+                strokeColor: layer.strokeColor,
+                strokeWidth: layer.strokeWidth,
+                strokeEnabled: layer.strokeEnabled,
+                backgroundColor: layer.backgroundColor,
+                backgroundPadding: layer.backgroundPadding,
+                backgroundRadius: layer.backgroundRadius,
+                backgroundEnabled: layer.backgroundEnabled,
+                shadowColor: layer.shadowColor,
+                shadowOffsetX: layer.shadowOffsetX,
+                shadowOffsetY: layer.shadowOffsetY,
+                shadowBlur: layer.shadowBlur,
+                shadowEnabled: layer.shadowEnabled,
+                opacity: layer.opacity,
+                lineHeight: layer.lineHeight,
+                letterSpacing: layer.letterSpacing,
+                locked: layer.locked,
+                visible: layer.visible
+            }))
+        };
+    }
+
+    /**
+     * Restore state from history
+     */
+    setState(state) {
+        if (!this.textManager || !state || !state.layers) return;
+
+        // Clear existing layers
+        this.textManager.layers = [];
+        this.textManager.selectedLayerId = null;
+
+        // Restore layers
+        state.layers.forEach(layerData => {
+            const layer = this.textManager.addLayer();
+            // Assign properties
+            Object.assign(layer, layerData);
+            // Ensure ID matches for consistent history
+            layer.id = layerData.id;
+        });
+
+        // Update UI
+        this._updateTextLayerList();
+        this.textManager.render();
+    }
 }

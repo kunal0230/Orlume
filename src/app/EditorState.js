@@ -89,6 +89,7 @@ export class EditorState {
     setImage(image) {
         this.originalImage = image;
         this.hasImage = !!image;
+        this.imageId = Date.now().toString(36) + Math.random().toString(36).substr(2); // Unique ID for this image version
         this._emit('imageLoad', { image });
     }
 

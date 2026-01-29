@@ -45,6 +45,31 @@ export class RelightingModule {
         // Preview canvas
         this.previewCanvas = null;
         this.previewCtx = null;
+
+        // Parameter state tracking
+        this.params = {
+            intensity: 1.0,
+            ambient: 0.2,
+            reach: 1.0,
+            contrast: 1.0,
+            specularity: 0.5,
+            glossiness: 0.5,
+            rimIntensity: 0.5,
+            rimWidth: 0.5,
+            shadowIntensity: 0.8,
+            shadowSoftness: 0.5,
+            spotAngle: 45,
+            spotSoftness: 0.2,
+            sssIntensity: 0.0,
+            lightHeight: 0.5
+        };
+        this.lightConfig = {
+            color: { r: 1, g: 1, b: 1 },
+            position: { x: 0.5, y: 0.5 },
+            direction: { x: 0, y: 0, z: 1 },
+            type: 'directional', // directional, point, spot
+            blendMode: 'overlay'
+        };
     }
 
     /**
@@ -149,6 +174,11 @@ export class RelightingModule {
                 if (valueEl) valueEl.textContent = value;
                 this._updateParameter(param, value / divisor);
             });
+
+            // Push history on release
+            slider.addEventListener('change', () => {
+                this.ui._pushHistoryDebounced?.();
+            });
         });
     }
 
@@ -201,7 +231,12 @@ export class RelightingModule {
             case 'lightHeight':
                 this.engine.setLightHeight(value);
                 break;
+                this.engine.setLightHeight(value);
+                break;
         }
+
+        // Update local state
+        this.params[param] = value;
 
         this._debouncedRender();
     }
@@ -235,6 +270,7 @@ export class RelightingModule {
                     this.engine.setDirectional(true);
                     directionalBtn.classList.add('btn-primary');
                     if (pointBtn) pointBtn.classList.remove('btn-primary');
+                    this.lightConfig.type = 'directional';
                     this._debouncedRender();
                 }
             });
@@ -250,6 +286,7 @@ export class RelightingModule {
                     const spotBtn = document.getElementById('btn-light-spotlight');
                     if (spotBtn) spotBtn.classList.remove('btn-primary');
                     this._hideSpotlightControls();
+                    this.lightConfig.type = 'point';
                     this._debouncedRender();
                 }
             });
@@ -268,6 +305,7 @@ export class RelightingModule {
                     if (directionalBtn) directionalBtn.classList.remove('btn-primary');
                     if (pointBtn) pointBtn.classList.remove('btn-primary');
                     this._showSpotlightControls();
+                    this.lightConfig.type = 'spot';
                     this._debouncedRender();
                 }
             });
@@ -313,6 +351,7 @@ export class RelightingModule {
                     const g = parseInt(hex.slice(3, 5), 16) / 255;
                     const b = parseInt(hex.slice(5, 7), 16) / 255;
                     this.engine.setLightColor(r, g, b);
+                    this.lightConfig.color = { r, g, b };
                     this._debouncedRender();
                 }
             });
@@ -328,6 +367,7 @@ export class RelightingModule {
                     const g = parseInt(hex.slice(3, 5), 16) / 255;
                     const b = parseInt(hex.slice(5, 7), 16) / 255;
                     this.engine.setLightColor(r, g, b);
+                    this.lightConfig.color = { r, g, b };
                     this._debouncedRender();
                 }
             });
@@ -441,6 +481,7 @@ export class RelightingModule {
         blendSelect.addEventListener('change', () => {
             if (this.engine) {
                 this.engine.setBlendMode(blendSelect.value);
+                this.lightConfig.blendMode = blendSelect.value;
                 this._debouncedRender();
             }
         });
@@ -681,6 +722,7 @@ export class RelightingModule {
 
             if (this.engine) {
                 this.engine.setLightPosition(x, y);
+                this.lightConfig.position = { x, y };
                 this._updateLightIndicator();
                 this._schedulePreviewRender();
             }
@@ -714,6 +756,7 @@ export class RelightingModule {
                     const dirZ = 1.0 - dist * 0.5; // Z decreases as we drag further (more angled light)
 
                     this.engine.setLightDirection(dirX, dirY, Math.max(0.3, dirZ));
+                    this.lightConfig.direction = { x: dirX, y: dirY, z: Math.max(0.3, dirZ) };
                     this._schedulePreviewRender();
                 }
             }
@@ -777,6 +820,7 @@ export class RelightingModule {
 
         if (this.engine) {
             this.engine.setLightPosition(x, y);
+            this.lightConfig.position = { x, y };
             this._updateLightIndicator();
             this._debouncedRender();
         }
@@ -1152,6 +1196,185 @@ export class RelightingModule {
         if (this.previewCanvas?.parentElement) {
             this.previewCanvas.parentElement.removeChild(this.previewCanvas);
         }
+    }
+    /**
+     * Get current state for history
+     */
+    getState() {
+        return {
+            isActive: this.isActive,
+            params: { ...this.params },
+            lightConfig: JSON.parse(JSON.stringify(this.lightConfig))
+        };
+    }
+
+    /**
+     * Set state from history
+     */
+    setState(state) {
+        if (!state) return;
+
+        try {
+            // Helper to apply params once engine is ready
+            const applyParams = () => {
+                try {
+                    if (!this.engine) return;
+
+                    // Restore params
+                    if (state.params) {
+                        this.params = { ...state.params };
+
+                        // Apply all params to engine
+                        this.engine.setLightIntensity(this.params.intensity);
+                        this.engine.setAmbient(this.params.ambient);
+                        this.engine.setReach(this.params.reach);
+                        this.engine.setContrast(this.params.contrast);
+                        this.engine.setSpecularity(this.params.specularity);
+                        this.engine.setGlossiness(this.params.glossiness);
+                        this.engine.setRimIntensity(this.params.rimIntensity);
+                        this.engine.setRimWidth(this.params.rimWidth);
+                        this.engine.setShadowIntensity(this.params.shadowIntensity);
+                        this.engine.setShadowSoftness(this.params.shadowSoftness);
+                        this.engine.setSpotAngle(this.params.spotAngle);
+                        this.engine.setSpotSoftness(this.params.spotSoftness);
+                        this.engine.setSSSIntensity(this.params.sssIntensity);
+                        this.engine.setLightHeight(this.params.lightHeight);
+
+                        // Re-sync UI sliders
+                        this._syncSliders();
+                    }
+
+                    // Restore light config
+                    if (state.lightConfig) {
+                        this.lightConfig = JSON.parse(JSON.stringify(state.lightConfig));
+
+                        // Apply light config
+                        if (this.lightConfig.color) {
+                            const { r, g, b } = this.lightConfig.color;
+                            this.engine.setLightColor(r, g, b);
+
+                            // Update color picker UI
+                            const toHex = (c) => {
+                                const hex = Math.round(c * 255).toString(16);
+                                return hex.length === 1 ? '0' + hex : hex;
+                            };
+                            const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+                            const picker = document.getElementById('relight-color-picker');
+                            if (picker) picker.value = hexColor;
+                        }
+
+                        if (this.lightConfig.position) {
+                            this.engine.setLightPosition(this.lightConfig.position.x, this.lightConfig.position.y);
+                            this._updateLightIndicator();
+                        }
+
+                        if (this.lightConfig.direction) {
+                            this.engine.setLightDirection(
+                                this.lightConfig.direction.x,
+                                this.lightConfig.direction.y,
+                                this.lightConfig.direction.z
+                            );
+                        }
+
+                        if (this.lightConfig.type) {
+                            if (this.lightConfig.type === 'directional') {
+                                this.engine.setDirectional(true);
+                                this._hideSpotlightControls();
+                            } else if (this.lightConfig.type === 'point') {
+                                this.engine.setDirectional(false);
+                                this.engine.setSpotlightEnabled(false);
+                                this._hideSpotlightControls();
+                            } else if (this.lightConfig.type === 'spot') {
+                                this.engine.setDirectional(false);
+                                this.engine.setSpotlightEnabled(true);
+                                this._showSpotlightControls();
+                            }
+                            this._updateLightTypeUI();
+                        }
+
+                        if (this.lightConfig.blendMode) {
+                            this.engine.setBlendMode(this.lightConfig.blendMode);
+                            const blendSelect = document.getElementById('relight-blend-mode');
+                            if (blendSelect) blendSelect.value = this.lightConfig.blendMode;
+                        }
+                    }
+
+                    this._debouncedRender();
+                } catch (err) {
+                    console.error('Error applying relighting params:', err);
+                }
+            };
+
+            // Restore active state
+            if (state.isActive && !this.isActive) {
+                // activate() is likely async, so chain the param application
+                Promise.resolve(this.activate())
+                    .then(() => applyParams())
+                    .catch(err => console.error('Error activating relighting module during undo:', err));
+            } else if (!state.isActive && this.isActive) {
+                this.deactivate();
+                // No need to apply params if deactivating
+            } else {
+                // Already active or inactive, just apply params
+                applyParams();
+            }
+        } catch (e) {
+            console.warn('Failed to restore Relighting state:', e);
+        }
+    }
+
+    /**
+     * Sync sliders with current params
+     */
+    _syncSliders() {
+        const paramToId = {
+            intensity: 'relight-intensity',
+            ambient: 'relight-ambient',
+            reach: 'relight-softness', // mapped from code
+            specularity: 'relight-specularity',
+            glossiness: 'relight-glossiness',
+            rimIntensity: 'relight-rim-intensity',
+            rimWidth: 'relight-rim-width',
+            shadowIntensity: 'relight-shadow-intensity',
+            shadowSoftness: 'relight-shadow-softness',
+            spotAngle: 'relight-spot-angle',
+            spotSoftness: 'relight-spot-softness',
+            sssIntensity: 'relight-sss-intensity',
+            lightHeight: 'relight-height'
+        };
+
+        const divisors = {
+            intensity: 100, ambient: 100, reach: 1, specularity: 100, glossiness: 1,
+            rimIntensity: 100, rimWidth: 100, shadowIntensity: 100, shadowSoftness: 100,
+            spotAngle: 1, spotSoftness: 100, sssIntensity: 100, lightHeight: 100
+        };
+
+        for (const [param, id] of Object.entries(paramToId)) {
+            const val = this.params[param];
+            if (val !== undefined) {
+                const slider = document.getElementById(`slider-${id}`);
+                const valEl = document.getElementById(`val-${id}`);
+                if (slider) {
+                    const divisor = divisors[param] || 1;
+                    slider.value = val * divisor;
+                    if (valEl) valEl.textContent = val * divisor; // display value is usually scaled
+                }
+            }
+        }
+    }
+
+    /**
+     * Update Light Type button UI state
+     */
+    _updateLightTypeUI() {
+        const type = this.lightConfig.type;
+        const directionalBtn = document.getElementById('btn-light-directional');
+        const pointBtn = document.getElementById('btn-light-point');
+        const spotBtn = document.getElementById('btn-light-spotlight');
+
+        if (directionalBtn) directionalBtn.classList.toggle('btn-primary', type === 'directional');
+        if (pointBtn) pointBtn.classList.toggle('btn-primary', type === 'point');
+        if (spotBtn) spotBtn.classList.toggle('btn-primary', type === 'spot');
     }
 }
 

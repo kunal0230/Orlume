@@ -20,6 +20,19 @@ export class HSLModule {
 
         // Track active tab
         this.activeTab = 'hue';
+
+        // State tracking
+        this.state = {};
+        this._initDefaultState();
+    }
+
+    _initDefaultState() {
+        this.colors.forEach(color => {
+            const capColor = color.charAt(0).toUpperCase() + color.slice(1);
+            this.state[`hslHue${capColor}`] = 0;
+            this.state[`hslSat${capColor}`] = 0;
+            this.state[`hslLum${capColor}`] = 0;
+        });
     }
 
     /**
@@ -141,6 +154,9 @@ export class HSLModule {
 
             // Update GPU parameter
             this.gpu.setParam(paramName, value);
+
+            // Update local state
+            this.state[paramName] = value;
         });
 
         // Double-click to reset
@@ -183,5 +199,61 @@ export class HSLModule {
             this.gpu.setParam(`hslSat${this._capitalize(color)}`, 0);
             this.gpu.setParam(`hslLum${this._capitalize(color)}`, 0);
         });
+    }
+    /**
+     * Get current state for history
+     */
+    getState() {
+        return { ...this.state };
+    }
+
+    /**
+     * Set state from history
+     */
+    setState(state) {
+        if (!state) return;
+
+        this.state = { ...state };
+
+        // Restore all values
+        for (const [param, value] of Object.entries(this.state)) {
+            // Update GPU
+            this.gpu.setParam(param, value);
+
+            // Derive UI ID from parameter name
+            // param: hslHueRed -> hue, red
+            // ID: slider-hsl-hue-red
+
+            // Extract type and color
+            let type = '';
+            let colorCap = '';
+
+            if (param.startsWith('hslHue')) {
+                type = 'hue';
+                colorCap = param.replace('hslHue', '');
+            } else if (param.startsWith('hslSat')) {
+                type = 'sat';
+                colorCap = param.replace('hslSat', '');
+            } else if (param.startsWith('hslLum')) {
+                type = 'lum';
+                colorCap = param.replace('hslLum', '');
+            }
+
+            if (type && colorCap) {
+                const color = colorCap.toLowerCase();
+                const sliderId = `slider-hsl-${type}-${color}`;
+                const valueId = `hsl-${type}-${color}`;
+
+                const slider = document.getElementById(sliderId);
+                const valueDisplay = document.getElementById(valueId);
+
+                if (slider) {
+                    slider.value = value;
+                }
+                if (valueDisplay) {
+                    valueDisplay.textContent = value > 0 ? `+${value}` : value;
+                }
+            }
+        }
     }
 }

@@ -19,6 +19,13 @@ export class HistoryModule {
 
         // Debounce timer
         this._historyDebounceTimer = null;
+
+        // Image change tracking
+        this.lastCapturedImage = null;
+
+        // Image Registry - stores robust image copies by ID
+        // This ensures we can always restore the exact image version needed
+        this.imageRegistry = new Map();
     }
 
     /**
@@ -52,29 +59,71 @@ export class HistoryModule {
         const maskLayerAdjustments = this.masks.layers.map(layer => ({
             id: layer.id,
             name: layer.name,
-            adjustments: { ...layer.adjustments }
+            adjustments: { ...layer.adjustments },
+            strokes: layer.strokes ? [...layer.strokes] : [] // Capture brush strokes
         }));
 
-        // Capture current image state for crop undo
+        // Capture current image state
+        // We use the imageId to track uniqueness
+        const imageId = this.state.imageId;
         let imageDataUrl = null;
-        if (this.state.originalImage) {
-            // Create a canvas to capture the original image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.state.originalImage.width;
-            tempCanvas.height = this.state.originalImage.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.state.originalImage, 0, 0);
-            imageDataUrl = tempCanvas.toDataURL('image/png');
+
+        // If we have an image ID, ensure it's in the registry
+        if (imageId && this.state.originalImage) {
+            if (!this.imageRegistry.has(imageId)) {
+                // Determine if we need to serialize (first time seeing this version)
+                console.log(`📸 Registering new image version: ${imageId}`);
+
+                // Create data URL
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.state.originalImage.width;
+                tempCanvas.height = this.state.originalImage.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(this.state.originalImage, 0, 0);
+                imageDataUrl = tempCanvas.toDataURL('image/png');
+
+                // Save to registry
+                this.imageRegistry.set(imageId, imageDataUrl);
+            }
+        }
+        // Fallback: If no ID (legacy?) or we just want to ensure we have a URL for the record
+        // but for now the registry handles the "data" part.
+        // We leave imageDataUrl as null unless we just generated it.
+        // If we didn't generate it, but we need it for the snapshot (legacy support),
+        // we could pull it from registry:
+        if (!imageDataUrl && imageId && this.imageRegistry.has(imageId)) {
+            imageDataUrl = this.imageRegistry.get(imageId);
         }
 
-        return {
+        // Capture standard state
+        const state = {
+            currentTool: this.state.currentTool, // Capture active tool
             globalAdjustments,
             maskLayerAdjustments,
             activeLayerIndex: this.masks.activeLayerIndex,
-            imageDataUrl,
+            imageId: imageId, // Track by ID instead of raw data URL check by logic
+            // We still store dataUrl in snapshot for potential serialization/export, 
+            // but runtime mostly uses registry
+            imageDataUrl: imageDataUrl,
             imageWidth: this.state.originalImage?.width || 0,
-            imageHeight: this.state.originalImage?.height || 0
+            imageHeight: this.state.originalImage?.height || 0,
+            modules: {}
         };
+
+        // Dynamic Module State Capture
+        // Iterates through all properties of editor ending in 'Module'
+        // checks for getState() method and saves it
+        for (const key of Object.keys(this.editor)) {
+            if (key.endsWith('Module') && this.editor[key] && typeof this.editor[key].getState === 'function') {
+                const moduleName = key.replace('Module', '');
+                const moduleState = this.editor[key].getState();
+                if (moduleState !== null && moduleState !== undefined) {
+                    state.modules[moduleName] = moduleState;
+                }
+            }
+        }
+
+        return state;
     }
 
     /**
@@ -112,37 +161,98 @@ export class HistoryModule {
      * Handles image restoration for crop undo
      */
     restoreState(snapshot) {
+        console.log('🔄 Restoring State...', snapshot);
 
-        // Check if we need to restore a different image (crop or liquify undo)
-        // Always restore if imageDataUrl exists - this handles liquify with same dimensions
-        const needsImageRestore = !!snapshot.imageDataUrl;
+        if (!snapshot) {
+            console.warn('⚠️ Unknown state snapshot');
+            return;
+        }
 
-        if (needsImageRestore) {
-            // Restore the image from data URL
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
+        try {
+            // Check if we need to restore a different image
+            // Logic: If snapshot has an imageId and it differs from current state, we MUST restore.
+            const targetImageId = snapshot.imageId;
+            const currentImageId = this.state.imageId;
 
-                // Reload GPU processor with restored image
-                this.gpu.loadImage(img);
+            const needsImageRestore = (targetImageId && targetImageId !== currentImageId);
 
-                // Clear masks (they don't align with restored image)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.editor.updateLayersList();
+            const executeRestore = () => {
+                // Restore tool mode first to Ensure UI is in sync
+                if (snapshot.currentTool && snapshot.currentTool !== this.state.currentTool) {
+                    console.log(`🔄 Switching tool to ${snapshot.currentTool}`);
+                    this.editor.setMode(snapshot.currentTool);
+                }
 
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+                // Restore active layer
+                if (snapshot.activeLayerIndex !== undefined) {
+                    this.masks.activeLayerIndex = snapshot.activeLayerIndex;
+                    this.editor.updateLayersList();
+                }
 
-                // Then restore adjustments
+                // Restore adjustments
                 this.restoreAdjustments(snapshot);
 
+                // Re-render
+                this.editor.renderWithMask(false);
+                requestAnimationFrame(() => this.editor.renderHistogram());
+
+                console.log('✅ State Restored Successfully');
             };
-            img.src = snapshot.imageDataUrl;
-        } else {
+
+            if (needsImageRestore) {
+                console.log('🖼️ Restoring Source Image from Registry...');
+
+                let restoreUrl = snapshot.imageDataUrl;
+
+                // Try registry first for robustness
+                if (targetImageId && this.imageRegistry.has(targetImageId)) {
+                    restoreUrl = this.imageRegistry.get(targetImageId);
+                }
+
+                if (restoreUrl) {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Update state
+                        this.state.setImage(img);
+
+                        // Force ID to match snapshot so history stays consistent
+                        if (targetImageId) {
+                            this.state.imageId = targetImageId;
+                        }
+
+                        this.lastCapturedImage = img;
+
+                        // Reload GPU processor with restored image
+                        this.editor.gpu.loadImage(img);
+                        this.editor.resetAdjustments(); // Reset to fresh state before applying params
+
+                        // Clear masks (they don't align with restored image)
+                        this.masks.layers = [];
+                        this.masks.activeLayerIndex = -1;
+                        this.editor.updateLayersList();
+
+                        // Update UI
+                        if (this.elements.perfIndicator) {
+                            this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+                        }
+
+                        executeRestore();
+                    };
+                    img.onerror = (e) => {
+                        console.error('❌ Failed to restore image from snapshot', e);
+                        // Try to restore adjustments anyway
+                        executeRestore();
+                    };
+                    img.src = restoreUrl;
+                    return;
+                }
+            }
+
             // No image change, just restore adjustments
-            this.restoreAdjustments(snapshot);
+            executeRestore();
+
+        } catch (e) {
+            console.error('🔥 CRITICAL ERROR during restoreState:', e);
         }
     }
 
@@ -187,12 +297,54 @@ export class HistoryModule {
                             }
                         }
                     }
+
+                    // Restore strokes
+                    if (savedLayer.strokes) {
+                        layer.strokes = [...savedLayer.strokes];
+                        // Replay strokes on GPU
+                        this.masks.replayLayer(layer.id);
+                    }
                 }
             }
         }
 
-        // Re-render (handles both global and mask adjustments)
-        this.editor.renderWithMask(false);
-        requestAnimationFrame(() => this.editor.renderHistogram());
+        // Dynamic Module State Restoration
+        if (snapshot.modules) {
+            for (const [moduleName, moduleState] of Object.entries(snapshot.modules)) {
+                // Reconstruct module key: 'Relighting' -> 'relightingModule'
+                // But editor usually has them as 'relightingModule' or 'camelCaseModule'
+                // The capture captured 'GodRays' -> 'modules.GodRays'
+                // We need to find `editor.godRaysModule` or similar.
+                // Assuming standard naming convention from EditorUI imports:
+                // import { GodRaysModule } ... editor.godRaysModule
+                // But wait, key in modules is 'GodRays'.
+                // So property is likely `godRaysModule`.
+                const camelCaseName = moduleName.charAt(0).toLowerCase() + moduleName.slice(1);
+                // Try likely candidates
+                const targetModule = this.editor[`${camelCaseName}Module`] || this.editor[camelCaseName];
+
+                if (targetModule) {
+                    if (typeof targetModule.setState === 'function') {
+                        try {
+                            console.log(`invoking ${moduleName}.setState()`);
+                            targetModule.setState(moduleState);
+                        } catch (err) {
+                            console.error(`❌ Module '${moduleName}' crashed during restore:`, err);
+                        }
+                    }
+                } else {
+                    // console.warn(`⚠️ Module '${moduleName}' found in history but not loaded in editor.`);
+                }
+            }
+        }
+
+        // Handle Legacy Tone Curves
+        if (snapshot.toneCurves && this.editor.toneCurveModule) {
+            try {
+                this.editor.toneCurveModule.setCurves(snapshot.toneCurves);
+            } catch (err) {
+                console.error('Failed to restore legacy tone curves:', err);
+            }
+        }
     }
 }

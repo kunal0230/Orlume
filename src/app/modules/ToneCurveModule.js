@@ -33,7 +33,8 @@ export class ToneCurveModule {
         this.curveEditor = new ToneCurveEditor(container, {
             width: 268,  // Panel width - padding
             height: 200,
-            onChange: (luts) => this._onCurveChanged(luts)
+            onChange: (luts) => this._onCurveChanged(luts),
+            onInteractionEnd: () => this.editorUI._pushHistoryDebounced()
         });
 
         // Initialize section toggle
@@ -117,6 +118,13 @@ export class ToneCurveModule {
     /**
      * Get current curve state for saving
      */
+    /**
+     * Get current curve state for saving
+     */
+    getState() {
+        return this.getCurveState();
+    }
+
     getCurveState() {
         return this.curveEditor?.getCurves() ?? null;
     }
@@ -124,6 +132,10 @@ export class ToneCurveModule {
     /**
      * Set curve state from saved data
      */
+    setState(state) {
+        this.setCurveState(state);
+    }
+
     setCurveState(curves) {
         if (curves && this.curveEditor) {
             this.curveEditor.setCurves(curves);

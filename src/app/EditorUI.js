@@ -99,6 +99,10 @@ export class EditorUI {
         this._initFileHandling();
         this._initActionButtons();
 
+        // Bind Undo/Redo buttons
+        document.getElementById('btn-undo')?.addEventListener('click', () => this.undo());
+        document.getElementById('btn-redo')?.addEventListener('click', () => this.redo());
+
         // Initialize modular components
         this.zoomPanModule.init();
         this.cropModule.init();

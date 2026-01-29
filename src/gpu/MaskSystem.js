@@ -316,7 +316,8 @@ export class MaskSystem {
             },
             // For radial/gradient types
             shape: null,
-            visible: true
+            visible: true,
+            strokes: [] // History of brush strokes for this layer
         };
 
         this.layers.push(layer);
@@ -329,9 +330,20 @@ export class MaskSystem {
      * Paint a brush stroke at the given coordinates
      * @param {number} x - X coordinate in image pixels
      * @param {number} y - Y coordinate in image pixels
+     * @param {boolean} record - Whether to record this stroke in history
      */
-    paintBrush(x, y) {
+    paintBrush(x, y, record = true) {
         if (this.activeLayerIndex < 0) return;
+
+        // Record stroke
+        if (record) {
+            const layer = this.layers[this.activeLayerIndex];
+            layer.strokes.push({
+                type: 'brush',
+                x, y,
+                settings: { ...this.brushSettings }
+            });
+        }
 
         const layer = this.layers[this.activeLayerIndex];
         if (layer.type !== 'brush') return;
@@ -375,6 +387,7 @@ export class MaskSystem {
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), centerX, centerY);
         gl.uniform1f(gl.getUniformLocation(program, 'u_radius'), radius);
         gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
         gl.uniform1f(gl.getUniformLocation(program, 'u_opacity'), (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100));
 
         // Draw full-screen quad
@@ -389,11 +402,24 @@ export class MaskSystem {
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        // Reset blend state
         gl.blendEquation(gl.FUNC_ADD);
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, width, height);
+    }
+
+    /**
+     * Record a brush dab (internal use or for atomic undo)
+     */
+    _recordBrush(x, y) {
+        if (this.activeLayerIndex < 0) return;
+        const layer = this.layers[this.activeLayerIndex];
+
+        layer.strokes.push({
+            type: 'brush',
+            x, y,
+            settings: { ...this.brushSettings }
+        });
     }
 
     /**
@@ -403,9 +429,20 @@ export class MaskSystem {
      * @param {number} y1 - Start Y in image pixels
      * @param {number} x2 - End X in image pixels
      * @param {number} y2 - End Y in image pixels
+     * @param {boolean} record - Whether to record this stroke in history
      */
-    paintStroke(x1, y1, x2, y2) {
+    paintStroke(x1, y1, x2, y2, record = true) {
         if (this.activeLayerIndex < 0) return;
+
+        // Record stroke
+        if (record) {
+            const layer = this.layers[this.activeLayerIndex];
+            layer.strokes.push({
+                type: 'stroke',
+                x1, y1, x2, y2,
+                settings: { ...this.brushSettings }
+            });
+        }
 
         // Spacing as percentage of brush size (15-25% gives natural results)
         const spacing = Math.max(2, this.brushSettings.size * 0.18);
@@ -413,9 +450,17 @@ export class MaskSystem {
         const dy = y2 - y1;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
+        // If distance is small, just paint a single dot (but don't record if we already recorded a stroke)
+        // Actually, for simplicity in the 'brush' tool handler, 'mousedown' calls paintBrush (single dot),
+        // and 'mousemove' calls paintStroke.
+        // To avoid double recording for the initial dot if paintStroke is called with small dist,
+        // we rely on the caller structure. 
+        // Logic: paintBrush is for single clicks. paintStroke is for drag.
+
         if (dist < 1) {
             // Points are essentially the same, just paint one dab
-            this.paintBrush(x2, y2);
+            // We pass false for record because we already recorded the stroke wrapper above
+            this.paintBrush(x2, y2, false);
             return;
         }
 
@@ -424,8 +469,52 @@ export class MaskSystem {
             const t = i / steps;
             const x = x1 + dx * t;
             const y = y1 + dy * t;
-            this.paintBrush(x, y);
+            this.paintBrush(x, y, false); // Don't record individual interpolated dabs
         }
+    }
+
+    /**
+     * Replay all strokes on a layer to restore its state
+     */
+    replayLayer(layerId) {
+        const layer = this.layers.find(l => l.id === layerId);
+        if (!layer) return;
+
+        // Save current context
+        const prevActiveIndex = this.activeLayerIndex;
+        const prevSettings = { ...this.brushSettings };
+
+        // Set active layer for painting
+        this.activeLayerIndex = this.layers.indexOf(layer);
+
+        // Clear the mask
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // Replay strokes
+        // We need to optimize widespread replays. 
+        // For now, simple iteration.
+        if (layer.strokes && layer.strokes.length > 0) {
+            console.log(`Replaying ${layer.strokes.length} strokes for layer ${layer.name}`);
+
+            for (const op of layer.strokes) {
+                // Restore settings for this stroke
+                this.brushSettings = op.settings;
+
+                if (op.type === 'brush') {
+                    this.paintBrush(op.x, op.y, false);
+                } else if (op.type === 'stroke') {
+                    this.paintStroke(op.x1, op.y1, op.x2, op.y2, false);
+                }
+            }
+        }
+
+        // Restore context
+        this.brushSettings = prevSettings;
+        this.activeLayerIndex = prevActiveIndex;
     }
 
     /**
