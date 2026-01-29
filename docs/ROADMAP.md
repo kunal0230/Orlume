@@ -4,7 +4,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## ✅ Completed Features
+##  Completed Features
 
 ### Core Editor
 - [x] WebGL2 GPU-accelerated canvas rendering
@@ -77,7 +77,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## 🚧 In Progress
+##  In Progress
 
 ### AI Image Enhancer
 - [x] Upscale panel UI
@@ -91,7 +91,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ## 📋 Planned Features
 
-### 🎨 AI & Enhancement (Priority: High)
+###  AI & Enhancement (Priority: High)
 
 #### Image Restoration
 - [ ] AI noise reduction (denoise)
@@ -129,7 +129,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🖌️ Editing Tools (Priority: High)
+###  Editing Tools (Priority: High)
 
 #### Selection Tools
 - [ ] Rectangular selection
@@ -190,7 +190,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🎭 Filters & Effects (Priority: Medium)
+###  Filters & Effects (Priority: Medium)
 
 #### Preset Filters
 - [ ] Cinematic presets
@@ -243,7 +243,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 📐 Transform & Distortion (Priority: Medium)
+###  Transform & Distortion (Priority: Medium)
 
 #### Basic Transform
 - [ ] Scale (resize with aspect lock)
@@ -267,7 +267,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 📁 File & Project Management (Priority: Medium)
+###  File & Project Management (Priority: Medium)
 
 #### File Format Support
 - [ ] RAW file support (CR2, NEF, ARW, etc.)
@@ -313,7 +313,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🔧 UI/UX Improvements (Priority: Medium)
+###  UI/UX Improvements (Priority: Medium)
 
 #### Interface Enhancements
 - [ ] Collapsible panels
@@ -356,7 +356,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🚀 Performance & Technical (Priority: Low)
+###  Performance & Technical (Priority: Low)
 
 #### Rendering
 - [ ] WebGPU support (future)
@@ -382,7 +382,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🔌 Integrations (Priority: Low)
+###  Integrations (Priority: Low)
 
 #### AI Services
 - [ ] Replicate API integration
@@ -404,7 +404,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-### 🎯 Advanced Features (Priority: Future)
+###  Advanced Features (Priority: Future)
 
 #### Video Support
 - [ ] Video import
@@ -432,7 +432,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## 📊 Feature Statistics
+##  Feature Statistics
 
 | Category | Completed | In Progress | Planned |
 |----------|-----------|-------------|---------|
@@ -452,7 +452,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## 🏷️ Version History
+##  Version History
 
 | Version | Date | Features Added |
 |---------|------|----------------|
@@ -464,7 +464,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-## 📝 Notes
+##  Notes
 
 - Features marked with (AI) require external API or local ML server
 - Priority may change based on user feedback
