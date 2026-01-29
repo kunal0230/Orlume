@@ -11,12 +11,17 @@ export class WebGL2Backend extends GPUBackend {
     constructor(canvas) {
         super(canvas);
         this.gl = null;
+        this.gl = null;
         this.programs = new Map();
 
         // Buffers
         this.positionBuffer = null;
         this.texCoordBuffer = null;
         this.texCoordBufferFBO = null;
+
+        // Multi-pass FBOs
+        this.blurFbo1 = null;
+        this.blurFbo2 = null;
     }
 
     /**
@@ -64,7 +69,8 @@ export class WebGL2Backend extends GPUBackend {
         this._createQuadBuffers();
 
         // Compile shaders
-        this._compileShaders();
+        const success = await this._compileShaders();
+        if (!success) return false;
 
         this.isReady = true;
         return true;
@@ -104,7 +110,7 @@ export class WebGL2Backend extends GPUBackend {
     /**
      * Compile GLSL shaders
      */
-    _compileShaders() {
+    async _compileShaders() {
         const vertexShader = `#version 300 es
             in vec2 a_position;
             in vec2 a_texCoord;
@@ -127,329 +133,27 @@ export class WebGL2Backend extends GPUBackend {
             }
         `;
 
-        const developFragment = `#version 300 es
-            precision highp float;
-            in vec2 v_texCoord;
-            uniform sampler2D u_texture;
-            out vec4 fragColor;
-            
-            // Basic adjustments
-            uniform float u_exposure;
-            uniform float u_contrast;
-            uniform float u_highlights;
-            uniform float u_shadows;
-            uniform float u_whites;
-            uniform float u_blacks;
-            uniform float u_temperature;
-            uniform float u_tint;
-            uniform float u_vibrance;
-            uniform float u_saturation;
-            uniform float u_clarity;
-            
-            // HSL Per-Channel (8 colors × 3 channels = 24 uniforms)
-            uniform float u_hslHue[8];    // Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
-            uniform float u_hslSat[8];
-            uniform float u_hslLum[8];
-            
-            // Tone Curve LUT textures
-            uniform bool u_hasCurveLut;
-            uniform bool u_hasRgbCurve;
-            uniform sampler2D u_curveLutTexRgb;
-            uniform bool u_hasRedCurve;
-            uniform sampler2D u_curveLutTexRed;
-            uniform bool u_hasGreenCurve;
-            uniform sampler2D u_curveLutTexGreen;
-            uniform bool u_hasBlueCurve;
-            uniform sampler2D u_curveLutTexBlue;
-            
-            // Color center hues (in degrees out of 360)
-            const float COLOR_HUES[8] = float[8](0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
-            
-            float sRGBtoLinear(float c) {
-                return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4);
-            }
-            
-            float linearToSRGB(float c) {
-                return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
-            }
-            
-            float luminance(vec3 c) {
-                return dot(c, vec3(0.2126, 0.7152, 0.0722));
-            }
-            
-            // RGB to HSL conversion
-            vec3 rgbToHsl(vec3 rgb) {
-                float maxC = max(rgb.r, max(rgb.g, rgb.b));
-                float minC = min(rgb.r, min(rgb.g, rgb.b));
-                float l = (maxC + minC) * 0.5;
-                
-                if (maxC == minC) {
-                    return vec3(0.0, 0.0, l); // Achromatic
-                }
-                
-                float d = maxC - minC;
-                float s = l > 0.5 ? d / (2.0 - maxC - minC) : d / (maxC + minC);
-                
-                float h;
-                if (maxC == rgb.r) {
-                    h = (rgb.g - rgb.b) / d + (rgb.g < rgb.b ? 6.0 : 0.0);
-                } else if (maxC == rgb.g) {
-                    h = (rgb.b - rgb.r) / d + 2.0;
-                } else {
-                    h = (rgb.r - rgb.g) / d + 4.0;
-                }
-                h /= 6.0;
-                
-                return vec3(h * 360.0, s, l); // H in degrees, S and L in 0-1
-            }
-            
-            // Helper function for HSL to RGB (must be outside main function in GLSL)
-            float hueToRgb(float p, float q, float t) {
-                if (t < 0.0) t += 1.0;
-                if (t > 1.0) t -= 1.0;
-                if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
-                if (t < 1.0/2.0) return q;
-                if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
-                return p;
-            }
-            
-            // HSL to RGB conversion
-            vec3 hslToRgb(vec3 hsl) {
-                float h = hsl.x / 360.0; // Convert back to 0-1
-                float s = hsl.y;
-                float l = hsl.z;
-                
-                if (s == 0.0) {
-                    return vec3(l, l, l); // Achromatic
-                }
-                
-                float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
-                float p = 2.0 * l - q;
-                
-                return vec3(
-                    hueToRgb(p, q, h + 1.0/3.0),
-                    hueToRgb(p, q, h),
-                    hueToRgb(p, q, h - 1.0/3.0)
-                );
-            }
-            
-            // Get weight for how much a given hue belongs to a color channel
-            float getColorWeight(float hue, int colorIndex) {
-                float centerHue = COLOR_HUES[colorIndex];
-                float dist = abs(hue - centerHue);
-                
-                // Handle wraparound (e.g., red at 0° and 360°)
-                if (dist > 180.0) dist = 360.0 - dist;
-                
-                // Smooth falloff - each color affects ~45° range
-                float width = 30.0;
-                return smoothstep(width, 0.0, dist);
-            }
-            
-            // Apply per-channel HSL adjustments
-            vec3 applyHSLAdjustments(vec3 hsl) {
-                float hue = hsl.x;
-                float sat = hsl.y;
-                float lum = hsl.z;
-                
-                // Skip if too desaturated (adjustments won't be visible)
-                if (sat < 0.05) return hsl;
-                
-                float totalHueShift = 0.0;
-                float satMultiplier = 1.0;
-                float lumShift = 0.0;
-                float totalWeight = 0.0;
-                
-                for (int i = 0; i < 8; i++) {
-                    float weight = getColorWeight(hue, i);
-                    if (weight > 0.001) {
-                        totalWeight += weight;
-                        
-                        // Hue shift: map -100..+100 to -60°..+60°
-                        totalHueShift += u_hslHue[i] * 0.6 * weight;
-                        
-                        // Saturation: map -100..+100 to 0..2 multiplier
-                        float satAdj = u_hslSat[i] / 100.0;
-                        satMultiplier += satAdj * weight;
-                        
-                        // Luminance: map -100..+100 to -0.5..+0.5
-                        lumShift += (u_hslLum[i] / 100.0) * 0.5 * weight;
-                    }
-                }
-                
-                if (totalWeight > 0.001) {
-                    // Normalize adjustments by total weight
-                    totalHueShift /= totalWeight;
-                    
-                    // Apply hue shift
-                    hsl.x = mod(hue + totalHueShift, 360.0);
-                    
-                    // Apply saturation
-                    hsl.y = clamp(sat * satMultiplier, 0.0, 1.0);
-                    
-                    // Apply luminance
-                    hsl.z = clamp(lum + lumShift, 0.0, 1.0);
-                }
-                
-                return hsl;
-            }
-            
-            float shadowWeight(float L) { return smoothstep(0.3, 0.0, L); }
-            float midtoneWeight(float L) { return exp(-pow((L - 0.5) / 0.25, 2.0) * 0.5); }
-            float highlightWeight(float L) { return smoothstep(0.7, 1.0, L); }
-            
-            float softShoulder(float x, float knee) {
-                if (x <= knee) return x;
-                float over = x - knee;
-                return knee + over / (1.0 + over * 2.0);
-            }
-            
-            vec3 linearRGBtoOKLab(vec3 rgb) {
-                float l = 0.4122214708 * rgb.r + 0.5363325363 * rgb.g + 0.0514459929 * rgb.b;
-                float m = 0.2119034982 * rgb.r + 0.6806995451 * rgb.g + 0.1073969566 * rgb.b;
-                float s = 0.0883024619 * rgb.r + 0.2817188376 * rgb.g + 0.6299787005 * rgb.b;
-                l = pow(max(0.0, l), 1.0/3.0);
-                m = pow(max(0.0, m), 1.0/3.0);
-                s = pow(max(0.0, s), 1.0/3.0);
-                return vec3(
-                    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-                    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-                    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
-                );
-            }
-            
-            vec3 OKLabToLinearRGB(vec3 lab) {
-                float l = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
-                float m = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
-                float s = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
-                l = l * l * l; m = m * m * m; s = s * s * s;
-                return vec3(
-                    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-                    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-                    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-                );
-            }
-            
-            void main() {
-                vec4 pixel = texture(u_texture, v_texCoord);
-                vec3 srgb = pixel.rgb;
-                
-                // === STEP 1: Apply HSL per-channel adjustments (in sRGB/perceptual space) ===
-                bool hasHSL = false;
-                for (int i = 0; i < 8; i++) {
-                    if (u_hslHue[i] != 0.0 || u_hslSat[i] != 0.0 || u_hslLum[i] != 0.0) {
-                        hasHSL = true;
-                        break;
-                    }
-                }
-                
-                if (hasHSL) {
-                    vec3 hsl = rgbToHsl(srgb);
-                    hsl = applyHSLAdjustments(hsl);
-                    srgb = hslToRgb(hsl);
-                }
-                
-                // === STEP 2: Convert to linear for remaining adjustments ===
-                vec3 linear = vec3(sRGBtoLinear(srgb.r), sRGBtoLinear(srgb.g), sRGBtoLinear(srgb.b));
-                
-                float L = luminance(linear);
-                float midW = midtoneWeight(L);
-                float shadowW = shadowWeight(L);
-                float highlightW = highlightWeight(L);
-                
-                // Exposure
-                if (u_exposure != 0.0) {
-                    float gain = pow(2.0, u_exposure);
-                    float effectiveGain = 1.0 + (gain - 1.0) * (0.5 + midW * 0.5);
-                    linear *= effectiveGain;
-                    if (u_exposure > 0.0) {
-                        float newL = luminance(linear);
-                        if (newL > 0.7) linear *= softShoulder(newL, 0.7) / max(newL, 0.001);
-                    }
-                }
-                
-                L = luminance(linear);
-                midW = midtoneWeight(L);
-                shadowW = shadowWeight(L);
-                highlightW = highlightWeight(L);
-                
-                // Contrast
-                if (u_contrast != 0.0) {
-                    float k = u_contrast > 0.0 ? pow(abs(u_contrast), 0.7) * 3.5 : -pow(abs(u_contrast), 0.7) * 0.6;
-                    float effectiveK = k * (0.3 + midW * 0.7);
-                    float delta = L - 0.18;
-                    float newL;
-                    if (u_contrast > 0.0) {
-                        float compressed = delta / (1.0 + abs(delta) * abs(effectiveK));
-                        newL = 0.18 + compressed * (1.0 + abs(effectiveK) * 0.5);
-                        if (shadowW > 0.3) newL = L + (newL - L) * (1.0 - shadowW * 0.5);
-                        if (highlightW > 0.3) newL = L + (newL - L) * (1.0 - highlightW * 0.4);
-                    } else {
-                        newL = L + (0.18 - L) * abs(effectiveK);
-                    }
-                    linear *= max(newL, 0.0) / max(L, 0.001);
-                }
-                
-                // Highlights/Shadows
-                L = luminance(linear);
-                if (u_highlights != 0.0) linear *= 1.0 + u_highlights * highlightWeight(L) * 0.5;
-                L = luminance(linear);
-                if (u_shadows != 0.0) linear *= 1.0 + u_shadows * shadowWeight(L) * 0.5;
-                
-                // Whites/Blacks
-                L = luminance(linear);
-                if (u_whites != 0.0) linear *= 1.0 + u_whites * smoothstep(0.85, 1.0, L) * 0.4;
-                L = luminance(linear);
-                if (u_blacks != 0.0) linear *= 1.0 + u_blacks * smoothstep(0.15, 0.0, L) * 0.4;
-                
-                // White Balance
-                if (u_temperature != 0.0 || u_tint != 0.0) {
-                    linear.r *= 1.0 + u_temperature * 0.25;
-                    linear.b *= 1.0 - u_temperature * 0.25;
-                    linear.g *= 1.0 - u_tint * 0.15;
-                    linear.r *= 1.0 + u_tint * 0.08;
-                }
-                
-                // Vibrance/Saturation
-                if (u_vibrance != 0.0 || u_saturation != 0.0) {
-                    vec3 lab = linearRGBtoOKLab(linear);
-                    float chroma = length(lab.yz);
-                    if (u_vibrance != 0.0) lab.yz *= 1.0 + u_vibrance * (1.0 - min(1.0, chroma / 0.2)) * 0.5;
-                    if (u_saturation != 0.0) lab.yz *= 1.0 + u_saturation;
-                    linear = max(OKLabToLinearRGB(lab), vec3(0.0));
-                }
-                
-                // Convert to sRGB
-                vec3 finalSrgb = vec3(linearToSRGB(clamp(linear.r, 0.0, 1.0)), linearToSRGB(clamp(linear.g, 0.0, 1.0)), linearToSRGB(clamp(linear.b, 0.0, 1.0)));
-                
-                // Apply Tone Curve (in sRGB space, after all adjustments)
-                if (u_hasCurveLut) {
-                    // RGB composite curve
-                    if (u_hasRgbCurve) {
-                        float rVal = texture(u_curveLutTexRgb, vec2(finalSrgb.r, 0.5)).r;
-                        float gVal = texture(u_curveLutTexRgb, vec2(finalSrgb.g, 0.5)).r;
-                        float bVal = texture(u_curveLutTexRgb, vec2(finalSrgb.b, 0.5)).r;
-                        finalSrgb = vec3(rVal, gVal, bVal);
-                    }
-                    
-                    // Per-channel curves
-                    if (u_hasRedCurve) {
-                        finalSrgb.r = texture(u_curveLutTexRed, vec2(finalSrgb.r, 0.5)).r;
-                    }
-                    if (u_hasGreenCurve) {
-                        finalSrgb.g = texture(u_curveLutTexGreen, vec2(finalSrgb.g, 0.5)).r;
-                    }
-                    if (u_hasBlueCurve) {
-                        finalSrgb.b = texture(u_curveLutTexBlue, vec2(finalSrgb.b, 0.5)).r;
-                    }
-                }
-                
-                fragColor = vec4(clamp(finalSrgb, 0.0, 1.0), pixel.a);
-            }
-        `;
+        // Load develop and blur shaders from external file
+        let developFragment, blurFragment;
+        try {
+            developFragment = await this._loadShader('develop.glsl');
+            blurFragment = await this._loadShader('blur.glsl');
+        } catch (e) {
+            console.error('Failed to load shaders:', e);
+            return false;
+        }
 
         this.programs.set('passthrough', this._createProgram(vertexShader, passthroughFragment));
         this.programs.set('develop', this._createProgram(vertexShader, developFragment));
+        this.programs.set('blur', this._createProgram(vertexShader, blurFragment));
+
+        // Cache blur uniform locations
+        const blur = this.programs.get('blur');
+        if (blur) {
+            const gl = this.gl;
+            blur.u_direction = gl.getUniformLocation(blur, 'u_direction');
+            blur.u_resolution = gl.getUniformLocation(blur, 'u_resolution');
+        }
 
         // Cache develop uniform locations
         const dev = this.programs.get('develop');
@@ -466,6 +170,9 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_vibrance = gl.getUniformLocation(dev, 'u_vibrance');
             dev.u_saturation = gl.getUniformLocation(dev, 'u_saturation');
             dev.u_clarity = gl.getUniformLocation(dev, 'u_clarity');
+            dev.u_structure = gl.getUniformLocation(dev, 'u_structure');
+            dev.u_dehaze = gl.getUniformLocation(dev, 'u_dehaze');
+            dev.u_blurTexture = gl.getUniformLocation(dev, 'u_blurTexture');
 
             // HSL per-channel uniforms (arrays of 8 floats each)
             dev.u_hslHue = gl.getUniformLocation(dev, 'u_hslHue');
@@ -484,6 +191,36 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_curveLutTexBlue = gl.getUniformLocation(dev, 'u_curveLutTexBlue');
         }
 
+        return true;
+    }
+
+    /**
+     * Load shader from URL and handle includes
+     */
+    async _loadShader(name) {
+        const response = await fetch(`src/gpu/shaders/${name}?t=${Date.now()}`);
+        if (!response.ok) throw new Error(`Failed to fetch ${name}`);
+        let source = await response.text();
+
+        // Handle #include <path>
+        // Note: Simple regex replacement, doesn't handle nested includes recursively yet
+        // but supports multiple includes in the main file.
+        const includeRegex = /#include\s+<(.+)>/g;
+        const matches = [...source.matchAll(includeRegex)];
+
+        for (const match of matches) {
+            const includePath = match[1];
+            try {
+                const res = await fetch(`src/gpu/shaders/${includePath}?t=${Date.now()}`);
+                if (!res.ok) throw new Error(`Failed to fetch include ${includePath}`);
+                const includeSrc = await res.text();
+                source = source.replace(match[0], includeSrc);
+            } catch (e) {
+                console.error(`Error resolving include ${includePath}:`, e);
+            }
+        }
+
+        return source;
     }
 
     _compileShader(type, source) {
@@ -570,14 +307,79 @@ export class WebGL2Backend extends GPUBackend {
     }
 
     /**
+     * Helper to manage blur FBOs
+     */
+    _ensureBlurFbos(width, height) {
+        if (!this.blurFbo1 || this.blurFbo1.texture.width !== width || this.blurFbo1.texture.height !== height) {
+            this.deleteFramebuffer(this.blurFbo1);
+            this.deleteFramebuffer(this.blurFbo2);
+            this.blurFbo1 = this.createFramebuffer(width, height);
+            this.blurFbo2 = this.createFramebuffer(width, height);
+        }
+    }
+
+    /**
+     * Render a blur pass
+     */
+    _renderBlurPass(inputTexture, outputFbo, direction) {
+        const gl = this.gl;
+        const program = this.programs.get('blur');
+        gl.useProgram(program);
+
+        gl.uniform2f(program.u_direction, direction[0], direction[1]);
+        gl.uniform2f(program.u_resolution, this.width, this.height);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, inputTexture._internal);
+        gl.uniform1i(program.u_texture, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, outputFbo._internal);
+        gl.viewport(0, 0, this.width, this.height);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    /**
      * Render develop
      */
     renderDevelop(inputTexture, uniforms, target = null) {
         const gl = this.gl;
+
+        // === MULTI-PASS PRE-PROCESSING ===
+        let blurTexture = inputTexture; // Default fallback if no blur needed
+
+        if ((uniforms.clarity && uniforms.clarity !== 0) || (uniforms.structure && uniforms.structure !== 0)) {
+            console.log('[WebGL2Backend] Triggering blur pass. Clarity:', uniforms.clarity, 'Structure:', uniforms.structure);
+            this._ensureBlurFbos(this.width, this.height);
+
+            // Pass 1: Horizontal Blur (Input -> FBO1)
+            this._renderBlurPass(inputTexture, this.blurFbo1, [1.0, 0.0]);
+
+            // Pass 2: Vertical Blur (FBO1 -> FBO2)
+            this._renderBlurPass(this.blurFbo1.texture, this.blurFbo2, [0.0, 1.0]);
+
+            blurTexture = this.blurFbo2.texture;
+        } else {
+            console.log('[WebGL2Backend] Skipping blur pass.');
+        }
+
+        // === FINAL PASS ===
         const program = this.programs.get('develop');
         if (!program) return;
 
         gl.useProgram(program);
+
+        // Bind Blur Texture to Unit 5 (0-4 are used by main and LUTS)
+        gl.activeTexture(gl.TEXTURE5);
+        gl.bindTexture(gl.TEXTURE_2D, blurTexture._internal);
+        gl.uniform1i(program.u_blurTexture, 5);
 
         // Set uniforms
         gl.uniform1f(program.u_exposure, uniforms.exposure || 0);
@@ -591,6 +393,9 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_vibrance, (uniforms.vibrance || 0) / 100);
         gl.uniform1f(program.u_saturation, (uniforms.saturation || 0) / 100);
         gl.uniform1f(program.u_clarity, (uniforms.clarity || 0) / 100);
+        gl.uniform1f(program.u_structure, (uniforms.structure || 0) / 100);
+        gl.uniform1f(program.u_dehaze, (uniforms.dehaze || 0) / 100);
+        console.log('[WebGL2Backend] Setting uniforms - Clarity:', (uniforms.clarity || 0) / 100, 'Structure:', (uniforms.structure || 0) / 100);
 
         // HSL per-channel uniforms (arrays of 8 floats)
         // Order: Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta

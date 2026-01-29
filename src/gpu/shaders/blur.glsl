@@ -1,0 +1,26 @@
+#version 300 es
+precision highp float;
+
+in vec2 v_texCoord;
+uniform sampler2D u_texture;
+uniform vec2 u_direction; // (1.0, 0.0) for Horizontal, (0.0, 1.0) for Vertical
+uniform vec2 u_resolution; // Width, Height in pixels
+
+out vec4 fragColor;
+
+// 9-tap Gaussian Blur (Sigma approx 2.0)
+// Weights derived from standard normal distribution
+const float weight[5] = float[](0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+
+void main() {
+    vec2 tex_offset = 1.0 / u_resolution; // Size of single texel
+    vec3 result = texture(u_texture, v_texCoord).rgb * weight[0]; // Current fragment contribution (center)
+    
+    for(int i = 1; i < 5; ++i) {
+        vec2 offset = vec2(float(i)) * tex_offset * u_direction;
+        result += texture(u_texture, v_texCoord + offset).rgb * weight[i];
+        result += texture(u_texture, v_texCoord - offset).rgb * weight[i];
+    }
+    
+    fragColor = vec4(result, 1.0);
+}
