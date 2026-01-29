@@ -31,6 +31,7 @@ export class EditorUI {
         // Slider lists
         this.globalSliders = [
             'exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks',
+            'structure', 'clarity', 'dehaze',
             'temperature', 'tint', 'vibrance', 'saturation'
         ];
 
@@ -374,10 +375,14 @@ export class EditorUI {
         this.globalSliders.forEach(name => {
             const slider = document.getElementById(`slider-${name}`);
             const valueDisplay = document.getElementById(`val-${name}`);
-            if (!slider) return;
+            if (!slider) {
+                console.warn(`[EditorUI] Slider not found: slider-${name}`);
+                return;
+            }
 
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
+                console.log(`[EditorUI] Slider input: ${name} = ${value}`);
                 valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
                 this.state.setAdjustment(name, value);
 

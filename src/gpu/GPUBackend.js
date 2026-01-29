@@ -170,13 +170,13 @@ export class GPUBackend {
  */
 export async function createBestBackend(canvas) {
     // Try WebGPU first (now that MaskSystemWebGPU exists)
-    const { WebGPUBackend } = await import('./WebGPUBackend.js');
-    if (await WebGPUBackend.isSupported()) {
-        const backend = new WebGPUBackend(canvas);
-        if (await backend.init()) {
-            return backend;
-        }
-    }
+    // const { WebGPUBackend } = await import('./WebGPUBackend.js');
+    // if (await WebGPUBackend.isSupported()) {
+    //     const backend = new WebGPUBackend(canvas);
+    //     if (await backend.init()) {
+    //         return backend;
+    //     }
+    // }
 
     // Fall back to WebGL2
     const { WebGL2Backend } = await import('./WebGL2Backend.js');

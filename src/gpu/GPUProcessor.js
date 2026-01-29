@@ -32,7 +32,8 @@ export class GPUProcessor {
             vibrance: 0,
             saturation: 0,
             clarity: 0,
-            texture: 0,
+            structure: 0,
+            dehaze: 0,
 
             // HSL Per-Channel Adjustments (8 colors × 3 channels = 24 params)
             // Hue shifts (-100 to +100 = -180° to +180°)
@@ -163,6 +164,7 @@ export class GPUProcessor {
      * Update adjustment parameter
      */
     setParam(name, value) {
+        console.log(`[GPUProcessor] setParam: ${name} = ${value}`);
         if (name in this.params) {
             this.params[name] = value;
             this.render();
@@ -229,6 +231,7 @@ export class GPUProcessor {
      */
     render() {
         if (!this.inputTexture || !this.backend?.isReady) return;
+        console.log('[GPUProcessor] Rendering with backend:', this.backend.constructor.name);
         this.backend.renderDevelop(this.inputTexture, this.params);
     }
 
