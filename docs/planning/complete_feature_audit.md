@@ -103,7 +103,7 @@
 
 ---
 
-## 🚀50 NEW PRACTICAL FEATURES TO ADD
+## 50 NEW PRACTICAL FEATURES TO ADD
 
 ### Image Processing Essentials (10 features)
 
