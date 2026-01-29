@@ -6,6 +6,9 @@
  */
 
 import { GPUBackend } from './GPUBackend.js';
+import developShaderSrc from './shaders/develop.glsl?raw';
+import blurShaderSrc from './shaders/blur.glsl?raw';
+import commonShaderSrc from './shaders/modules/common.glsl?raw';
 
 export class WebGL2Backend extends GPUBackend {
     constructor(canvas) {
@@ -195,12 +198,18 @@ export class WebGL2Backend extends GPUBackend {
     }
 
     /**
-     * Load shader from URL and handle includes
+     * Load shader from imported strings and handle includes
      */
     async _loadShader(name) {
-        const response = await fetch(`src/gpu/shaders/${name}?t=${Date.now()}`);
-        if (!response.ok) throw new Error(`Failed to fetch ${name}`);
-        let source = await response.text();
+        // Map names to imported sources
+        const shaderMap = {
+            'develop.glsl': developShaderSrc,
+            'blur.glsl': blurShaderSrc,
+            'modules/common.glsl': commonShaderSrc
+        };
+
+        let source = shaderMap[name];
+        if (!source) throw new Error(`Shader not found: ${name}`);
 
         // Handle #include <path>
         // Note: Simple regex replacement, doesn't handle nested includes recursively yet
@@ -210,14 +219,13 @@ export class WebGL2Backend extends GPUBackend {
 
         for (const match of matches) {
             const includePath = match[1];
-            try {
-                const res = await fetch(`src/gpu/shaders/${includePath}?t=${Date.now()}`);
-                if (!res.ok) throw new Error(`Failed to fetch include ${includePath}`);
-                const includeSrc = await res.text();
-                source = source.replace(match[0], includeSrc);
-            } catch (e) {
-                console.error(`Error resolving include ${includePath}:`, e);
+            // Resolve include from map
+            const includeSrc = shaderMap[includePath];
+            if (!includeSrc) {
+                console.error(`Include not found: ${includePath}`);
+                continue;
             }
+            source = source.replace(match[0], includeSrc);
         }
 
         return source;
