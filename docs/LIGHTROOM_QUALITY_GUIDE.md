@@ -1,13 +1,13 @@
 # Lightroom-Quality Core Tools - Implementation Guide
 
-> **Version:** 1.0  
-> **Status:**  In Progress  
-> **Last Updated:** 2026-01-27  
+> **Version:** 1.1  
+> **Status:**  Phase 1 Complete (Clarity, Texture, Dehaze Implemented)  
+> **Last Updated:** 2026-01-30  
 > **Goal:** Match or exceed Adobe Lightroom Classic's Develop module quality
 
 ---
 
-##  Progress Tracker
+## Progress Tracker
 
 ### Develop Panel
 
@@ -23,9 +23,9 @@
 | Tint | ✅ Done | - | Works |
 | Vibrance | 🔲 Upgrade | P2 | Skin protection |
 | Saturation | ✅ Done | - | OKLAB-based |
-| **Clarity** | 🔲 New | P0 | High-pass local contrast |
-| **Texture** | 🔲 New | P0 | Micro-contrast |
-| **Dehaze** | 🔲 New | P0 | Dark channel prior |
+| **Clarity** | ✅ Done | P0 | Frequency Separation implemented |
+| **Texture** | ✅ Done | P0 | Implemented via `u_structure` |
+| **Dehaze** | ✅ Done | P0 | Dark channel approximation |
 
 ### HSL Panel
 
@@ -70,17 +70,17 @@
 
 ---
 
-##  Implementation Priority
+## Implementation Priority
 
-### Phase 1: Core Develop (Week 1)
+### Phase 1: Core Develop (Done)
 
-- [ ] Clarity effect (2-pass GPU processing)
-- [ ] Texture effect (micro-contrast)
-- [ ] Dehaze (dark channel prior algorithm)
+- [x] Clarity effect (2-pass GPU processing)
+- [x] Texture effect (micro-contrast as `u_structure`)
+- [x] Dehaze (approximation)
 - [ ] Improved Highlights/Shadows recovery
 - [ ] Improved Whites/Blacks point control
 
-### Phase 2: Color & Effects (Week 2)
+### Phase 2: Color & Effects (Next)
 
 - [ ] Color Grading (3-way wheels) - shader
 - [ ] Color Grading - UI components
@@ -88,7 +88,7 @@
 - [ ] Film Grain effect
 - [ ] LUT support (.cube loading)
 
-### Phase 3: Polish (Week 3)
+### Phase 3: Polish (Future)
 
 - [ ] Tone Curve parametric mode
 - [ ] HSL color picker
@@ -98,7 +98,7 @@
 
 ---
 
-##  Technical Implementation
+## Technical Implementation
 
 ### New Uniforms Required
 
@@ -139,7 +139,7 @@ Pass 2: Develop shader with clarity using blurTexture
 
 ---
 
-##  Files to Create
+## Files to Create
 
 | File | Purpose |
 |------|---------|
@@ -150,7 +150,7 @@ Pass 2: Develop shader with clarity using blurTexture
 | `src/components/ColorWheel.js` | Color grading wheel UI |
 | `src/presets/FilterPresets.js` | Built-in filter definitions |
 
-##  Files to Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
@@ -162,7 +162,7 @@ Pass 2: Develop shader with clarity using blurTexture
 
 ---
 
-##  Quality Benchmarks
+## Quality Benchmarks
 
 After implementation, test these scenarios:
 
@@ -179,7 +179,7 @@ After implementation, test these scenarios:
 
 ---
 
-##  Reference Materials
+## Reference Materials
 
 ### Color Science
 
@@ -199,7 +199,7 @@ After implementation, test these scenarios:
 
 ---
 
-##  Change Log
+## Change Log
 
 | Date | Version | Changes |
 |------|---------|---------|

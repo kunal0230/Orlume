@@ -135,55 +135,119 @@ void main() {
     // === STEP 2: Convert to linear for remaining adjustments ===
     vec3 linear = vec3(sRGBtoLinear(srgb.r), sRGBtoLinear(srgb.g), sRGBtoLinear(srgb.b));
     
-    float L = luminance(linear);
-    float midW = midtoneWeight(L);
-    float shadowW = shadowWeight(L);
-    float highlightW = highlightWeight(L);
-    
-    // Exposure
+    // --- 1. EXPOSURE (Gain) ---
+    // Simple photometric exposure
     if (u_exposure != 0.0) {
         float gain = pow(2.0, u_exposure);
-        float effectiveGain = 1.0 + (gain - 1.0) * (0.5 + midW * 0.5);
-        linear *= effectiveGain;
-        if (u_exposure > 0.0) {
-            float newL = luminance(linear);
-            if (newL > 0.7) linear *= softShoulder(newL, 0.7) / max(newL, 0.001);
-        }
+        linear *= gain;
     }
-    
-    L = luminance(linear);
-    midW = midtoneWeight(L);
-    shadowW = shadowWeight(L);
-    highlightW = highlightWeight(L);
-    
-    // Contrast
+
+    // --- 2. CONTRAST (Filmic S-Curve) ---
+    // Best applied in Perceptual/Gamma space to match human vision
     if (u_contrast != 0.0) {
-        float k = u_contrast > 0.0 ? pow(abs(u_contrast), 0.7) * 3.5 : -pow(abs(u_contrast), 0.7) * 0.6;
-        float effectiveK = k * (0.3 + midW * 0.7);
-        float delta = L - 0.18;
-        float newL;
-        if (u_contrast > 0.0) {
-            float compressed = delta / (1.0 + abs(delta) * abs(effectiveK));
-            newL = 0.18 + compressed * (1.0 + abs(effectiveK) * 0.5);
-            if (shadowW > 0.3) newL = L + (newL - L) * (1.0 - shadowW * 0.5);
-            if (highlightW > 0.3) newL = L + (newL - L) * (1.0 - highlightW * 0.4);
+        // Convert to Log/Gamma approximation for contrast
+        vec3 logC = pow(max(linear, 0.0001), vec3(0.5)); // Approx Gamma 2.0
+        
+        // S-Curve centered at mid-gray (0.5 in Log space approx)
+        // Fix: Invert logic. 
+        // Higher contrast -> push away from 0.5 -> power < 1.0
+        // Lower contrast -> pull towards 0.5 -> power > 1.0
+        float c = 1.0 - u_contrast * 0.5; 
+        
+        // Polynomial S-Curve: x < 0.5 ? 0.5 * (2x)^c : 1.0 - 0.5 * (2(1-x))^c
+        // Check for separate R/G/B to avoid saturation shifts? No, coupled is standard.
+        vec3 centered = logC - 0.5;
+        vec3 signs = sign(centered);
+        vec3 mag = abs(centered) * 2.0; // 0..1 range
+        
+        // Apply power curve
+        vec3 modified = 0.5 * signs * pow(max(mag, 0.0), vec3(c));
+        logC = modified + 0.5;
+        
+        // Back to Linear
+        linear = pow(max(logC, 0.0), vec3(2.0));
+    }
+
+    // --- 3. HIGHLIGHTS & SHADOWS (Tone Mapping) ---
+    // Luma-based to protect color ratios
+    float luma = luminance(linear);
+    
+    // Highlights: Reinhard-style compression for recovery, Gamma roll-off for boost
+    if (u_highlights != 0.0) {
+        float target = luma;
+        if (u_highlights < 0.0) {
+             // Recover: Compress highlights > 0.5
+             // Formula: L_new = L / (1 + strength * max(0, L - threshold))
+             float strength = -u_highlights * 2.0; // Scale 
+             float threshold = 0.5; // Only affect highs
+             float overshoot = max(0.0, luma - threshold);
+             float compressed = luma / (1.0 + strength * overshoot);
+             // Blend based on luminance to ensure continuity
+             target = mix(luma, compressed, smoothstep(threshold, 1.0, luma) * 0.8);
         } else {
-            newL = L + (0.18 - L) * abs(effectiveK);
+             // Boost: Soft shoulder push
+             float strength = u_highlights * 0.5;
+             target = luma + strength * smoothstep(0.5, 1.0, luma) * (1.0 - luma);
         }
-        linear *= max(newL, 0.0) / max(L, 0.001);
+        
+        // Apply scaling to RGB
+        linear *= (target / max(0.0001, luma));
     }
     
-    // Highlights/Shadows
-    L = luminance(linear);
-    if (u_highlights != 0.0) linear *= 1.0 + u_highlights * highlightWeight(L) * 0.5;
-    L = luminance(linear);
-    if (u_shadows != 0.0) linear *= 1.0 + u_shadows * shadowWeight(L) * 0.5;
-    
-    // Whites/Blacks
-    L = luminance(linear);
-    if (u_whites != 0.0) linear *= 1.0 + u_whites * smoothstep(0.85, 1.0, L) * 0.4;
-    L = luminance(linear);
-    if (u_blacks != 0.0) linear *= 1.0 + u_blacks * smoothstep(0.15, 0.0, L) * 0.4;
+    // Shadows: Lift deep tones without lifting black point
+    if (u_shadows != 0.0) {
+         float target = luma;
+         if (u_shadows > 0.0) {
+             // Lift: Gamma-like lift constrained to shadows
+             // Target Zone: 0.0 - 0.4
+             float strength = u_shadows * 0.5;
+             float mask = 1.0 - smoothstep(0.0, 0.5, luma);
+             // Simple lift: L^(1-s)
+             float lifted = pow(luma, 1.0 - strength);
+             target = mix(luma, lifted, mask);
+         } else {
+             // Crush: Gamma-like drop
+             float strength = -u_shadows * 0.5;
+             float mask = 1.0 - smoothstep(0.0, 0.5, luma);
+             float crushed = pow(luma, 1.0 + strength);
+             target = mix(luma, crushed, mask);
+         }
+         linear *= (target / max(0.0001, luma));
+    }
+
+    // --- 4. WHITES & BLACKS (Dynamic Range Remapping) ---
+    // Soft Clip: Shift endpoints
+    if (u_whites != 0.0 || u_blacks != 0.0) {
+        // Concept: Map Linear [0..1] range to new endpoints [Black..White]
+        // Whites: Affects clipping point (1.0)
+        // Blacks: Affects black point (0.0)
+        
+        // Calculate remapping curve
+        float whitePt = 1.0;
+        float blackPt = 0.0;
+        
+        if (u_whites > 0.0) {
+             // Push whites up (clip later): divide by (1 - w)
+             linear /= max(0.01, 1.0 - u_whites * 0.2); // Gentle scaling
+        } else if (u_whites < 0.0) {
+             // Pull whites down (grey out): multiply
+             // Smart clipping: Soft knee at top
+             float knee = 0.8 + u_whites * 0.2; // 0.6 to 0.8
+             if (luma > knee) {
+                  float over = luma - knee;
+                  float compression = 1.0 / (1.0 + abs(u_whites) * 5.0 * over);
+                  linear *= compression;
+             }
+        }
+        
+        if (u_blacks != 0.0) {
+             // Offset black point
+             float offset = u_blacks * 0.1; // +/- 0.1 shift
+             linear += offset;
+             // Ensure we don't invert (max(0)) but allow crushing
+             linear = max(vec3(0.0), linear); 
+        }
+    }
     
     // White Balance
     if (u_temperature != 0.0 || u_tint != 0.0) {
