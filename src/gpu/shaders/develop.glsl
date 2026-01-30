@@ -36,7 +36,22 @@ uniform bool u_hasBlueCurve;
 uniform sampler2D u_curveLutTexBlue;
 
 // Multi-pass textures
+// Multi-pass textures
 uniform sampler2D u_blurTexture;
+
+// Bradford Chromatic Adaptation Matrices (Column-Major for GLSL)
+// M_BFD = [0.8951, 0.2664, -0.1614; -0.7502, 1.7135, 0.0367; 0.0389, -0.0685, 1.0296]
+const mat3 RGB_TO_LMS_BRADFORD = mat3(
+    0.8951, -0.7502, 0.0389,
+    0.2664,  1.7135, -0.0685,
+   -0.1614,  0.0367,  1.0296
+);
+
+const mat3 LMS_TO_RGB_BRADFORD = mat3(
+    0.98699, 0.43231, -0.00853,
+   -0.14705, 0.51836,  0.04004,
+    0.15996, 0.04929,  0.96849
+);
 
 #include <modules/common.glsl>
 
@@ -249,44 +264,61 @@ void main() {
         }
     }
     
-    // White Balance
+    // --- 5. WHITE BALANCE (Bradford Adaptation) ---
     if (u_temperature != 0.0 || u_tint != 0.0) {
-        linear.r *= 1.0 + u_temperature * 0.25;
-        linear.b *= 1.0 - u_temperature * 0.25;
-        linear.g *= 1.0 - u_tint * 0.15;
-        linear.r *= 1.0 + u_tint * 0.08;
-    }
+        // Temperature: LMS Space Adaptation
+        if (u_temperature != 0.0) {
+            vec3 lms = RGB_TO_LMS_BRADFORD * linear;
+            // Warm (+): Boost Red (L), Cut Blue (S)
+            // Cool (-): Cut Red (L), Boost Blue (S)
+            // Very strong temperature boost (0.5x scaling)
+            float temp = u_temperature * 0.5; 
+            lms.x *= 1.0 + temp;      
+            lms.z *= 1.0 - temp;      
+            linear = LMS_TO_RGB_BRADFORD * lms;
+        }
 
-    // Dehaze (Approximation)
-    if (u_dehaze != 0.0) {
-        float dehaze = u_dehaze * 0.5; // Scale for usability
-        
-        // 1. Airlight Removal (darken shadows/blacks)
-        // If removing haze (positive), we subtract; if adding haze (negative), we add.
-        linear -= vec3(0.05 * dehaze);
-        
-        // 2. Contrast/Gamma compensation
-        // Removing haze needs more contrast.
-        float power = 1.0 + dehaze * 0.5;
-        linear = pow(max(linear, vec3(0.0)), vec3(power));
-        
-        // 3. Saturation boost (removing haze reveals color)
-        if (dehaze > 0.0) {
-            vec3 luma = vec3(luminance(linear));
-            linear = mix(luma, linear, 1.0 + dehaze * 0.4);
-        } else {
-            // Adding haze washes out color
-            vec3 luma = vec3(luminance(linear));
-            linear = mix(luma, linear, 1.0 + dehaze * 0.3); // dehaze is negative here
+        // Tint: Green/Magenta (Simple Green Channel scaling applied in RGB)
+        if (u_tint != 0.0) {
+            // Very strong tint boost (0.5x scaling)
+            float tint = u_tint * 0.5;
+            linear.g *= 1.0 - tint; // +Tint = Magenta (Reduce Green), -Tint = Green
         }
     }
     
-    // Vibrance/Saturation
+    // --- 6. VIBRANCE / SATURATION (Smart Skin Protection) ---
     if (u_vibrance != 0.0 || u_saturation != 0.0) {
         vec3 lab = linearRGBtoOKLab(linear);
-        float chroma = length(lab.yz);
-        if (u_vibrance != 0.0) lab.yz *= 1.0 + u_vibrance * (1.0 - min(1.0, chroma / 0.2)) * 0.5;
-        if (u_saturation != 0.0) lab.yz *= 1.0 + u_saturation;
+        float sat = length(lab.yz);
+        
+        // Vibrance: Smart Saturation
+        if (u_vibrance != 0.0) {
+            // 1. Hue Detection (Skin Protection)
+            float hue = atan(lab.z, lab.y); // Returns -PI to PI
+            
+            // Skin Tone Target: ~40 degrees (0.7 rad) 
+            float skinHue = 0.7; 
+            float hueDist = abs(hue - skinHue);
+            float skinWeight = exp(-pow(hueDist * 2.5, 2.0)); 
+            
+            // 2. Saturation Mask (Pop low sat, protect high sat)
+            float curSatMask = 1.0 - smoothstep(0.1, 0.6, sat); 
+            
+            // Combined Mask: 
+            // Fix: Reduced skin protection from 0.7 to 0.5 to allow some warmth
+            float protection = 0.5 * skinWeight; 
+            float mask = curSatMask * (1.0 - protection);
+            
+            // Fix: Increased multiplier from 0.5 to 1.2
+            lab.yz *= 1.0 + u_vibrance * 1.2 * mask;
+        }
+        
+        // Saturation: Global boost
+        if (u_saturation != 0.0) {
+            lab.yz *= 1.0 + u_saturation;
+        }
+        
+        // Restore
         linear = max(OKLabToLinearRGB(lab), vec3(0.0));
     }
     

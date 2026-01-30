@@ -14,14 +14,14 @@
 | Feature | Status | Priority | Notes |
 |---------|--------|----------|-------|
 | Exposure | ✅ Done | - | 2^x stops, working well |
-| Contrast | 🔲 Upgrade | P1 | Need filmic curve |
-| Highlights | 🔲 Upgrade | P1 | Tone-mapped recovery |
-| Shadows | 🔲 Upgrade | P1 | Noise-aware lifting |
-| Whites | 🔲 Upgrade | P1 | Soft clipping |
-| Blacks | 🔲 Upgrade | P1 | Point control |
-| Temperature | 🔲 Upgrade | P2 | Bradford adaptation |
+| Contrast | ✅ Done | - | Filmic S-curve |
+| Highlights | ✅ Done | - | Tone-mapped recovery |
+| Shadows | ✅ Done | - | Luminance-masked lifting |
+| Whites | ✅ Done | - | Soft clipping implemented |
+| Blacks | ✅ Done | - | Point control implemented |
+| Temperature | ✅ Done | - | Bradford adaptation |
 | Tint | ✅ Done | - | Works |
-| Vibrance | 🔲 Upgrade | P2 | Skin protection |
+| Vibrance | ✅ Done | - | Skin protection |
 | Saturation | ✅ Done | - | OKLAB-based |
 | **Clarity** | ✅ Done | P0 | Frequency Separation implemented |
 | **Texture** | ✅ Done | P0 | Implemented via `u_structure` |
@@ -77,8 +77,8 @@
 - [x] Clarity effect (2-pass GPU processing)
 - [x] Texture effect (micro-contrast as `u_structure`)
 - [x] Dehaze (approximation)
-- [ ] Improved Highlights/Shadows recovery
-- [ ] Improved Whites/Blacks point control
+- [x] Improved Highlights/Shadows recovery
+- [x] Improved Whites/Blacks point control
 
 ### Phase 2: Color & Effects (Next)
 
@@ -92,8 +92,8 @@
 
 - [ ] Tone Curve parametric mode
 - [ ] HSL color picker
-- [ ] Improved white balance (Bradford)
-- [ ] Improved vibrance (skin protection)
+- [x] Improved white balance (Bradford)
+- [x] Improved vibrance (skin protection)
 - [ ] Built-in filter presets
 
 ---
