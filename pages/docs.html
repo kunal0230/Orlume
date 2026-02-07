@@ -680,7 +680,7 @@ const smoothedDepth = bilateralFilter(depthMap, {
                         <pre><code class="language-glsl">// Per-vertex normal via area-weighted averaging
 vec3 computeSmoothNormal(int vertexIdx) {
     vec3 normal = vec3(0.0);
-    for (int t = 0; t < adjacentTriangles; t++) {
+    for (int t = 0; t &lt; adjacentTriangles; t++) {
         vec3 faceNormal = cross(v1 - v0, v2 - v0);
         float area = length(faceNormal) * 0.5;
         normal += normalize(faceNormal) * area;
@@ -870,7 +870,7 @@ vec3 computeNormal(vec2 uv, sampler2D depthTex) {
 
                         <pre><code class="language-glsl">float computeHBAO(vec2 uv, float centerDepth) {
     float occlusion = 0.0;
-    for (int d = 0; d < 8; d++) {
+    for (int d = 0; d &lt; 8; d++) {
         vec2 dir = directions[d];
         float maxHorizon = -1.0;
         
@@ -918,7 +918,7 @@ float calculateSoftShadow(vec2 uv, vec2 lightPos) {
     vec2 rayDir = normalize(lightPos - uv);
     float shadow = 0.0;
     
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i &lt; 48; i++) {
         float t = (float(i) + dither) / 48.0;
         t = t * t; // Quadratic distribution
         vec2 samplePos = mix(uv, lightPos, t);
