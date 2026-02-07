@@ -85,27 +85,56 @@
         }
 
         .docs-content pre {
-            background: #0d0d1a;
-            border: 1px solid var(--border-glass);
+            background: #1a1a2e;
+            border: 1px solid rgba(99, 102, 241, 0.2);
             border-radius: 8px;
-            padding: 1rem;
+            padding: 1.25rem;
             overflow-x: auto;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
-            line-height: 1.5;
+            line-height: 1.6;
+            color: #e2e8f0;
         }
 
         .docs-content code {
             font-family: 'JetBrains Mono', monospace;
-            background: rgba(99, 102, 241, 0.1);
-            padding: 0.15rem 0.4rem;
+            background: #3730a3;
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-size: 0.85em;
+            color: #f0f0f5;
         }
 
         .docs-content pre code {
             background: transparent;
             padding: 0;
+            color: #e2e8f0;
+        }
+
+        /* Syntax highlighting classes */
+        .docs-content pre .keyword {
+            color: #c792ea;
+        }
+
+        .docs-content pre .type {
+            color: #82aaff;
+        }
+
+        .docs-content pre .function {
+            color: #82aaff;
+        }
+
+        .docs-content pre .number {
+            color: #f78c6c;
+        }
+
+        .docs-content pre .string {
+            color: #c3e88d;
+        }
+
+        .docs-content pre .comment {
+            color: #676e95;
+            font-style: italic;
         }
 
         .tech-badge {
@@ -133,12 +162,13 @@
         }
 
         .architecture-diagram {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
+            background: #1a1a2e;
+            border: 1px solid rgba(99, 102, 241, 0.3);
             border-radius: 12px;
             padding: 1.5rem;
             margin: 1.5rem 0;
             text-align: center;
+            overflow-x: auto;
         }
 
         .architecture-diagram pre {
@@ -146,6 +176,9 @@
             border: none;
             margin: 0;
             text-align: left;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            line-height: 1.4;
         }
 
         .equation-block {
@@ -874,7 +907,7 @@ vec3 computeNormal(vec2 uv, sampler2D depthTex) {
         vec2 dir = directions[d];
         float maxHorizon = -1.0;
         
-        for (int s = 1; s <= 8; s++) {
+        for (int s = 1; s &lt;= 8; s++) {
             vec2 sampleUV = uv + dir * float(s) * radius;
             float sampleDepth = texture(depthTex, sampleUV).r;
             float heightDiff = sampleDepth - centerDepth;
