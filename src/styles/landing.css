@@ -383,175 +383,101 @@ img {
     }
 }
 
+
+
+
+
 /* ========================================
-   Hero Demo (Before/After)
+   How It Works Section
    ======================================== */
-.hero-demo {
-    margin-top: 80px;
-    width: 100%;
-    max-width: 1000px;
-    animation: fadeInUp 0.8s var(--ease-out-expo) 0.4s both;
-}
-
-.demo-container {
+.how-it-works {
+    padding: 120px 24px;
+    background: linear-gradient(180deg, transparent, var(--bg-secondary), transparent);
     position: relative;
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: var(--shadow-glow), var(--shadow-card);
-    border: 1px solid var(--border-glass);
-    aspect-ratio: 16/10;
-    background: var(--bg-tertiary);
 }
 
-.demo-container::before {
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px;
+    max-width: 1000px;
+    margin: 60px auto 0;
+}
+
+.step-card {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.step-card::after {
     content: '';
     position: absolute;
-    inset: -2px;
-    background: var(--gradient-primary);
-    border-radius: 26px;
+    top: 40px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border-glass), transparent);
     z-index: -1;
-    opacity: 0.5;
-    filter: blur(20px);
 }
 
-/* ========================================
-   Floating UI Elements
-   ======================================== */
-.floating-ui {
-    position: absolute;
+.step-card:last-child::after {
+    display: none;
+}
+
+.step-number {
+    width: 80px;
+    height: 80px;
     background: var(--bg-glass);
-    backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
-    border-radius: 16px;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: var(--shadow-card);
-    animation: float 6s ease-in-out infinite;
-}
-
-.floating-ui.ui-1 {
-    top: 20%;
-    left: -5%;
-    animation-delay: 0s;
-}
-
-.floating-ui.ui-2 {
-    bottom: 20%;
-    right: -5%;
-    animation-delay: -3s;
-}
-
-.floating-ui .icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    border-radius: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.floating-ui .icon.green {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-}
-
-.floating-ui .icon.blue {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-15px);
-    }
-}
-
-/* ========================================
-   Comparison Slider
-   ======================================== */
-.comparison-container {
+    margin: 0 auto 24px;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--accent-purple);
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s var(--ease-out-back);
     position: relative;
-    width: 100%;
-    height: 100%;
-    cursor: ew-resize;
-    user-select: none;
+    overflow: hidden;
 }
 
-.comparison-image {
+.step-number::before {
+    content: '';
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    background: var(--gradient-primary);
+    opacity: 0.1;
 }
 
-.comparison-before {
-    clip-path: inset(0 50% 0 0);
+.step-card:hover .step-number {
+    transform: translateY(-8px) scale(1.1);
+    border-color: var(--accent-purple);
+    box-shadow: var(--shadow-glow);
 }
 
-.comparison-slider {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 4px;
-    background: white;
-    z-index: 10;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+.step-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
 }
 
-.comparison-handle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 48px;
-    height: 48px;
-    background: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    cursor: ew-resize;
+.step-desc {
+    color: var(--text-secondary);
+    line-height: 1.6;
 }
 
-.comparison-handle svg {
-    width: 24px;
-    height: 24px;
-    color: var(--bg-primary);
-}
+@media (max-width: 768px) {
+    .steps-grid {
+        grid-template-columns: 1fr;
+        gap: 60px;
+    }
 
-.comparison-label {
-    position: absolute;
-    top: 24px;
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    border-radius: 100px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    z-index: 20;
-}
-
-.comparison-label.label-before {
-    left: 24px;
-}
-
-.comparison-label.label-after {
-    right: 24px;
+    .step-card::after {
+        display: none;
+    }
 }
 
 /* ========================================
@@ -560,6 +486,7 @@ img {
 .features-section {
     padding: var(--section-padding) 0;
     position: relative;
+    overflow: hidden;
 }
 
 .section-header {
@@ -574,6 +501,10 @@ img {
     letter-spacing: 2px;
     color: var(--accent-purple);
     margin-bottom: 16px;
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 100px;
 }
 
 .section-title {
@@ -581,6 +512,9 @@ img {
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .section-desc {
@@ -594,13 +528,16 @@ img {
 .features-track-wrapper {
     overflow: hidden;
     padding: 40px 0;
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
 .features-track {
     display: flex;
     gap: 32px;
     padding: 0 24px;
-    animation: scrollTrack 40s linear infinite;
+    animation: scrollTrack 60s linear infinite;
+    width: max-content;
 }
 
 .features-track:hover {
@@ -613,42 +550,30 @@ img {
     }
 
     100% {
-        transform: translateX(-50%);
+        transform: translateX(calc(-50% - 16px));
+        /* Adjust for gap */
     }
 }
 
 .feature-card {
     flex-shrink: 0;
-    width: 400px;
+    width: 320px;
+    /* Reduced width since no image */
     background: var(--bg-glass);
     backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
     border-radius: 24px;
     overflow: hidden;
     transition: all 0.4s var(--ease-out-expo);
+    transform: translateZ(0);
+    /* Hardware acceleration */
 }
 
 .feature-card:hover {
-    transform: translateY(-8px);
-    border-color: var(--accent-purple);
-    box-shadow: var(--shadow-glow);
-}
-
-.feature-card-media {
-    aspect-ratio: 16/10;
-    background: var(--bg-tertiary);
-    overflow: hidden;
-}
-
-.feature-card-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.6s var(--ease-out-expo);
-}
-
-.feature-card:hover .feature-card-media img {
-    transform: scale(1.05);
+    transform: translateY(-12px) scale(1.02);
+    border-color: rgba(124, 58, 237, 0.3);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 0 20px rgba(124, 58, 237, 0.1);
+    z-index: 10;
 }
 
 .feature-card-content {
@@ -658,22 +583,23 @@ img {
 .feature-card-icon {
     width: 48px;
     height: 48px;
-    background: var(--gradient-primary);
+    background: var(--bg-primary);
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .feature-card-icon svg {
     width: 24px;
     height: 24px;
-    color: white;
+    color: var(--accent-purple);
 }
 
 .feature-card h3 {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     margin-bottom: 12px;
     letter-spacing: -0.5px;
@@ -693,11 +619,13 @@ img {
     font-size: 14px;
     font-weight: 600;
     color: var(--accent-purple);
-    transition: gap 0.3s;
+    transition: all 0.3s;
+    padding: 8px 0;
 }
 
 .feature-link:hover {
     gap: 10px;
+    opacity: 0.8;
 }
 
 /* ========================================

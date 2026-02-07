@@ -9,6 +9,7 @@ import { GPUBackend } from './GPUBackend.js';
 import developShaderSrc from './shaders/develop.glsl?raw';
 import blurShaderSrc from './shaders/blur.glsl?raw';
 import commonShaderSrc from './shaders/modules/common.glsl?raw';
+import colorGradingShaderSrc from './shaders/modules/color_grading.glsl?raw';
 
 export class WebGL2Backend extends GPUBackend {
     constructor(canvas) {
@@ -205,7 +206,8 @@ export class WebGL2Backend extends GPUBackend {
         const shaderMap = {
             'develop.glsl': developShaderSrc,
             'blur.glsl': blurShaderSrc,
-            'modules/common.glsl': commonShaderSrc
+            'modules/common.glsl': commonShaderSrc,
+            'modules/color_grading.glsl': colorGradingShaderSrc
         };
 
         let source = shaderMap[name];
@@ -404,6 +406,17 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_structure, (uniforms.structure || 0) / 100);
         gl.uniform1f(program.u_dehaze, (uniforms.dehaze || 0) / 100);
 
+
+        // Color Grading Uniforms
+        gl.uniform2f(program.u_shadowsColor, uniforms.shadowsHue || 0, uniforms.shadowsSat || 0);
+        gl.uniform2f(program.u_midtonesColor, uniforms.midtonesHue || 0, uniforms.midtonesSat || 0);
+        gl.uniform2f(program.u_highlightsColor, uniforms.highlightsHue || 0, uniforms.highlightsSat || 0);
+        gl.uniform1f(program.u_shadowsLum, uniforms.shadowsLum || 0);
+        gl.uniform1f(program.u_midtonesLum, uniforms.midtonesLum || 0);
+        gl.uniform1f(program.u_highlightsLum, uniforms.highlightsLum || 0);
+
+        gl.uniform1f(program.u_colorBalance, (uniforms.colorBalance || 0));
+        gl.uniform1f(program.u_colorBlending, (uniforms.colorBlending !== undefined ? uniforms.colorBlending : 50)); // Default blending 50
 
         // HSL per-channel uniforms (arrays of 8 floats)
         // Order: Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta

@@ -20,3 +20,4 @@ export { PresetsModule } from './PresetsModule.js';
 export { TextModule } from './TextModule.js';
 export { RelightingModule } from './RelightingModule.js';
 export { ToneCurveModule } from './ToneCurveModule.js';
+export { ColorGradingModule } from './ColorGradingModule.js';

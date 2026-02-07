@@ -54,7 +54,17 @@ const mat3 LMS_TO_RGB_BRADFORD = mat3(
 );
 
 #include <modules/common.glsl>
+#include <modules/color_grading.glsl>
 
+// Color Grading Uniforms
+uniform vec2 u_shadowsColor;      // x=Hue, y=Sat
+uniform vec2 u_midtonesColor;
+uniform vec2 u_highlightsColor;
+uniform float u_shadowsLum;
+uniform float u_midtonesLum;
+uniform float u_highlightsLum;
+uniform float u_colorBalance;     // -100 to 100
+uniform float u_colorBlending;    // 0 to 100
 // Apply per-channel HSL adjustments
 // Apply per-channel HSL adjustments
 vec3 applyHSLAdjustments(vec3 hsl) {
@@ -322,6 +332,31 @@ void main() {
         linear = max(OKLabToLinearRGB(lab), vec3(0.0));
     }
     
+    // --- 7. COLOR GRADING (3-Way) ---
+    // Only apply if any grading is active (avoid math if not needed)
+    if (u_shadowsColor.y > 0.0 || u_midtonesColor.y > 0.0 || u_highlightsColor.y > 0.0 || 
+        u_shadowsLum != 0.0 || u_midtonesLum != 0.0 || u_highlightsLum != 0.0) {
+        
+        // Normalize params (UI sends -100 to 100, shader expects -1.0 to 1.0 or 0.0 to 1.0)
+        float balance = u_colorBalance * 0.01;
+        float blending = u_colorBlending * 0.01;
+        float shadowsLum = u_shadowsLum * 0.01;
+        float midtonesLum = u_midtonesLum * 0.01;
+        float highlightsLum = u_highlightsLum * 0.01;
+        
+        linear = applyColorGrading(
+            linear,
+            u_shadowsColor,
+            u_midtonesColor,
+            u_highlightsColor,
+            balance,
+            blending,
+            shadowsLum,
+            midtonesLum,
+            highlightsLum
+        );
+    }
+
     // Convert to sRGB
     vec3 finalSrgb = vec3(linearToSRGB(clamp(linear.r, 0.0, 1.0)), linearToSRGB(clamp(linear.g, 0.0, 1.0)), linearToSRGB(clamp(linear.b, 0.0, 1.0)));
     

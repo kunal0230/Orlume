@@ -35,7 +35,20 @@ export class EditorState {
             temperature: 0,
             tint: 0,
             vibrance: 0,
-            saturation: 0
+            saturation: 0,
+
+            // Color Grading
+            shadowsHue: 0,
+            shadowsSat: 0,
+            midtonesHue: 0,
+            midtonesSat: 0,
+            highlightsHue: 0,
+            highlightsSat: 0,
+            shadowsLum: 0,
+            midtonesLum: 0,
+            highlightsLum: 0,
+            colorBalance: 0,
+            colorBlending: 50
         };
 
         // Event listeners

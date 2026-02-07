@@ -55,8 +55,8 @@ export class RelightingEngineV7 {
             position: { x: 0.5, y: 0.5 },
             direction: { x: 0, y: 0, z: 1 },
             color: { r: 1.0, g: 0.98, b: 0.95 },
-            intensity: 0.8,
-            ambient: 0.15,
+            intensity: 0.5,  // Reduced from 0.8 to prevent overexposure
+            ambient: 0.1,    // Reduced from 0.15 for more contrast
             specularity: 0.0,
             glossiness: 32,
             directional: true,
@@ -71,20 +71,55 @@ export class RelightingEngineV7 {
             shadowIntensity: 0.7,
             shadowSoftness: 0.5,
             shadowEnabled: true,
+            shadowColor: { r: 0.0, g: 0.0, b: 0.1 }, // Shadow color tint
+            gpuShadows: true, // Use GPU raymarched shadows
             // Spotlight controls
             isSpotlight: false,
             spotAngle: 30.0,
             spotSoftness: 0.3,
-            // Subsurface scattering (new)
+            // Subsurface scattering
             sssIntensity: 0.0,         // 0 = off, 1 = full translucency
             sssColor: { r: 1.0, g: 0.4, b: 0.3 },  // Skin-like warm color
             // Light height (for 3D effect)
             lightHeight: 0.5,  // 0 = low, 1 = high
+            // v8: Ambient Occlusion
+            aoIntensity: 0.0,  // 0 = off, 1 = full AO
+            aoRadius: 10.0,    // AO sample radius in pixels
+            // v8: PBR parameters
+            roughness: 0.5,    // 0 = glossy, 1 = rough
+            metallic: 0.0,     // 0 = dielectric, 1 = metallic
+            usePBR: false,     // Enable PBR lighting model
         };
 
         // v7: Quality mode
         this.qualityMode = 'v7'; // 'v5' or 'v7'
         this.useAdvancedAlbedo = true;
+
+        // v8: Quality presets
+        this.qualityPresets = {
+            draft: {
+                shadowEnabled: false,
+                gpuShadows: false,
+                aoIntensity: 0.0,
+                sssIntensity: 0.0,
+                usePBR: false,
+            },
+            standard: {
+                shadowEnabled: true,
+                gpuShadows: true,
+                aoIntensity: 0.0,
+                sssIntensity: 0.0,
+                usePBR: false,
+            },
+            high: {
+                shadowEnabled: true,
+                gpuShadows: true,
+                aoIntensity: 0.5,
+                sssIntensity: 0.0,
+                usePBR: false,
+            },
+        };
+        this.currentPreset = 'standard';
 
         // State
         this.isReady = false;
@@ -208,17 +243,24 @@ export class RelightingEngineV7 {
 
             // Step 1.5: Generate smooth surface from depth (bilateral filter + smooth normals)
             // This removes texture artifacts while preserving face/body shape for lighting
+
+            // Use requestAnimationFrame to allow UI updates during heavy processing
+            await new Promise(resolve => setTimeout(resolve, 50));
+            reportProgress(88, 'Smoothing surface...');
+
             this.smoothSurfaceData = this.smoothSurfaceGenerator.generate(
                 this.neuralData.depthData || this.neuralData.depth,
                 this.width,
                 this.height
             );
 
-            reportProgress(88, 'Preparing albedo...');
+            reportProgress(92, 'Preparing albedo...');
+            await new Promise(resolve => setTimeout(resolve, 30));
 
             // Step 2: Prepare albedo
 
             if (this.qualityMode === 'v7' && this.useAdvancedAlbedo) {
+                reportProgress(94, 'Computing advanced albedo...');
                 // v7: Advanced albedo with linear color space
                 this.albedoData = this.albedoEstimatorV7.estimate(
                     this.originalImageData,
@@ -240,6 +282,7 @@ export class RelightingEngineV7 {
                 });
             }
 
+            reportProgress(98, 'Finalizing...');
             this.compositor.init(this.width, this.height);
             this.hasGeometry = true;
 
@@ -452,6 +495,62 @@ export class RelightingEngineV7 {
 
     setLightHeight(height) {
         this.light.lightHeight = Math.max(0, Math.min(1, height));
+    }
+
+    // === v8: SHADOW COLOR SETTERS ===
+
+    setShadowColor(r, g, b) {
+        this.light.shadowColor = { r, g, b };
+    }
+
+    setGPUShadows(enabled) {
+        this.light.gpuShadows = enabled;
+    }
+
+    // === v8: AMBIENT OCCLUSION SETTERS ===
+
+    setAOIntensity(intensity) {
+        this.light.aoIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setAORadius(radius) {
+        this.light.aoRadius = Math.max(1, Math.min(50, radius));
+    }
+
+    // === v8: PBR SETTERS ===
+
+    setRoughness(roughness) {
+        this.light.roughness = Math.max(0, Math.min(1, roughness));
+    }
+
+    setMetallic(metallic) {
+        this.light.metallic = Math.max(0, Math.min(1, metallic));
+    }
+
+    setUsePBR(enabled) {
+        this.light.usePBR = enabled;
+    }
+
+    // === v8: QUALITY PRESETS ===
+
+    applyPreset(presetName) {
+        const preset = this.qualityPresets[presetName];
+        if (!preset) {
+            console.warn(`Unknown preset: ${presetName}`);
+            return false;
+        }
+
+        this.currentPreset = presetName;
+        Object.assign(this.light, preset);
+        return true;
+    }
+
+    getPreset() {
+        return this.currentPreset;
+    }
+
+    getAvailablePresets() {
+        return Object.keys(this.qualityPresets);
     }
 
     // === DEBUG ===

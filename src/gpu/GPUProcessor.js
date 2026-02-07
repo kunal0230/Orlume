@@ -66,6 +66,24 @@ export class GPUProcessor {
             hslLumPurple: 0,
             hslLumMagenta: 0,
 
+            // Color Grading (3-Way)
+            // Hues: 0-1 (0-360), Sat: 0-1 (0-100)
+            shadowsHue: 0,
+            shadowsSat: 0,
+            midtonesHue: 0,
+            midtonesSat: 0,
+            highlightsHue: 0,
+            highlightsSat: 0,
+
+            // Luminance: -100 to +100
+            shadowsLum: 0,
+            midtonesLum: 0,
+            highlightsLum: 0,
+
+            // Global
+            colorBalance: 0,   // -100 to +100
+            colorBlending: 50, // 0 to 100 (Default 50)
+
             // Tone Curve LUTs (256 entries each, null = identity)
             curveLutRgb: null,
             curveLutRed: null,

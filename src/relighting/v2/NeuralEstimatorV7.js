@@ -63,6 +63,8 @@ export class NeuralEstimatorV7 {
                         this.onProgress({
                             stage: 'loading',
                             progress: percent,
+                            loaded: progress.loaded,   // Pass raw bytes loaded
+                            total: progress.total,     // Pass total bytes
                             message: `Loading depth model: ${percent}%`
                         });
                     }
@@ -120,9 +122,19 @@ export class NeuralEstimatorV7 {
 
         reportProgress(10, 'Running AI depth estimation...');
 
-        // Run depth estimation
+        // Run depth estimation with simulated incremental progress
+        // The pipeline call is a black box, so we simulate progress updates
+        let fakeProgress = 10;
+        const progressInterval = setInterval(() => {
+            if (fakeProgress < 45) {
+                fakeProgress += 3;
+                reportProgress(fakeProgress, 'Analyzing image depth...');
+            }
+        }, 200);
+
         const result = await this.depthPipeline(imageDataURL);
 
+        clearInterval(progressInterval);
         reportProgress(50, 'Processing depth data...');
 
         // Extract depth data from result
@@ -153,7 +165,7 @@ export class NeuralEstimatorV7 {
         reportProgress(100, 'Complete!');
 
         return {
-            depth: depthData,
+            depthData: depthData,
             normals: smoothedNormals,
             confidence: confidence,
             depthImageData: this._depthToImageData(depthData, width, height),
@@ -166,52 +178,163 @@ export class NeuralEstimatorV7 {
     }
 
     /**
-     * Check if the depth model is cached in browser storage
-     * @returns {Promise<{cached: boolean, size: string}>}
-     */
+ * Check if the depth model is cached in browser storage
+ * @returns {Promise<{cached: boolean, size: string}>}
+ */
     static async checkCacheStatus() {
         try {
-            // Transformers.js stores models in IndexedDB under 'transformers-cache'
-            const databases = await indexedDB.databases();
-            const cacheDb = databases.find(db => db.name === 'transformers-cache');
+            let totalSize = 0;
+            let foundCache = false;
 
-            if (!cacheDb) {
+            // Method 1: Check Cache Storage API (transformers.js uses this primarily)
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                console.debug('Cache Storage keys:', cacheNames);
+
+                for (const name of cacheNames) {
+                    if (name.includes('transformers') ||
+                        name.includes('huggingface') ||
+                        name.includes('onnx') ||
+                        name.includes('Xenova')) {
+
+                        const cache = await caches.open(name);
+                        const keys = await cache.keys();
+
+                        // Only count as cached if there are actual entries
+                        if (keys.length > 0) {
+                            foundCache = true;
+                            console.debug(`Found cache '${name}' with ${keys.length} entries`);
+
+                            // Estimate size by checking response sizes
+                            for (const request of keys) {
+                                try {
+                                    const response = await cache.match(request);
+                                    if (response) {
+                                        const blob = await response.clone().blob();
+                                        totalSize += blob.size;
+                                    }
+                                } catch (e) {
+                                    // Skip if can't read size
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Method 2: Check IndexedDB only if Cache Storage found nothing
+            if (!foundCache) {
+                const databases = await indexedDB.databases();
+                console.debug('IndexedDB databases:', databases.map(db => db.name));
+
+                const cacheDb = databases.find(db =>
+                    db.name?.includes('transformers') ||
+                    db.name?.includes('huggingface') ||
+                    db.name?.includes('onnx') ||
+                    db.name?.includes('Xenova')
+                );
+
+                if (cacheDb) {
+                    // Try to open and check if it has data
+                    try {
+                        const db = await new Promise((resolve, reject) => {
+                            const request = indexedDB.open(cacheDb.name);
+                            request.onsuccess = () => resolve(request.result);
+                            request.onerror = () => reject(request.error);
+                        });
+
+                        // Check if store has any entries
+                        const storeNames = Array.from(db.objectStoreNames);
+                        if (storeNames.length > 0) {
+                            const tx = db.transaction(storeNames[0], 'readonly');
+                            const store = tx.objectStore(storeNames[0]);
+                            const count = await new Promise(resolve => {
+                                const req = store.count();
+                                req.onsuccess = () => resolve(req.result);
+                                req.onerror = () => resolve(0);
+                            });
+
+                            if (count > 0) {
+                                foundCache = true;
+                                console.debug(`Found IndexedDB '${cacheDb.name}' with ${count} entries`);
+                                // Use storage estimate for IndexedDB size
+                                const estimate = await navigator.storage?.estimate?.();
+                                if (estimate?.usage) {
+                                    totalSize = estimate.usage;
+                                }
+                            }
+                        }
+                        db.close();
+                    } catch (e) {
+                        console.debug('Could not inspect IndexedDB:', e);
+                    }
+                }
+            }
+
+            if (!foundCache || totalSize < 1000000) { // Less than 1MB = not properly cached
+                console.debug('No substantial model cache found');
                 return { cached: false, size: '0 MB' };
             }
 
-            // Try to estimate cache size
-            const estimate = await navigator.storage?.estimate?.();
-            const usedMB = estimate ? (estimate.usage / (1024 * 1024)).toFixed(1) : '?';
-
-            return { cached: true, size: `~${usedMB} MB` };
+            const sizeMB = (totalSize / (1024 * 1024)).toFixed(0);
+            return { cached: true, size: `~${sizeMB} MB` };
         } catch (error) {
             console.warn('Could not check cache status:', error);
             return { cached: false, size: '0 MB' };
         }
     }
-
     /**
      * Clear the cached model from browser storage
      * @returns {Promise<boolean>}
      */
     static async clearCache() {
-        try {
-            // Delete the Transformers.js IndexedDB cache
-            const deleteRequest = indexedDB.deleteDatabase('transformers-cache');
+        console.log('🗑️ Starting cache clear...');
+        let clearedAny = false;
 
-            return new Promise((resolve) => {
-                deleteRequest.onsuccess = () => {
-                    resolve(true);
-                };
-                deleteRequest.onerror = () => {
-                    console.warn('Failed to clear cache');
-                    resolve(false);
-                };
-                deleteRequest.onblocked = () => {
-                    console.warn('Cache deletion blocked - close other tabs');
-                    resolve(false);
-                };
-            });
+        try {
+            // Method 1: Clear IndexedDB caches
+            const databases = await indexedDB.databases();
+            console.log('IndexedDB databases found:', databases.map(db => db.name));
+
+            for (const db of databases) {
+                if (db.name?.includes('transformers') ||
+                    db.name?.includes('huggingface') ||
+                    db.name?.includes('onnx') ||
+                    db.name?.includes('Xenova')) {
+                    console.log('Deleting IndexedDB:', db.name);
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const deleteReq = indexedDB.deleteDatabase(db.name);
+                            deleteReq.onsuccess = () => { console.log('✓ Deleted:', db.name); resolve(); };
+                            deleteReq.onerror = () => reject(deleteReq.error);
+                            deleteReq.onblocked = () => { console.warn('Blocked, forcing delete:', db.name); resolve(); };
+                        });
+                        clearedAny = true;
+                    } catch (e) {
+                        console.warn('Failed to delete:', db.name, e);
+                    }
+                }
+            }
+
+            // Method 2: Clear Cache Storage
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                console.log('Cache Storage keys:', cacheNames);
+
+                for (const name of cacheNames) {
+                    if (name.includes('transformers') ||
+                        name.includes('huggingface') ||
+                        name.includes('onnx') ||
+                        name.includes('Xenova')) {
+                        console.log('Deleting Cache Storage:', name);
+                        await caches.delete(name);
+                        clearedAny = true;
+                    }
+                }
+            }
+
+            console.log('🗑️ Cache clear complete. Cleared any:', clearedAny);
+            return true;
         } catch (error) {
             console.error('Error clearing cache:', error);
             return false;

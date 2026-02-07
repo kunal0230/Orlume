@@ -61,7 +61,12 @@ export class RelightingModule {
             spotAngle: 45,
             spotSoftness: 0.2,
             sssIntensity: 0.0,
-            lightHeight: 0.5
+            lightHeight: 0.5,
+            // v8: New parameters
+            aoIntensity: 0.0,
+            aoRadius: 10,
+            roughness: 0.5,
+            metallic: 0.0,
         };
         this.lightConfig = {
             color: { r: 1, g: 1, b: 1 },
@@ -81,61 +86,96 @@ export class RelightingModule {
         this._initBlendModeSelect();
         this._createLightIndicator();
         this._createDirectionIndicator();
-        this._createProgressBar();
         this._createPreviewCanvas();
-        this._updateCacheStatus();
-
+        this._createProgressBar();
+        this._updateModelStatus();
     }
 
+    // =========================================================================
+    //  MODEL STATUS (State: 'idle' | 'ready')
+    // =========================================================================
+
     /**
-     * Check and update cache status display
+     * Update model status badge based on cache state
      */
-    async _updateCacheStatus() {
+    async _updateModelStatus() {
         const status = await NeuralEstimatorV7.checkCacheStatus();
-        const badge = document.getElementById('relight-cache-badge');
+        this._setModelStatus(status.cached ? 'ready' : 'idle', status.size);
+    }
+
+    /**
+     * Set model status UI state
+     * @param {'idle' | 'ready'} state
+     * @param {string} size - Optional size string like "~97 MB"
+     */
+    _setModelStatus(state, size = '') {
+        const statusIcon = document.getElementById('relight-status-icon');
+        const statusText = document.getElementById('relight-status-text');
         const clearBtn = document.getElementById('btn-relight-clear-cache');
+        const progressRow = document.getElementById('relight-progress-row');
+        const firstTimeNote = document.getElementById('relight-first-time-note');
 
-        if (badge) {
-            if (status.cached) {
-                badge.textContent = `✓ Model Cached (${status.size})`;
-                badge.style.color = '#4ade80';
-            } else {
-                badge.textContent = '○ Model Not Cached';
-                badge.style.color = 'var(--text-secondary)';
+        // Hide progress bar when showing status
+        if (progressRow) progressRow.style.display = 'none';
+
+        if (state === 'ready') {
+            // Cached/ready state - show database icon and green text
+            if (statusIcon) {
+                statusIcon.innerHTML = '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>';
+                statusIcon.style.stroke = '#4ade80';
             }
-        }
-
-        if (clearBtn) {
-            clearBtn.disabled = !status.cached;
-            clearBtn.style.opacity = status.cached ? '1' : '0.5';
+            if (statusText) {
+                statusText.textContent = size ? `AI Model Ready (${size})` : 'AI Model Ready';
+                statusText.style.color = '#4ade80';
+            }
+            if (clearBtn) {
+                clearBtn.style.display = 'block';
+            }
+            // Hide first-time note when cached
+            if (firstTimeNote) firstTimeNote.style.display = 'none';
+        } else {
+            // Idle/not cached state - show download icon and secondary text
+            if (statusIcon) {
+                statusIcon.innerHTML = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>';
+                statusIcon.style.stroke = 'var(--text-secondary)';
+            }
+            if (statusText) {
+                statusText.textContent = 'AI Model Required';
+                statusText.style.color = 'var(--text-secondary)';
+            }
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+            // Show first-time note when model not cached
+            if (firstTimeNote) firstTimeNote.style.display = 'block';
         }
     }
 
     /**
-     * Clear the model cache
+     * Clear model cache and reset to 'idle' state
      */
     async _clearModelCache() {
         const clearBtn = document.getElementById('btn-relight-clear-cache');
-        if (clearBtn) {
-            clearBtn.disabled = true;
-            clearBtn.textContent = 'Clearing...';
+        const statusText = document.getElementById('relight-status-text');
+
+        // Show clearing state
+        if (clearBtn) clearBtn.disabled = true;
+        if (statusText) statusText.textContent = 'Clearing cache...';
+
+        // Clear the cache
+        await NeuralEstimatorV7.clearCache();
+
+        // Dispose engine so it re-downloads next time
+        if (this.engine) {
+            this.engine.dispose();
+            this.engine = null;
         }
 
-        const success = await NeuralEstimatorV7.clearCache();
+        // Immediately update UI to 'idle' state
+        this._setModelStatus('idle');
 
-        if (success) {
-            // Reset engine so it will re-download on next use
-            if (this.engine) {
-                this.engine.dispose();
-                this.engine = null;
-            }
-        }
-
-        if (clearBtn) {
-            clearBtn.textContent = 'Clear Cache';
-        }
-
-        await this._updateCacheStatus();
+        // Re-enable button (will be hidden by _setModelStatus)
+        if (clearBtn) clearBtn.disabled = false;
     }
 
     /**
@@ -161,6 +201,12 @@ export class RelightingModule {
             { id: 'relight-sss-intensity', param: 'sssIntensity', divisor: 100 },
             // Light height
             { id: 'relight-height', param: 'lightHeight', divisor: 100 },
+            // v8: Ambient Occlusion
+            { id: 'relight-ao-intensity', param: 'aoIntensity', divisor: 100 },
+            { id: 'relight-ao-radius', param: 'aoRadius', divisor: 1 },
+            // v8: PBR
+            { id: 'relight-roughness', param: 'roughness', divisor: 100 },
+            { id: 'relight-metallic', param: 'metallic', divisor: 100 },
         ];
 
         sliders.forEach(({ id, param, divisor }) => {
@@ -231,7 +277,18 @@ export class RelightingModule {
             case 'lightHeight':
                 this.engine.setLightHeight(value);
                 break;
-                this.engine.setLightHeight(value);
+            // v8: New parameters
+            case 'aoIntensity':
+                this.engine.setAOIntensity(value);
+                break;
+            case 'aoRadius':
+                this.engine.setAORadius(value);
+                break;
+            case 'roughness':
+                this.engine.setRoughness(value);
+                break;
+            case 'metallic':
+                this.engine.setMetallic(value);
                 break;
         }
 
@@ -375,6 +432,57 @@ export class RelightingModule {
 
         // Lighting presets
         this._initLightingPresets();
+
+        // v8: Quality preset dropdown
+        const qualityPreset = document.getElementById('relight-quality-preset');
+        if (qualityPreset) {
+            qualityPreset.addEventListener('change', () => {
+                if (this.engine) {
+                    const preset = qualityPreset.value;
+                    this.engine.applyPreset(preset);
+                    this._debouncedRender();
+                }
+            });
+        }
+
+        // v8: PBR toggle
+        const pbrToggle = document.getElementById('btn-relight-pbr');
+        if (pbrToggle) {
+            pbrToggle.addEventListener('click', () => {
+                if (this.engine) {
+                    const isActive = pbrToggle.classList.toggle('btn-primary');
+                    this.engine.setUsePBR(isActive);
+                    this._debouncedRender();
+                }
+            });
+        }
+
+        // v8: GPU Shadows toggle  
+        const gpuShadowsToggle = document.getElementById('btn-relight-gpu-shadows');
+        if (gpuShadowsToggle) {
+            gpuShadowsToggle.addEventListener('click', () => {
+                if (this.engine) {
+                    const isActive = gpuShadowsToggle.classList.toggle('btn-primary');
+                    this.engine.setGPUShadows(isActive);
+                    this._debouncedRender();
+                }
+            });
+        }
+
+        // v8: Shadow color picker
+        const shadowColorPicker = document.getElementById('relight-shadow-color');
+        if (shadowColorPicker) {
+            shadowColorPicker.addEventListener('input', () => {
+                if (this.engine) {
+                    const hex = shadowColorPicker.value;
+                    const r = parseInt(hex.slice(1, 3), 16) / 255;
+                    const g = parseInt(hex.slice(3, 5), 16) / 255;
+                    const b = parseInt(hex.slice(5, 7), 16) / 255;
+                    this.engine.setShadowColor(r, g, b);
+                    this._debouncedRender();
+                }
+            });
+        }
     }
 
     /**
@@ -528,67 +636,10 @@ export class RelightingModule {
     }
 
     /**
-     * Create progress bar
+     * Initialize progress bar and cache controls (HTML is static, just bind events)
      */
     _createProgressBar() {
-        const panel = document.getElementById('panel-relight');
-        if (!panel) return;
-
-        if (document.getElementById('relight-progress-container')) return;
-
-        // Create progress container
-        const progressContainer = document.createElement('div');
-        progressContainer.id = 'relight-progress-container';
-        progressContainer.style.cssText = `
-            display: none;
-            padding: 12px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            margin-bottom: 12px;
-        `;
-        progressContainer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <span id="relight-progress-text">Processing...</span>
-                <span id="relight-progress-percent">0%</span>
-            </div>
-            <div style="height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden;">
-                <div id="relight-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #60a5fa); transition: width 0.15s ease-out;"></div>
-            </div>
-        `;
-
-        // Create cache status container
-        const cacheContainer = document.createElement('div');
-        cacheContainer.id = 'relight-cache-container';
-        cacheContainer.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            margin-bottom: 12px;
-            font-size: 11px;
-        `;
-        cacheContainer.innerHTML = `
-            <span id="relight-cache-badge" style="color: var(--text-secondary);">○ Checking cache...</span>
-            <button id="btn-relight-clear-cache" class="btn" style="padding: 4px 8px; font-size: 10px; opacity: 0.5;" disabled>Clear Cache</button>
-        `;
-
-        // Insert into the first section of the panel (before the Estimate Depth button)
-        const firstSection = panel.querySelector('.section');
-        if (firstSection) {
-            // Insert at the very beginning of the first section, after the header
-            const sectionHeader = firstSection.querySelector('.section-header');
-            if (sectionHeader && sectionHeader.nextSibling) {
-                firstSection.insertBefore(cacheContainer, sectionHeader.nextSibling);
-                firstSection.insertBefore(progressContainer, sectionHeader.nextSibling);
-            } else {
-                firstSection.insertBefore(cacheContainer, firstSection.firstChild);
-                firstSection.insertBefore(progressContainer, firstSection.firstChild);
-            }
-        }
-
-        // Add event listener for clear cache button
+        // Elements are now static in HTML, just bind the clear cache button
         const clearBtn = document.getElementById('btn-relight-clear-cache');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this._clearModelCache());
@@ -620,27 +671,113 @@ export class RelightingModule {
         this.previewCtx = this.previewCanvas.getContext('2d');
     }
 
-    /**
-     * Update progress bar
-     */
-    _updateProgress(percent, text) {
-        const container = document.getElementById('relight-progress-container');
-        const bar = document.getElementById('relight-progress-bar');
-        const percentEl = document.getElementById('relight-progress-percent');
-        const textEl = document.getElementById('relight-progress-text');
+    // ==================== UNIFIED PROGRESS SYSTEM ====================
 
-        if (container) container.style.display = 'block';
-        if (bar) bar.style.width = `${percent}%`;
-        if (percentEl) percentEl.textContent = `${Math.round(percent)}%`;
-        if (textEl) textEl.textContent = text;
+    /**
+     * Show download progress in unified card
+     * @param {number} sizeMB - Current downloaded size in MB
+     * @param {number} totalMB - Total size in MB (optional, for showing percentage)
+     */
+    _showDownload(sizeMB, totalMB = 97) {
+        const statusIcon = document.getElementById('relight-status-icon');
+        const statusText = document.getElementById('relight-status-text');
+        const progressRow = document.getElementById('relight-progress-row');
+        const progressText = document.getElementById('relight-progress-text');
+        const progressPercent = document.getElementById('relight-progress-percent');
+        const progressBar = document.getElementById('relight-progress-bar');
+        const clearBtn = document.getElementById('btn-relight-clear-cache');
+
+        // Update status to downloading
+        if (statusIcon) {
+            statusIcon.innerHTML = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>';
+            statusIcon.style.stroke = 'var(--accent)';
+        }
+        if (statusText) {
+            statusText.textContent = 'Downloading AI Model...';
+            statusText.style.color = 'var(--accent)';
+        }
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // Show progress row
+        if (progressRow) progressRow.style.display = 'block';
+        if (progressText) progressText.textContent = `${sizeMB.toFixed(1)} MB / ~${totalMB} MB`;
+
+        const percent = Math.min(100, (sizeMB / totalMB) * 100);
+        if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+            progressBar.style.background = 'var(--accent)';
+        }
     }
 
     /**
-     * Hide progress bar
+     * Hide download and transition to analysis phase
+     */
+    _hideDownload() {
+        // No-op - progress bar stays visible for analysis phase
+        // This method exists for API compatibility
+    }
+
+    /**
+     * Update progress bar (0-100%)
+     * @param {number} percent - Progress percentage (0-100)
+     * @param {string} text - Status message
+     */
+    _updateProgress(percent, text) {
+        const statusIcon = document.getElementById('relight-status-icon');
+        const statusText = document.getElementById('relight-status-text');
+        const progressRow = document.getElementById('relight-progress-row');
+        const progressBar = document.getElementById('relight-progress-bar');
+        const progressPercent = document.getElementById('relight-progress-percent');
+        const progressTextEl = document.getElementById('relight-progress-text');
+        const clearBtn = document.getElementById('btn-relight-clear-cache');
+
+        // Update status to analyzing
+        if (statusIcon) {
+            statusIcon.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>';
+            statusIcon.style.stroke = 'var(--accent)';
+        }
+        if (statusText) {
+            statusText.textContent = 'Analyzing Image...';
+            statusText.style.color = 'var(--accent)';
+        }
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // Show progress row
+        if (progressRow) progressRow.style.display = 'block';
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressPercent) progressPercent.textContent = `${Math.round(percent)}%`;
+        if (progressTextEl) progressTextEl.textContent = text;
+
+        // Green color on completion
+        if (percent >= 100 && progressBar) {
+            progressBar.style.background = '#22c55e';
+        }
+    }
+
+    /**
+     * Show completion state then restore to ready
+     */
+    _showComplete() {
+        this._updateProgress(100, 'Complete!');
+        setTimeout(() => {
+            this._hideProgress();
+            this._updateModelStatus(); // Refresh to show cached state
+        }, 800);
+    }
+
+    /**
+     * Hide progress bar and reset
      */
     _hideProgress() {
-        const container = document.getElementById('relight-progress-container');
-        if (container) container.style.display = 'none';
+        const progressRow = document.getElementById('relight-progress-row');
+        const progressBar = document.getElementById('relight-progress-bar');
+
+        if (progressRow) progressRow.style.display = 'none';
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'var(--accent)';
+        }
     }
 
     /**
@@ -710,9 +847,16 @@ export class RelightingModule {
         if (!canvas) return;
 
         this._canvasClickHandler = (e) => {
+            if (!this.isActive) {
+                console.debug('Relighting: Click ignored - not active');
+                return;
+            }
+
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width;
             const y = (e.clientY - rect.top) / rect.height;
+
+            console.debug(`Relighting: Light position set to (${x.toFixed(2)}, ${y.toFixed(2)})`);
 
             // Set anchor point (light source position)
             this._lightAnchor = { x, y };
@@ -724,7 +868,7 @@ export class RelightingModule {
                 this.engine.setLightPosition(x, y);
                 this.lightConfig.position = { x, y };
                 this._updateLightIndicator();
-                this._schedulePreviewRender();
+                this._renderPreview(); // Force immediate render
             }
         };
 
@@ -857,11 +1001,11 @@ export class RelightingModule {
         const depthBtn = document.getElementById('btn-relight-depth');
 
         if (this.hasProcessed) {
-            if (statusEl) statusEl.textContent = '✅ Surface map ready';
-            if (depthBtn) depthBtn.textContent = 'Re-estimate Depth';
+            if (statusEl) statusEl.textContent = 'Surface map ready';
+            if (depthBtn) depthBtn.textContent = 'Re-analyze Image';
         } else {
-            if (statusEl) statusEl.textContent = 'ℹ️ Click "Estimate Depth" to start';
-            if (depthBtn) depthBtn.textContent = 'Estimate Depth';
+            if (statusEl) statusEl.textContent = 'Click "Analyze Image" to start';
+            if (depthBtn) depthBtn.textContent = 'Analyze Image';
         }
     }
 
@@ -884,23 +1028,26 @@ export class RelightingModule {
         }
 
         try {
-            this._updateProgress(0, 'Initializing...');
+            // Check if engine is already ready (model cached)
+            const modelAlreadyLoaded = this.engine && this.engine.isReady;
 
-            // Initialize engine if not ready
-            if (!this.engine || !this.engine.isReady) {
+            if (!modelAlreadyLoaded) {
+                // Model needs to be downloaded - show download progress
+                this._showDownload(0, 97); // Initial state with estimated total
                 this.engine = new RelightingEngineV7();
-
-                // Model loading phase: 0-40%
                 await this.engine.init((progress) => {
-                    const modelPercent = (progress.progress || 0) * 0.4; // Scale to 0-40%
-                    this._updateProgress(modelPercent, progress.message || 'Loading AI model...');
+                    // Show download size in MB (progress.loaded/total are in bytes)
+                    if (progress.loaded && progress.total) {
+                        const loadedMB = progress.loaded / (1024 * 1024);
+                        const totalMB = progress.total / (1024 * 1024);
+                        this._showDownload(loadedMB, totalMB);
+                    }
                 });
-            } else {
-                // Engine already ready, skip model loading
-                this._updateProgress(40, 'Model loaded from cache');
+                this._hideDownload();
             }
 
-            this._updateProgress(40, 'Preparing image...');
+            // Image processing: Simple 0-100% progress bar
+            this._updateProgress(0, 'Preparing image...');
 
             // Get current image
             const imageData = this.ui.gpu.toImageData();
@@ -910,14 +1057,18 @@ export class RelightingModule {
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.putImageData(imageData, 0, 0);
 
+            this._updateProgress(5, 'Loading image...');
+
             // Create image from canvas
             const imageUrl = tempCanvas.toDataURL();
             const image = await this._loadImage(imageUrl);
 
-            // Estimation phase: 40-100% (progress callback maps estimator's 0-100 to our 40-100)
+            this._updateProgress(10, 'Starting analysis...');
+
+            // Estimation phase: engine reports 0-100, we map to 10-95
             const estimationCallback = (progress) => {
-                const mappedPercent = 40 + (progress.progress * 0.6); // 40% to 100%
-                this._updateProgress(mappedPercent, progress.message);
+                const mappedPercent = 10 + (progress.progress * 0.85); // 10% to 95%
+                this._updateProgress(Math.min(95, mappedPercent), progress.message);
             };
 
             // Process with neural network engine
@@ -927,17 +1078,16 @@ export class RelightingModule {
                 throw new Error('Neural estimation failed');
             }
 
-            this._updateProgress(100, 'Complete! ✓');
+            // Show completion state (stops spinner, turns bar green, then hides)
+            this._showComplete();
 
             this.hasProcessed = true;
             this._updateDepthStatus();
-            this._updateCacheStatus(); // Update cache badge after successful run
+            this._updateModelStatus(); // Update cache badge after successful run
 
             // Show preview
             this.previewCanvas.style.display = 'block';
             this._renderPreview();
-
-            setTimeout(() => this._hideProgress(), 1500);
 
         } catch (error) {
             console.error('Neural estimation failed:', error);
@@ -947,7 +1097,7 @@ export class RelightingModule {
             this.isProcessing = false;
             if (depthBtn) {
                 depthBtn.disabled = false;
-                depthBtn.textContent = this.hasProcessed ? 'Re-estimate Depth' : 'Estimate Depth';
+                depthBtn.textContent = this.hasProcessed ? 'Re-analyze Image' : 'Analyze Image';
             }
         }
     }

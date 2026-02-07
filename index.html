@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orlume — Free AI Photo Editor | 3D Relighting & Background Removal</title>
+    <title>Orlume | Free AI Photo Editor, 3D Relighting & Background Removal</title>
     <meta name="description"
-        content="Professional free online AI photo editor by Orlume Vision Labs. Features realtime 3D relighting, background removal, AI upscaling, and color grading. 100% browser-based, privacy-first editing with WebGPU.">
+        content="Professional AI photo editor in your browser. Features 3D relighting, background removal, and color grading. Privacy-first, no uploads required.">
     <meta name="keywords"
         content="orlume, orlume vision labs, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor, online photo editor, browser image editor">
     <meta name="author" content="Orlume">
@@ -324,7 +324,7 @@
 
         <p class="hero-subtitle">
             Professional-grade AI tools that run entirely in your browser.
-            3D relighting, background removal, and cinematic color grading — all for free.
+            3D relighting, background removal, and cinematic color grading. All for free.
         </p>
 
         <div class="hero-buttons">
@@ -339,25 +339,56 @@
             </a>
         </div>
 
+
         <!-- Trusted By Section -->
-        <div class="trusted-by reveal" style="margin-top: 60px; text-align: center;">
+        <div class="trusted-by reveal" style="margin-top: 80px; text-align: center;">
             <p
-                style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
+                style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px;">
                 Trusted by creators worldwide</p>
-            <div style="display: flex; justify-content: center; gap: 48px; align-items: center; opacity: 0.5;">
-                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Photographers</span>
-                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Designers</span>
-                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Marketers</span>
-                <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Creators</span>
+            <div
+                style="display: flex; justify-content: center; gap: 48px; align-items: center; opacity: 0.6; flex-wrap: wrap;">
+                <span
+                    style="font-size: 18px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M10 8l6 4-6 4V8z" />
+                    </svg>
+                    Photographers
+                </span>
+                <span
+                    style="font-size: 18px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                        <path d="M2 2l7.586 7.586" />
+                        <circle cx="11" cy="11" r="2" />
+                    </svg>
+                    Designers
+                </span>
+                <span
+                    style="font-size: 18px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 6l-9.5 9.5-5-5L1 18" />
+                        <path d="M17 6h6v6" />
+                    </svg>
+                    Marketers
+                </span>
+                <span
+                    style="font-size: 18px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Creators
+                </span>
             </div>
         </div>
-
-
     </section>
 
     <!-- How It Works Section -->
-    <section class="how-it-works"
-        style="padding: 120px 24px; background: linear-gradient(180deg, transparent, var(--bg-secondary), transparent);">
+    <!-- How It Works Section -->
+    <section class="how-it-works">
         <div class="container">
             <div class="section-header reveal">
                 <div class="section-eyebrow">How It Works</div>
@@ -365,31 +396,24 @@
                 <p class="section-desc">No downloads. No sign-ups. Just powerful editing.</p>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; max-width: 1000px; margin: 60px auto 0;"
-                class="reveal">
-                <div style="text-align: center;">
-                    <div
-                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
-                        1</div>
-                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Upload Your Image</h3>
-                    <p style="color: var(--text-secondary); line-height: 1.6;">Drag and drop any image or paste from
-                        clipboard. Supports JPG, PNG, WebP up to 50MB.</p>
+            <div class="steps-grid reveal">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3 class="step-title">Upload Your Image</h3>
+                    <p class="step-desc">Drag and drop any image or paste from clipboard. Supports JPG, PNG, WebP up to
+                        50MB.</p>
                 </div>
-                <div style="text-align: center;">
-                    <div
-                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
-                        2</div>
-                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Apply AI Magic</h3>
-                    <p style="color: var(--text-secondary); line-height: 1.6;">Use 3D relighting, background removal,
-                        presets, or any of our 50+ professional tools.</p>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3 class="step-title">Apply AI Magic</h3>
+                    <p class="step-desc">Use 3D relighting, background removal, presets, or any of our 50+ professional
+                        tools.</p>
                 </div>
-                <div style="text-align: center;">
-                    <div
-                        style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; font-weight: 800;">
-                        3</div>
-                    <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Export & Share</h3>
-                    <p style="color: var(--text-secondary); line-height: 1.6;">Download in multiple formats including 4K
-                        resolution. Share directly or save to cloud.</p>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3 class="step-title">Export & Share</h3>
+                    <p class="step-desc">Download in multiple formats including 4K resolution. Share directly or save to
+                        cloud.</p>
                 </div>
             </div>
         </div>
@@ -401,7 +425,7 @@
             <div class="section-header reveal">
                 <div class="section-eyebrow">Complete Toolkit</div>
                 <h2 class="section-title">Everything you need, nothing you don't</h2>
-                <p class="section-desc">Professional-grade tools that rival desktop applications — all running in your
+                <p class="section-desc">Professional-grade tools that rival desktop applications, all running in your
                     browser.</p>
             </div>
 
@@ -688,9 +712,6 @@
             <div class="features-track">
                 <!-- Feature Cards (duplicated for infinite scroll) -->
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/relight_after.png" alt="3D Relighting">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -706,9 +727,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/bg_remove_after.png" alt="Background Removal">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -726,9 +744,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/grading_after.png" alt="Color Grading">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -746,9 +761,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/relight_after.png" alt="AI Upscaling">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -766,9 +778,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/bg_remove_before.png" alt="Professional Presets">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -785,9 +794,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/grading_after.png" alt="Magic Eraser">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -803,9 +809,6 @@
 
                 <!-- Duplicate for infinite scroll -->
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/relight_after.png" alt="3D Relighting">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -821,9 +824,6 @@
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-card-media">
-                        <img src="/bg_remove_after.png" alt="Background Removal">
-                    </div>
                     <div class="feature-card-content">
                         <div class="feature-card-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

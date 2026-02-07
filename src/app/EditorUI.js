@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule, ToneCurveModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule, ToneCurveModule, ColorGradingModule } from './modules/index.js';
 
 export class EditorUI {
     constructor(state, gpu, masks) {
@@ -60,6 +60,8 @@ export class EditorUI {
         this.textModule = new TextModule(this);
         this.relightingModule = new RelightingModule(this);
         this.toneCurveModule = new ToneCurveModule(this);
+        this.colorGradingModule = new ColorGradingModule(this);
+        this.colorGradingModule.init();
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
