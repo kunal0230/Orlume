@@ -10,6 +10,42 @@
             "destination": "/editor.html"
         },
         {
+            "source": "/docs",
+            "destination": "/pages/docs.html"
+        },
+        {
+            "source": "/tutorials",
+            "destination": "/pages/tutorials.html"
+        },
+        {
+            "source": "/blog",
+            "destination": "/pages/blog.html"
+        },
+        {
+            "source": "/changelog",
+            "destination": "/pages/changelog.html"
+        },
+        {
+            "source": "/about",
+            "destination": "/pages/about.html"
+        },
+        {
+            "source": "/careers",
+            "destination": "/pages/careers.html"
+        },
+        {
+            "source": "/contribute",
+            "destination": "/pages/contribute.html"
+        },
+        {
+            "source": "/privacy",
+            "destination": "/pages/privacy.html"
+        },
+        {
+            "source": "/terms",
+            "destination": "/pages/terms.html"
+        },
+        {
             "source": "/((?!assets|images|public|.*\\..*).*)",
             "destination": "/index.html"
         }

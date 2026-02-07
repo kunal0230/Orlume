@@ -36,6 +36,35 @@ const copyWasmPlugin = () => ({
   }
 });
 
+/**
+ * Plugin to handle clean URLs for pages during development
+ * Maps routes like /docs to /pages/docs.html
+ */
+const pageRoutesPlugin = () => ({
+  name: 'page-routes',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const pageRoutes = {
+        '/docs': '/pages/docs.html',
+        '/tutorials': '/pages/tutorials.html',
+        '/blog': '/pages/blog.html',
+        '/changelog': '/pages/changelog.html',
+        '/about': '/pages/about.html',
+        '/careers': '/pages/careers.html',
+        '/contribute': '/pages/contribute.html',
+        '/privacy': '/pages/privacy.html',
+        '/terms': '/pages/terms.html'
+      };
+
+      const url = req.url.split('?')[0]; // Remove query string
+      if (pageRoutes[url]) {
+        req.url = pageRoutes[url];
+      }
+      next();
+    });
+  }
+});
+
 export default defineConfig({
   server: {
     port: 5174,
@@ -89,6 +118,7 @@ export default defineConfig({
   // Note: Don't exclude @huggingface/transformers - let Vite pre-bundle it
 
   plugins: [
+    pageRoutesPlugin(),
     copyWasmPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
