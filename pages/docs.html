@@ -1343,33 +1343,45 @@ float calculateSoftShadow(vec2 uv, vec2 lightPos) {
     </div>
 
     <script>
-        // Smooth scroll for anchor links
-        document.querySelectorAll('.docs-nav-list a').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = document.querySelector(link.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    document.querySelectorAll('.docs-nav-list a').forEach(l => l.classList.remove('active'));
-                    link.classList.add('active');
-                }
-            });
-        });
-
-        // Highlight current section on scroll
-        const sections = document.querySelectorAll('.docs-content section');
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const id = entry.target.id;
-                    document.querySelectorAll('.docs-nav-list a').forEach(link => {
-                        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Smooth scroll for anchor links
+            const navLinks = document.querySelectorAll('.docs-nav-list a');
+            if (navLinks.length > 0) {
+                navLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const href = link.getAttribute('href');
+                        if (href) {
+                            const target = document.querySelector(href);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                navLinks.forEach(l => l.classList.remove('active'));
+                                link.classList.add('active');
+                            }
+                        }
                     });
-                }
-            });
-        }, { rootMargin: '-100px 0px -70% 0px' });
+                });
+            }
 
-        sections.forEach(section => observer.observe(section));
+            // Highlight current section on scroll
+            const sections = document.querySelectorAll('.docs-content section');
+            if (sections.length > 0) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const id = entry.target.id;
+                            if (id) {
+                                document.querySelectorAll('.docs-nav-list a').forEach(link => {
+                                    link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+                                });
+                            }
+                        }
+                    });
+                }, { rootMargin: '-100px 0px -70% 0px' });
+
+                sections.forEach(section => observer.observe(section));
+            }
+        });
     </script>
 </body>
 
