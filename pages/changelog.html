@@ -6,24 +6,180 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Changelog — Orlume AI Photo Editor</title>
     <meta name="description"
-        content="See what's new in Orlume. Track all product updates, new features, improvements, and bug fixes.">
-    <meta name="keywords" content="orlume changelog, orlume updates, new features, release notes">
+        content="Complete release history for Orlume. Track all product updates, new features, performance improvements, and technical enhancements.">
+    <meta name="keywords" content="orlume changelog, orlume updates, new features, release notes, version history">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/changelog">
 
     <meta property="og:title" content="Changelog — Orlume AI Photo Editor">
-    <meta property="og:description" content="Track all product updates and new features from Orlume.">
+    <meta property="og:description" content="Complete version history and release notes for Orlume.">
     <meta property="og:url" content="https://orlume.io/changelog">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 
     <link rel="stylesheet" href="/src/styles/landing.css">
     <link rel="stylesheet" href="/src/styles/pages.css">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <!-- Vercel Analytics -->
     <script type="module" src="/src/utils/analytics.js"></script>
+
+    <style>
+        .changelog-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .changelog-item {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .changelog-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            border-radius: 4px 0 0 4px;
+        }
+
+        .changelog-version {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .changelog-tag {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            color: white;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .changelog-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .changelog-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .changelog-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .changelog-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .changelog-list li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .changelog-list li:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .badge.new {
+            background: linear-gradient(135deg, #10b981, #06b6d4);
+            color: white;
+        }
+
+        .badge.improved {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+
+        .badge.fixed {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+            color: white;
+        }
+
+        .badge.perf {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            color: white;
+        }
+
+        .badge.breaking {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .tech-detail {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .tech-detail code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 8px;
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 
 <body>
@@ -50,7 +206,7 @@
                                 </svg></div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">Documentation</div>
-                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                                <div class="nav-dropdown-desc">Technical reference</div>
                             </div>
                         </a>
                         <a href="/tutorials">
@@ -148,42 +304,316 @@
         <div class="page-content">
             <header class="page-header">
                 <div class="page-eyebrow">Changelog</div>
-                <h1 class="page-title">What's New</h1>
-                <p class="page-subtitle">A complete history of updates, features, and improvements to Orlume.</p>
+                <h1 class="page-title">Release History</h1>
+                <p class="page-subtitle">A complete technical history of updates, new features, and performance
+                    improvements.</p>
             </header>
 
             <div class="changelog-container">
-                <!-- Version 1.5.0 -->
+                <!-- Version 4.3.0 -->
                 <div class="changelog-item">
                     <div class="changelog-version">
-                        <span class="changelog-tag">v1.5.0</span>
-                        <span class="changelog-date">January 2, 2026</span>
+                        <span class="changelog-tag">v4.3.0</span>
+                        <span class="changelog-date">February 7, 2026</span>
                     </div>
-                    <h3 class="changelog-title">Professional Presets & HSL Improvements</h3>
+                    <h3 class="changelog-title">3-Way Color Grading & Technical Documentation</h3>
+                    <p class="changelog-subtitle">Introducing professional-grade shadow/midtone/highlight color controls
+                        with GPU-accelerated lift-gamma-gain implementation.</p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            Professional Presets library with 40+ cinematic looks across 6 categories
+                            <div>
+                                <strong>3-Way Color Grading</strong> — Independent shadow, midtone, and highlight color
+                                wheels
+                                <div class="tech-detail">GPU shader uses lift-gamma-gain algorithm:
+                                    <code>out = (in × gain + lift) ^ (1/gamma)</code></div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Preset intensity slider for blending effects
-                        </li>
-                        <li>
-                            <span class="badge new">New</span>
-                            Colorful gradient backgrounds for HSL hue sliders
-                        </li>
-                        <li>
-                            <span class="badge improved">Improved</span>
-                            HSL color mixer with smoother transitions
+                            <div>
+                                <strong>Technical Documentation Portal</strong> — Comprehensive academic-level
+                                documentation
+                                <div class="tech-detail">Covers ML models, PBR rendering, GLSL shaders, and HBAO
+                                    implementation</div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge improved">Improved</span>
-                            Overall UI polish and micro-animations
+                            <div>
+                                <strong>Navigation Routing</strong> — Fixed page routing for documentation, tutorials,
+                                and blog
+                                <div class="tech-detail">Added <code>pageRoutesPlugin</code> middleware for Vite dev
+                                    server</div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge fixed">Fixed</span>
-                            Preset reset button now properly clears all adjustments
+                            <div>Shader compilation errors for include paths and uniform definitions</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 4.2.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v4.2.0</span>
+                        <span class="changelog-date">February 1, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">Advanced Day Planner & UI Refinements</h3>
+                    <p class="changelog-subtitle">New planning tools and improved visual indicators for the editor
+                        interface.</p>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>Advanced day planner with task duration controls</div>
+                        </li>
+                        <li>
+                            <span class="badge improved">Improved</span>
+                            <div>Current time indicator visibility with red body and white outline</div>
+                        </li>
+                        <li>
+                            <span class="badge fixed">Fixed</span>
+                            <div>Task overflow issues and scroll functionality in planner</div>
+                        </li>
+                        <li>
+                            <span class="badge fixed">Fixed</span>
+                            <div>Eliminated double confirmation prompt when deleting tasks</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 4.1.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v4.1.0</span>
+                        <span class="changelog-date">January 29, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">Clarity, Texture & Dehaze Controls</h3>
+                    <p class="changelog-subtitle">New detail enhancement controls with GPU-accelerated local contrast
+                        algorithms.</p>
+
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">60fps</div>
+                            <div class="metric-label">Real-time Processing</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">3</div>
+                            <div class="metric-label">New Sliders</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">0</div>
+                            <div class="metric-label">Server Calls</div>
+                        </div>
+                    </div>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>Clarity slider</strong> — Local contrast enhancement using unsharp mask
+                                <div class="tech-detail">Algorithm:
+                                    <code>clarity = original + (original - blur) × strength</code></div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>Texture slider</strong> — High-frequency detail enhancement
+                                <div class="tech-detail">Preserves edges while boosting micro-contrast</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>Dehaze slider</strong> — Atmospheric haze removal
+                                <div class="tech-detail">Based on dark channel prior with transmission map estimation
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge fixed">Fixed</span>
+                            <div>UI slider state management and parameter passing to GPU</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 4.0.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v4.0.0</span>
+                        <span class="changelog-date">January 27, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">God Rays & Undo/Redo Overhaul</h3>
+                    <p class="changelog-subtitle">Major release with volumetric lighting effects and completely
+                        rewritten history system.</p>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>God Rays (Volumetric Lighting)</strong> — Screen-space light scattering effect
+                                <div class="tech-detail">Ray marching with 32-128 samples, chromatic aberration, and
+                                    bloom integration</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge breaking">Breaking</span>
+                            <div>
+                                <strong>History System Rewrite</strong> — Complete overhaul of undo/redo logic
+                                <div class="tech-detail">Command pattern implementation with <code>pushDebounced</code>
+                                    calls across all modules</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge improved">Improved</span>
+                            <div>Initial state capture upon image load in EditorUI</div>
+                        </li>
+                        <li>
+                            <span class="badge fixed">Fixed</span>
+                            <div>God rays <code>setState()</code> invocation during state restoration</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 3.5.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v3.5.0</span>
+                        <span class="changelog-date">January 20, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">Vercel Analytics & Performance Monitoring</h3>
+                    <p class="changelog-subtitle">Production-ready analytics integration for performance monitoring.</p>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>Vercel Analytics integration for Web Vitals monitoring</div>
+                        </li>
+                        <li>
+                            <span class="badge perf">Perf</span>
+                            <div>
+                                <strong>Core Web Vitals tracking</strong>
+                                <div class="tech-detail">LCP, FID, CLS, TTFB metrics with custom event reporting</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 3.0.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v3.0.0</span>
+                        <span class="changelog-date">January 15, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">3D Relighting V2 — Complete Rewrite</h3>
+                    <p class="changelog-subtitle">Second-generation relighting system with HBAO, soft shadows, and
+                        material-aware rendering.</p>
+
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">150ms</div>
+                            <div class="metric-label">Depth Inference</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">60fps</div>
+                            <div class="metric-label">Render Loop</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">48</div>
+                            <div class="metric-label">Shadow Ray Steps</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">150</div>
+                            <div class="metric-label">Semantic Classes</div>
+                        </div>
+                    </div>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>Depth Anything V2</strong> — State-of-the-art monocular depth estimation
+                                <div class="tech-detail">ViT-Small architecture via
+                                    <code>Xenova/depth-anything-small-hf</code></div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>SegFormer B0</strong> — Material-aware semantic segmentation
+                                <div class="tech-detail">150-class ADE20K with per-pixel roughness/metallic/SSS
+                                    properties</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>HBAO (Horizon-Based Ambient Occlusion)</strong>
+                                <div class="tech-detail">8-direction, 8-step ray marching with Gaussian blur
+                                    post-processing</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>GGX BRDF</strong> — Cook-Torrance specular with Fresnel-Schlick
+                                <div class="tech-detail">Physically-based rendering with energy conservation</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>
+                                <strong>Dithered Soft Shadows</strong> — Anti-banded screen-space shadows
+                                <div class="tech-detail">Hash-based dithering + 9-tap Gaussian depth sampling</div>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="badge improved">Improved</span>
+                            <div>
+                                <strong>Scharr Normal Estimation</strong> — Better rotational symmetry than Sobel
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Version 2.0.0 -->
+                <div class="changelog-item">
+                    <div class="changelog-version">
+                        <span class="changelog-tag">v2.0.0</span>
+                        <span class="changelog-date">January 2, 2026</span>
+                    </div>
+                    <h3 class="changelog-title">Professional Presets & HSL Improvements</h3>
+                    <p class="changelog-subtitle">40+ cinematic color presets with intensity blending and enhanced HSL
+                        controls.</p>
+
+                    <ul class="changelog-list">
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>Professional Presets library — 40+ cinematic looks across 6 categories</div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>Preset intensity slider for blend control between original and effect</div>
+                        </li>
+                        <li>
+                            <span class="badge new">New</span>
+                            <div>Colorful gradient backgrounds for HSL hue slider visualization</div>
+                        </li>
+                        <li>
+                            <span class="badge improved">Improved</span>
+                            <div>HSL color mixer with smoother GPU-accelerated transitions</div>
+                        </li>
+                        <li>
+                            <span class="badge improved">Improved</span>
+                            <div>Overall UI polish and micro-animations</div>
+                        </li>
+                        <li>
+                            <span class="badge fixed">Fixed</span>
+                            <div>Preset reset button now properly clears all adjustments</div>
                         </li>
                     </ul>
                 </div>
@@ -194,27 +624,36 @@
                         <span class="changelog-tag">v1.4.0</span>
                         <span class="changelog-date">December 28, 2025</span>
                     </div>
-                    <h3 class="changelog-title">Advanced 3D Model Export</h3>
+                    <h3 class="changelog-title">3D Mesh Export & Interactive Preview</h3>
+                    <p class="changelog-subtitle">Export depth maps as textured OBJ meshes with Three.js-powered 3D
+                        preview.</p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            Export depth maps as 3D OBJ meshes with textures
+                            <div>
+                                <strong>3D OBJ Mesh Export</strong> — Depth-displaced geometry with UV-mapped textures
+                                <div class="tech-detail">Three.js PlaneGeometry with configurable 64-512 segment
+                                    resolution</div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Interactive 3D preview with orbit controls
+                            <div>
+                                <strong>Interactive 3D Preview</strong> — OrbitControls with zoom/pan/rotate
+                            </div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Configurable mesh resolution and depth scale
+                            <div>Configurable mesh resolution and depth scale parameters</div>
                         </li>
                         <li>
                             <span class="badge improved">Improved</span>
-                            Depth estimation accuracy for complex scenes
+                            <div>Depth estimation accuracy for complex multi-object scenes</div>
                         </li>
                         <li>
                             <span class="badge fixed">Fixed</span>
-                            Shadow slider now works correctly in relight mode
+                            <div>Shadow slider functionality in relight mode</div>
                         </li>
                     </ul>
                 </div>
@@ -226,26 +665,33 @@
                         <span class="changelog-date">December 20, 2025</span>
                     </div>
                     <h3 class="changelog-title">8-Channel HSL Color Mixer</h3>
+                    <p class="changelog-subtitle">Lightroom-style per-channel color control with GPU-accelerated
+                        processing.</p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            Complete HSL color mixer with 8 color channels
+                            <div>
+                                <strong>8-Channel HSL Mixer</strong> — Red, Orange, Yellow, Green, Aqua, Blue, Purple,
+                                Magenta
+                                <div class="tech-detail">Single-pass GPU shader with hue-range based masking</div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Independent Hue, Saturation, and Luminance controls per channel
+                            <div>Independent Hue, Saturation, and Luminance per channel</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Collapsible channel panels for cleaner workflow
+                            <div>Collapsible channel panels for cleaner UI workflow</div>
                         </li>
                         <li>
-                            <span class="badge improved">Improved</span>
-                            GPU shader performance for real-time HSL adjustments
+                            <span class="badge perf">Perf</span>
+                            <div>GPU shader optimization for real-time HSL adjustments at 4K</div>
                         </li>
                         <li>
                             <span class="badge fixed">Fixed</span>
-                            Global undo/redo now works across all editing modes
+                            <div>Global undo/redo now works across all editing modes</div>
                         </li>
                     </ul>
                 </div>
@@ -257,26 +703,32 @@
                         <span class="changelog-date">December 15, 2025</span>
                     </div>
                     <h3 class="changelog-title">Enhanced Relighting System</h3>
+                    <p class="changelog-subtitle">Multiple light types with interactive positioning and color control.
+                    </p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            Interactive light source positioning with visual indicator
+                            <div>Interactive light source positioning with visual indicator overlay</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Multiple light types: Key, Fill, Rim, and Ambient
+                            <div>Multiple light types: Key, Fill, Rim, and Ambient lighting</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Light color picker for creative effects
+                            <div>Light color picker for creative colored lighting effects</div>
                         </li>
                         <li>
                             <span class="badge improved">Improved</span>
-                            Faster depth estimation with optimized models
+                            <div>
+                                <strong>Faster depth estimation</strong>
+                                <div class="tech-detail">Optimized ONNX model loading with IndexedDB caching</div>
+                            </div>
                         </li>
                         <li>
                             <span class="badge improved">Improved</span>
-                            More realistic shadow falloff calculation
+                            <div>More realistic shadow falloff using inverse-square + bias formula</div>
                         </li>
                     </ul>
                 </div>
@@ -288,26 +740,29 @@
                         <span class="changelog-date">December 10, 2025</span>
                     </div>
                     <h3 class="changelog-title">Background Removal & Effects</h3>
+                    <p class="changelog-subtitle">AI-powered background removal with vignette and film grain effects.
+                    </p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            AI-powered background removal with edge refinement
+                            <div>AI-powered background removal with alpha-matted PNG output</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Vignette effect with customizable intensity and radius
+                            <div>Vignette effect with customizable intensity and radius</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Film grain effect for analog aesthetics
+                            <div>Film grain effect with noise pattern for analog aesthetics</div>
                         </li>
                         <li>
                             <span class="badge improved">Improved</span>
-                            Export quality up to 4K resolution
+                            <div>Export quality up to 4K resolution (3840×2160)</div>
                         </li>
                         <li>
                             <span class="badge fixed">Fixed</span>
-                            Image loading issues on Safari browsers
+                            <div>Image loading issues on Safari browsers</div>
                         </li>
                     </ul>
                 </div>
@@ -319,30 +774,38 @@
                         <span class="changelog-date">December 1, 2025</span>
                     </div>
                     <h3 class="changelog-title">Initial Release</h3>
+                    <p class="changelog-subtitle">First public release of Orlume AI Photo Editor with core editing
+                        capabilities.</p>
+
                     <ul class="changelog-list">
                         <li>
                             <span class="badge new">New</span>
-                            3D Relighting with AI depth estimation
+                            <div>
+                                <strong>3D Relighting</strong> — AI depth estimation with WebGL2 lighting
+                            </div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Basic adjustments: Exposure, Contrast, Highlights, Shadows
+                            <div>Basic adjustments: Exposure, Contrast, Highlights, Shadows, Whites, Blacks</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Color controls: Temperature, Tint, Vibrance, Saturation
+                            <div>Color controls: Temperature, Tint, Vibrance, Saturation</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Crop and rotation tools
+                            <div>Crop and rotation tools with aspect ratio presets</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            Export to JPEG, PNG, and WebP formats
+                            <div>Export to JPEG, PNG, and WebP formats</div>
                         </li>
                         <li>
                             <span class="badge new">New</span>
-                            WebGL2 GPU acceleration for real-time preview
+                            <div>
+                                <strong>WebGL2 GPU Acceleration</strong>
+                                <div class="tech-detail">Real-time preview at 60fps with ping-pong framebuffers</div>
+                            </div>
                         </li>
                     </ul>
                 </div>

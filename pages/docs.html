@@ -4,24 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation — Orlume AI Photo Editor</title>
+    <title>Technical Documentation — Orlume AI Photo Editor</title>
     <meta name="description"
-        content="Learn how to use Orlume's AI photo editing tools. Complete documentation for 3D relighting, background removal, color grading, and more.">
+        content="Comprehensive technical documentation for Orlume's AI photo editing architecture. Deep dive into depth estimation, neural rendering, WebGL2/WebGPU acceleration, and physically-based rendering.">
     <meta name="keywords"
-        content="orlume documentation, photo editor tutorial, 3d relighting guide, background removal help">
+        content="orlume documentation, depth estimation, neural rendering, WebGL2, WebGPU, PBR, HBAO, 3D relighting, computer vision">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/docs">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="Documentation — Orlume AI Photo Editor">
-    <meta property="og:description" content="Complete documentation for Orlume's AI photo editing tools.">
+    <meta property="og:title" content="Technical Documentation — Orlume AI Photo Editor">
+    <meta property="og:description"
+        content="Comprehensive technical documentation for Orlume's AI-powered photo editing architecture.">
     <meta property="og:url" content="https://orlume.io/docs">
     <meta property="og:type" content="website">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 
     <!-- Styles -->
     <link rel="stylesheet" href="/src/styles/landing.css">
@@ -32,6 +35,163 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <!-- Vercel Analytics -->
     <script type="module" src="/src/utils/analytics.js"></script>
+
+    <style>
+        /* Documentation-specific styles */
+        .docs-content h1 {
+            font-size: 2rem;
+            margin-top: 0;
+        }
+
+        .docs-content h2 {
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 0.5rem;
+        }
+
+        .docs-content h3 {
+            font-size: 1.15rem;
+            margin-top: 1.5rem;
+            color: var(--accent-purple);
+        }
+
+        .docs-content h4 {
+            font-size: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .docs-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .docs-content th,
+        .docs-content td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border: 1px solid var(--border-glass);
+        }
+
+        .docs-content th {
+            background: var(--bg-glass);
+            font-weight: 600;
+        }
+
+        .docs-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .docs-content pre {
+            background: #0d0d1a;
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .docs-content code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .docs-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .tech-badge.ml {
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            color: white;
+        }
+
+        .tech-badge.gpu {
+            background: linear-gradient(135deg, #10b981, #06b6d4);
+            color: white;
+        }
+
+        .tech-badge.shader {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+        }
+
+        .architecture-diagram {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .architecture-diagram pre {
+            background: transparent;
+            border: none;
+            margin: 0;
+            text-align: left;
+        }
+
+        .equation-block {
+            background: var(--bg-glass);
+            border-left: 3px solid var(--accent-purple);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .paper-reference {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .paper-reference strong {
+            color: var(--accent-purple);
+        }
+
+        .feature-highlight {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-highlight-item {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .feature-highlight-item strong {
+            display: block;
+            font-size: 1.5rem;
+            color: var(--accent-purple);
+            margin-bottom: 0.25rem;
+        }
+    </style>
 </head>
 
 <body>
@@ -59,7 +219,7 @@
                                 </svg></div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">Documentation</div>
-                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                                <div class="nav-dropdown-desc">Technical reference</div>
                             </div>
                         </a>
                         <a href="/tutorials">
@@ -157,10 +317,10 @@
         <div class="page-content">
             <!-- Page Header -->
             <header class="page-header">
-                <div class="page-eyebrow">Documentation</div>
-                <h1 class="page-title">Learn Orlume</h1>
-                <p class="page-subtitle">Everything you need to master professional photo editing with AI-powered tools.
-                </p>
+                <div class="page-eyebrow">Technical Documentation</div>
+                <h1 class="page-title">Orlume Architecture</h1>
+                <p class="page-subtitle">Comprehensive technical reference for researchers, developers, and academics
+                    interested in browser-based neural image processing.</p>
             </header>
 
             <!-- Documentation Layout -->
@@ -169,40 +329,58 @@
                 <aside class="docs-sidebar">
                     <nav>
                         <div class="docs-nav-section">
-                            <div class="docs-nav-title">Getting Started</div>
+                            <div class="docs-nav-title">Overview</div>
                             <ul class="docs-nav-list">
-                                <li><a href="#introduction" class="active">Introduction</a></li>
-                                <li><a href="#quick-start">Quick Start</a></li>
-                                <li><a href="#interface">Interface Overview</a></li>
-                                <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+                                <li><a href="#abstract" class="active">Abstract</a></li>
+                                <li><a href="#architecture">System Architecture</a></li>
+                                <li><a href="#capabilities">Technical Capabilities</a></li>
                             </ul>
                         </div>
 
                         <div class="docs-nav-section">
-                            <div class="docs-nav-title">Core Features</div>
+                            <div class="docs-nav-title">Machine Learning</div>
                             <ul class="docs-nav-list">
-                                <li><a href="#basic-adjustments">Basic Adjustments</a></li>
-                                <li><a href="#color-grading">Color Grading & HSL</a></li>
-                                <li><a href="#presets">Professional Presets</a></li>
-                                <li><a href="#curves">Curves & Levels</a></li>
+                                <li><a href="#depth-estimation">Monocular Depth Estimation</a></li>
+                                <li><a href="#segmentation">Semantic Segmentation</a></li>
+                                <li><a href="#face-mesh">Face Mesh Detection</a></li>
+                                <li><a href="#upscaling">Neural Upscaling</a></li>
                             </ul>
                         </div>
 
                         <div class="docs-nav-section">
-                            <div class="docs-nav-title">AI Tools</div>
+                            <div class="docs-nav-title">Rendering Pipeline</div>
                             <ul class="docs-nav-list">
-                                <li><a href="#relighting">3D Relighting</a></li>
-                                <li><a href="#background-removal">Background Removal</a></li>
-                                <li><a href="#upscaling">AI Upscaling</a></li>
-                                <li><a href="#magic-eraser">Magic Eraser</a></li>
+                                <li><a href="#normal-estimation">Surface Normal Estimation</a></li>
+                                <li><a href="#pbr">Physically-Based Rendering</a></li>
+                                <li><a href="#ambient-occlusion">Ambient Occlusion</a></li>
+                                <li><a href="#shadows">Shadow Computation</a></li>
+                                <li><a href="#god-rays">Volumetric Lighting</a></li>
                             </ul>
                         </div>
 
                         <div class="docs-nav-section">
-                            <div class="docs-nav-title">Export & Share</div>
+                            <div class="docs-nav-title">GPU Acceleration</div>
                             <ul class="docs-nav-list">
-                                <li><a href="#export">Export Options</a></li>
-                                <li><a href="#formats">File Formats</a></li>
+                                <li><a href="#webgpu">WebGPU Backend</a></li>
+                                <li><a href="#webgl2">WebGL2 Fallback</a></li>
+                                <li><a href="#shaders">GLSL Shaders</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="docs-nav-section">
+                            <div class="docs-nav-title">Color Science</div>
+                            <ul class="docs-nav-list">
+                                <li><a href="#color-grading">Color Grading Pipeline</a></li>
+                                <li><a href="#hsl">HSL Color Mixer</a></li>
+                                <li><a href="#tone-mapping">Tone Mapping</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="docs-nav-section">
+                            <div class="docs-nav-title">References</div>
+                            <ul class="docs-nav-list">
+                                <li><a href="#references">Academic Papers</a></li>
+                                <li><a href="#dependencies">Dependencies</a></li>
                             </ul>
                         </div>
                     </nav>
@@ -210,255 +388,882 @@
 
                 <!-- Content -->
                 <main class="docs-content">
-                    <section id="introduction">
-                        <h1>Introduction to Orlume</h1>
-                        <p>Orlume is a professional-grade AI photo editor that runs entirely in your browser. Built with
-                            privacy in mind, all processing happens locally on your device using WebGL2 GPU
-                            acceleration.</p>
-
-                        <div class="docs-callout">
-                            <p><strong>No account required.</strong> Start editing immediately — just upload an image
-                                and go.</p>
-                        </div>
-
-                        <h3>Key Features</h3>
-                        <ul>
-                            <li><strong>3D Relighting</strong> — Add dramatic lighting using AI depth estimation</li>
-                            <li><strong>Background Removal</strong> — Pixel-perfect cutouts in seconds</li>
-                            <li><strong>Professional Presets</strong> — 40+ cinematic looks across 6 categories</li>
-                            <li><strong>HSL Color Mixer</strong> — 8-channel color control like Lightroom</li>
-                            <li><strong>AI Upscaling</strong> — Increase resolution up to 4x</li>
-                            <li><strong>Magic Eraser</strong> — Remove objects with AI inpainting</li>
-                        </ul>
-                    </section>
-
-                    <section id="quick-start">
-                        <h2>Quick Start</h2>
-                        <p>Getting started with Orlume takes just a few seconds:</p>
-
-                        <h3>1. Open the Editor</h3>
-                        <p>Navigate to <a href="/editor" style="color: var(--accent-purple);">orlume.io/editor</a> or
-                            click "Open Editor" from the homepage.</p>
-
-                        <h3>2. Upload an Image</h3>
-                        <p>You can upload images in three ways:</p>
-                        <ul>
-                            <li><strong>Drag and drop</strong> — Drop any image directly onto the canvas</li>
-                            <li><strong>Click to browse</strong> — Click the upload area to select a file</li>
-                            <li><strong>Paste from clipboard</strong> — Use <code>Ctrl/Cmd + V</code> to paste</li>
-                        </ul>
-                        <p>Supported formats: JPG, PNG, WebP, HEIC (up to 50MB)</p>
-
-                        <h3>3. Make Adjustments</h3>
-                        <p>Use the sidebar panels to access different editing tools. Changes are applied in real-time
-                            with GPU acceleration.</p>
-
-                        <h3>4. Export Your Work</h3>
-                        <p>Click the Export button or press <code>Ctrl/Cmd + E</code> to save your edited image.</p>
-                    </section>
-
-                    <section id="interface">
-                        <h2>Interface Overview</h2>
-                        <p>The Orlume editor is divided into three main areas:</p>
-
-                        <h3>The Canvas</h3>
-                        <p>The central workspace where your image is displayed. You can zoom with scroll wheel or pinch
-                            gestures, and pan by clicking and dragging.</p>
-
-                        <h3>Left Sidebar — Tools</h3>
-                        <p>Quick access to specialized tools like Liquify, Healing Brush, and selection tools.</p>
-
-                        <h3>Right Sidebar — Adjustments</h3>
-                        <p>All image adjustment controls organized into collapsible panels:</p>
-                        <ul>
-                            <li><strong>Basic</strong> — Exposure, contrast, highlights, shadows, etc.</li>
-                            <li><strong>Color</strong> — Temperature, tint, vibrance, saturation</li>
-                            <li><strong>HSL</strong> — Per-channel hue, saturation, luminance</li>
-                            <li><strong>Effects</strong> — Vignette, grain, clarity, dehaze</li>
-                            <li><strong>AI</strong> — 3D relighting, depth tools, background removal</li>
-                            <li><strong>Presets</strong> — Professional preset library</li>
-                        </ul>
-                    </section>
-
-                    <section id="keyboard-shortcuts">
-                        <h2>Keyboard Shortcuts</h2>
-                        <p>Speed up your workflow with these keyboard shortcuts:</p>
-
-                        <h3>General</h3>
-                        <ul>
-                            <li><code>Ctrl/Cmd + Z</code> — Undo</li>
-                            <li><code>Ctrl/Cmd + Shift + Z</code> — Redo</li>
-                            <li><code>Ctrl/Cmd + E</code> — Export</li>
-                            <li><code>Ctrl/Cmd + 0</code> — Fit to screen</li>
-                            <li><code>Ctrl/Cmd + 1</code> — Zoom to 100%</li>
-                            <li><code>Space + Drag</code> — Pan canvas</li>
-                        </ul>
-
-                        <h3>Tools</h3>
-                        <ul>
-                            <li><code>V</code> — Selection tool</li>
-                            <li><code>B</code> — Brush tool</li>
-                            <li><code>E</code> — Eraser tool</li>
-                            <li><code>J</code> — Healing brush</li>
-                            <li><code>L</code> — Liquify tool</li>
-                        </ul>
-                    </section>
-
-                    <section id="basic-adjustments">
-                        <h2>Basic Adjustments</h2>
-                        <p>The Basic panel provides fundamental image adjustments:</p>
-
-                        <h3>Exposure</h3>
-                        <p>Controls overall image brightness. Positive values brighten the image, negative values darken
-                            it.</p>
-
-                        <h3>Contrast</h3>
-                        <p>Adjusts the difference between light and dark areas. Higher contrast creates more dramatic
-                            images.</p>
-
-                        <h3>Highlights & Shadows</h3>
-                        <p>Recover detail in bright and dark areas independently. Essential for high-contrast scenes.
+                    <section id="abstract">
+                        <h1>Abstract</h1>
+                        <p>
+                            <strong>Orlume</strong> is a browser-native image processing system that combines deep
+                            learning-based scene understanding with real-time physically-based rendering. The system
+                            performs monocular depth estimation using Vision Transformer architectures, generates
+                            surface normals through gradient-based reconstruction, and applies deferred shading with GGX
+                            specular reflectance and horizon-based ambient occlusion (HBAO).
                         </p>
 
-                        <h3>Whites & Blacks</h3>
-                        <p>Set the white and black points of your image for optimal tonal range.</p>
+                        <div class="feature-highlight">
+                            <div class="feature-highlight-item">
+                                <strong>100%</strong>
+                                <span>Client-Side Processing</span>
+                            </div>
+                            <div class="feature-highlight-item">
+                                <strong>60fps</strong>
+                                <span>Real-time Rendering</span>
+                            </div>
+                            <div class="feature-highlight-item">
+                                <strong>150</strong>
+                                <span>Semantic Classes</span>
+                            </div>
+                            <div class="feature-highlight-item">
+                                <strong>Zero</strong>
+                                <span>Server Dependencies</span>
+                            </div>
+                        </div>
+
+                        <div class="docs-callout">
+                            <p><strong>Key Innovation:</strong> First fully browser-based implementation of neural 3D
+                                relighting that combines monocular depth estimation with physically-based rendering for
+                                interactive photo manipulation.</p>
+                        </div>
                     </section>
 
-                    <section id="color-grading">
-                        <h2>Color Grading & HSL</h2>
-                        <p>Orlume offers professional-grade color controls similar to Adobe Lightroom.</p>
+                    <section id="architecture">
+                        <h2>System Architecture</h2>
+                        <p>The Orlume processing pipeline implements a multi-stage architecture optimized for GPU
+                            parallelism:</p>
 
-                        <h3>Temperature & Tint</h3>
-                        <p>Adjust the color balance of your image. Temperature controls warm/cool (orange/blue), while
-                            Tint controls green/magenta.</p>
-
-                        <h3>HSL Color Mixer</h3>
-                        <p>The HSL panel gives you independent control over 8 color channels:</p>
-                        <ul>
-                            <li>Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta</li>
-                        </ul>
-                        <p>For each channel, you can adjust:</p>
-                        <ul>
-                            <li><strong>Hue</strong> — Shift the color toward adjacent hues</li>
-                            <li><strong>Saturation</strong> — Increase or decrease color intensity</li>
-                            <li><strong>Luminance</strong> — Brighten or darken specific colors</li>
-                        </ul>
+                        <div class="architecture-diagram">
+                            <pre>
+┌─────────────────────────────────────────────────────────────────────┐
+│                        INPUT PROCESSING                              │
+│  ┌─────────┐    ┌──────────────┐    ┌─────────────┐                 │
+│  │  Image  │───▶│ sRGB→Linear  │───▶│  Normalize  │                 │
+│  │ Decode  │    │  Conversion  │    │   [0,1]     │                 │
+│  └─────────┘    └──────────────┘    └─────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    NEURAL INFERENCE (Parallel)                       │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐         │
+│  │ Depth Anything │  │   SegFormer    │  │  MediaPipe FM  │         │
+│  │     V2 ViT     │  │     B0-512     │  │   468 Points   │         │
+│  │  (Depth Map)   │  │  (Materials)   │  │  (Face Mesh)   │         │
+│  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘         │
+└──────────┼───────────────────┼───────────────────┼──────────────────┘
+           │                   │                   │
+           ▼                   ▼                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    GEOMETRY RECONSTRUCTION                           │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐         │
+│  │ Scharr Kernel  │  │ Material Map   │  │ Face Normals   │         │
+│  │  ∇D → Normal   │  │  RGBA Encode   │  │  Triangulation │         │
+│  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘         │
+└──────────┼───────────────────┼───────────────────┼──────────────────┘
+           │                   │                   │
+           └───────────────────┴───────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    DEFERRED RENDERING (WebGL2/WebGPU)                │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  G-Buffer: Albedo | Normals | Depth | Materials | Position    │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                              │                                       │
+│              ┌───────────────┼───────────────┐                      │
+│              ▼               ▼               ▼                      │
+│       ┌──────────┐    ┌──────────┐    ┌──────────┐                  │
+│       │   HBAO   │    │ GGX BRDF │    │  Shadow  │                  │
+│       │  8-dir   │    │ Specular │    │  Raymarch│                  │
+│       └────┬─────┘    └────┬─────┘    └────┬─────┘                  │
+│            └───────────────┼───────────────┘                        │
+│                            ▼                                         │
+│       ┌─────────────────────────────────────────────────────────┐   │
+│       │  Final Composite: Diffuse + Specular + AO + Shadows     │   │
+│       │  Tone Mapping: ACES Filmic | Exposure Compensation      │   │
+│       └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+                            </pre>
+                        </div>
                     </section>
 
-                    <section id="presets">
-                        <h2>Professional Presets</h2>
-                        <p>Apply one-click cinematic looks with our library of 40+ professional presets.</p>
+                    <section id="capabilities">
+                        <h2>Technical Capabilities</h2>
 
-                        <h3>Categories</h3>
-                        <ul>
-                            <li><strong>Portrait</strong> — Soft skin tones, flattering looks</li>
-                            <li><strong>Landscape</strong> — Vibrant nature photography</li>
-                            <li><strong>Urban & Street</strong> — Gritty, contemporary feels</li>
-                            <li><strong>Creative</strong> — Bold, artistic effects</li>
-                            <li><strong>Black & White</strong> — Classic monochrome conversions</li>
-                            <li><strong>Sky & Golden Hour</strong> — Warm, atmospheric lighting</li>
-                        </ul>
-
-                        <h3>Intensity Control</h3>
-                        <p>Use the intensity slider to blend between your original image and the preset effect. This
-                            allows for subtle adjustments or full preset application.</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Subsystem</th>
+                                    <th>Technology</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Depth Estimation</td>
+                                    <td>Depth Anything V2 (ViT-Small)</td>
+                                    <td>~150ms @ 1080p</td>
+                                </tr>
+                                <tr>
+                                    <td>Semantic Segmentation</td>
+                                    <td>SegFormer B0 (ADE20K 150-class)</td>
+                                    <td>~200ms @ 512×512</td>
+                                </tr>
+                                <tr>
+                                    <td>Face Mesh</td>
+                                    <td>MediaPipe (468 landmarks)</td>
+                                    <td>~16ms per frame</td>
+                                </tr>
+                                <tr>
+                                    <td>PBR Shading</td>
+                                    <td>GGX + HBAO + Soft Shadows</td>
+                                    <td>60fps @ 4K</td>
+                                </tr>
+                                <tr>
+                                    <td>Neural Upscaling</td>
+                                    <td>Real-ESRGAN / ESRGAN-thick</td>
+                                    <td>~2s per 2× upscale</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </section>
 
-                    <section id="relighting">
-                        <h2>3D Relighting</h2>
-                        <p>Our AI-powered relighting tool uses depth estimation to add realistic lighting effects to any
-                            photo.</p>
+                    <section id="depth-estimation">
+                        <h2><span class="tech-badge ml">ML</span> Monocular Depth Estimation</h2>
 
-                        <h3>How It Works</h3>
-                        <ol>
-                            <li>The AI analyzes your image to create a depth map</li>
-                            <li>You position virtual light sources in 3D space</li>
-                            <li>Lighting is applied based on the estimated geometry</li>
-                        </ol>
+                        <p>
+                            Orlume employs <strong>Depth Anything V2</strong>, a state-of-the-art monocular depth
+                            estimation model based on the Vision Transformer (ViT) architecture. The model processes
+                            single RGB images to produce dense, relative depth maps that serve as the foundation for 3D
+                            scene reconstruction.
+                        </p>
 
-                        <h3>Light Types</h3>
-                        <ul>
-                            <li><strong>Key Light</strong> — Main light source, usually positioned above and to the side
-                            </li>
-                            <li><strong>Fill Light</strong> — Softer light to reduce shadows</li>
-                            <li><strong>Rim Light</strong> — Backlight creating edge highlights</li>
-                            <li><strong>Ambient</strong> — Overall environmental lighting</li>
-                        </ul>
+                        <h3>Model Specification</h3>
+                        <table>
+                            <tr>
+                                <th>Property</th>
+                                <th>Value</th>
+                            </tr>
+                            <tr>
+                                <td>Model ID</td>
+                                <td><code>Xenova/depth-anything-small-hf</code></td>
+                            </tr>
+                            <tr>
+                                <td>Architecture</td>
+                                <td>Vision Transformer (ViT) Encoder + CNN Decoder</td>
+                            </tr>
+                            <tr>
+                                <td>Input Resolution</td>
+                                <td>Any (internally resized to 518×518)</td>
+                            </tr>
+                            <tr>
+                                <td>Output</td>
+                                <td>Single-channel depth map, normalized [0, 1]</td>
+                            </tr>
+                            <tr>
+                                <td>Inference Backend</td>
+                                <td>ONNX Runtime (WebGPU → WASM fallback)</td>
+                            </tr>
+                        </table>
+
+                        <h3>Depth Processing Pipeline</h3>
+                        <pre><code class="language-javascript">// Depth estimation with bilateral smoothing
+const depthTensor = await pipeline('depth-estimation', image);
+const depthMap = normalizeMinMax(depthTensor);
+const smoothedDepth = bilateralFilter(depthMap, {
+    spatialSigma: 9,
+    rangeSigma: 0.1   // Edge-preserving parameter
+});</code></pre>
+
+                        <div class="paper-reference">
+                            <strong>Reference:</strong> Yang, L. et al. "Depth Anything: Unleashing the Power of
+                            Large-Scale Unlabeled Data." <em>CVPR 2024</em>. The model is trained on 62M unlabeled
+                            images using a self-training paradigm.
+                        </div>
                     </section>
 
-                    <section id="background-removal">
-                        <h2>Background Removal</h2>
-                        <p>Remove backgrounds with AI-powered precision in just one click.</p>
+                    <section id="segmentation">
+                        <h2><span class="tech-badge ml">ML</span> Semantic Segmentation</h2>
 
-                        <h3>Usage</h3>
-                        <ol>
-                            <li>Open the AI panel in the right sidebar</li>
-                            <li>Click "Remove Background"</li>
-                            <li>Wait for AI processing (typically 1-3 seconds)</li>
-                            <li>Optionally refine edges with the brush tool</li>
-                        </ol>
+                        <p>
+                            Material-aware rendering is achieved through <strong>SegFormer B0</strong>, a hierarchical
+                            Transformer encoder with lightweight MLP decoder. The model classifies each pixel into one
+                            of 150 semantic categories from the ADE20K dataset, which are then mapped to
+                            physically-based material properties.
+                        </p>
 
-                        <h3>Tips for Best Results</h3>
+                        <h3>Material Property Mapping</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Class</th>
+                                    <th>Roughness</th>
+                                    <th>Metallic</th>
+                                    <th>Subsurface</th>
+                                    <th>Emissive</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Person/Skin</td>
+                                    <td>0.60</td>
+                                    <td>0.00</td>
+                                    <td>0.35</td>
+                                    <td>0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Metal/Car/Building</td>
+                                    <td>0.30</td>
+                                    <td>0.95</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Glass/Window</td>
+                                    <td>0.02</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Vegetation</td>
+                                    <td>0.85</td>
+                                    <td>0.00</td>
+                                    <td>0.10</td>
+                                    <td>0.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Sky</td>
+                                    <td>1.00</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>1.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Lamp/Light</td>
+                                    <td>0.50</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>0.80</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>RGBA Material Encoding</h3>
+                        <div class="equation-block">
+                            R = Roughness × 255<br>
+                            G = Metallic × 255<br>
+                            B = Subsurface Scattering × 255<br>
+                            A = Emissive × 255
+                        </div>
+
+                        <div class="paper-reference">
+                            <strong>Reference:</strong> Xie, E. et al. "SegFormer: Simple and Efficient Design for
+                            Semantic Segmentation with Transformers." <em>NeurIPS 2021</em>.
+                        </div>
+                    </section>
+
+                    <section id="face-mesh">
+                        <h2><span class="tech-badge ml">ML</span> Face Mesh Detection</h2>
+
+                        <p>
+                            For portrait images, <strong>MediaPipe Face Mesh</strong> provides 468 3D facial landmarks
+                            that are triangulated into a dense mesh. This enables accurate facial geometry
+                            reconstruction for realistic skin rendering with subsurface scattering.
+                        </p>
+
+                        <h3>Mesh Generation</h3>
                         <ul>
-                            <li>Works best with clear subject-background separation</li>
-                            <li>Hair and fine details are handled automatically</li>
-                            <li>Use the refinement brush for tricky edges</li>
+                            <li><strong>468 vertices</strong> — Sparse 3D landmark positions</li>
+                            <li><strong>~900 triangles</strong> — Dense tessellation via Delaunay triangulation</li>
+                            <li><strong>Smooth normals</strong> — Area-weighted vertex normal averaging</li>
+                            <li><strong>Depth interpolation</strong> — Barycentric coordinates for dense depth map</li>
                         </ul>
+
+                        <pre><code class="language-glsl">// Per-vertex normal via area-weighted averaging
+vec3 computeSmoothNormal(int vertexIdx) {
+    vec3 normal = vec3(0.0);
+    for (int t = 0; t < adjacentTriangles; t++) {
+        vec3 faceNormal = cross(v1 - v0, v2 - v0);
+        float area = length(faceNormal) * 0.5;
+        normal += normalize(faceNormal) * area;
+    }
+    return normalize(normal);
+}</code></pre>
                     </section>
 
                     <section id="upscaling">
-                        <h2>AI Upscaling</h2>
-                        <p>Increase image resolution while preserving and enhancing details.</p>
+                        <h2><span class="tech-badge ml">ML</span> Neural Image Upscaling</h2>
 
-                        <h3>Scale Options</h3>
-                        <ul>
-                            <li><strong>2x</strong> — Double resolution</li>
-                            <li><strong>4x</strong> — Quadruple resolution (Pro feature)</li>
-                        </ul>
-
-                        <p>The AI reconstructs missing detail using trained neural networks, producing sharper results
-                            than traditional upscaling methods.</p>
-                    </section>
-
-                    <section id="magic-eraser">
-                        <h2>Magic Eraser</h2>
-                        <p>Remove unwanted objects from your photos with AI inpainting.</p>
-
-                        <h3>How to Use</h3>
-                        <ol>
-                            <li>Select the Magic Eraser tool from the left toolbar</li>
-                            <li>Brush over the object you want to remove</li>
-                            <li>The AI will fill in the area with appropriate content</li>
-                        </ol>
-
-                        <p>Works best for removing small to medium-sized objects against relatively uniform backgrounds.
+                        <p>
+                            Super-resolution is powered by <strong>Real-ESRGAN</strong> with optional face enhancement
+                            via <strong>GFPGAN</strong>. The RRDB (Residual-in-Residual Dense Block) architecture
+                            reconstructs high-frequency details that are lost in traditional bicubic upscaling.
                         </p>
+
+                        <table>
+                            <tr>
+                                <th>Scale Factor</th>
+                                <th>Architecture</th>
+                                <th>Use Case</th>
+                            </tr>
+                            <tr>
+                                <td>2×</td>
+                                <td>Real-ESRGAN x2</td>
+                                <td>General photo enhancement</td>
+                            </tr>
+                            <tr>
+                                <td>4×</td>
+                                <td>Real-ESRGAN x4 + GFPGAN</td>
+                                <td>Portrait restoration</td>
+                            </tr>
+                        </table>
+
+                        <div class="paper-reference">
+                            <strong>Reference:</strong> Wang, X. et al. "Real-ESRGAN: Training Real-World Blind
+                            Super-Resolution with Pure Synthetic Data." <em>ICCV 2021 Workshop</em>.
+                        </div>
                     </section>
 
-                    <section id="export">
-                        <h2>Export Options</h2>
-                        <p>Save your edited images in various formats and resolutions.</p>
+                    <section id="normal-estimation">
+                        <h2><span class="tech-badge shader">SHADER</span> Surface Normal Estimation</h2>
 
-                        <h3>Resolution</h3>
-                        <ul>
-                            <li><strong>Original</strong> — Same as input image</li>
-                            <li><strong>720p</strong> — Free tier maximum</li>
-                            <li><strong>1080p</strong> — Full HD</li>
-                            <li><strong>4K</strong> — Ultra HD (Pro feature)</li>
-                        </ul>
+                        <p>
+                            Surface normals are computed from the depth map using the <strong>Scharr operator</strong>,
+                            which provides better rotational symmetry than the traditional Sobel kernel. A 9-tap
+                            Gaussian filter is applied for artifact-free surfaces.
+                        </p>
 
-                        <h3>Quality</h3>
-                        <p>Adjust JPEG/WebP compression quality from 70-100%. Higher values mean larger files but better
-                            quality.</p>
+                        <h3>Scharr Gradient Kernels</h3>
+                        <div class="architecture-diagram">
+                            <pre>
+Gx (Horizontal):          Gy (Vertical):
+┌────┬────┬────┐          ┌────┬─────┬────┐
+│ -3 │  0 │ +3 │          │ -3 │ -10 │ -3 │
+├────┼────┼────┤          ├────┼─────┼────┤
+│-10 │  0 │+10 │          │  0 │   0 │  0 │
+├────┼────┼────┤          ├────┼─────┼────┤
+│ -3 │  0 │ +3 │          │ +3 │ +10 │ +3 │
+└────┴────┴────┘          └────┴─────┴────┘
+                            </pre>
+                        </div>
+
+                        <h3>Normal Reconstruction</h3>
+                        <pre><code class="language-glsl">// Fragment shader: Depth → Normal
+vec3 computeNormal(vec2 uv, sampler2D depthTex) {
+    float d = texture(depthTex, uv).r;
+    float dx = texture(depthTex, uv + vec2(1.0, 0.0) / resolution).r - d;
+    float dy = texture(depthTex, uv + vec2(0.0, 1.0) / resolution).r - d;
+    
+    vec3 normal = normalize(vec3(-dx * normalStrength, 
+                                  -dy * normalStrength, 
+                                  1.0));
+    return normal * 0.5 + 0.5; // Encode to [0,1] for storage
+}</code></pre>
+
+                        <h3>Gaussian Smoothing (9-tap)</h3>
+                        <div class="equation-block">
+                            N<sub>smooth</sub> = Σ w<sub>ij</sub> × N<sub>ij</sub> / 16<br><br>
+                            Weights: [1,2,1; 2,4,2; 1,2,1]
+                        </div>
                     </section>
 
-                    <section id="formats">
-                        <h2>File Formats</h2>
+                    <section id="pbr">
+                        <h2><span class="tech-badge shader">SHADER</span> Physically-Based Rendering</h2>
+
+                        <p>
+                            Orlume implements a full <strong>Cook-Torrance BRDF</strong> with GGX microfacet
+                            distribution, Fresnel-Schlick approximation, and Smith geometry term. This provides
+                            physically-accurate light interaction that responds correctly to material properties.
+                        </p>
+
+                        <h3>BRDF Components</h3>
+
+                        <h4>GGX Normal Distribution Function (D)</h4>
+                        <div class="equation-block">
+                            D(m) = α² / (π × ((n·m)² × (α² - 1) + 1)²)<br><br>
+                            where α = roughness², m = half-vector, n = surface normal
+                        </div>
+
+                        <h4>Fresnel-Schlick Approximation (F)</h4>
+                        <div class="equation-block">
+                            F(v,h) = F₀ + (1 - F₀) × (1 - v·h)⁵<br><br>
+                            where F₀ = 0.04 for dielectrics, ~0.7-1.0 for metals
+                        </div>
+
+                        <h4>Smith Geometry Function (G)</h4>
+                        <div class="equation-block">
+                            G(l,v,h) = G₁(l) × G₁(v)<br>
+                            G₁(x) = 2(n·x) / (n·x + √(α² + (1-α²)(n·x)²))
+                        </div>
+
+                        <h3>Final BRDF Integration</h3>
+                        <pre><code class="language-glsl">vec3 cookTorranceBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, 
+                       float roughness, float metallic) {
+    vec3 H = normalize(V + L);
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotH = max(dot(N, H), 0.0);
+    float VdotH = max(dot(V, H), 0.0);
+    
+    // GGX Distribution
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    float denom = NdotH * NdotH * (alpha2 - 1.0) + 1.0;
+    float D = alpha2 / (PI * denom * denom);
+    
+    // Fresnel
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+    vec3 F = F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
+    
+    // Geometry (Smith-GGX)
+    float k = alpha / 2.0;
+    float G1L = NdotL / (NdotL * (1.0 - k) + k);
+    float G1V = NdotV / (NdotV * (1.0 - k) + k);
+    float G = G1L * G1V;
+    
+    // Specular term
+    vec3 specular = (D * F * G) / (4.0 * NdotL * NdotV + 0.001);
+    
+    // Diffuse (Lambert)
+    vec3 kD = (1.0 - F) * (1.0 - metallic);
+    vec3 diffuse = kD * albedo / PI;
+    
+    return (diffuse + specular) * NdotL;
+}</code></pre>
+                    </section>
+
+                    <section id="ambient-occlusion">
+                        <h2><span class="tech-badge shader">SHADER</span> Horizon-Based Ambient Occlusion</h2>
+
+                        <p>
+                            <strong>HBAO</strong> (Horizon-Based Ambient Occlusion) provides realistic contact shadows
+                            and ambient darkening in crevices. The algorithm ray-marches in multiple directions to find
+                            the horizon angle at each pixel.
+                        </p>
+
+                        <h3>Algorithm Parameters</h3>
+                        <table>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                            </tr>
+                            <tr>
+                                <td>Directions</td>
+                                <td>8</td>
+                                <td>Cardinal + diagonal directions</td>
+                            </tr>
+                            <tr>
+                                <td>Steps per Direction</td>
+                                <td>8</td>
+                                <td>Ray marching samples</td>
+                            </tr>
+                            <tr>
+                                <td>Radius</td>
+                                <td>8px</td>
+                                <td>Sample distance</td>
+                            </tr>
+                            <tr>
+                                <td>Bias</td>
+                                <td>0.025</td>
+                                <td>Self-occlusion prevention</td>
+                            </tr>
+                        </table>
+
+                        <pre><code class="language-glsl">float computeHBAO(vec2 uv, float centerDepth) {
+    float occlusion = 0.0;
+    for (int d = 0; d < 8; d++) {
+        vec2 dir = directions[d];
+        float maxHorizon = -1.0;
+        
+        for (int s = 1; s <= 8; s++) {
+            vec2 sampleUV = uv + dir * float(s) * radius;
+            float sampleDepth = texture(depthTex, sampleUV).r;
+            float heightDiff = sampleDepth - centerDepth;
+            float horizonAngle = heightDiff / (float(s) * radius);
+            maxHorizon = max(maxHorizon, horizonAngle);
+        }
+        occlusion += clamp(maxHorizon, 0.0, 1.0);
+    }
+    return 1.0 - (occlusion / 8.0) * intensity;
+}</code></pre>
+
+                        <div class="paper-reference">
+                            <strong>Reference:</strong> Bavoil, L., Sainz, M. "Image-space horizon-based ambient
+                            occlusion." <em>SIGGRAPH 2008</em>, Talk.
+                        </div>
+                    </section>
+
+                    <section id="shadows">
+                        <h2><span class="tech-badge shader">SHADER</span> Soft Shadow Computation</h2>
+
+                        <p>
+                            Shadows are computed via <strong>screen-space ray marching</strong> from each fragment
+                            toward the light source. A novel anti-banding technique combines per-pixel dithering with
+                            Gaussian depth sampling.
+                        </p>
+
+                        <h3>Anti-Banding Techniques</h3>
                         <ul>
-                            <li><strong>JPEG</strong> — Universal compatibility, good for photos</li>
-                            <li><strong>PNG</strong> — Lossless, supports transparency</li>
-                            <li><strong>WebP</strong> — Modern format, best compression</li>
+                            <li><strong>Pseudo-random dithering</strong> — Per-pixel offset using hash function</li>
+                            <li><strong>9-tap Gaussian blur</strong> — Smooth depth sampling at 3px radius</li>
+                            <li><strong>Gradient accumulation</strong> — Soft blocking instead of hard thresholds</li>
+                            <li><strong>48 ray steps</strong> — Quadratic distribution (denser near fragment)</li>
                         </ul>
+
+                        <pre><code class="language-glsl">float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float calculateSoftShadow(vec2 uv, vec2 lightPos) {
+    float dither = hash(uv * resolution) * 0.5;
+    vec2 rayDir = normalize(lightPos - uv);
+    float shadow = 0.0;
+    
+    for (int i = 0; i < 48; i++) {
+        float t = (float(i) + dither) / 48.0;
+        t = t * t; // Quadratic distribution
+        vec2 samplePos = mix(uv, lightPos, t);
+        
+        // 9-tap Gaussian depth sample
+        float depth = sampleDepthSmooth(samplePos);
+        float heightDiff = depth - texture(depthTex, uv).r;
+        
+        shadow += smoothstep(0.0, 0.05, heightDiff);
+    }
+    return 1.0 - (shadow / 48.0);
+}</code></pre>
+                    </section>
+
+                    <section id="god-rays">
+                        <h2><span class="tech-badge shader">SHADER</span> Volumetric God Rays</h2>
+
+                        <p>
+                            Atmospheric light scattering is simulated through radial blur from the light source
+                            position. The effect includes chromatic aberration, bloom, and depth-aware masking for
+                            realistic results.
+                        </p>
+
+                        <h3>Effect Parameters</h3>
+                        <table>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Range</th>
+                                <th>Description</th>
+                            </tr>
+                            <tr>
+                                <td>Intensity</td>
+                                <td>0.0 - 2.0</td>
+                                <td>Ray brightness</td>
+                            </tr>
+                            <tr>
+                                <td>Decay</td>
+                                <td>0.90 - 1.0</td>
+                                <td>Falloff per sample</td>
+                            </tr>
+                            <tr>
+                                <td>Samples</td>
+                                <td>32 - 128</td>
+                                <td>Ray marching iterations</td>
+                            </tr>
+                            <tr>
+                                <td>Chromatic</td>
+                                <td>0.0 - 0.1</td>
+                                <td>RGB channel separation</td>
+                            </tr>
+                            <tr>
+                                <td>Scatter</td>
+                                <td>0.0 - 1.0</td>
+                                <td>Atmospheric scattering</td>
+                            </tr>
+                        </table>
+                    </section>
+
+                    <section id="webgpu">
+                        <h2><span class="tech-badge gpu">GPU</span> WebGPU Backend</h2>
+
+                        <p>
+                            The primary rendering backend leverages <strong>WebGPU</strong> for modern GPU acceleration
+                            with WGSL shaders. This provides significant performance improvements over WebGL2,
+                            especially for compute-heavy operations.
+                        </p>
+
+                        <table>
+                            <tr>
+                                <th>Feature</th>
+                                <th>WebGPU</th>
+                                <th>WebGL2</th>
+                            </tr>
+                            <tr>
+                                <td>Shader Language</td>
+                                <td>WGSL</td>
+                                <td>GLSL ES 3.00</td>
+                            </tr>
+                            <tr>
+                                <td>Compute Shaders</td>
+                                <td>✓</td>
+                                <td>✗</td>
+                            </tr>
+                            <tr>
+                                <td>Bind Groups</td>
+                                <td>✓</td>
+                                <td>✗</td>
+                            </tr>
+                            <tr>
+                                <td>Multi-threaded</td>
+                                <td>✓</td>
+                                <td>Limited</td>
+                            </tr>
+                        </table>
+                    </section>
+
+                    <section id="webgl2">
+                        <h2><span class="tech-badge gpu">GPU</span> WebGL2 Fallback</h2>
+
+                        <p>
+                            For browsers without WebGPU support, a full <strong>WebGL2</strong> backend provides
+                            identical visual results with GLSL ES 3.00 shaders. Automatic detection ensures the best
+                            available backend is selected.
+                        </p>
+
+                        <h3>Required Extensions</h3>
+                        <ul>
+                            <li><code>EXT_color_buffer_float</code> — Floating-point render targets</li>
+                            <li><code>OES_texture_float_linear</code> — Linear filtering for float textures</li>
+                            <li><code>EXT_float_blend</code> — Blending with float framebuffers</li>
+                        </ul>
+                    </section>
+
+                    <section id="shaders">
+                        <h2><span class="tech-badge gpu">GPU</span> GLSL Shader Architecture</h2>
+
+                        <p>The shader pipeline processes images through multiple passes:</p>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pass</th>
+                                    <th>Shader</th>
+                                    <th>Output</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Develop (Exposure, WB)</td>
+                                    <td>Linear RGB</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>HSL Color Mixer</td>
+                                    <td>Color-adjusted RGB</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>Normal Generation</td>
+                                    <td>Normal map (RGB)</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>HBAO</td>
+                                    <td>AO mask (R)</td>
+                                </tr>
+                                <tr>
+                                    <td>5</td>
+                                    <td>PBR Lighting</td>
+                                    <td>Lit RGB</td>
+                                </tr>
+                                <tr>
+                                    <td>6</td>
+                                    <td>Shadow Pass</td>
+                                    <td>Shadow mask (R)</td>
+                                </tr>
+                                <tr>
+                                    <td>7</td>
+                                    <td>Composite + Tone Map</td>
+                                    <td>Final sRGB</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <section id="color-grading">
+                        <h2>Color Grading Pipeline</h2>
+
+                        <p>
+                            Color processing follows a strict order to maintain predictable results:
+                        </p>
+
+                        <ol>
+                            <li><strong>Exposure</strong> — EV stops (-5 to +5)</li>
+                            <li><strong>White Balance</strong> — Temperature (2000K-12000K) + Tint</li>
+                            <li><strong>Contrast</strong> — S-curve with midpoint preservation</li>
+                            <li><strong>Highlights/Shadows</strong> — Luminance-selective adjustment</li>
+                            <li><strong>Whites/Blacks</strong> — Endpoint clipping control</li>
+                            <li><strong>HSL</strong> — Per-channel hue/saturation/luminance</li>
+                            <li><strong>Vibrance</strong> — Saturation-aware saturation boost</li>
+                        </ol>
+                    </section>
+
+                    <section id="hsl">
+                        <h2>HSL Color Mixer</h2>
+
+                        <p>
+                            The 8-channel HSL mixer provides independent control over specific color ranges, implemented
+                            in a single-pass GPU shader:
+                        </p>
+
+                        <table>
+                            <tr>
+                                <th>Channel</th>
+                                <th>Hue Range</th>
+                                <th>Center Hue</th>
+                            </tr>
+                            <tr>
+                                <td>Red</td>
+                                <td>330° - 30°</td>
+                                <td>0°</td>
+                            </tr>
+                            <tr>
+                                <td>Orange</td>
+                                <td>15° - 45°</td>
+                                <td>30°</td>
+                            </tr>
+                            <tr>
+                                <td>Yellow</td>
+                                <td>45° - 75°</td>
+                                <td>60°</td>
+                            </tr>
+                            <tr>
+                                <td>Green</td>
+                                <td>75° - 165°</td>
+                                <td>120°</td>
+                            </tr>
+                            <tr>
+                                <td>Aqua</td>
+                                <td>165° - 195°</td>
+                                <td>180°</td>
+                            </tr>
+                            <tr>
+                                <td>Blue</td>
+                                <td>195° - 255°</td>
+                                <td>225°</td>
+                            </tr>
+                            <tr>
+                                <td>Purple</td>
+                                <td>255° - 285°</td>
+                                <td>270°</td>
+                            </tr>
+                            <tr>
+                                <td>Magenta</td>
+                                <td>285° - 330°</td>
+                                <td>310°</td>
+                            </tr>
+                        </table>
+                    </section>
+
+                    <section id="tone-mapping">
+                        <h2>Tone Mapping</h2>
+
+                        <p>
+                            Final output uses <strong>ACES Filmic</strong> tone mapping for cinematic highlight
+                            roll-off:
+                        </p>
+
+                        <pre><code class="language-glsl">vec3 ACESFilm(vec3 x) {
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}</code></pre>
+
+                        <div class="paper-reference">
+                            <strong>Reference:</strong> Academy Color Encoding System (ACES). Academy of Motion Picture
+                            Arts and Sciences, 2014.
+                        </div>
+                    </section>
+
+                    <section id="references">
+                        <h2>Academic References</h2>
+
+                        <ul>
+                            <li>Yang, L. et al. <strong>"Depth Anything: Unleashing the Power of Large-Scale Unlabeled
+                                    Data."</strong> CVPR 2024.</li>
+                            <li>Xie, E. et al. <strong>"SegFormer: Simple and Efficient Design for Semantic Segmentation
+                                    with Transformers."</strong> NeurIPS 2021.</li>
+                            <li>Wang, X. et al. <strong>"Real-ESRGAN: Training Real-World Blind Super-Resolution with
+                                    Pure Synthetic Data."</strong> ICCV 2021 Workshop.</li>
+                            <li>Bavoil, L., Sainz, M. <strong>"Image-space horizon-based ambient occlusion."</strong>
+                                SIGGRAPH 2008.</li>
+                            <li>Walter, B. et al. <strong>"Microfacet Models for Refraction through Rough
+                                    Surfaces."</strong> EGSR 2007.</li>
+                            <li>Karis, B. <strong>"Real Shading in Unreal Engine 4."</strong> SIGGRAPH 2013 Course.</li>
+                        </ul>
+                    </section>
+
+                    <section id="dependencies">
+                        <h2>Technical Dependencies</h2>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Library</th>
+                                    <th>Version</th>
+                                    <th>Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Transformers.js</td>
+                                    <td>2.17+</td>
+                                    <td>ML model inference (ONNX Runtime)</td>
+                                </tr>
+                                <tr>
+                                    <td>Three.js</td>
+                                    <td>0.160+</td>
+                                    <td>3D mesh rendering</td>
+                                </tr>
+                                <tr>
+                                    <td>MediaPipe</td>
+                                    <td>0.10+</td>
+                                    <td>Face mesh detection</td>
+                                </tr>
+                                <tr>
+                                    <td>ONNX Runtime Web</td>
+                                    <td>1.17+</td>
+                                    <td>Neural network execution</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>Browser Compatibility</h3>
+                        <table>
+                            <tr>
+                                <th>Browser</th>
+                                <th>WebGPU</th>
+                                <th>WebGL2</th>
+                            </tr>
+                            <tr>
+                                <td>Chrome</td>
+                                <td>113+</td>
+                                <td>90+</td>
+                            </tr>
+                            <tr>
+                                <td>Firefox</td>
+                                <td>120+</td>
+                                <td>90+</td>
+                            </tr>
+                            <tr>
+                                <td>Safari</td>
+                                <td>17+</td>
+                                <td>15+</td>
+                            </tr>
+                            <tr>
+                                <td>Edge</td>
+                                <td>113+</td>
+                                <td>90+</td>
+                            </tr>
+                        </table>
                     </section>
                 </main>
             </div>
@@ -512,7 +1317,6 @@
                 const target = document.querySelector(link.getAttribute('href'));
                 if (target) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // Update active state
                     document.querySelectorAll('.docs-nav-list a').forEach(l => l.classList.remove('active'));
                     link.classList.add('active');
                 }
