@@ -2,52 +2,53 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "framework": "vite",
-    "cleanUrls": true,
-    "trailingSlash": false,
-    "rewrites": [
+    "routes": [
         {
-            "source": "/editor",
-            "destination": "/editor.html"
+            "src": "/editor",
+            "dest": "/editor.html"
         },
         {
-            "source": "/docs",
-            "destination": "/pages/docs.html"
+            "src": "/docs",
+            "dest": "/pages/docs.html"
         },
         {
-            "source": "/tutorials",
-            "destination": "/pages/tutorials.html"
+            "src": "/tutorials",
+            "dest": "/pages/tutorials.html"
         },
         {
-            "source": "/blog",
-            "destination": "/pages/blog.html"
+            "src": "/blog",
+            "dest": "/pages/blog.html"
         },
         {
-            "source": "/changelog",
-            "destination": "/pages/changelog.html"
+            "src": "/changelog",
+            "dest": "/pages/changelog.html"
         },
         {
-            "source": "/about",
-            "destination": "/pages/about.html"
+            "src": "/about",
+            "dest": "/pages/about.html"
         },
         {
-            "source": "/careers",
-            "destination": "/pages/careers.html"
+            "src": "/careers",
+            "dest": "/pages/careers.html"
         },
         {
-            "source": "/contribute",
-            "destination": "/pages/contribute.html"
+            "src": "/contribute",
+            "dest": "/pages/contribute.html"
         },
         {
-            "source": "/privacy",
-            "destination": "/pages/privacy.html"
+            "src": "/privacy",
+            "dest": "/pages/privacy.html"
         },
         {
-            "source": "/terms",
-            "destination": "/pages/terms.html"
+            "src": "/terms",
+            "dest": "/pages/terms.html"
         },
         {
-            "source": "/((?!assets|images|public|.*\\..*).*)",
-            "destination": "/index.html"
+            "handle": "filesystem"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
         }
     ]
 }
