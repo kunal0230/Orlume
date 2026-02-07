@@ -1064,22 +1064,24 @@
         // Comparison slider
         const comparison = document.getElementById('hero-comparison');
         const slider = document.getElementById('hero-slider');
-        const beforeImg = comparison.querySelector('.comparison-before');
-        let isDragging = false;
+        if (comparison && slider) {
+            const beforeImg = comparison.querySelector('.comparison-before');
+            let isDragging = false;
 
-        function updateSlider(x) {
-            const rect = comparison.getBoundingClientRect();
-            const pos = Math.min(Math.max(((x - rect.left) / rect.width) * 100, 0), 100);
-            beforeImg.style.clipPath = `inset(0 ${100 - pos}% 0 0)`;
-            slider.style.left = `${pos}%`;
+            function updateSlider(x) {
+                const rect = comparison.getBoundingClientRect();
+                const pos = Math.min(Math.max(((x - rect.left) / rect.width) * 100, 0), 100);
+                if (beforeImg) beforeImg.style.clipPath = `inset(0 ${100 - pos}% 0 0)`;
+                slider.style.left = `${pos}%`;
+            }
+
+            comparison.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            comparison.addEventListener('mousemove', (e) => { if (isDragging) updateSlider(e.clientX); });
+            comparison.addEventListener('touchstart', () => isDragging = true);
+            window.addEventListener('touchend', () => isDragging = false);
+            comparison.addEventListener('touchmove', (e) => { if (isDragging) updateSlider(e.touches[0].clientX); });
         }
-
-        comparison.addEventListener('mousedown', () => isDragging = true);
-        window.addEventListener('mouseup', () => isDragging = false);
-        comparison.addEventListener('mousemove', (e) => { if (isDragging) updateSlider(e.clientX); });
-        comparison.addEventListener('touchstart', () => isDragging = true);
-        window.addEventListener('touchend', () => isDragging = false);
-        comparison.addEventListener('touchmove', (e) => { if (isDragging) updateSlider(e.touches[0].clientX); });
 
 
 
