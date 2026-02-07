@@ -156,6 +156,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Don't intercept navigation to page routes - this is a multi-page app
+        navigateFallback: null,
+        // Exclude page routes from the service worker fallback
+        navigateFallbackDenylist: [
+          /^\/docs/,
+          /^\/about/,
+          /^\/tutorials/,
+          /^\/blog/,
+          /^\/changelog/,
+          /^\/careers/,
+          /^\/contribute/,
+          /^\/privacy/,
+          /^\/terms/,
+          /^\/pages\//
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
