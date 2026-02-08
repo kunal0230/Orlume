@@ -131,6 +131,17 @@
                     <path d="M19 8l2 -2" />
                 </svg>
             </button>
+            <button class="tool-btn" id="tool-3d-pro" title="3D Relighting PRO (P)">
+                <!-- Pro relighting icon with star -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="10" r="4" />
+                    <path d="M12 2l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5-2.5-2.5 3.5-.5z" fill="currentColor"
+                        stroke="none" />
+                    <path d="M9 14v1.5a3 3 0 0 0 6 0V14" />
+                    <line x1="12" y1="18.5" x2="12" y2="21" />
+                    <line x1="9" y1="21" x2="15" y2="21" />
+                </svg>
+            </button>
 
             <div class="tool-divider"></div>
 
@@ -335,6 +346,13 @@
             <!-- 3D Relighting Mode Header -->
             <div class="panel-header mode-header" id="relight-mode-header" style="display: none;">
                 <span class="panel-title">💡 3D Relighting</span>
+            </div>
+
+            <!-- 3D Relighting PRO Mode Header -->
+            <div class="panel-header mode-header" id="relight-pro-mode-header" style="display: none;">
+                <span class="panel-title">⭐ 3D Relighting PRO</span>
+                <span
+                    style="font-size: 10px; background: linear-gradient(135deg, #667eea, #764ba2); padding: 2px 6px; border-radius: 4px; margin-left: 8px;">v8</span>
             </div>
 
             <div class="panel-content">
@@ -2057,6 +2075,155 @@
                         <div class="btn-row" style="gap: 8px;">
                             <button class="btn" id="btn-relight-reset" style="flex: 1;">Reset</button>
                             <button class="btn btn-primary" id="btn-relight-apply" style="flex: 1;">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D Relighting PRO Panel (v8) -->
+                <div class="panel-section" id="panel-3d-pro">
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+                        <strong style="color: var(--accent);">PRO Relighting</strong> - SOTA depth estimation with
+                        real-time mesh reconstruction.
+                    </p>
+
+                    <!-- Model Loading Status -->
+                    <div id="v8-model-status-card"
+                        style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div id="v8-status-indicator"
+                                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary);">
+                                </div>
+                                <span id="v8-status-text" style="font-size: 11px; color: var(--text-secondary);">
+                                    Initializing...
+                                </span>
+                            </div>
+                            <span id="v8-model-badge"
+                                style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--success); color: #000; display: none;">
+                                Ready
+                            </span>
+                        </div>
+                        <div id="v8-progress-container" style="display: none; margin-top: 8px;">
+                            <div
+                                style="height: 3px; background: var(--bg-secondary); border-radius: 2px; overflow: hidden;">
+                                <div id="v8-progress-bar"
+                                    style="height: 100%; width: 0%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.2s;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 9px; color: var(--text-tertiary);">
+                                <span id="v8-progress-stage">Loading...</span>
+                                <span id="v8-progress-percent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btn-v8-analyze" style="width: 100%; margin-bottom: 12px;"
+                        disabled>
+                        Analyze Image
+                    </button>
+
+                    <div id="v8-analysis-status"
+                        style="display: none; margin-bottom: 12px; font-size: 11px; color: var(--text-secondary);">
+                        <span id="v8-analysis-text">Processing...</span>
+                        <div
+                            style="margin-top: 4px; height: 3px; background: var(--bg-secondary); border-radius: 2px; overflow: hidden;">
+                            <div id="v8-analysis-bar"
+                                style="height: 100%; width: 0%; background: var(--accent); transition: width 0.15s;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls (shown after analysis) -->
+                    <div id="v8-controls" style="display: none;">
+                        <div class="section">
+                            <div class="section-header">Light Position</div>
+                            <p style="font-size: 10px; color: var(--text-secondary); margin-bottom: 8px;">Click or drag
+                                to position the light source</p>
+                            <div id="v8-light-position"
+                                style="width: 100%; aspect-ratio: 4/3; background: linear-gradient(135deg, rgba(30,30,40,0.9) 0%, rgba(20,20,30,0.95) 100%); border-radius: 12px; position: relative; cursor: crosshair; margin-bottom: 8px; border: 2px solid rgba(102, 126, 234, 0.4); overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
+                                <!-- Grid lines for visual reference -->
+                                <div
+                                    style="position: absolute; inset: 0; background: 
+                                    repeating-linear-gradient(90deg, rgba(102,126,234,0.1) 0px, transparent 1px, transparent 25%, rgba(102,126,234,0.1) 25%),
+                                    repeating-linear-gradient(0deg, rgba(102,126,234,0.1) 0px, transparent 1px, transparent 33.33%, rgba(102,126,234,0.1) 33.33%);">
+                                </div>
+                                <!-- Center crosshair -->
+                                <div
+                                    style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(102,126,234,0.2);">
+                                </div>
+                                <div
+                                    style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(102,126,234,0.2);">
+                                </div>
+                                <!-- Corner labels -->
+                                <div
+                                    style="position: absolute; top: 4px; left: 6px; font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase;">
+                                    Top-Left</div>
+                                <div
+                                    style="position: absolute; top: 4px; right: 6px; font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase;">
+                                    Top-Right</div>
+                                <div
+                                    style="position: absolute; bottom: 4px; left: 6px; font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase;">
+                                    Bottom-Left</div>
+                                <div
+                                    style="position: absolute; bottom: 4px; right: 6px; font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase;">
+                                    Bottom-Right</div>
+                                <!-- Light source dot -->
+                                <div id="v8-light-dot"
+                                    style="position: absolute; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd700 30%, #667eea 80%); box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(102, 126, 234, 0.5); transform: translate(-50%, -50%); left: 50%; top: 30%; transition: box-shadow 0.15s ease;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-header">Lighting</div>
+                            <div class="control-group">
+                                <div class="control-label"><span>Intensity</span><span id="val-v8-intensity">50</span>
+                                </div>
+                                <input type="range" id="slider-v8-intensity" min="0" max="200" step="1" value="50">
+                            </div>
+                            <div class="control-group">
+                                <div class="control-label"><span>Ambient</span><span id="val-v8-ambient">15</span></div>
+                                <input type="range" id="slider-v8-ambient" min="0" max="100" step="1" value="15">
+                            </div>
+                            <div class="control-group">
+                                <div class="control-label"><span>Light Height</span><span id="val-v8-height">50</span>
+                                </div>
+                                <input type="range" id="slider-v8-height" min="0" max="100" step="1" value="50">
+                            </div>
+                            <div class="control-group">
+                                <div class="control-label"><span>Light Color</span></div>
+                                <input type="color" id="v8-light-color" value="#fff8f0"
+                                    style="width: 40px; height: 24px; border: none; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <details class="section">
+                            <summary class="section-header"
+                                style="list-style: none; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <span style="font-size: 10px;">▶</span> Shadows
+                            </summary>
+                            <div style="margin-top: 8px;">
+                                <div class="control-group">
+                                    <div class="control-label"><span>Shadow Intensity</span><span
+                                            id="val-v8-shadow-intensity">60</span></div>
+                                    <input type="range" id="slider-v8-shadow-intensity" min="0" max="100" step="1"
+                                        value="60">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-label"><span>Shadow Softness</span><span
+                                            id="val-v8-shadow-softness">40</span></div>
+                                    <input type="range" id="slider-v8-shadow-softness" min="0" max="100" step="1"
+                                        value="40">
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="section">
+                            <div class="btn-row" style="gap: 8px;">
+                                <button class="btn" id="btn-v8-reset" style="flex: 1;">Reset</button>
+                                <button class="btn btn-primary" id="btn-v8-apply" style="flex: 1;">Apply</button>
+                            </div>
                         </div>
                     </div>
                 </div>

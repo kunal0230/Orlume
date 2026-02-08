@@ -7,6 +7,9 @@ import { HistoryManager } from './HistoryManager.js';
 // Modular components
 import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule, ToneCurveModule, ColorGradingModule } from './modules/index.js';
 
+// v8 PRO Relighting
+import { RelightingProModule } from '../modules/RelightingProModule.js';
+
 export class EditorUI {
     constructor(state, gpu, masks) {
         this.state = state;
@@ -59,6 +62,7 @@ export class EditorUI {
         this.presetsModule = new PresetsModule(this);
         this.textModule = new TextModule(this);
         this.relightingModule = new RelightingModule(this);
+        this.relightingProModule = new RelightingProModule(this);  // v8 PRO
         this.toneCurveModule = new ToneCurveModule(this);
         this.colorGradingModule = new ColorGradingModule(this);
         this.colorGradingModule.init();
@@ -223,6 +227,7 @@ export class EditorUI {
         document.getElementById('bg-remove-mode-header').style.display = 'none';
         document.getElementById('godrays-mode-header').style.display = 'none';
         document.getElementById('relight-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('relight-pro-mode-header')?.style.setProperty('display', 'none');
         document.getElementById('text-mode-header')?.style.setProperty('display', 'none');
 
         // Hide all panels
@@ -243,6 +248,13 @@ export class EditorUI {
                 document.getElementById('panel-relight').classList.add('active');
                 this.relightingModule.activate();
                 break;
+
+            case '3d-pro':
+                document.getElementById('relight-pro-mode-header').style.display = 'block';
+                document.getElementById('panel-3d-pro').classList.add('active');
+                this.relightingProModule.activate();
+                break;
+
             case 'export':
                 document.getElementById('export-mode-header').style.display = 'block';
                 document.getElementById('panel-export').classList.add('active');

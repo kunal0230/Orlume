@@ -1,0 +1,527 @@
+/**
+ * RelightingPipeline.js - v8 Relighting System
+ * 
+ * Main orchestrator for the relighting pipeline.
+ * Coordinates all modules: resolution, color, models, geometry, rendering.
+ * 
+ * Key responsibilities:
+ * - Initialize background model loading on app start
+ * - Process images through the full pipeline
+ * - Manage rendering mode selection (mesh vs 2D)
+ * - Handle errors gracefully with fallbacks
+ */
+
+import { EventEmitter } from './EventEmitter.js';
+import { ResolutionManager, UserCancelledError } from './ResolutionManager.js';
+import { ColorSpaceConverter } from './ColorSpaceConverter.js';
+import { BackgroundModelLoader } from './BackgroundModelLoader.js';
+import { WebGL2DeferredRenderer } from '../rendering/WebGL2DeferredRenderer.js';
+import { ConfidenceEstimator } from '../confidence/ConfidenceEstimator.js';
+import { LightingAnalyzer } from '../confidence/LightingAnalyzer.js';
+
+export class RelightingPipeline extends EventEmitter {
+    constructor(options = {}) {
+        super();
+
+        // Core modules
+        this.resolutionManager = new ResolutionManager({
+            onModalShow: () => this.emit('modal-show'),
+            onModalHide: () => this.emit('modal-hide')
+        });
+
+        this.colorConverter = new ColorSpaceConverter();
+
+        this.modelLoader = new BackgroundModelLoader();
+
+        // GPU Renderer
+        this.gpuRenderer = new WebGL2DeferredRenderer();
+        this.useGPU = true;
+
+        // Confidence & Analysis
+        this.confidenceEstimator = new ConfidenceEstimator();
+        this.lightingAnalyzer = new LightingAnalyzer();
+
+        // State
+        this.isInitialized = false;
+        this.isProcessing = false;
+        this.currentImage = null;
+        this.gBuffer = null;
+
+        // Light parameters (from UI)
+        this.light = {
+            position: { x: 0.5, y: 0.5 },
+            direction: { x: 0, y: 0, z: 1 },
+            color: { r: 1.0, g: 0.98, b: 0.95 },
+            intensity: 0.5,
+            ambient: 0.1,
+            height: 0.5,
+            shadowIntensity: 0.6,
+            shadowSoftness: 0.4
+        };
+
+        // Pipeline data
+        this.depth = null;
+        this.normals = null;
+        this.albedo = null;
+        this.confidence = null;
+
+        // Dimensions
+        this.width = 0;
+        this.height = 0;
+
+        // Setup model loader events
+        this._setupModelLoaderEvents();
+    }
+
+    /**
+     * Initialize the pipeline
+     * Call this when app opens - starts background model loading
+     */
+    async init() {
+        if (this.isInitialized) return true;
+
+        console.log('🎨 Initializing v8 Relighting Pipeline...');
+
+        // Start background model loading (non-blocking)
+        this.modelLoader.startLoading();
+
+        // Initialize GPU renderer
+        const gpuReady = await this.gpuRenderer.init();
+        if (!gpuReady) {
+            console.warn('GPU renderer failed, using CPU fallback');
+            this.useGPU = false;
+        }
+
+        this.isInitialized = true;
+        this.emit('initialized');
+
+        return true;
+    }
+
+    /**
+     * Setup event forwarding from model loader
+     */
+    _setupModelLoaderEvents() {
+        this.modelLoader.on('total-progress', (data) => {
+            this.emit('model-progress', data);
+        });
+
+        this.modelLoader.on('model-loaded', (data) => {
+            this.emit('model-loaded', data);
+        });
+
+        this.modelLoader.on('feature-enabled', (data) => {
+            this.emit('feature-enabled', data);
+        });
+
+        this.modelLoader.on('all-models-ready', () => {
+            this.emit('models-ready');
+        });
+
+        this.modelLoader.on('loading-error', (data) => {
+            this.emit('model-error', data);
+        });
+    }
+
+    /**
+     * Process an image for relighting
+     * @param {HTMLImageElement|ImageBitmap} image - Input image
+     * @param {Function} progressCallback - Progress updates
+     * @returns {Promise<boolean>} Success
+     */
+    async processImage(image, progressCallback = null) {
+        if (this.isProcessing) {
+            console.warn('Already processing an image');
+            return false;
+        }
+
+        if (!this.modelLoader.isReady()) {
+            console.warn('Models not ready yet');
+            this.emit('not-ready');
+            return false;
+        }
+
+        this.isProcessing = true;
+        const startTime = performance.now();
+
+        try {
+            // Step 1: Resolution check
+            this._reportProgress(progressCallback, 5, 'Checking resolution...');
+
+            let processedImage;
+            try {
+                const resizeResult = await this.resolutionManager.checkAndResize(image);
+                processedImage = resizeResult.image;
+
+                if (resizeResult.wasResized) {
+                    this.emit('image-resized', resizeResult);
+                }
+            } catch (error) {
+                if (error instanceof UserCancelledError) {
+                    this.emit('cancelled');
+                    return false;
+                }
+                throw error;
+            }
+
+            // Get dimensions
+            this.width = processedImage.width || processedImage.naturalWidth;
+            this.height = processedImage.height || processedImage.naturalHeight;
+            this.currentImage = processedImage;
+
+            // Step 2: Convert to linear color space
+            this._reportProgress(progressCallback, 10, 'Preparing image...');
+            const imageData = this._getImageData(processedImage);
+            const linearImage = this.colorConverter.sRGBToLinear(imageData);
+
+            // Step 3: Depth estimation
+            this._reportProgress(progressCallback, 15, 'Estimating depth...');
+            this.depth = await this._estimateDepth(processedImage, (p) => {
+                const mappedProgress = 15 + (p * 0.4); // 15% to 55%
+                this._reportProgress(progressCallback, mappedProgress, 'Estimating depth...');
+            });
+
+            // Step 4: Normal estimation (from depth for now)
+            this._reportProgress(progressCallback, 60, 'Computing surface normals...');
+            this.normals = this._computeNormalsFromDepth(this.depth);
+
+            // Step 5: Albedo estimation (use original for now)
+            this._reportProgress(progressCallback, 75, 'Analyzing materials...');
+            this.albedo = imageData; // Simple: use original image
+
+            // Step 6: Compute confidence
+            this._reportProgress(progressCallback, 85, 'Assessing quality...');
+            this.confidence = this._computeConfidence(this.depth, this.normals);
+
+            // Step 7: Build G-Buffer
+            this._reportProgress(progressCallback, 95, 'Preparing render...');
+            this.gBuffer = this._buildGBuffer();
+
+            // Done
+            this._reportProgress(progressCallback, 100, 'Ready!');
+
+            const elapsed = performance.now() - startTime;
+            console.log(`✓ Image processed in ${(elapsed / 1000).toFixed(2)}s`);
+
+            this.emit('processed', {
+                width: this.width,
+                height: this.height,
+                processingTime: elapsed,
+                confidence: this.confidence.overall
+            });
+
+            return true;
+
+        } catch (error) {
+            console.error('❌ Processing failed:', error);
+            this.emit('error', { error });
+            return false;
+
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
+    /**
+     * Estimate depth using the loaded model
+     */
+    async _estimateDepth(image, progressCallback) {
+        const pipeline = this.modelLoader.getPipeline('depth');
+
+        // Transformers.js expects HTMLCanvasElement, URL, or RawImage
+        // Convert HTMLImageElement to canvas first
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+
+        const result = await pipeline(canvas);
+
+        // Convert to Float32Array
+        const depthData = result.depth?.data || result.data;
+
+        return {
+            data: depthData,
+            width: result.depth?.width || this.width,
+            height: result.depth?.height || this.height,
+            min: 0,
+            max: 1
+        };
+    }
+
+    /**
+     * Compute normals from depth map
+     */
+    _computeNormalsFromDepth(depth) {
+        const { data, width, height } = depth;
+        const normals = new Float32Array(width * height * 3);
+
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const idx = y * width + x;
+
+                // Central differences
+                const dL = data[(y) * width + (x - 1)];
+                const dR = data[(y) * width + (x + 1)];
+                const dT = data[(y - 1) * width + x];
+                const dB = data[(y + 1) * width + x];
+
+                // Compute gradients
+                const dx = (dR - dL) * 0.5;
+                const dy = (dB - dT) * 0.5;
+
+                // Cross product to get normal
+                let nx = -dx * 2;
+                let ny = -dy * 2;
+                let nz = 1.0;
+
+                // Normalize
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                nx /= len;
+                ny /= len;
+                nz /= len;
+
+                const outIdx = idx * 3;
+                normals[outIdx] = nx;
+                normals[outIdx + 1] = ny;
+                normals[outIdx + 2] = nz;
+            }
+        }
+
+        return {
+            data: normals,
+            width,
+            height
+        };
+    }
+
+    /**
+     * Compute confidence score using 3-tier system
+     */
+    _computeConfidence(depth, normals) {
+        // Build temporary gBuffer for confidence estimation
+        const gBuffer = {
+            depth: depth,
+            normals: normals,
+            albedo: this.albedo,
+            width: this.width,
+            height: this.height
+        };
+
+        // Use the full confidence estimator
+        const confidence = this.confidenceEstimator.estimate(gBuffer);
+
+        // Also analyze lighting if we have image data
+        if (this.albedo) {
+            const lighting = this.lightingAnalyzer.analyze(this.albedo);
+            confidence.lighting = lighting;
+            confidence.warnings = [...(confidence.warnings || []), ...(lighting.warnings || [])];
+        }
+
+        // Log confidence results
+        console.log(`📊 Quality: ${confidence.quality} (${(confidence.overall * 100).toFixed(0)}%)`);
+        if (confidence.warnings.length > 0) {
+            console.log(`⚠ Warnings:`, confidence.warnings.map(w => w.message));
+        }
+
+        // Emit confidence event for UI
+        this.emit('confidence', confidence);
+
+        return confidence;
+    }
+
+    /**
+     * Build G-Buffer for deferred rendering
+     */
+    _buildGBuffer() {
+        return {
+            albedo: this.albedo,
+            normals: this.normals,
+            depth: this.depth,
+            confidence: this.confidence,
+            width: this.width,
+            height: this.height
+        };
+    }
+
+    /**
+     * Get ImageData from various image types
+     */
+    _getImageData(image) {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        return ctx.getImageData(0, 0, this.width, this.height);
+    }
+
+    /**
+     * Report progress
+     */
+    _reportProgress(callback, percent, message) {
+        if (callback) {
+            callback({ progress: percent, message, stage: 'processing' });
+        }
+        this.emit('progress', { progress: percent, message });
+    }
+
+    /**
+     * Render with current light settings
+     * @returns {HTMLCanvasElement}
+     */
+    render() {
+        if (!this.gBuffer) {
+            console.warn('No image processed yet');
+            return null;
+        }
+
+        // Use GPU renderer if available
+        if (this.useGPU && this.gpuRenderer.isInitialized) {
+            return this._renderGPU();
+        }
+
+        // Fallback to CPU rendering
+        return this._renderCPU();
+    }
+
+    /**
+     * GPU-accelerated deferred rendering
+     */
+    _renderGPU() {
+        const canvas = this.gpuRenderer.render(this.gBuffer, this.light);
+        return canvas;
+    }
+
+    /**
+     * CPU rendering fallback
+     */
+    _renderCPU() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+
+        // Get albedo pixels
+        const albedoData = this.albedo;
+        const output = ctx.createImageData(this.width, this.height);
+
+        const { normals, depth } = this;
+        const { direction, intensity, ambient, color } = this.light;
+
+        // Normalize light direction
+        const lx = direction.x;
+        const ly = direction.y;
+        const lz = direction.z;
+        const lLen = Math.sqrt(lx * lx + ly * ly + lz * lz);
+        const lightDir = { x: lx / lLen, y: ly / lLen, z: lz / lLen };
+
+        for (let i = 0; i < this.width * this.height; i++) {
+            const nx = normals.data[i * 3];
+            const ny = normals.data[i * 3 + 1];
+            const nz = normals.data[i * 3 + 2];
+
+            // Lambertian diffuse
+            const NdotL = Math.max(0, nx * lightDir.x + ny * lightDir.y + nz * lightDir.z);
+            const lighting = ambient + NdotL * intensity;
+
+            const srcIdx = i * 4;
+            output.data[srcIdx] = Math.min(255, albedoData.data[srcIdx] * lighting * color.r);
+            output.data[srcIdx + 1] = Math.min(255, albedoData.data[srcIdx + 1] * lighting * color.g);
+            output.data[srcIdx + 2] = Math.min(255, albedoData.data[srcIdx + 2] * lighting * color.b);
+            output.data[srcIdx + 3] = 255;
+        }
+
+        ctx.putImageData(output, 0, 0);
+        return canvas;
+    }
+
+    // === Light control methods ===
+
+    setLightPosition(x, y) {
+        this.light.position.x = Math.max(0, Math.min(1, x));
+        this.light.position.y = Math.max(0, Math.min(1, y));
+        this._updateLightDirection();
+    }
+
+    setLightIntensity(intensity) {
+        this.light.intensity = Math.max(0, Math.min(2, intensity));
+    }
+
+    setAmbient(ambient) {
+        this.light.ambient = Math.max(0, Math.min(1, ambient));
+    }
+
+    setLightHeight(height) {
+        this.light.height = Math.max(0, Math.min(1, height));
+        this._updateLightDirection();
+    }
+
+    setLightColor(r, g, b) {
+        this.light.color = { r, g, b };
+    }
+
+    setShadowIntensity(intensity) {
+        this.light.shadowIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setShadowSoftness(softness) {
+        this.light.shadowSoftness = Math.max(0, Math.min(1, softness));
+    }
+
+    _updateLightDirection() {
+        const px = (this.light.position.x - 0.5) * 2;
+        const py = (this.light.position.y - 0.5) * 2;
+
+        const dirX = px;
+        const dirY = -py;
+        const dirZ = Math.max(0.3, this.light.height);
+
+        const len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        this.light.direction = {
+            x: dirX / len,
+            y: dirY / len,
+            z: dirZ / len
+        };
+    }
+
+    // === Status methods ===
+
+    isReady() {
+        return this.modelLoader.isReady();
+    }
+
+    hasProcessedImage() {
+        return this.gBuffer !== null;
+    }
+
+    getStatus() {
+        return {
+            initialized: this.isInitialized,
+            modelsReady: this.modelLoader.isReady(),
+            modelsFullyLoaded: this.modelLoader.isFullyLoaded(),
+            hasImage: this.hasProcessedImage(),
+            dimensions: this.gBuffer ? {
+                width: this.width,
+                height: this.height
+            } : null,
+            confidence: this.confidence?.overall || 0,
+            modelStatus: this.modelLoader.getStatus()
+        };
+    }
+
+    // === Cleanup ===
+
+    dispose() {
+        this.depth = null;
+        this.normals = null;
+        this.albedo = null;
+        this.confidence = null;
+        this.gBuffer = null;
+        this.currentImage = null;
+        this.removeAllListeners();
+    }
+}
+
+export default RelightingPipeline;
