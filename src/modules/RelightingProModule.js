@@ -164,6 +164,54 @@ export class RelightingProModule {
                 }
             });
         }
+
+        // Keyboard shortcuts for light control
+        this._keyboardHandler = this._onKeyDown.bind(this);
+        document.addEventListener('keydown', this._keyboardHandler);
+    }
+
+    _onKeyDown(e) {
+        // Only handle if we have analyzed and the tool is active
+        if (!this.hasAnalyzed || !this.isActive) return;
+
+        // Don't capture if user is typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        const step = 0.05; // 5% movement per keypress
+        let handled = false;
+
+        switch (e.key.toLowerCase()) {
+            case 'w': // Move light up
+                this.pipeline.light.position.y = Math.max(0, this.pipeline.light.position.y - step);
+                handled = true;
+                break;
+            case 's': // Move light down
+                this.pipeline.light.position.y = Math.min(1, this.pipeline.light.position.y + step);
+                handled = true;
+                break;
+            case 'a': // Move light left
+                this.pipeline.light.position.x = Math.max(0, this.pipeline.light.position.x - step);
+                handled = true;
+                break;
+            case 'd': // Move light right
+                this.pipeline.light.position.x = Math.min(1, this.pipeline.light.position.x + step);
+                handled = true;
+                break;
+            case 'r': // Reset light position
+                this.pipeline.setLightPosition(0.5, 0.5);
+                this.pipeline.setLightIntensity(1.0);
+                this.pipeline.setAmbient(0.3);
+                this.pipeline.setLightHeight(0.5);
+                this._updateLightHandle(0.5, 0.5);
+                handled = true;
+                break;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            this._updateLightHandle(this.pipeline.light.position.x, this.pipeline.light.position.y);
+            this._render();
+        }
     }
 
     _setupPipelineEvents() {
@@ -178,9 +226,15 @@ export class RelightingProModule {
         });
 
         // Model loaded
-        this.pipeline.modelLoader.on('model-loaded', ({ model }) => {
-            console.log(`✓ Model loaded: ${model}`);
+        this.pipeline.modelLoader.on('model-loaded', ({ model, fromCache }) => {
+            console.log(`✓ Model loaded: ${model}${fromCache ? ' (cached)' : ''}`);
             this._hideDownloadStatus();
+        });
+
+        // Model loaded from cache (fast feedback)
+        this.pipeline.modelLoader.on('model-cached', ({ model, loadTime }) => {
+            console.log(`⚡ Model ${model} loaded from cache in ${loadTime}ms`);
+            this._showCacheMessage();
         });
 
         // Models ready
@@ -368,6 +422,28 @@ export class RelightingProModule {
         }
     }
 
+    _showCacheMessage() {
+        // Show brief "Using cached model" feedback
+        if (this.elements.statusText) {
+            const originalText = this.elements.statusText.textContent;
+            this.elements.statusText.textContent = 'Using cached model';
+            this.elements.statusText.style.color = '#4ade80'; // Green
+
+            // Fade back after 2 seconds
+            setTimeout(() => {
+                this.elements.statusText.textContent = originalText;
+                this.elements.statusText.style.color = '';
+            }, 2000);
+        }
+
+        // Flash the status indicator
+        if (this.elements.statusIndicator) {
+            this.elements.statusIndicator.style.animation = 'none';
+            this.elements.statusIndicator.offsetHeight; // Force reflow
+            this.elements.statusIndicator.style.animation = 'pulse 0.5s ease-out';
+        }
+    }
+
     _setBasicReady() {
         // Enable analyze button when depth model is ready
         if (this.elements.analyzeBtn) {
@@ -542,6 +618,22 @@ export class RelightingProModule {
 
         // Render initial result
         this._render();
+    }
+
+    /**
+     * Update the visual light handle position (for keyboard controls)
+     * @param {number} x - 0-1 horizontal position
+     * @param {number} y - 0-1 vertical position
+     */
+    _updateLightHandle(x, y) {
+        if (!this.elements.lightDot || !this.elements.lightPosition) return;
+
+        const rect = this.elements.lightPosition.getBoundingClientRect();
+        const dotX = x * rect.width;
+        const dotY = y * rect.height;
+
+        this.elements.lightDot.style.left = `${dotX}px`;
+        this.elements.lightDot.style.top = `${dotY}px`;
     }
 
     _showError(message) {

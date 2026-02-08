@@ -130,26 +130,22 @@ export class BackgroundModelLoader extends EventEmitter {
     /**
      * Start background loading (call on app open)
      * Non-blocking, fire-and-forget
+     * 
+     * Note: transformers.js handles caching internally via Cache API.
+     * We detect cache hits via timing in _loadModel().
      */
     async startLoading() {
-        if (this.isLoading || this.loadingComplete) {
+        if (this.isLoading) {
             return;
         }
 
+        // Reset loading state for tier switches
+        this.loadingComplete = false;
         this.isLoading = true;
-        console.log('🚀 Starting background model loading...');
+        console.log('🚀 Starting model loading...');
 
         try {
-            // Check what's already cached
-            const cacheStatus = await this._checkCacheStatus();
-
-            if (cacheStatus.allCached) {
-                console.log('✓ All models cached, instant ready!');
-                this._markAllLoaded();
-                return;
-            }
-
-            // Load in priority order
+            // Load models in priority order
             await this._loadInPriorityOrder();
 
             this.loadingComplete = true;
@@ -190,6 +186,8 @@ export class BackgroundModelLoader extends EventEmitter {
      * Load a single model
      */
     async _loadModel(name, model) {
+        const startTime = Date.now();
+
         console.log(`⬇ Loading ${name} model (${model.size}MB)...`);
 
         this.emit('model-loading', {
@@ -201,22 +199,33 @@ export class BackgroundModelLoader extends EventEmitter {
         // Import transformers.js dynamically
         const { pipeline } = await import('@huggingface/transformers');
 
+        let downloadStarted = false;
+
         // Create pipeline with progress callback
         model.pipeline = await pipeline(model.id, model.modelId, {
             progress_callback: (progress) => {
                 if (progress.status === 'progress') {
+                    downloadStarted = true;
                     const percent = Math.round((progress.loaded / progress.total) * 100);
                     this._emitProgress(name, percent, progress.loaded, progress.total);
                 }
             }
         });
 
+        const loadTime = Date.now() - startTime;
+        const loadedFromCache = loadTime < 3000 && !downloadStarted;
+
         model.loaded = true;
         this.loadedSize += model.size;
 
-        console.log(`✓ ${name} model ready (${this.loadedSize}/${this.totalSize}MB)`);
+        if (loadedFromCache) {
+            console.log(`✓ ${name} model loaded from cache (${loadTime}ms)`);
+            this.emit('model-cached', { model: name, loadTime });
+        } else {
+            console.log(`✓ ${name} model ready (${this.loadedSize}/${this.totalSize}MB)`);
+        }
 
-        this.emit('model-loaded', { model: name });
+        this.emit('model-loaded', { model: name, fromCache: loadedFromCache });
         this._emitTotalProgress();
         this._checkFeatureEnablement();
     }
