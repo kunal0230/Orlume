@@ -120,17 +120,7 @@
                     <line x1="17.66" y1="6.34" x2="19.78" y2="4.22" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-3d" title="3D Relighting (3)">
-                <!-- Lightbulb with 3D effect icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="8" r="5" />
-                    <path d="M9 13v2a3 3 0 0 0 6 0v-2" />
-                    <line x1="12" y1="18" x2="12" y2="21" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <path d="M5 8l-2 -2" />
-                    <path d="M19 8l2 -2" />
-                </svg>
-            </button>
+
             <button class="tool-btn" id="tool-3d-pro" title="3D Relighting PRO (P)">
                 <!-- Pro relighting icon with star -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -335,22 +325,19 @@
 
             <!-- Text Mode Header -->
             <div class="panel-header mode-header" id="text-mode-header" style="display: none;">
-                <span class="panel-title">✏️ Add Text</span>
+                <span class="panel-title">Add Text</span>
             </div>
 
             <!-- God Rays Mode Header -->
             <div class="panel-header mode-header" id="godrays-mode-header" style="display: none;">
-                <span class="panel-title">☀️ Volumetric Lighting</span>
+                <span class="panel-title">Volumetric Lighting</span>
             </div>
 
-            <!-- 3D Relighting Mode Header -->
-            <div class="panel-header mode-header" id="relight-mode-header" style="display: none;">
-                <span class="panel-title">💡 3D Relighting</span>
-            </div>
+
 
             <!-- 3D Relighting PRO Mode Header -->
             <div class="panel-header mode-header" id="relight-pro-mode-header" style="display: none;">
-                <span class="panel-title">⭐ 3D Relighting PRO</span>
+                <span class="panel-title">3D Relighting</span>
                 <span
                     style="font-size: 10px; background: linear-gradient(135deg, #667eea, #764ba2); padding: 2px 6px; border-radius: 4px; margin-left: 8px;">v8</span>
             </div>
@@ -1766,325 +1753,27 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 3D Relighting Panel -->
-                <div class="panel-section" id="panel-relight">
-                    <!-- Getting Started -->
-                    <div class="section">
-                        <div class="section-header" style="display: flex; align-items: center; gap: 8px;">
-                            3D Relighting
-                            <span
-                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">BETA</span>
-                        </div>
-                        <p
-                            style="font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
-                            Add realistic 3D lighting. Click on the image to position the light.
-                            <br><span style="font-size: 10px; opacity: 0.8;">💡 Works best with simple portrait/selfie
-                                photos. We're improving complex image support.</span>
-                        </p>
-
-                        <!-- Unified Status Card -->
-                        <div id="relight-status-card"
-                            style="padding: 10px 12px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 12px;">
-                            <!-- Status Row (always visible) -->
-                            <div id="relight-status-row"
-                                style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <svg id="relight-status-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                        stroke="var(--text-secondary)" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <path d="M12 6v6l4 2" />
-                                    </svg>
-                                    <span id="relight-status-text" style="color: var(--text-secondary);">Checking
-                                        model...</span>
-                                </div>
-                                <button id="btn-relight-clear-cache" class="btn"
-                                    style="padding: 4px 8px; font-size: 10px; display: none;">Clear</button>
-                            </div>
-                            <!-- Progress Bar (hidden by default) -->
-                            <div id="relight-progress-row" style="display: none; margin-top: 8px;">
-                                <div
-                                    style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px;">
-                                    <span id="relight-progress-text"
-                                        style="color: var(--text-secondary);">Processing...</span>
-                                    <span id="relight-progress-percent" style="color: var(--text-primary);">0%</span>
-                                </div>
-                                <div
-                                    style="height: 4px; background: var(--bg-secondary); border-radius: 2px; overflow: hidden;">
-                                    <div id="relight-progress-bar"
-                                        style="height: 100%; width: 0%; background: var(--accent); transition: width 0.15s ease-out;">
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- First-time note (shown when model not cached) -->
-                            <p id="relight-first-time-note"
-                                style="display: none; margin: 8px 0 0 0; font-size: 9px; color: var(--text-tertiary); line-height: 1.4;">
-                                ⏱️ First-time download takes 2-3 min depending on internet speed
-                            </p>
-                        </div>
-
-
-                        <button class="btn btn-primary" id="btn-relight-depth" style="width: 100%; margin-bottom: 8px;">
-                            Analyze Image
-                        </button>
-                        <p id="relight-depth-status"
-                            style="font-size: 10px; color: var(--text-secondary); text-align: center; margin: 0;">
-                            Click to estimate depth and surface
-                        </p>
-                    </div>
-
-                    <!-- Light Settings -->
-                    <div class="section">
-                        <div class="section-header">Light</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Intensity</span>
-                                <span id="val-relight-intensity">50</span>
-                            </div>
-                            <input type="range" id="slider-relight-intensity" min="0" max="200" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Ambient</span>
-                                <span id="val-relight-ambient">10</span>
-                            </div>
-                            <input type="range" id="slider-relight-ambient" min="0" max="100" step="1" value="10">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Height</span>
-                                <span id="val-relight-height">50</span>
-                            </div>
-                            <input type="range" id="slider-relight-height" min="0" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Color</span>
-                            </div>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                                <input type="color" id="relight-color-picker" value="#fffaf0"
-                                    style="width: 32px; height: 28px; border: none; border-radius: 4px; cursor: pointer;">
-                                <button class="btn" data-light-color="#fffaf0"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Warm</button>
-                                <button class="btn" data-light-color="#ffffff"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Neutral</button>
-                                <button class="btn" data-light-color="#d0e8ff"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Cool</button>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 8px;">
-                            <div class="section-header" style="font-size: 11px; margin-bottom: 6px;">Presets</div>
-                            <div class="btn-row" style="gap: 4px;">
-                                <button class="btn" id="preset-natural" style="flex: 1; font-size: 10px; padding: 6px;"
-                                    title="Soft natural light">Natural</button>
-                                <button class="btn" id="preset-studio" style="flex: 1; font-size: 10px; padding: 6px;"
-                                    title="Studio light">Studio</button>
-                                <button class="btn" id="preset-dramatic" style="flex: 1; font-size: 10px; padding: 6px;"
-                                    title="Dramatic side light">Dramatic</button>
-                                <button class="btn" id="preset-backlit" style="flex: 1; font-size: 10px; padding: 6px;"
-                                    title="Backlit rim">Backlit</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Surface Properties -->
-                    <div class="section">
-                        <div class="section-header">Surface</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Softness</span>
-                                <span id="val-relight-softness">0</span>
-                            </div>
-                            <input type="range" id="slider-relight-softness" min="0" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Specular</span>
-                                <span id="val-relight-specularity">0</span>
-                            </div>
-                            <input type="range" id="slider-relight-specularity" min="0" max="100" step="1" value="0">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Glossiness</span>
-                                <span id="val-relight-glossiness">32</span>
-                            </div>
-                            <input type="range" id="slider-relight-glossiness" min="1" max="128" step="1" value="32">
-                        </div>
-                    </div>
-
-                    <!-- Effects -->
-                    <div class="section">
-                        <div class="section-header">Effects</div>
-
-                        <!-- Shadows -->
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Shadows
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Intensity</span>
-                                    <span id="val-relight-shadow-intensity">70</span>
-                                </div>
-                                <input type="range" id="slider-relight-shadow-intensity" min="0" max="100" step="1"
-                                    value="70">
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Softness</span>
-                                    <span id="val-relight-shadow-softness">50</span>
-                                </div>
-                                <input type="range" id="slider-relight-shadow-softness" min="0" max="100" step="1"
-                                    value="50">
-                            </div>
-                        </div>
-
-                        <!-- Rim Light -->
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Rim Light
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Intensity</span>
-                                    <span id="val-relight-rim-intensity">0</span>
-                                </div>
-                                <input type="range" id="slider-relight-rim-intensity" min="0" max="100" step="1"
-                                    value="0">
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Width</span>
-                                    <span id="val-relight-rim-width">50</span>
-                                </div>
-                                <input type="range" id="slider-relight-rim-width" min="0" max="100" step="1" value="50">
-                            </div>
-                        </div>
-
-                        <!-- Translucency -->
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Translucency
-                                (SSS)</div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Intensity</span>
-                                    <span id="val-relight-sss-intensity">0</span>
-                                </div>
-                                <input type="range" id="slider-relight-sss-intensity" min="0" max="100" step="1"
-                                    value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Advanced Settings -->
-                    <div class="section">
-                        <div class="section-header">Advanced</div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Quality</span>
-                            </div>
-                            <select id="relight-quality-preset"
-                                style="width: 100%; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 11px;">
-                                <option value="draft">Draft (Fast)</option>
-                                <option value="standard" selected>Standard</option>
-                                <option value="high">High Quality</option>
-                            </select>
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Light Type</span>
-                            </div>
-                            <div class="btn-row" style="gap: 4px;">
-                                <button class="btn btn-primary" id="btn-light-directional"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Directional</button>
-                                <button class="btn" id="btn-light-point"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Point</button>
-                                <button class="btn" id="btn-light-spotlight"
-                                    style="flex: 1; font-size: 10px; padding: 6px;">Spot</button>
-                            </div>
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Blend Mode</span>
-                            </div>
-                            <select id="relight-blend-mode"
-                                style="width: 100%; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 11px;">
-                                <option value="normal" selected>Normal</option>
-                                <option value="softLight">Soft Light</option>
-                                <option value="additive">Additive</option>
-                                <option value="screen">Screen</option>
-                                <option value="multiply">Multiply</option>
-                            </select>
-                        </div>
-
-                        <!-- Spotlight Settings (hidden by default) -->
-                        <div id="spotlight-controls"
-                            style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Spotlight
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Cone Angle</span>
-                                    <span id="val-relight-spot-angle">30</span>
-                                </div>
-                                <input type="range" id="slider-relight-spot-angle" min="5" max="90" step="1" value="30">
-                            </div>
-                            <div class="control-group">
-                                <div class="control-label">
-                                    <span>Edge Softness</span>
-                                    <span id="val-relight-spot-softness">30</span>
-                                </div>
-                                <input type="range" id="slider-relight-spot-softness" min="0" max="100" step="1"
-                                    value="30">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Debug (collapsed by default) -->
-                    <details class="section" style="cursor: pointer;">
-                        <summary class="section-header"
-                            style="list-style: none; display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 10px;">▶</span> Debug
-                        </summary>
-                        <div style="margin-top: 8px;">
-                            <div class="btn-row" style="gap: 4px;">
-                                <button class="btn" id="btn-show-normals"
-                                    style="flex: 1; font-size: 9px; padding: 5px;">Normals</button>
-                                <button class="btn" id="btn-show-depth"
-                                    style="flex: 1; font-size: 9px; padding: 5px;">Depth</button>
-                                <button class="btn" id="btn-show-lighting"
-                                    style="flex: 1; font-size: 9px; padding: 5px;">Albedo</button>
-                                <button class="btn" id="btn-show-result"
-                                    style="flex: 1; font-size: 9px; padding: 5px;">Result</button>
-                            </div>
-                        </div>
-                    </details>
-
-                    <!-- Actions -->
-                    <div class="section">
-                        <div class="btn-row" style="gap: 8px;">
-                            <button class="btn" id="btn-relight-reset" style="flex: 1;">Reset</button>
-                            <button class="btn btn-primary" id="btn-relight-apply" style="flex: 1;">Apply</button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 3D Relighting PRO Panel (v8) -->
                 <div class="panel-section" id="panel-3d-pro">
                     <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
-                        <strong style="color: var(--accent);">PRO Relighting</strong> - SOTA depth estimation with
-                        real-time mesh reconstruction.
+                        <strong style="color: var(--accent);">3D Relighting</strong> - AI-powered depth estimation with
+                        real-time lighting simulation.
                     </p>
+
+                    <!-- Beta Notice -->
+                    <div
+                        style="padding: 10px 12px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12)); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; margin-bottom: 12px;">
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span
+                                style="font-size: 10px; font-weight: 600; color: var(--accent); background: rgba(99, 102, 241, 0.2); padding: 2px 6px; border-radius: 4px;">BETA</span>
+                            <span style="font-size: 9px; color: var(--text-tertiary);">Updated 8 Feb 2026</span>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                            In active development. Currently refining normal map fusion to preserve surface detail while
+                            minimizing edge artifacts.
+                        </p>
+                    </div>
 
                     <!-- Model Loading Status -->
                     <div id="v8-model-status-card"

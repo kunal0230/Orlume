@@ -544,7 +544,7 @@ float computeContactShadow(vec2 uv, float centerDepth, vec3 lightDir) {
     
     for (int i = 1; i <= STEPS; i++) {
         float t = float(i) / float(STEPS);
-        vec2 sampleUV = uv - lightDirSS * t;  // Trace backward from light direction
+        vec2 sampleUV = uv + lightDirSS * t;  // Trace toward shadow (away from light source)
         
         // Bounds check
         if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) {

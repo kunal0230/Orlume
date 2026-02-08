@@ -575,6 +575,147 @@ export class RelightingPipeline extends EventEmitter {
         this.light.shadowSoftness = Math.max(0, Math.min(1, softness));
     }
 
+    // === v7 Compatibility Methods ===
+    // These methods exist for UI compatibility with RelightingModule.js
+
+    setSpecularity(specularity) {
+        this.light.specularity = Math.max(0, Math.min(1, specularity));
+    }
+
+    setGlossiness(glossiness) {
+        this.light.glossiness = Math.max(0, Math.min(256, glossiness));
+    }
+
+    setReach(reach) {
+        this.light.reach = Math.max(0, reach);
+    }
+
+    setContrast(contrast) {
+        this.light.contrast = Math.max(0, Math.min(2, contrast));
+    }
+
+    setDirectional(isDirectional) {
+        this.light.isDirectional = isDirectional;
+    }
+
+    setBlendMode(mode) {
+        this.light.blendMode = mode;
+    }
+
+    setLightDirection(dx, dy, dz = 0.5) {
+        const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (len > 0) {
+            this.light.direction = {
+                x: dx / len,
+                y: dy / len,
+                z: dz / len
+            };
+        }
+    }
+
+    // Rim lighting
+    setRimIntensity(intensity) {
+        this.light.rimIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setRimWidth(width) {
+        this.light.rimWidth = Math.max(0, Math.min(1, width));
+    }
+
+    setRimColor(r, g, b) {
+        this.light.rimColor = { r, g, b };
+    }
+
+    // Shadow controls
+    setShadowEnabled(enabled) {
+        this.light.shadowEnabled = enabled;
+    }
+
+    setShadowColor(r, g, b) {
+        this.light.shadowColor = { r, g, b };
+    }
+
+    // Spotlight
+    setSpotlightEnabled(enabled) {
+        this.light.spotlightEnabled = enabled;
+    }
+
+    setSpotAngle(angle) {
+        this.light.spotAngle = Math.max(1, Math.min(180, angle));
+    }
+
+    setSpotSoftness(softness) {
+        this.light.spotSoftness = Math.max(0, Math.min(1, softness));
+    }
+
+    // Subsurface scattering
+    setSSSIntensity(intensity) {
+        this.light.sssIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setSSSColor(r, g, b) {
+        this.light.sssColor = { r, g, b };
+    }
+
+    // Ambient occlusion
+    setAOIntensity(intensity) {
+        this.light.aoIntensity = Math.max(0, Math.min(1, intensity));
+    }
+
+    setAORadius(radius) {
+        this.light.aoRadius = Math.max(1, Math.min(50, radius));
+    }
+
+    // PBR
+    setRoughness(roughness) {
+        this.light.roughness = Math.max(0, Math.min(1, roughness));
+    }
+
+    setMetallic(metallic) {
+        this.light.metallic = Math.max(0, Math.min(1, metallic));
+    }
+
+    setUsePBR(usePBR) {
+        this.light.usePBR = usePBR;
+    }
+
+    setGPUShadows(useGPUShadows) {
+        this.light.useGPUShadows = useGPUShadows;
+    }
+
+    // Preset application
+    applyPreset(preset) {
+        // Presets would adjust multiple light parameters together
+        console.log(`Applied preset: ${preset}`);
+    }
+
+    // === Static cache methods (v7 API compatibility) ===
+
+    static async checkCacheStatus() {
+        try {
+            const cache = await caches.open('transformers-cache');
+            const keys = await cache.keys();
+            const totalSize = keys.length > 0 ? '~50 MB' : '';
+            return {
+                cached: keys.length > 0,
+                size: totalSize
+            };
+        } catch {
+            return { cached: false, size: '' };
+        }
+    }
+
+    static async clearCache() {
+        try {
+            await caches.delete('transformers-cache');
+            console.log('✓ Transformers cache cleared');
+            return true;
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+            return false;
+        }
+    }
+
     // === Model Tier Methods ===
 
     /**

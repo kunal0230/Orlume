@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, RelightingModule, ToneCurveModule, ColorGradingModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, ToneCurveModule, ColorGradingModule } from './modules/index.js';
 
 // v8 PRO Relighting
 import { RelightingProModule } from '../modules/RelightingProModule.js';
@@ -61,7 +61,6 @@ export class EditorUI {
         this.hslModule = new HSLModule(this);
         this.presetsModule = new PresetsModule(this);
         this.textModule = new TextModule(this);
-        this.relightingModule = new RelightingModule(this);
         this.relightingProModule = new RelightingProModule(this);  // v8 PRO
         this.toneCurveModule = new ToneCurveModule(this);
         this.colorGradingModule = new ColorGradingModule(this);
@@ -124,7 +123,7 @@ export class EditorUI {
         this.hslModule.init();
         this.presetsModule.init();
         this.textModule.init();
-        this.relightingModule.init();
+        // RelightingModule removed - using v8 PRO only
         this.toneCurveModule.init();
 
         // Sync tool references for backward compatibility
@@ -136,6 +135,25 @@ export class EditorUI {
         this.upscaler = this.upscaleModule.upscaler;
         this.upscaleScaleFactor = this.upscaleModule.scaleFactor;
         this.comparison = this.comparisonModule.comparison;
+
+        // Handle URL parameters for direct tool access
+        this._handleURLParameters();
+    }
+
+    /**
+     * Handle URL parameters to open specific tools
+     * Example: /editor?tool=3d-pro will open 3D Relighting
+     */
+    _handleURLParameters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tool = urlParams.get('tool');
+
+        if (tool) {
+            // Delay to ensure UI is fully initialized
+            setTimeout(() => {
+                this.setMode(tool);
+            }, 100);
+        }
     }
 
     /**
@@ -203,9 +221,9 @@ export class EditorUI {
             this.textModule.deactivate();
         }
 
-        // Deactivate relighting when leaving relight/3d mode
-        if ((previousMode === '3d' || previousMode === 'relight') && mode !== '3d' && mode !== 'relight') {
-            this.relightingModule.deactivate();
+        // Deactivate relighting PRO when leaving 3d-pro mode
+        if (previousMode === '3d-pro' && mode !== '3d-pro') {
+            this.relightingProModule.deactivate();
         }
 
         this.state.setTool(mode);
@@ -226,7 +244,6 @@ export class EditorUI {
         document.getElementById('presets-mode-header').style.display = 'none';
         document.getElementById('bg-remove-mode-header').style.display = 'none';
         document.getElementById('godrays-mode-header').style.display = 'none';
-        document.getElementById('relight-mode-header')?.style.setProperty('display', 'none');
         document.getElementById('relight-pro-mode-header')?.style.setProperty('display', 'none');
         document.getElementById('text-mode-header')?.style.setProperty('display', 'none');
 
@@ -242,12 +259,7 @@ export class EditorUI {
                 document.getElementById('panel-develop').classList.add('active');
                 break;
 
-            case '3d':
-            case 'relight':
-                document.getElementById('relight-mode-header').style.display = 'block';
-                document.getElementById('panel-relight').classList.add('active');
-                this.relightingModule.activate();
-                break;
+
 
             case '3d-pro':
                 document.getElementById('relight-pro-mode-header').style.display = 'block';
