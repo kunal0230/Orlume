@@ -2118,21 +2118,93 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" id="btn-v8-analyze" style="width: 100%; margin-bottom: 12px;"
-                        disabled>
+                    <!-- Model Quality Selector -->
+                    <div class="section" style="margin-bottom: 12px;">
+                        <div class="section-header">Model Quality</div>
+                        <select id="v8-model-tier" class="slider"
+                            style="width: 100%; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); cursor: pointer; font-size: 13px;">
+                            <option value="fast">⚡ Fast (V2 Small) - ~50MB</option>
+                            <option value="balanced">⚖️ Balanced (V2 Base) - ~200MB</option>
+                        </select>
+                    </div>
+
+                    <!-- Model Download Progress (shown when downloading) -->
+                    <div id="v8-download-status"
+                        style="display: none; margin-bottom: 12px; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <div id="v8-download-spinner"
+                                style="width: 16px; height: 16px; border: 2px solid rgba(102, 126, 234, 0.3); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite;">
+                            </div>
+                            <span id="v8-download-text"
+                                style="font-size: 13px; color: var(--text-primary); font-weight: 500;">Downloading AI
+                                model...</span>
+                        </div>
+                        <div
+                            style="height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden;">
+                            <div id="v8-download-bar"
+                                style="height: 100%; width: 0%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.2s;">
+                            </div>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--text-secondary);">
+                            <span id="v8-download-size">0 MB / 0 MB</span>
+                            <span id="v8-download-percent">0%</span>
+                        </div>
+                    </div>
+
+                    <style>
+                        @keyframes spin {
+                            to {
+                                transform: rotate(360deg);
+                            }
+                        }
+                    </style>
+
+                    <button class="btn btn-primary" id="btn-v8-analyze"
+                        style="width: 100%; margin-bottom: 12px; padding: 12px; font-size: 14px;" disabled>
                         Analyze Image
                     </button>
 
-                    <div id="v8-analysis-status"
-                        style="display: none; margin-bottom: 12px; font-size: 11px; color: var(--text-secondary);">
-                        <span id="v8-analysis-text">Processing...</span>
+                    <!-- Analysis Progress (shown during analysis) -->
+                    <div id="v8-analysis-status" style="display: none; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <div
+                                style="width: 16px; height: 16px; border: 2px solid rgba(74, 222, 128, 0.3); border-top-color: #4ade80; border-radius: 50%; animation: spin 1s linear infinite;">
+                            </div>
+                            <span id="v8-analysis-text"
+                                style="font-size: 13px; color: var(--text-primary); font-weight: 500;">Processing...</span>
+                        </div>
                         <div
-                            style="margin-top: 4px; height: 3px; background: var(--bg-secondary); border-radius: 2px; overflow: hidden;">
+                            style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
                             <div id="v8-analysis-bar"
-                                style="height: 100%; width: 0%; background: var(--accent); transition: width 0.15s;">
+                                style="height: 100%; width: 0%; background: linear-gradient(90deg, #4ade80, #22c55e); transition: width 0.3s ease-out;">
                             </div>
                         </div>
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                            <span id="v8-analysis-stage">Initializing...</span>
+                            <span id="v8-analysis-percent">0%</span>
+                        </div>
                     </div>
+
+                    <!-- Tips & Time Estimation (below analyze button, hidden after analysis) -->
+                    <div id="v8-tips-section"
+                        style="padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div
+                            style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 10px;">
+                            <div style="margin-bottom: 6px;"><strong>Fast</strong>: Best for older devices or slow
+                                connections</div>
+                            <div><strong>Balanced</strong>: Better quality, needs more RAM & bandwidth</div>
+                        </div>
+                        <div
+                            style="font-size: 12px; color: var(--text-tertiary); padding-top: 10px; border-top: 1px solid var(--border-color);">
+                            <div id="v8-time-estimate" style="margin-bottom: 4px;">Estimated time: <span
+                                    id="v8-est-time">~2-5 seconds</span></div>
+                            <div style="font-size: 11px; opacity: 0.8;">Larger images and models take more time.
+                                First download may take 30-60s.</div>
+                        </div>
+                    </div>
+
 
                     <!-- Controls (shown after analysis) -->
                     <div id="v8-controls" style="display: none;">

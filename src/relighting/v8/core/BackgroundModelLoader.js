@@ -18,30 +18,47 @@ export class BackgroundModelLoader extends EventEmitter {
     constructor(options = {}) {
         super();
 
+        // Model tier configuration (Depth Anything V2)
+        this.modelTiers = {
+            fast: {
+                id: 'onnx-community/depth-anything-v2-small',
+                size: 50,
+                description: 'Fast (V2 Small)',
+                quality: 'Good'
+            },
+            balanced: {
+                id: 'onnx-community/depth-anything-v2-base',
+                size: 200,
+                description: 'Balanced (V2 Base)',
+                quality: 'Better'
+            }
+        };
+
+        // Current selected tier
+        this.currentTier = options.tier || 'fast';
+
         // Model configuration
         this.models = {
             depth: {
                 id: 'depth-estimation',
-                // Using HuggingFace Transformers.js model IDs
-                modelId: 'Xenova/depth-anything-small-hf',
-                size: 24, // MB (quantized)
+                // Uses tier-based model ID
+                modelId: this.modelTiers[this.currentTier].id,
+                size: this.modelTiers[this.currentTier].size,
                 priority: 1,
                 loaded: false,
                 pipeline: null,
-                description: 'Depth estimation'
+                description: 'Depth estimation (V2)'
             },
             normals: {
                 id: 'normals',
-                // Will use depth-derived normals for now (no separate model)
-                // Future: Omnidata-large when available
+                // DSINE requires ONNX conversion - using depth-derived for now
+                // Future: DSINE or Omnidata ONNX when available
                 size: 0,
                 priority: 2,
                 loaded: true, // Derived from depth
                 pipeline: null,
-                description: 'Surface normals'
+                description: 'Surface normals (from depth)'
             },
-            // Future: intrinsic decomposition model
-            // Future: PBR material estimation model
         };
 
         this.totalSize = Object.values(this.models).reduce((sum, m) => sum + m.size, 0);
@@ -54,7 +71,60 @@ export class BackgroundModelLoader extends EventEmitter {
 
         // Options
         this.autoStart = options.autoStart !== false;
-        this.cacheVersion = options.cacheVersion || 'v8-1';
+        this.cacheVersion = options.cacheVersion || 'v8-2'; // Updated version for V2
+    }
+
+    /**
+     * Set model quality tier and trigger loading
+     * @param {string} tier - 'fast' or 'balanced'
+     */
+    async setTier(tier) {
+        if (!this.modelTiers[tier]) {
+            console.warn(`Unknown tier: ${tier}, using 'fast'`);
+            tier = 'fast';
+        }
+
+        if (tier === this.currentTier && this.models.depth.loaded) {
+            return; // Already loaded with this tier
+        }
+
+        this.currentTier = tier;
+        const tierConfig = this.modelTiers[tier];
+
+        // Update model config
+        this.models.depth.modelId = tierConfig.id;
+        this.models.depth.size = tierConfig.size;
+        this.models.depth.description = tierConfig.description;
+        this.models.depth.loaded = false;
+        this.models.depth.pipeline = null;
+
+        // Recalculate total
+        this.totalSize = Object.values(this.models).reduce((sum, m) => sum + m.size, 0);
+        this.loadedSize = 0;
+        this.loadingComplete = false;
+
+        console.log(`Model tier set to: ${tier} (${tierConfig.description})`);
+        this.emit('tier-changed', { tier, config: tierConfig });
+
+        // Immediately start loading the new model
+        await this.startLoading();
+    }
+
+    /**
+     * Get available tiers
+     */
+    getTiers() {
+        return Object.entries(this.modelTiers).map(([key, config]) => ({
+            id: key,
+            ...config
+        }));
+    }
+
+    /**
+     * Get current tier
+     */
+    getCurrentTier() {
+        return this.currentTier;
     }
 
     /**

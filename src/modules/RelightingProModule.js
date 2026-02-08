@@ -76,6 +76,24 @@ export class RelightingProModule {
 
         // Light color
         this.elements.lightColor = document.getElementById('v8-light-color');
+
+        // Model tier selector
+        this.elements.modelTier = document.getElementById('v8-model-tier');
+
+        // Download progress elements
+        this.elements.downloadStatus = document.getElementById('v8-download-status');
+        this.elements.downloadText = document.getElementById('v8-download-text');
+        this.elements.downloadBar = document.getElementById('v8-download-bar');
+        this.elements.downloadSize = document.getElementById('v8-download-size');
+        this.elements.downloadPercent = document.getElementById('v8-download-percent');
+
+        // Analysis progress elements
+        this.elements.analysisStage = document.getElementById('v8-analysis-stage');
+        this.elements.analysisPercent = document.getElementById('v8-analysis-percent');
+
+        // Time estimation and tips
+        this.elements.estTime = document.getElementById('v8-est-time');
+        this.elements.tipsSection = document.getElementById('v8-tips-section');
     }
 
     _setupEventListeners() {
@@ -123,17 +141,46 @@ export class RelightingProModule {
         if (this.elements.applyBtn) {
             this.elements.applyBtn.addEventListener('click', this._onApplyClick);
         }
+
+        // Model tier selector
+        if (this.elements.modelTier) {
+            this.elements.modelTier.addEventListener('change', async (e) => {
+                const tier = e.target.value;
+                console.log(`🔄 Switching to model tier: ${tier}`);
+
+                // Disable analyze button during model loading
+                if (this.elements.analyzeBtn) {
+                    this.elements.analyzeBtn.disabled = true;
+                    this.elements.analyzeBtn.textContent = 'Loading Model...';
+                }
+
+                // Wait for tier switch and model loading
+                await this.pipeline.setModelTier(tier);
+
+                // Re-enable button
+                if (this.elements.analyzeBtn) {
+                    this.elements.analyzeBtn.disabled = false;
+                    this.elements.analyzeBtn.textContent = 'Analyze Image';
+                }
+            });
+        }
     }
 
     _setupPipelineEvents() {
-        // Model loading progress
-        this.pipeline.on('model-progress', ({ percent, modelName, stage }) => {
-            this._updateModelProgress(percent, modelName);
+        // Model downloading progress (before loading)
+        this.pipeline.modelLoader.on('model-loading', ({ model, description, size }) => {
+            this._showDownloadStatus(description, size);
+        });
+
+        // Model download progress (actual download)
+        this.pipeline.modelLoader.on('model-progress', ({ model, percent, loaded, total }) => {
+            this._updateDownloadProgress(percent, loaded, total);
         });
 
         // Model loaded
-        this.pipeline.on('model-loaded', ({ name }) => {
-            console.log(`✓ Model loaded: ${name}`);
+        this.pipeline.modelLoader.on('model-loaded', ({ model }) => {
+            console.log(`✓ Model loaded: ${model}`);
+            this._hideDownloadStatus();
         });
 
         // Models ready
@@ -264,6 +311,63 @@ export class RelightingProModule {
         }
     }
 
+    // === Download Progress Methods ===
+
+    _showDownloadStatus(description, sizeMB) {
+        console.log(`📦 Starting download: ${description} (${sizeMB}MB)`);
+
+        if (this.elements.downloadStatus) {
+            this.elements.downloadStatus.style.display = 'block';
+        }
+        if (this.elements.downloadText) {
+            this.elements.downloadText.textContent = `Downloading ${description}...`;
+        }
+        if (this.elements.downloadBar) {
+            this.elements.downloadBar.style.width = '0%';
+        }
+        if (this.elements.downloadSize) {
+            this.elements.downloadSize.textContent = `0 MB / ${sizeMB} MB`;
+        }
+        if (this.elements.downloadPercent) {
+            this.elements.downloadPercent.textContent = '0%';
+        }
+
+        // Disable analyze button during download
+        if (this.elements.analyzeBtn) {
+            this.elements.analyzeBtn.disabled = true;
+            this.elements.analyzeBtn.textContent = 'Downloading Model...';
+        }
+
+        // Store expected size
+        this._expectedDownloadSize = sizeMB;
+    }
+
+    _updateDownloadProgress(percent, loadedBytes, totalBytes) {
+        const loadedMB = (loadedBytes / (1024 * 1024)).toFixed(1);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        if (this.elements.downloadBar) {
+            this.elements.downloadBar.style.width = `${percent}%`;
+        }
+        if (this.elements.downloadSize) {
+            this.elements.downloadSize.textContent = `${loadedMB} MB / ${totalMB} MB`;
+        }
+        if (this.elements.downloadPercent) {
+            this.elements.downloadPercent.textContent = `${percent}%`;
+        }
+    }
+
+    _hideDownloadStatus() {
+        if (this.elements.downloadStatus) {
+            this.elements.downloadStatus.style.display = 'none';
+        }
+        // Re-enable analyze button
+        if (this.elements.analyzeBtn) {
+            this.elements.analyzeBtn.disabled = false;
+            this.elements.analyzeBtn.textContent = 'Analyze Image';
+        }
+    }
+
     _setBasicReady() {
         // Enable analyze button when depth model is ready
         if (this.elements.analyzeBtn) {
@@ -304,6 +408,12 @@ export class RelightingProModule {
             return;
         }
 
+        // Get image data from GPU backend
+        const imageData = this.ui.gpu.toImageData();
+
+        // Update time estimate based on image size
+        this._updateTimeEstimate(imageData.width, imageData.height);
+
         // Show analysis progress
         if (this.elements.analysisStatus) {
             this.elements.analysisStatus.style.display = 'block';
@@ -312,9 +422,13 @@ export class RelightingProModule {
             this.elements.analyzeBtn.disabled = true;
             this.elements.analyzeBtn.textContent = 'Analyzing...';
         }
-
-        // Get image data from GPU backend
-        const imageData = this.ui.gpu.toImageData();
+        // Reset progress bar
+        if (this.elements.analysisBar) {
+            this.elements.analysisBar.style.width = '0%';
+        }
+        if (this.elements.analysisPercent) {
+            this.elements.analysisPercent.textContent = '0%';
+        }
 
         // Create image element from the canvas
         const canvas = document.createElement('canvas');
@@ -348,12 +462,58 @@ export class RelightingProModule {
     }
 
     _updateAnalysisProgress(progress, message) {
+        // Safety check for undefined/NaN progress
+        const safeProgress = (typeof progress === 'number' && !isNaN(progress)) ? progress : 0;
+
         if (this.elements.analysisBar) {
-            this.elements.analysisBar.style.width = `${progress}%`;
+            this.elements.analysisBar.style.width = `${safeProgress}%`;
         }
         if (this.elements.analysisText) {
             this.elements.analysisText.textContent = message || 'Processing...';
         }
+        if (this.elements.analysisStage) {
+            this.elements.analysisStage.textContent = message || 'Processing...';
+        }
+        if (this.elements.analysisPercent) {
+            this.elements.analysisPercent.textContent = `${Math.round(safeProgress)}%`;
+        }
+    }
+
+    /**
+     * Update estimated processing time based on image size and model tier
+     */
+    _updateTimeEstimate(imageWidth, imageHeight) {
+        const pixels = imageWidth * imageHeight;
+        const tier = this.pipeline.getCurrentModelTier();
+
+        // Base time estimates (seconds)
+        let baseTime = 2;
+
+        // Adjust for image size
+        if (pixels > 4000000) {  // > 4MP (e.g., 2000x2000)
+            baseTime = 8;
+        } else if (pixels > 2000000) {  // > 2MP
+            baseTime = 5;
+        } else if (pixels > 1000000) {  // > 1MP
+            baseTime = 3;
+        }
+
+        // Adjust for model tier
+        if (tier === 'balanced') {
+            baseTime *= 1.5;
+        }
+
+        // Calculate range
+        const minTime = Math.max(1, Math.round(baseTime * 0.7));
+        const maxTime = Math.round(baseTime * 1.5);
+
+        const estimate = `~${minTime}-${maxTime} seconds`;
+
+        if (this.elements.estTime) {
+            this.elements.estTime.textContent = estimate;
+        }
+
+        return estimate;
     }
 
     _onAnalysisComplete(confidence) {
@@ -362,6 +522,11 @@ export class RelightingProModule {
         // Hide analysis progress
         if (this.elements.analysisStatus) {
             this.elements.analysisStatus.style.display = 'none';
+        }
+
+        // Hide tips section (no longer needed after analysis)
+        if (this.elements.tipsSection) {
+            this.elements.tipsSection.style.display = 'none';
         }
 
         // Show controls

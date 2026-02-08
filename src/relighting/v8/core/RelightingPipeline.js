@@ -18,6 +18,7 @@ import { BackgroundModelLoader } from './BackgroundModelLoader.js';
 import { WebGL2DeferredRenderer } from '../rendering/WebGL2DeferredRenderer.js';
 import { ConfidenceEstimator } from '../confidence/ConfidenceEstimator.js';
 import { LightingAnalyzer } from '../confidence/LightingAnalyzer.js';
+import { NeuralNormalEstimator } from '../../../ml/NeuralNormalEstimator.js';
 
 export class RelightingPipeline extends EventEmitter {
     constructor(options = {}) {
@@ -40,6 +41,10 @@ export class RelightingPipeline extends EventEmitter {
         // Confidence & Analysis
         this.confidenceEstimator = new ConfidenceEstimator();
         this.lightingAnalyzer = new LightingAnalyzer();
+
+        // Neural Normal Estimator (optional, for higher quality)
+        this.neuralNormalEstimator = new NeuralNormalEstimator();
+        this.useNeuralNormals = true; // Enable by default, falls back gracefully
 
         // State
         this.isInitialized = false;
@@ -181,9 +186,44 @@ export class RelightingPipeline extends EventEmitter {
                 this._reportProgress(progressCallback, mappedProgress, 'Estimating depth...');
             });
 
-            // Step 4: Normal estimation (from depth for now)
+            // Step 4: Normal estimation
             this._reportProgress(progressCallback, 60, 'Computing surface normals...');
-            this.normals = this._computeNormalsFromDepth(this.depth);
+
+            // Use neural normals if enabled, with fallback to depth-derived
+            if (this.useNeuralNormals) {
+                try {
+                    this._reportProgress(progressCallback, 60, 'Computing neural normals...');
+                    const depthNormals = this._computeNormalsFromDepth(this.depth);
+
+                    // Get image dataURL for neural estimator
+                    const canvas = document.createElement('canvas');
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(processedImage, 0, 0);
+                    const imageDataURL = canvas.toDataURL('image/jpeg', 0.9);
+
+                    // Try neural estimation
+                    const neuralResult = await this.neuralNormalEstimator.estimate(
+                        imageDataURL,
+                        this.width,
+                        this.height,
+                        (p) => this._reportProgress(progressCallback, 60 + p.progress * 0.1, 'Neural normals...')
+                    );
+
+                    // Convert neuralResult to compatible format
+                    const neuralNormals = this._convertNormalMapToFloat32(neuralResult);
+
+                    // Blend neural + depth normals for best quality
+                    this.normals = this._blendNormals(neuralNormals, depthNormals, 0.7);
+                    console.log('✓ Using hybrid neural + depth normals');
+                } catch (error) {
+                    console.warn('Neural normals failed, using depth-derived:', error.message);
+                    this.normals = this._computeNormalsFromDepth(this.depth);
+                }
+            } else {
+                this.normals = this._computeNormalsFromDepth(this.depth);
+            }
 
             // Step 5: Albedo estimation (use original for now)
             this._reportProgress(progressCallback, 75, 'Analyzing materials...');
@@ -293,6 +333,71 @@ export class RelightingPipeline extends EventEmitter {
             data: normals,
             width,
             height
+        };
+    }
+
+    /**
+     * Convert ImageData-based normal map to Float32Array format
+     */
+    _convertNormalMapToFloat32(normalMap) {
+        const { data, width, height } = normalMap;
+        const normals = new Float32Array(width * height * 3);
+
+        for (let i = 0; i < width * height; i++) {
+            const pixelIdx = i * 4;
+            const outIdx = i * 3;
+
+            // Convert from [0, 255] to [-1, 1]
+            normals[outIdx] = (data[pixelIdx] / 255.0) * 2 - 1;     // X
+            normals[outIdx + 1] = (data[pixelIdx + 1] / 255.0) * 2 - 1; // Y
+            normals[outIdx + 2] = (data[pixelIdx + 2] / 255.0) * 2 - 1; // Z
+        }
+
+        return {
+            data: normals,
+            width,
+            height
+        };
+    }
+
+    /**
+     * Blend two normal maps with weighted average
+     * @param {Object} normals1 - First normal map (neural)
+     * @param {Object} normals2 - Second normal map (depth-derived)
+     * @param {number} weight1 - Weight for first map (0-1)
+     */
+    _blendNormals(normals1, normals2, weight1 = 0.7) {
+        const weight2 = 1.0 - weight1;
+        const width = normals1.width;
+        const height = normals1.height;
+        const blended = new Float32Array(width * height * 3);
+
+        for (let i = 0; i < width * height; i++) {
+            const idx = i * 3;
+
+            // Weighted average
+            let nx = normals1.data[idx] * weight1 + normals2.data[idx] * weight2;
+            let ny = normals1.data[idx + 1] * weight1 + normals2.data[idx + 1] * weight2;
+            let nz = normals1.data[idx + 2] * weight1 + normals2.data[idx + 2] * weight2;
+
+            // Re-normalize
+            const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (len > 0) {
+                nx /= len;
+                ny /= len;
+                nz /= len;
+            }
+
+            blended[idx] = nx;
+            blended[idx + 1] = ny;
+            blended[idx + 2] = nz;
+        }
+
+        return {
+            data: blended,
+            width,
+            height,
+            isHybrid: true
         };
     }
 
@@ -468,6 +573,30 @@ export class RelightingPipeline extends EventEmitter {
 
     setShadowSoftness(softness) {
         this.light.shadowSoftness = Math.max(0, Math.min(1, softness));
+    }
+
+    // === Model Tier Methods ===
+
+    /**
+     * Set model quality tier
+     * @param {string} tier - 'fast' or 'balanced'
+     */
+    async setModelTier(tier) {
+        await this.modelLoader.setTier(tier);
+    }
+
+    /**
+     * Get available model tiers
+     */
+    getModelTiers() {
+        return this.modelLoader.getTiers();
+    }
+
+    /**
+     * Get current model tier
+     */
+    getCurrentModelTier() {
+        return this.modelLoader.getCurrentTier();
     }
 
     _updateLightDirection() {
