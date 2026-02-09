@@ -162,45 +162,98 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     let normalSample = textureSampleLevel(normalTexture, textureSampler, input.texCoord, 0.0);
     let depth = textureSampleLevel(depthTexture, textureSampler, input.texCoord, 0.0).r;
     
+    // Original image color (this is our base to blend with)
+    let originalColor = albedoSample.rgb;
+    
     // Unpack albedo (sRGB to linear)
-    let albedo = sRGBToLinear(albedoSample.rgb);
+    let albedo = sRGBToLinear(originalColor);
     
     // Unpack normals from [0,1] to [-1,1]
     let normal = normalize(normalSample.rgb * 2.0 - 1.0);
     
-    // Normalize light direction
+    // === 3D Position from Depth ===
+    // Reconstruct approximate world position using depth
+    // depth is 0-1 where higher = closer to camera
+    let worldZ = depth * 2.0; // Scale depth for more pronounced 3D effect
+    let worldPos = vec3f(
+        (input.texCoord.x - 0.5) * 2.0,
+        (input.texCoord.y - 0.5) * 2.0,
+        worldZ
+    );
+    
+    // === Light Position in 3D ===
+    // Light direction already includes height component
     let lightDir = normalize(light.direction);
     
-    // === Lambertian Diffuse ===
-    let NdotL = max(dot(normal, lightDir), 0.0);
-    let diffuse = albedo * NdotL * light.color * light.intensity;
+    // Calculate per-pixel light vector considering depth
+    // Objects closer to camera (higher depth) should have different light angle
+    let lightPos3D = lightDir * 3.0; // Light at distance 3 in light direction
+    let toLight = normalize(lightPos3D - worldPos * 0.5);
     
-    // === Ambient ===
-    let ambient = albedo * light.ambient;
+    // === Depth-based Light Attenuation ===
+    // Closer objects get more light (simulate point light falloff)
+    let depthAttenuation = mix(0.7, 1.0, depth);
     
-    // === Blinn-Phong Specular ===
+    // === Lambertian Diffuse with Depth-aware Normal ===
+    // Blend between screen-space and depth-adjusted lighting
+    let NdotL_screen = max(dot(normal, lightDir), 0.0);
+    let NdotL_3d = max(dot(normal, toLight), 0.0);
+    let NdotL = mix(NdotL_screen, NdotL_3d, 0.4); // 40% 3D influence
+    
+    // === Calculate new lighting contribution ===
+    let diffuseLight = NdotL * light.intensity * depthAttenuation;
+    
+    // === Soft Blinn-Phong Specular ===
     let viewDir = vec3f(0.0, 0.0, 1.0);
-    let halfDir = normalize(lightDir + viewDir);
+    let halfDir = normalize(toLight + viewDir);
     let NdotH = max(dot(normal, halfDir), 0.0);
-    let specular = pow(NdotH, 32.0) * 0.3 * light.intensity;
+    let specular = pow(NdotH, 48.0) * 0.15 * light.intensity * depthAttenuation;
     
     // === SSAO ===
     let ao = computeSSAO(input.texCoord, depth, normal);
     
-    // === Contact Shadows ===
+    // === Depth-based Contact Shadows ===
     let contactShadow = computeContactShadow(input.texCoord, depth, lightDir);
     
-    // === Combine shadows ===
-    let combinedShadow = min(ao, contactShadow);
+    // === Combine shadows with depth weighting ===
+    // Deeper areas (lower depth) get stronger shadows
+    let shadowStrength = mix(1.0, 0.6, depth);
+    let combinedShadow = mix(1.0, min(ao, contactShadow), shadowStrength);
     
-    // Apply shadow to diffuse and specular
-    var lighting = ambient + (diffuse + vec3f(specular)) * combinedShadow;
+    // === Estimate original lighting to remove ===
+    // Assume original lighting was relatively even (ambient-dominant)
+    // We'll blend our new lighting with original
+    let originalLuminance = dot(originalColor, vec3f(0.299, 0.587, 0.114));
     
-    // === ACES Tone Mapping ===
-    lighting = ACESFilm(lighting);
+    // === Natural Blending: Modify original lighting rather than replacing ===
+    // Calculate how much we want to change the lighting
+    let targetLighting = light.ambient + diffuseLight * combinedShadow;
     
-    // Convert back to sRGB
-    let finalColor = linearToSRGB(lighting);
+    // Blend factor: how much we modify vs preserve original
+    // Preserve more of original in well-lit areas, modify more in shadows
+    let blendFactor = 0.6; // 60% new lighting, 40% original preserved
+    
+    // Apply lighting as a multiplier that blends with original
+    let lightingMultiplier = mix(1.0, targetLighting, blendFactor);
+    
+    // Apply to original color (preserving original hues better)
+    var finalColor = originalColor * lightingMultiplier * light.color;
+    
+    // Add subtle specular highlights (additive)
+    finalColor += vec3f(specular * combinedShadow);
+    
+    // === Depth-aware color grading ===
+    // Slightly warm closer objects, cool distant ones (atmospheric perspective)
+    let atmosphericTint = mix(vec3f(0.98, 0.99, 1.02), vec3f(1.02, 1.01, 0.98), depth);
+    finalColor *= atmosphericTint;
+    
+    // Gentle contrast enhancement based on depth
+    let contrastCenter = 0.5;
+    let contrastAmount = mix(1.0, 1.1, depth * 0.3);
+    finalColor = (finalColor - contrastCenter) * contrastAmount + contrastCenter;
+    
+    // Clamp to valid range
+    finalColor = clamp(finalColor, vec3f(0.0), vec3f(1.0));
     
     return vec4f(finalColor, 1.0);
 }
