@@ -13,6 +13,7 @@ export class RelightingProModule {
         this.pipeline = new RelightingPipeline();
         this.isActive = false;
         this.hasAnalyzed = false;
+        this.rendererBackend = null; // 'webgpu' or 'webgl2'
 
         // Cache DOM elements
         this.elements = {};
@@ -268,6 +269,12 @@ export class RelightingProModule {
         this.pipeline.on('error', ({ error }) => {
             this._showError(error.message);
         });
+
+        // Renderer initialized
+        this.pipeline.on('renderer-initialized', ({ backend }) => {
+            this.rendererBackend = backend;
+            console.log(`🎮 Renderer: ${backend.toUpperCase()}`);
+        });
     }
 
     _displayConfidence(confidence) {
@@ -464,15 +471,78 @@ export class RelightingProModule {
         if (this.elements.analyzeBtn) {
             this.elements.analyzeBtn.disabled = false;
         }
+        // Hide old status elements - we use renderer status instead
         if (this.elements.statusText) {
-            this.elements.statusText.textContent = 'Ready';
+            this.elements.statusText.style.display = 'none';
         }
         if (this.elements.statusIndicator) {
-            this.elements.statusIndicator.style.background = '#4ade80';
+            this.elements.statusIndicator.style.display = 'none';
         }
         if (this.elements.modelBadge) {
-            this.elements.modelBadge.style.display = 'block';
+            this.elements.modelBadge.style.display = 'none';
         }
+        // Hide the entire model status card
+        const modelStatusCard = document.getElementById('v8-model-status-card');
+        if (modelStatusCard) {
+            modelStatusCard.style.display = 'none';
+        }
+
+        // Create renderer status display
+        this._createRendererStatusDisplay();
+    }
+
+    /**
+     * Create a visual display showing renderer status
+     */
+    _createRendererStatusDisplay() {
+        // Find or create the container
+        let container = document.getElementById('v8-renderer-status');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'v8-renderer-status';
+            container.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 10px 12px;
+                background: rgba(30, 30, 40, 0.5);
+                border-radius: 8px;
+                font-size: 11px;
+            `;
+
+            // Insert after the model status card
+            const modelStatusCard = document.getElementById('v8-model-status-card');
+            if (modelStatusCard && modelStatusCard.parentNode) {
+                modelStatusCard.parentNode.insertBefore(container, modelStatusCard.nextSibling);
+            }
+        }
+
+        const isWebGPU = this.rendererBackend === 'webgpu';
+
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    box-shadow: 0 0 6px #22c55e;
+                "></span>
+                <span style="color: #fff; font-weight: 500;">WebGPU</span>
+                <span style="color: #22c55e; font-size: 10px; margin-left: auto;">Active</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; opacity: 0.6;">
+                <span style="
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #eab308;
+                "></span>
+                <span style="color: #9ca3af;">WebGL2</span>
+                <span style="color: #eab308; font-size: 10px; margin-left: auto;">Fallback</span>
+            </div>
+        `;
     }
 
     // === Analysis UI ===
@@ -610,6 +680,15 @@ export class RelightingProModule {
             this.elements.controls.style.display = 'block';
         }
 
+        // Hide intro text and beta notice for cleaner post-analysis UI
+        const introText = document.getElementById('v8-intro-text');
+        const betaNotice = document.getElementById('v8-beta-notice');
+        if (introText) introText.style.display = 'none';
+        if (betaNotice) betaNotice.style.display = 'none';
+
+        // Add BETA badge with hover tooltip to header (if not already added)
+        this._addBetaHeaderBadge();
+
         // Reset analyze button
         if (this.elements.analyzeBtn) {
             this.elements.analyzeBtn.disabled = false;
@@ -618,6 +697,82 @@ export class RelightingProModule {
 
         // Render initial result
         this._render();
+    }
+
+    /**
+     * Add a small BETA badge to the header with hover tooltip
+     */
+    _addBetaHeaderBadge() {
+        if (document.getElementById('v8-header-beta-badge')) return; // Already added
+
+        // Find the header with "3D Relighting v8"
+        const panel = document.getElementById('panel-3d-pro');
+        if (!panel) return;
+
+        // Create the badge with tooltip
+        const badge = document.createElement('span');
+        badge.id = 'v8-header-beta-badge';
+        badge.style.cssText = `
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 4px;
+            cursor: help;
+        `;
+        badge.textContent = 'BETA';
+
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.style.cssText = `
+            position: fixed;
+            padding: 10px 12px;
+            width: 200px;
+            background: rgba(30, 30, 40, 0.98);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        `;
+        tooltip.innerHTML = `
+            <div style="font-weight: 600; color: var(--accent); margin-bottom: 4px;">BETA · Updated 8 Feb 2026</div>
+            In active development. Currently refining normal map fusion to preserve surface detail while minimizing edge artifacts.
+        `;
+        document.body.appendChild(tooltip);
+
+        // Show/hide tooltip on hover with dynamic positioning
+        badge.addEventListener('mouseenter', () => {
+            const rect = badge.getBoundingClientRect();
+            // Position below the badge, but shift left to stay in viewport
+            tooltip.style.top = `${rect.bottom + 8}px`;
+            tooltip.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - 220))}px`;
+            tooltip.style.opacity = '1';
+            tooltip.style.visibility = 'visible';
+        });
+        badge.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = '0';
+            tooltip.style.visibility = 'hidden';
+        });
+
+        // Find the mode header with "3D Relighting v8" and insert after v8 badge
+        const modeHeader = document.getElementById('relight-pro-mode-header');
+        if (modeHeader) {
+            // Insert at the end of the header (after v8 badge)
+            modeHeader.appendChild(badge);
+        }
     }
 
     /**

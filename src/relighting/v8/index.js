@@ -12,6 +12,8 @@ export { BackgroundModelLoader } from './core/BackgroundModelLoader.js';
 export { EventEmitter } from './core/EventEmitter.js';
 
 // Rendering
+export { RenderingEngine } from './rendering/RenderingEngine.js';
+export { WebGPURenderer } from './rendering/WebGPURenderer.js';
 export { WebGL2DeferredRenderer } from './rendering/WebGL2DeferredRenderer.js';
 
 // Confidence system

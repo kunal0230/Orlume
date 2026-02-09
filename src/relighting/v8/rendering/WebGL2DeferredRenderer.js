@@ -3,10 +3,17 @@
  * 
  * GPU-accelerated deferred rendering using WebGL2.
  * Implements PBR lighting with Lambertian diffuse and specular.
+ * 
+ * Fallback renderer for browsers without WebGPU support.
  */
 
-export class WebGL2DeferredRenderer {
+import { RenderingEngine } from './RenderingEngine.js';
+
+export class WebGL2DeferredRenderer extends RenderingEngine {
     constructor() {
+        super();
+
+        this.backend = 'webgl2';
         this.canvas = null;
         this.gl = null;
         this.programs = {};
@@ -19,6 +26,45 @@ export class WebGL2DeferredRenderer {
 
         // Full-screen quad for deferred passes
         this.quadVAO = null;
+    }
+
+    /**
+     * Check if WebGL2 is supported
+     */
+    static isSupported() {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2');
+            return gl !== null;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Get renderer capabilities
+     */
+    getCapabilities() {
+        const gl = this.gl;
+        if (!gl) {
+            return {
+                backend: 'webgl2',
+                maxTextureSize: 0,
+                supportsFloat: false,
+                supportsCompute: false,
+                supportsPCSS: false
+            };
+        }
+
+        return {
+            backend: 'webgl2',
+            maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+            supportsFloat: !!gl.getExtension('EXT_color_buffer_float'),
+            supportsCompute: false, // WebGL2 doesn't have compute shaders
+            supportsPCSS: false,     // Limited shadow quality
+            renderer: gl.getParameter(gl.RENDERER),
+            vendor: gl.getParameter(gl.VENDOR)
+        };
     }
 
     /**

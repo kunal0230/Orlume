@@ -15,7 +15,7 @@ import { EventEmitter } from './EventEmitter.js';
 import { ResolutionManager, UserCancelledError } from './ResolutionManager.js';
 import { ColorSpaceConverter } from './ColorSpaceConverter.js';
 import { BackgroundModelLoader } from './BackgroundModelLoader.js';
-import { WebGL2DeferredRenderer } from '../rendering/WebGL2DeferredRenderer.js';
+import { RenderingEngine } from '../rendering/RenderingEngine.js';
 import { ConfidenceEstimator } from '../confidence/ConfidenceEstimator.js';
 import { LightingAnalyzer } from '../confidence/LightingAnalyzer.js';
 import { NeuralNormalEstimator } from '../../../ml/NeuralNormalEstimator.js';
@@ -34,8 +34,8 @@ export class RelightingPipeline extends EventEmitter {
 
         this.modelLoader = new BackgroundModelLoader();
 
-        // GPU Renderer
-        this.gpuRenderer = new WebGL2DeferredRenderer();
+        // GPU Renderer - initialized in init() via factory
+        this.gpuRenderer = null;
         this.useGPU = true;
 
         // Confidence & Analysis
@@ -90,10 +90,20 @@ export class RelightingPipeline extends EventEmitter {
         // Start background model loading (non-blocking)
         this.modelLoader.startLoading();
 
-        // Initialize GPU renderer
-        const gpuReady = await this.gpuRenderer.init();
-        if (!gpuReady) {
-            console.warn('GPU renderer failed, using CPU fallback');
+        // Initialize GPU renderer using factory pattern (WebGPU with WebGL2 fallback)
+        try {
+            this.gpuRenderer = await RenderingEngine.create();
+            this.useGPU = true;
+
+            // Emit renderer info for UI
+            const capabilities = this.gpuRenderer.getCapabilities();
+            this.emit('renderer-initialized', {
+                backend: capabilities.backend,
+                capabilities
+            });
+
+        } catch (error) {
+            console.warn('GPU renderer failed, using CPU fallback:', error);
             this.useGPU = false;
         }
 
@@ -745,7 +755,7 @@ export class RelightingPipeline extends EventEmitter {
         const py = (this.light.position.y - 0.5) * 2;
 
         const dirX = px;
-        const dirY = -py;
+        const dirY = py;  // Removed negation - Y now matches UI (top = top light)
         const dirZ = Math.max(0.3, this.light.height);
 
         const len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
