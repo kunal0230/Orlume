@@ -19,6 +19,7 @@ import { RenderingEngine } from '../rendering/RenderingEngine.js';
 import { ConfidenceEstimator } from '../confidence/ConfidenceEstimator.js';
 import { LightingAnalyzer } from '../confidence/LightingAnalyzer.js';
 import { NeuralNormalEstimator } from '../../../ml/NeuralNormalEstimator.js';
+import { SceneAnalyzer } from './SceneAnalyzer.js';
 
 export class RelightingPipeline extends EventEmitter {
     constructor(options = {}) {
@@ -41,6 +42,7 @@ export class RelightingPipeline extends EventEmitter {
         // Confidence & Analysis
         this.confidenceEstimator = new ConfidenceEstimator();
         this.lightingAnalyzer = new LightingAnalyzer();
+        this.sceneAnalyzer = new SceneAnalyzer();
 
         // Neural Normal Estimator (optional, for higher quality)
         this.neuralNormalEstimator = new NeuralNormalEstimator();
@@ -68,6 +70,7 @@ export class RelightingPipeline extends EventEmitter {
         this.depth = null;
         this.normals = null;
         this.albedo = null;
+        this.sceneMap = null;
         this.confidence = null;
 
         // Dimensions
@@ -236,8 +239,12 @@ export class RelightingPipeline extends EventEmitter {
             }
 
             // Step 5: Albedo estimation (use original for now)
-            this._reportProgress(progressCallback, 75, 'Analyzing materials...');
+            this._reportProgress(progressCallback, 70, 'Analyzing materials...');
             this.albedo = imageData; // Simple: use original image
+
+            // Step 5b: Scene Analysis — intelligent scene understanding
+            this._reportProgress(progressCallback, 75, 'Analyzing scene...');
+            this.sceneMap = this.sceneAnalyzer.analyze(imageData, this.depth, this.normals);
 
             // Step 6: Compute confidence
             this._reportProgress(progressCallback, 85, 'Assessing quality...');
@@ -432,6 +439,12 @@ export class RelightingPipeline extends EventEmitter {
             const lighting = this.lightingAnalyzer.analyze(this.albedo);
             confidence.lighting = lighting;
             confidence.warnings = [...(confidence.warnings || []), ...(lighting.warnings || [])];
+
+            // Store detected original light direction for intrinsic decomposition
+            if (lighting.dominantLightDir) {
+                this.light.originalLightDir = lighting.dominantLightDir;
+                console.log(`💡 Detected original light direction: (${lighting.dominantLightDir.x.toFixed(2)}, ${lighting.dominantLightDir.y.toFixed(2)})`);
+            }
         }
 
         // Log confidence results
@@ -454,6 +467,7 @@ export class RelightingPipeline extends EventEmitter {
             albedo: this.albedo,
             normals: this.normals,
             depth: this.depth,
+            sceneMap: this.sceneMap,
             confidence: this.confidence,
             width: this.width,
             height: this.height

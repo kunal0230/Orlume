@@ -32,6 +32,9 @@ export class LightingAnalyzer {
         // Detect colored lighting
         const coloredLight = this._detectColoredLighting(colorStats);
 
+        // Estimate dominant light direction for intrinsic decomposition
+        const dominantLightDir = this._estimateDominantLightDirection(data, width, height);
+
         // Overall complexity score (0 = simple, 1 = complex)
         const complexity = this._calculateComplexity(multiSource, shadows, coloredLight);
 
@@ -42,6 +45,7 @@ export class LightingAnalyzer {
             harshShadows: shadows.harsh,
             dominantColor: colorStats.dominant,
             lightSources: multiSource.estimated,
+            dominantLightDir,
             warnings: this._generateLightingWarnings(complexity, multiSource, shadows, coloredLight)
         };
     }
@@ -346,6 +350,62 @@ export class LightingAnalyzer {
         }
 
         return warnings;
+    }
+
+    /**
+     * Estimate the dominant light direction from luminance gradients
+     * Uses weighted gradient voting to find the most likely light source direction
+     * @returns {{ x: number, y: number }} Normalized 2D light direction
+     */
+    _estimateDominantLightDirection(data, width, height) {
+        let weightedX = 0;
+        let weightedY = 0;
+        let totalWeight = 0;
+        const step = 4;
+
+        for (let y = step; y < height - step; y += step) {
+            for (let x = step; x < width - step; x += step) {
+                const idx = (y * width + x) * 4;
+                const idxR = (y * width + (x + step)) * 4;
+                const idxB = ((y + step) * width + x) * 4;
+
+                if (idxR + 2 >= data.length || idxB + 2 >= data.length) continue;
+
+                // Luminance at center, right, below
+                const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) / 255;
+                const lumR = (data[idxR] * 0.299 + data[idxR + 1] * 0.587 + data[idxR + 2] * 0.114) / 255;
+                const lumB = (data[idxB] * 0.299 + data[idxB + 1] * 0.587 + data[idxB + 2] * 0.114) / 255;
+
+                const gx = lumR - lum;
+                const gy = lumB - lum;
+                const magnitude = Math.sqrt(gx * gx + gy * gy);
+
+                if (magnitude > 0.02) {
+                    const weight = magnitude * magnitude;
+                    weightedX += gx * weight;
+                    weightedY += gy * weight;
+                    totalWeight += weight;
+                }
+            }
+        }
+
+        if (totalWeight > 0) {
+            weightedX /= totalWeight;
+            weightedY /= totalWeight;
+        }
+
+        // Normalize
+        const len = Math.sqrt(weightedX * weightedX + weightedY * weightedY);
+        if (len > 0.001) {
+            weightedX /= len;
+            weightedY /= len;
+        } else {
+            // Default: top-left light
+            weightedX = 0.3;
+            weightedY = -0.5;
+        }
+
+        return { x: weightedX, y: weightedY };
     }
 }
 

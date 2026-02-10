@@ -288,7 +288,7 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
             return null;
         }
 
-        const { width, height, albedo, normals, depth } = gBuffer;
+        const { width, height, albedo, normals, depth, sceneMap } = gBuffer;
         const gl = this.gl;
 
         // Resize canvas if needed
@@ -325,6 +325,12 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         gl.bindTexture(gl.TEXTURE_2D, depthTex);
         gl.uniform1i(prog.uniforms.u_depth, 2);
 
+        // Scene map texture
+        const sceneMapTex = this.createTexture(sceneMap, width, height);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, sceneMapTex);
+        gl.uniform1i(prog.uniforms.u_sceneMap, 3);
+
         // Set light uniforms
         gl.uniform3f(prog.uniforms.u_lightDir,
             light.direction.x,
@@ -344,6 +350,28 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         gl.uniform1f(prog.uniforms.u_shadowSoftness, light.shadowSoftness || 0.5);
         gl.uniform2f(prog.uniforms.u_resolution, width, height);
 
+        // Set roughness
+        gl.uniform1f(prog.uniforms.u_roughness, light.roughness || 0.5);
+
+        // Compute and set SH coefficients
+        const dir = light.direction;
+        const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+        const nx = dir.x / len, ny = dir.y / len, nz = dir.z / len;
+        const newSH = this._computeSHCoefficients(nx, ny, nz, light.intensity * 2.0);
+
+        const origLightX = light.originalLightDir?.x || 0.3;
+        const origLightY = light.originalLightDir?.y || -0.5;
+        const origLen = Math.sqrt(origLightX * origLightX + origLightY * origLightY + 0.36);
+        const ox = origLightX / origLen, oy = origLightY / origLen, oz = 0.6 / origLen;
+        const origSH = this._computeSHCoefficients(ox, oy, oz, 1.0);
+
+        // Pass SH arrays — WebGL2 uses u_sh[0] naming for array elements
+        const shLoc = gl.getUniformLocation(prog.program, 'u_sh');
+        if (shLoc) gl.uniform1fv(shLoc, new Float32Array(newSH));
+
+        const origShLoc = gl.getUniformLocation(prog.program, 'u_origSh');
+        if (origShLoc) gl.uniform1fv(origShLoc, new Float32Array(origSH.slice(0, 7)));
+
         // Draw fullscreen quad
         gl.bindVertexArray(this.quadVAO);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -353,9 +381,28 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         gl.deleteTexture(albedoTex);
         gl.deleteTexture(normalTex);
         gl.deleteTexture(depthTex);
+        gl.deleteTexture(sceneMapTex);
 
         // Return result as canvas
         return this.canvas;
+    }
+
+    /**
+     * Compute SH coefficients from a direction (shared with WebGPU renderer)
+     */
+    _computeSHCoefficients(dirX, dirY, dirZ, intensity) {
+        const x = dirX, y = dirY, z = dirZ;
+        return [
+            0.282095 * intensity,
+            0.488603 * y * intensity,
+            0.488603 * z * intensity,
+            0.488603 * x * intensity,
+            1.092548 * x * y * intensity,
+            1.092548 * y * z * intensity,
+            0.315392 * (3 * z * z - 1) * intensity,
+            1.092548 * x * z * intensity,
+            0.546274 * (x * x - y * y) * intensity,
+        ];
     }
 
     /**
@@ -506,162 +553,277 @@ out vec4 fragColor;
 uniform sampler2D u_albedo;
 uniform sampler2D u_normals;
 uniform sampler2D u_depth;
+uniform sampler2D u_sceneMap;
 
 uniform vec3 u_lightDir;
 uniform vec3 u_lightColor;
 uniform float u_lightIntensity;
 uniform float u_ambient;
-
-// Shadow parameters
-uniform float u_shadowIntensity;  // 0-1, how dark shadows are
-uniform float u_shadowSoftness;   // 0-1, how soft/blurred shadows are
+uniform float u_shadowIntensity;
+uniform float u_shadowSoftness;
 uniform vec2 u_resolution;
 
-// sRGB to Linear conversion
+// SH coefficients
+uniform float u_sh[9];
+uniform float u_origSh[7];
+uniform float u_roughness;
+
+const float PI = 3.14159265359;
+
+// sRGB conversions
 vec3 sRGBToLinear(vec3 srgb) {
     vec3 low = srgb / 12.92;
     vec3 high = pow((srgb + 0.055) / 1.055, vec3(2.4));
     return mix(low, high, step(0.04045, srgb));
 }
-
-// Linear to sRGB conversion
 vec3 linearToSRGB(vec3 linear) {
     vec3 low = linear * 12.92;
-    vec3 high = 1.055 * pow(linear, vec3(1.0/2.4)) - 0.055;
+    vec3 high = 1.055 * pow(max(linear, vec3(0.0)), vec3(1.0/2.4)) - 0.055;
     return mix(low, high, step(0.0031308, linear));
 }
 
-// SSAO - Screen Space Ambient Occlusion
-float computeSSAO(vec2 uv, float centerDepth, vec3 normal) {
-    const int SAMPLES = 8;
-    float occlusion = 0.0;
-    
-    // Sample radius in UV space (adaptive based on softness)
-    float radius = (u_shadowSoftness * 0.02 + 0.005);
-    
-    // Hemisphere sample kernel (in tangent space)
-    vec2 kernel[8];
-    kernel[0] = vec2( 0.7071,  0.7071);
-    kernel[1] = vec2(-0.7071,  0.7071);
-    kernel[2] = vec2( 0.7071, -0.7071);
-    kernel[3] = vec2(-0.7071, -0.7071);
-    kernel[4] = vec2( 1.0,  0.0);
-    kernel[5] = vec2(-1.0,  0.0);
-    kernel[6] = vec2( 0.0,  1.0);
-    kernel[7] = vec2( 0.0, -1.0);
-    
-    for (int i = 0; i < SAMPLES; i++) {
-        // Sample offset with noise-like variation
-        float angle = float(i) * 0.785398 + uv.x * 12.9898 + uv.y * 78.233;
-        vec2 offset = vec2(cos(angle), sin(angle)) * radius * (1.0 + float(i) * 0.15);
-        
-        vec2 sampleUV = uv + offset;
-        float sampleDepth = texture(u_depth, sampleUV).r;
-        
-        // Check if sample is occluded (closer to camera = lower depth value)
-        float depthDiff = centerDepth - sampleDepth;
-        
-        // Range check - only count nearby samples
-        float rangeCheck = smoothstep(0.0, 0.1, abs(depthDiff));
-        rangeCheck *= 1.0 - smoothstep(0.1, 0.3, abs(depthDiff));  // Falloff at distance
-        
-        // Accumulate occlusion for samples that are closer (occluding)
-        occlusion += step(0.005, depthDiff) * rangeCheck;
-    }
-    
-    occlusion = 1.0 - (occlusion / float(SAMPLES));
-    return occlusion;
+// OKLAB conversions
+vec3 linearToOKLAB(vec3 rgb) {
+    float l = 0.4122214708 * rgb.r + 0.5363325363 * rgb.g + 0.0514459929 * rgb.b;
+    float m = 0.2119034982 * rgb.r + 0.6806995451 * rgb.g + 0.1073969566 * rgb.b;
+    float s = 0.0883024619 * rgb.r + 0.2817188376 * rgb.g + 0.6299787005 * rgb.b;
+    float l_ = pow(max(l, 0.0), 1.0/3.0);
+    float m_ = pow(max(m, 0.0), 1.0/3.0);
+    float s_ = pow(max(s, 0.0), 1.0/3.0);
+    return vec3(
+        0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+        1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+        0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_
+    );
+}
+vec3 OKLABToLinear(vec3 lab) {
+    float l_ = lab.x + 0.3963377774*lab.y + 0.2158037573*lab.z;
+    float m_ = lab.x - 0.1055613458*lab.y - 0.0638541728*lab.z;
+    float s_ = lab.x - 0.0894841775*lab.y - 1.2914855480*lab.z;
+    return vec3(
+         4.0767416621*l_*l_*l_ - 3.3077115913*m_*m_*m_ + 0.2309699292*s_*s_*s_,
+        -1.2684380046*l_*l_*l_ + 2.6097574011*m_*m_*m_ - 0.3413193965*s_*s_*s_,
+        -0.0041960863*l_*l_*l_ - 0.7034186147*m_*m_*m_ + 1.7076147010*s_*s_*s_
+    );
 }
 
-// Contact Shadows - trace along light direction in screen space
-float computeContactShadow(vec2 uv, float centerDepth, vec3 lightDir) {
-    const int STEPS = 12;
-    float shadow = 0.0;
-    
-    // Project light direction to screen space
-    vec2 lightDirSS = normalize(lightDir.xy) * (u_shadowSoftness * 0.03 + 0.01);
-    
-    // If light is behind/parallel to surface, no shadow
-    if (lightDir.z < 0.1) {
-        lightDirSS *= 0.5;  // Reduce shadow trace for grazing angles
+// Spherical Harmonics evaluation (order 2, 9 coefficients)
+float evaluateSH9(vec3 n) {
+    return max(
+        u_sh[0] * 0.282095 +
+        u_sh[1] * 0.488603 * n.y +
+        u_sh[2] * 0.488603 * n.z +
+        u_sh[3] * 0.488603 * n.x +
+        u_sh[4] * 1.092548 * n.x * n.y +
+        u_sh[5] * 1.092548 * n.y * n.z +
+        u_sh[6] * 0.315392 * (3.0 * n.z * n.z - 1.0) +
+        u_sh[7] * 1.092548 * n.x * n.z +
+        u_sh[8] * 0.546274 * (n.x * n.x - n.y * n.y),
+        0.0
+    );
+}
+
+// Original SH evaluation (7 coefficients)
+float evaluateOrigSH(vec3 n) {
+    return max(
+        u_origSh[0] * 0.282095 +
+        u_origSh[1] * 0.488603 * n.y +
+        u_origSh[2] * 0.488603 * n.z +
+        u_origSh[3] * 0.488603 * n.x +
+        u_origSh[4] * 1.092548 * n.x * n.y +
+        u_origSh[5] * 1.092548 * n.y * n.z +
+        u_origSh[6] * 0.315392 * (3.0 * n.z * n.z - 1.0),
+        0.05
+    );
+}
+
+// GGX Normal Distribution
+float distributionGGX(float NdotH, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float d = NdotH * NdotH * (a2 - 1.0) + 1.0;
+    return a2 / (PI * d * d + 0.0001);
+}
+
+// Smith-GGX Geometry
+float geometrySmith(float NdotV, float NdotL, float roughness) {
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    float gv = NdotV / (NdotV * (1.0 - k) + k + 0.0001);
+    float gl = NdotL / (NdotL * (1.0 - k) + k + 0.0001);
+    return gv * gl;
+}
+
+// Schlick Fresnel
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    float t = clamp(1.0 - cosTheta, 0.0, 1.0);
+    float t2 = t * t;
+    return F0 + (1.0 - F0) * (t2 * t2 * t);
+}
+
+// SSS Approximation
+float computeSSS(vec3 normal, vec3 lightDir, vec3 viewDir, float depth) {
+    float wrapNdotL = (dot(normal, lightDir) + 0.5) / 1.5;
+    float scatter = max(wrapNdotL, 0.0);
+    float backScatter = max(dot(-normal, lightDir), 0.0) * 0.3;
+    return (scatter * 0.4 + backScatter) * 0.5;
+}
+
+// Hair Specular (Anisotropic)
+float computeHairSpecular(vec3 normal, vec3 lightDir, vec3 viewDir) {
+    vec3 H = normalize(lightDir + viewDir);
+    float NdotH = max(dot(normal, H), 0.0);
+    float spec1 = pow(NdotH, 80.0) * 0.4;
+    float spec2 = pow(NdotH, 20.0) * 0.15;
+    return spec1 + spec2;
+}
+
+// SSAO with curvature awareness
+float computeSSAO(vec2 uv, float centerDepth, float curvature) {
+    float occlusion = 0.0;
+    float curvFactor = mix(1.5, 0.5, curvature);
+    float radius = (u_shadowSoftness * 0.025 + 0.005) * curvFactor;
+    for (int i = 0; i < 8; i++) {
+        float angle = float(i) * 0.785398 + uv.x * 12.9898 + uv.y * 78.233;
+        vec2 offset = vec2(cos(angle), sin(angle)) * radius * (1.0 + float(i) * 0.15);
+        float sd = texture(u_depth, uv + offset).r;
+        float dd = centerDepth - sd;
+        float rc = smoothstep(0.0, 0.08, abs(dd)) * (1.0 - smoothstep(0.08, 0.25, abs(dd)));
+        occlusion += step(0.003, dd) * rc;
     }
-    
+    return 1.0 - occlusion / 8.0;
+}
+
+// Contact Shadows with depth awareness
+float computeShadow(vec2 uv, float centerDepth, vec3 lightDir, float depthLayer) {
+    float shadow = 0.0;
+    vec2 lightDirSS = normalize(lightDir.xy) * (u_shadowSoftness * 0.04 + 0.012);
+    float heightStep = lightDir.z * 0.02;
     float totalWeight = 0.0;
     
-    for (int i = 1; i <= STEPS; i++) {
-        float t = float(i) / float(STEPS);
-        vec2 sampleUV = uv + lightDirSS * t;  // Trace toward shadow (away from light source)
-        
-        // Bounds check
-        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) {
-            continue;
-        }
-        
-        float sampleDepth = texture(u_depth, sampleUV).r;
-        float heightDiff = sampleDepth - centerDepth;
-        
-        // If sample is closer (occluding) and within range
-        float weight = 1.0 - t;  // Closer samples have more weight
-        if (heightDiff > 0.01 && heightDiff < 0.3) {
-            shadow += weight * smoothstep(0.01, 0.05, heightDiff);
-        }
-        totalWeight += weight;
+    float reachScale = mix(0.5, 1.8, depthLayer);
+
+    for (int i = 1; i <= 16; i++) {
+        float t = float(i) / 16.0;
+        float ps = reachScale; // Vary step size by depth layer
+        vec2 suv = uv + lightDirSS * t * ps;
+        if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) continue;
+        float sd = texture(u_depth, suv).r;
+        float ed = centerDepth + heightStep * t;
+        float hd = sd - ed;
+        float pen = 1.0 + t * 3.0;
+        float w = (1.0 - t) * (1.0 - t);
+        if (hd > 0.005 && hd < 0.35) shadow += w * smoothstep(0.005, 0.02 * pen, hd);
+        totalWeight += w;
     }
-    
-    if (totalWeight > 0.0) {
-        shadow = shadow / totalWeight;
-    }
-    
-    return 1.0 - clamp(shadow * u_shadowIntensity * 2.0, 0.0, 1.0);
+    if (totalWeight > 0.0) shadow /= totalWeight;
+    return 1.0 - clamp(shadow * u_shadowIntensity * 2.5, 0.0, 1.0);
 }
 
 void main() {
-    // Sample G-Buffer
-    vec4 albedoSample = texture(u_albedo, v_texCoord);
-    vec4 normalSample = texture(u_normals, v_texCoord);
+    vec3 originalColor = texture(u_albedo, v_texCoord).rgb;
     float depth = texture(u_depth, v_texCoord).r;
+    vec3 normal = normalize(texture(u_normals, v_texCoord).rgb * 2.0 - 1.0);
+    vec4 scene = texture(u_sceneMap, v_texCoord);
     
-    // Unpack albedo (sRGB to linear)
-    vec3 albedo = sRGBToLinear(albedoSample.rgb);
-    
-    // Unpack normals from [0,1] to [-1,1]
-    vec3 normal = normalize(normalSample.rgb * 2.0 - 1.0);
-    
-    // Normalize light direction
+    // Decode scene map
+    float materialType = scene.r;
+    float roughness = scene.g;
+    float curvature = scene.b;
+    float depthLayer = scene.a;
+
+    vec3 linearOriginal = sRGBToLinear(originalColor);
     vec3 lightDir = normalize(u_lightDir);
-    
-    // === Lambertian Diffuse ===
+    vec3 viewDir = vec3(0.0, 0.0, 1.0);
+    vec3 H = normalize(lightDir + viewDir);
+
     float NdotL = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = albedo * NdotL * u_lightColor * u_lightIntensity;
+    float NdotV = max(dot(normal, viewDir), 0.001);
+    float NdotH = max(dot(normal, H), 0.0);
+    float HdotV = max(dot(H, viewDir), 0.0);
+
+    // Ratio Image Relighting
+    float newSH = evaluateSH9(normal);
+    float origSH = evaluateOrigSH(normal);
+    float shadingRatio = newSH / max(origSH, 0.08);
+    float smoothRatio = mix(1.0, shadingRatio, u_lightIntensity);
+
+    // Material Classification
+    float isSkin = smoothstep(0.15, 0.25, materialType) * (1.0 - smoothstep(0.25, 0.35, materialType));
+    float isHair = smoothstep(0.4, 0.5, materialType) * (1.0 - smoothstep(0.5, 0.6, materialType));
+    float isFabric = smoothstep(0.65, 0.75, materialType) * (1.0 - smoothstep(0.75, 0.85, materialType));
+    float isMetal = smoothstep(0.9, 1.0, materialType);
+    float isBg = 1.0 - smoothstep(0.0, 0.1, materialType);
+
+    // F0 and Specular Scale
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, vec3(0.028), isSkin);
+    F0 = mix(F0, vec3(0.046), isHair);
+    F0 = mix(F0, vec3(0.04), isFabric);
+    F0 = mix(F0, linearOriginal * 0.8, isMetal);
+
+    float specScale = 0.5;
+    specScale = mix(specScale, 0.25, isSkin);
+    specScale = mix(specScale, 0.6, isHair);
+    specScale = mix(specScale, 0.15, isFabric);
+    specScale = mix(specScale, 1.2, isMetal);
+    specScale = mix(specScale, 0.0, isBg);
+
+    // Specular Calculation
+    float D = distributionGGX(NdotH, roughness);
+    float G = geometrySmith(NdotV, NdotL, roughness);
+    vec3 F = fresnelSchlick(HdotV, F0);
+    vec3 spec = (D * G * F) / (4.0 * NdotV * NdotL + 0.0001);
+    vec3 specContrib = spec * NdotL * u_lightIntensity * u_lightColor * specScale;
+
+    // Hair Anisotropic Specular
+    float hairSpec = computeHairSpecular(normal, lightDir, viewDir);
+    specContrib = mix(specContrib, vec3(hairSpec) * u_lightColor * u_lightIntensity, isHair);
+
+    // SSS
+    float sss = computeSSS(normal, lightDir, viewDir, depth);
+    vec3 sssColor = vec3(1.0, 0.4, 0.25) * sss * u_lightIntensity * isSkin;
+
+    // Curvature & Depth Modulation
+    float curvatureBoost = mix(0.85, 1.15, curvature);
+    float depthAttenuation = mix(0.7, 1.0, depthLayer);
+
+    // Rim Light
+    float fresnelVal = pow(1.0 - NdotV, 4.0);
+    float rimStrength = 0.12;
+    rimStrength = mix(rimStrength, 0.18, isSkin);
+    rimStrength = mix(rimStrength, 0.08, isHair);
+    rimStrength = mix(rimStrength, 0.05, isFabric);
+    rimStrength = mix(rimStrength, 0.35, isMetal);
+    rimStrength = mix(rimStrength, 0.0, isBg);
+    float rimLight = fresnelVal * u_lightIntensity * rimStrength * max(dot(normal, lightDir) + 0.3, 0.0);
+
+    // Shadows
+    float ao = computeSSAO(v_texCoord, depth, curvature);
+    float shadow = computeShadow(v_texCoord, depth, lightDir, depthLayer);
+    float combinedShadow = min(ao, shadow);
+    combinedShadow *= mix(0.75, 1.0, curvature);
+
+    // Composition
+    vec3 result = linearOriginal * smoothRatio;
+    result *= curvatureBoost;
+    result *= depthAttenuation;
+    result *= mix(1.0, combinedShadow, 0.7);
+    result *= mix(vec3(1.0), u_lightColor, 0.6);
+    result += specContrib * combinedShadow;
+    result += vec3(rimLight) * u_lightColor * combinedShadow;
+    result += sssColor * combinedShadow;
+    result = mix(result, linearOriginal * mix(0.95, 1.05, smoothRatio * 0.1), isBg);
+
+    // OKLAB Tone Mapping
+    vec3 origLAB = linearToOKLAB(max(linearOriginal, vec3(0.001)));
+    vec3 newLAB = linearToOKLAB(max(result, vec3(0.001)));
+    vec3 finalLAB = vec3(newLAB.x, mix(origLAB.y, newLAB.y, 0.3), mix(origLAB.z, newLAB.z, 0.3));
+    vec3 finalLinear = OKLABToLinear(finalLAB);
     
-    // === Ambient ===
-    vec3 ambient = albedo * u_ambient;
-    
-    // === Simple Specular (Blinn-Phong) ===
-    vec3 viewDir = vec3(0.0, 0.0, 1.0); // Orthographic assumption
-    vec3 halfDir = normalize(lightDir + viewDir);
-    float NdotH = max(dot(normal, halfDir), 0.0);
-    float specular = pow(NdotH, 32.0) * 0.3 * u_lightIntensity;
-    
-    // === SSAO (Ambient Occlusion) ===
-    float ao = computeSSAO(v_texCoord, depth, normal);
-    
-    // === Contact Shadows (directional, follows light) ===
-    float contactShadow = computeContactShadow(v_texCoord, depth, lightDir);
-    
-    // === Combine shadows ===
-    float combinedShadow = min(ao, contactShadow);
-    
-    // Apply shadow to diffuse and specular (not ambient)
-    vec3 lighting = ambient + (diffuse + vec3(specular)) * combinedShadow;
-    
-    // === Tone mapping (simple Reinhard) ===
-    lighting = lighting / (lighting + vec3(1.0));
-    
-    // Convert back to sRGB
-    vec3 finalColor = linearToSRGB(lighting);
-    
-    fragColor = vec4(finalColor, 1.0);
+    finalLinear = (finalLinear - 0.5) * 1.05 + 0.5;
+
+    fragColor = vec4(linearToSRGB(clamp(finalLinear, vec3(0.0), vec3(1.0))), 1.0);
 }
 `;
 

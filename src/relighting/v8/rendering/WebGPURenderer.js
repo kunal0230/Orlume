@@ -172,6 +172,12 @@ export class WebGPURenderer extends RenderingEngine {
                     visibility: GPUShaderStage.FRAGMENT,
                     buffer: { type: 'uniform' },
                 },
+                // Scene map texture (material, roughness, curvature, depth layer)
+                {
+                    binding: 5,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'float' },
+                },
             ],
         });
 
@@ -225,11 +231,9 @@ export class WebGPURenderer extends RenderingEngine {
         }
 
         // Create uniform buffer (must be 16-byte aligned)
-        // Layout: vec3 direction (12) + pad (4) + vec3 color (12) + intensity (4)
-        //         + ambient (4) + shadowIntensity (4) + shadowSoftness (4) + pad (4)
-        //         + vec2 resolution (8) + pad (8) = 64 bytes
+        // 128 bytes: base params (64) + SH new (36) + SH original (28) = 128 bytes
         this.uniformBuffer = this.device.createBuffer({
-            size: 64,
+            size: 128,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
     }
@@ -243,7 +247,7 @@ export class WebGPURenderer extends RenderingEngine {
             return null;
         }
 
-        const { width, height, albedo, normals, depth } = gBuffer;
+        const { width, height, albedo, normals, depth, sceneMap } = gBuffer;
 
         // Resize canvas if needed
         if (this.canvas.width !== width || this.canvas.height !== height) {
@@ -265,6 +269,7 @@ export class WebGPURenderer extends RenderingEngine {
         const albedoTex = this._createTexture(albedo, width, height, 'albedo');
         const normalTex = this._createNormalsTexture(normals, width, height);
         const depthTex = this._createDepthTexture(depth, width, height);
+        const sceneMapTex = this._createTexture(sceneMap, width, height, 'sceneMap');
 
         // Update uniform buffer
         this._updateUniforms(light, width, height);
@@ -278,6 +283,7 @@ export class WebGPURenderer extends RenderingEngine {
                 { binding: 2, resource: depthTex.createView() },
                 { binding: 3, resource: this.sampler },
                 { binding: 4, resource: { buffer: this.uniformBuffer } },
+                { binding: 5, resource: sceneMapTex.createView() },
             ],
         });
 
@@ -309,30 +315,78 @@ export class WebGPURenderer extends RenderingEngine {
     }
 
     /**
-     * Update uniform buffer with light parameters
+     * Project a directional light into 9 Spherical Harmonics coefficients (order 2)
+     * This creates smooth, natural lighting instead of harsh point lights
+     */
+    _computeSHCoefficients(dirX, dirY, dirZ, intensity) {
+        const x = dirX, y = dirY, z = dirZ;
+
+        // SH basis functions evaluated at the light direction, scaled by intensity
+        // Band 0 (constant/ambient fill)
+        const sh0 = 0.282095 * intensity;
+        // Band 1 (directional)
+        const sh1 = 0.488603 * y * intensity;
+        const sh2 = 0.488603 * z * intensity;
+        const sh3 = 0.488603 * x * intensity;
+        // Band 2 (quadratic — creates the smooth falloff)
+        const sh4 = 1.092548 * x * y * intensity;
+        const sh5 = 1.092548 * y * z * intensity;
+        const sh6 = 0.315392 * (3 * z * z - 1) * intensity;
+        const sh7 = 1.092548 * x * z * intensity;
+        const sh8 = 0.546274 * (x * x - y * y) * intensity;
+
+        return [sh0, sh1, sh2, sh3, sh4, sh5, sh6, sh7, sh8];
+    }
+
+    /**
+     * Update uniform buffer with light parameters + SH coefficients
      */
     _updateUniforms(light, width, height) {
+        // Original light direction from lighting analyzer
+        const origLightX = light.originalLightDir?.x || 0.3;
+        const origLightY = light.originalLightDir?.y || -0.5;
+
+        // Compute SH coefficients for new light direction
+        const dir = light.direction;
+        const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+        const nx = dir.x / len, ny = dir.y / len, nz = dir.z / len;
+        const newSH = this._computeSHCoefficients(nx, ny, nz, light.intensity * 2.0);
+
+        // Compute SH coefficients for estimated original light
+        const origLen = Math.sqrt(origLightX * origLightX + origLightY * origLightY + 0.36);
+        const ox = origLightX / origLen, oy = origLightY / origLen, oz = 0.6 / origLen;
+        const origSH = this._computeSHCoefficients(ox, oy, oz, 1.0);
+
+        // 128 bytes = 32 floats
         const uniformData = new Float32Array([
-            // vec3 direction + padding
+            // Bytes 0-15: vec3 direction + padding
             light.direction.x,
             light.direction.y,
             light.direction.z,
             0,
-            // vec3 color + intensity
+            // Bytes 16-31: vec3 color + intensity
             light.color.r,
             light.color.g,
             light.color.b,
             light.intensity,
-            // ambient, shadowIntensity, shadowSoftness, padding
+            // Bytes 32-47: ambient, shadow params, roughness
             light.ambient,
             light.shadowIntensity || 0.6,
             light.shadowSoftness || 0.4,
-            0,
-            // vec2 resolution + padding
+            light.roughness || 0.5,
+            // Bytes 48-63: resolution + original light direction
             width,
             height,
-            0,
-            0,
+            origLightX,
+            origLightY,
+            // Bytes 64-79: SH new (band 0 + band 1)
+            newSH[0], newSH[1], newSH[2], newSH[3],
+            // Bytes 80-95: SH new (band 2)
+            newSH[4], newSH[5], newSH[6], newSH[7],
+            // Bytes 96-111: SH new last + orig SH start
+            newSH[8], origSH[0], origSH[1], origSH[2],
+            // Bytes 112-127: orig SH continued
+            origSH[3], origSH[4], origSH[5], origSH[6],
         ]);
 
         this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
