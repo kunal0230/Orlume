@@ -129,6 +129,11 @@ export class SceneAnalyzer {
         const { data, width, height } = depth;
         const curvature = new Float32Array(width * height);
 
+        // Resolution independence: scale by image diagonal
+        // Higher resolution = smaller per-pixel local diffs for same geometric feature
+        const diagonal = Math.sqrt(width * width + height * height);
+        const scaleFactor = diagonal * 0.15; // Tuned constant
+
         for (let y = 1; y < height - 1; y++) {
             for (let x = 1; x < width - 1; x++) {
                 const i = y * width + x;
@@ -137,12 +142,12 @@ export class SceneAnalyzer {
                 const d2x = data[i - 1] - 2 * data[i] + data[i + 1];
                 const d2y = data[i - width] - 2 * data[i] + data[i + width];
 
-                // Mean curvature (positive = convex, negative = concave)
+                // Mean curvature
                 const meanCurv = (d2x + d2y) * 0.5;
 
                 // Map to 0-1: concave(0) → flat(0.5) → convex(1)
-                // Scale by 50 to make subtle depth changes visible
-                curvature[i] = Math.max(0, Math.min(1, 0.5 + meanCurv * 50));
+                // Normalize by resolution
+                curvature[i] = Math.max(0, Math.min(1, 0.5 + meanCurv * scaleFactor));
             }
         }
 

@@ -356,6 +356,14 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     combinedShadow *= mix(0.75, 1.0, curvature);
 
     // ================================================================
+    // MULTIPLE SCATTERING COMPENSATION
+    // ================================================================
+    // Standard GGX loses energy at high roughness because it models single bounce.
+    // We add a cheap compensation term to preserve brightness for rough metals/fabrics.
+    let msComp = 1.0 + F0 * (roughness * roughness) * 0.5;
+    specContrib *= msComp;
+
+    // ================================================================
     // COMPOSE — bring it all together
     // ================================================================
     // Base: ratio image relighting (preserves all original detail)
@@ -373,7 +381,7 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     // Apply light color tint
     result *= mix(vec3f(1.0), u.color, 0.6);
 
-    // Add specular highlights
+    // Add specular highlights (with MS compensation)
     result += specContrib * combinedShadow;
 
     // Add rim lighting
@@ -401,5 +409,19 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     // Gentle S-curve contrast
     finalLinear = (finalLinear - 0.5) * 1.05 + 0.5;
 
-    return vec4f(linearToSRGB(clamp(finalLinear, vec3f(0.0), vec3f(1.0))), 1.0);
+    // ================================================================
+    // SOFT-KNEE GAMUT MAPPING
+    // ================================================================
+    // Instead of hard clamp(0,1), we compress highlights > 0.8
+    // This prevents "hue shifting" (e.g. skin turning yellow/white)
+    let maxComp = max(finalLinear.r, max(finalLinear.g, finalLinear.b));
+    if (maxComp > 0.8) {
+        // Soft compression curve: f(x) = 0.8 + 0.2 * tanh((x - 0.8) / 0.2)
+        // Maps [0.8, infinity] -> [0.8, 1.0]
+        let overshoot = maxComp - 0.8;
+        let compressed = 0.8 + 0.2 * tanh(overshoot * 2.0); // *2.0 controls knee slope
+        finalLinear *= (compressed / maxComp);
+    }
+
+    return vec4f(linearToSRGB(max(vec3f(0.0), finalLinear)), 1.0);
 }

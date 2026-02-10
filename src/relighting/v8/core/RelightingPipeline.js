@@ -318,20 +318,39 @@ export class RelightingPipeline extends EventEmitter {
             for (let x = 1; x < width - 1; x++) {
                 const idx = y * width + x;
 
-                // Central differences
-                const dL = data[(y) * width + (x - 1)];
-                const dR = data[(y) * width + (x + 1)];
-                const dT = data[(y - 1) * width + x];
-                const dB = data[(y + 1) * width + x];
+                // Sobel Operator (3x3 kernel) for smoother normals
+                // tl t tr
+                // l  c  r
+                // bl b br
+                const tl = data[(y - 1) * width + (x - 1)];
+                const t = data[(y - 1) * width + x];
+                const tr = data[(y - 1) * width + (x + 1)];
+                const l = data[y * width + (x - 1)];
+                const r = data[y * width + (x + 1)];
+                const bl = data[(y + 1) * width + (x - 1)];
+                const b = data[(y + 1) * width + x];
+                const br = data[(y + 1) * width + (x + 1)];
 
-                // Compute gradients
-                const dx = (dR - dL) * 0.5;
-                const dy = (dB - dT) * 0.5;
+                // Sobel X
+                // -1 0 1
+                // -2 0 2
+                // -1 0 1
+                const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
 
-                // Cross product to get normal
-                let nx = -dx * 2;
-                let ny = -dy * 2;
-                let nz = 1.0;
+                // Sobel Y
+                // -1 -2 -1
+                //  0  0  0
+                //  1  2  1
+                const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
+
+                // Scale for steepness (tunable)
+                // Using 2.0 to match previous intensity, but Sobel naturally amplifies by 8
+                // So we divide by 8 effectively, or scale Z. 
+                // Let's use a strength factor.
+                const strength = 1.0;
+                let nx = -dX * strength;
+                let ny = -dY * strength;
+                let nz = 1.0 / 8.0; // Normalizing factor relative to kernel weight
 
                 // Normalize
                 const len = Math.sqrt(nx * nx + ny * ny + nz * nz);

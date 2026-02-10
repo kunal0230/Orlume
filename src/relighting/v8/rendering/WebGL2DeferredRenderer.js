@@ -804,6 +804,10 @@ void main() {
     float combinedShadow = min(ao, shadow);
     combinedShadow *= mix(0.75, 1.0, curvature);
 
+    // Multi Scattering Compensation
+    vec3 msComp = vec3(1.0) + F0 * (roughness * roughness) * 0.5;
+    specContrib *= msComp;
+
     // Composition
     vec3 result = linearOriginal * smoothRatio;
     result *= curvatureBoost;
@@ -823,7 +827,15 @@ void main() {
     
     finalLinear = (finalLinear - 0.5) * 1.05 + 0.5;
 
-    fragColor = vec4(linearToSRGB(clamp(finalLinear, vec3(0.0), vec3(1.0))), 1.0);
+    // Soft-Knee Gamut Mapping
+    float maxComp = max(finalLinear.r, max(finalLinear.g, finalLinear.b));
+    if (maxComp > 0.8) {
+        float overshoot = maxComp - 0.8;
+        float compressed = 0.8 + 0.2 * tanh(overshoot * 2.0);
+        finalLinear *= (compressed / maxComp);
+    }
+
+    fragColor = vec4(linearToSRGB(max(vec3(0.0), finalLinear)), 1.0);
 }
 `;
 
