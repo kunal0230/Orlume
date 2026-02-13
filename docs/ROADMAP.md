@@ -506,7 +506,7 @@ A comprehensive list of features for development. Check items as they're complet
 
 | Version | Date | Features Added |
 |---------|------|----------------|
-| v4.4.0 | 2024-12-26 | AI Image Enhancer UI, Mode selector, Server infrastructure |
+| v4.4.0 | 2025-12-26 | AI Image Enhancer UI, Mode selector, Server infrastructure |
 | v4.3.0 | Previous | Zoom, Pan, Before/After comparison |
 | v4.2.0 | Previous | Undo/Redo improvements |
 | v4.1.0 | Previous | Relight feature |
@@ -523,4 +523,4 @@ A comprehensive list of features for development. Check items as they're complet
 
 ---
 
-*Last updated: 2024-12-26*
+*Last updated: 2025-12-26*
