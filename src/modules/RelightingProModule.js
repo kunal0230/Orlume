@@ -554,13 +554,7 @@ export class RelightingProModule {
             return;
         }
 
-        // Get image data from GPU backend
-        const imageData = this.ui.gpu.toImageData();
-
-        // Update time estimate based on image size
-        this._updateTimeEstimate(imageData.width, imageData.height);
-
-        // Show analysis progress
+        // Show analysis progress and disable button immediately
         if (this.elements.analysisStatus) {
             this.elements.analysisStatus.style.display = 'block';
         }
@@ -568,7 +562,6 @@ export class RelightingProModule {
             this.elements.analyzeBtn.disabled = true;
             this.elements.analyzeBtn.textContent = 'Analyzing...';
         }
-        // Reset progress bar
         if (this.elements.analysisBar) {
             this.elements.analysisBar.style.width = '0%';
         }
@@ -576,26 +569,26 @@ export class RelightingProModule {
             this.elements.analysisPercent.textContent = '0%';
         }
 
-        // Create image element from the canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = imageData.width;
-        canvas.height = imageData.height;
-        const ctx = canvas.getContext('2d');
-        ctx.putImageData(imageData, 0, 0);
-
-        // Create Image element for pipeline
-        const img = new Image();
-        img.width = canvas.width;
-        img.height = canvas.height;
-
-        // Wait for image to be ready
-        await new Promise(resolve => {
-            img.onload = resolve;
-            img.src = canvas.toDataURL();
-        });
-
         try {
-            const success = await this.pipeline.processImage(img, (data) => {
+            // Get the GPU canvas directly — avoids the expensive toImageData() readback
+            // which synchronously reads millions of pixels from the GPU
+            const gpuCanvas = this.ui.gpu.canvas || this.ui.gpu.backend?.canvas;
+            if (!gpuCanvas) {
+                throw new Error('No GPU canvas available');
+            }
+
+            // Update time estimate from canvas dimensions (no pixel readback needed)
+            this._updateTimeEstimate(gpuCanvas.width, gpuCanvas.height);
+
+            // Use createImageBitmap for a non-blocking image capture from the canvas.
+            // This avoids the catastrophic toDataURL() call that base64-encodes
+            // the entire full-resolution image synchronously on the main thread.
+            const imageBitmap = await createImageBitmap(gpuCanvas);
+
+            // Pass the ImageBitmap directly to the pipeline.
+            // The pipeline's ResolutionManager will check dimensions and downscale
+            // BEFORE any heavy processing begins.
+            const success = await this.pipeline.processImage(imageBitmap, (data) => {
                 this._updateAnalysisProgress(data.progress, data.message);
             });
 
@@ -604,6 +597,12 @@ export class RelightingProModule {
             }
         } catch (error) {
             this._showError(error.message);
+        } finally {
+            // Always re-enable button on completion or failure
+            if (this.elements.analyzeBtn && !this.hasAnalyzed) {
+                this.elements.analyzeBtn.disabled = false;
+                this.elements.analyzeBtn.textContent = 'Analyze Image';
+            }
         }
     }
 

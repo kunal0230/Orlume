@@ -375,6 +375,7 @@
                 <aside class="changelog-sidebar">
                     <div class="changelog-sidebar-title">Versions</div>
                     <nav class="changelog-nav">
+                        <a href="#v4.4.0" class="changelog-nav-link">v4.4.0</a>
                         <a href="#v4.3.0" class="changelog-nav-link">v4.3.0</a>
                         <a href="#v4.1.0" class="changelog-nav-link">v4.1.0</a>
                         <a href="#v4.0.0" class="changelog-nav-link">v4.0.0</a>
@@ -390,6 +391,63 @@
                 </aside>
 
                 <main class="changelog-content">
+                    <!-- Version 4.4.0 -->
+                    <div class="changelog-item" id="v4.4.0">
+                        <div class="changelog-version">
+                            <span class="changelog-tag">v4.4.0</span>
+                            <span class="changelog-date">February 19, 2026</span>
+                        </div>
+                        <h3 class="changelog-title">Large Image Stability & Async Pipeline</h3>
+                        <p class="changelog-subtitle">Fixed critical crash when uploading images larger than 4K in the
+                            relighting section. Rewrote the analysis pipeline to use non-blocking async processing
+                            throughout.</p>
+
+                        <ul class="changelog-list">
+                            <li>
+                                <span class="badge fixed">Fixed</span>
+                                <div>
+                                    <strong>Page Unresponsive crash on 4K+ images</strong> — Eliminated synchronous
+                                    <code>toDataURL()</code> and <code>toImageData()</code> calls that blocked the main
+                                    thread
+                                    <div class="tech-detail">Replaced with async <code>createImageBitmap()</code> and
+                                        <code>canvas.toBlob()</code> for non-blocking image capture</div>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="badge perf">Perf</span>
+                                <div>
+                                    <strong>Async chunked normal computation</strong> — Sobel filter now processes in
+                                    128-row batches with main thread yielding
+                                    <div class="tech-detail">Prevents UI freeze during
+                                        <code>_computeNormalsFromDepth()</code> on large depth maps</div>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="badge perf">Perf</span>
+                                <div>
+                                    <strong>Async scene analysis</strong> — Material classification loop yields to the
+                                    browser between chunks
+                                    <div class="tech-detail"><code>SceneAnalyzer.analyze()</code> now processes 128 rows
+                                        per frame, keeping UI responsive</div>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="badge improved">Improved</span>
+                                <div>
+                                    <strong>Resolution check runs first</strong> — Pipeline now downscales oversized
+                                    images before any heavy processing begins
+                                    <div class="tech-detail">Previously, full-resolution pixel data was read and encoded
+                                        before <code>ResolutionManager</code> could intervene</div>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="badge improved">Improved</span>
+                                <div>Error recovery for analysis button — Always re-enables on failure, preventing stuck
+                                    UI state</div>
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- Version 4.3.0 -->
                     <div class="changelog-item" id="v4.3.0">
                         <div class="changelog-version">
@@ -524,7 +582,8 @@
                                     <strong>History System Rewrite</strong> — Complete overhaul of undo/redo logic
                                     <div class="tech-detail">Command pattern implementation with
                                         <code>pushDebounced</code>
-                                        calls across all modules</div>
+                                        calls across all modules
+                                    </div>
                                 </div>
                             </li>
                             <li>

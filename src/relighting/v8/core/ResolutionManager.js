@@ -69,14 +69,29 @@ export class ResolutionManager {
             if (userChoice.rememberChoice) {
                 this.enableAutoResize();
             }
+
+            // Show resize progress in the modal (don't close yet)
+            if (userChoice.modal) {
+                this._showResizeProgress(userChoice.modal);
+                // Yield TWO frames so the browser can paint the spinner + progress bar
+                // before the heavy canvas resize blocks the main thread.
+                // One rAF queues paint, second ensures it's flushed.
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            }
         }
 
-        // Perform resize
+        // Perform resize with progress callback
         const resized = await this._resizeImage(
             image,
             targetDims.width,
-            targetDims.height
+            targetDims.height,
+            (step, totalSteps) => {
+                this._updateResizeProgress(step, totalSteps);
+            }
         );
+
+        // Now close the modal
+        this._closeResizeProgressModal();
 
         console.log(`✓ Resized: ${width}×${height} → ${targetDims.width}×${targetDims.height}`);
 
@@ -175,8 +190,8 @@ export class ResolutionManager {
                         primary: true,
                         action: () => {
                             const remember = document.getElementById('resize-remember')?.checked;
-                            this._closeModal(modal);
-                            resolve({ cancelled: false, rememberChoice: remember });
+                            // Don't close the modal — keep it open for progress
+                            resolve({ cancelled: false, rememberChoice: remember, modal });
                         }
                     },
                     {
@@ -192,6 +207,118 @@ export class ResolutionManager {
             document.body.appendChild(modal);
             if (this.onModalShow) this.onModalShow();
         });
+    }
+
+    /**
+     * Transform the modal into a resize progress indicator
+     */
+    _showResizeProgress(modal) {
+        this._activeResizeModal = modal;
+        const modalBody = modal.querySelector('.resolution-modal-body');
+        const modalButtons = modal.querySelector('.resolution-modal-buttons');
+        const modalCheckbox = modal.querySelector('.resolution-modal-checkbox');
+        const modalHeader = modal.querySelector('.resolution-modal-header');
+
+        if (modalHeader) {
+            modalHeader.textContent = 'Resizing Image...';
+        }
+
+        if (modalCheckbox) {
+            modalCheckbox.style.display = 'none';
+        }
+
+        if (modalButtons) {
+            modalButtons.style.display = 'none';
+        }
+
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 20px 0;">
+                    <div class="resize-spinner"></div>
+                    <div id="resize-progress-text" style="
+                        margin-top: 16px;
+                        font-size: 14px;
+                        color: rgba(255,255,255,0.9);
+                        font-weight: 500;
+                    ">Preparing resize...</div>
+                    <div id="resize-progress-bar-container" style="
+                        margin-top: 12px;
+                        width: 100%;
+                        height: 4px;
+                        background: rgba(255,255,255,0.1);
+                        border-radius: 2px;
+                        overflow: hidden;
+                    ">
+                        <div id="resize-progress-bar" style="
+                            width: 0%;
+                            height: 100%;
+                            background: linear-gradient(90deg, #667eea, #764ba2);
+                            border-radius: 2px;
+                            transition: width 0.3s ease;
+                        "></div>
+                    </div>
+                    <div id="resize-progress-step" style="
+                        margin-top: 8px;
+                        font-size: 11px;
+                        color: rgba(255,255,255,0.5);
+                    "></div>
+                </div>
+            `;
+        }
+
+        // Inject spinner CSS if not present
+        if (!document.getElementById('resize-spinner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'resize-spinner-styles';
+            style.textContent = `
+                .resize-spinner {
+                    width: 36px;
+                    height: 36px;
+                    margin: 0 auto;
+                    border: 3px solid rgba(255,255,255,0.1);
+                    border-top: 3px solid #667eea;
+                    border-radius: 50%;
+                    animation: resize-spin 0.8s linear infinite;
+                }
+                @keyframes resize-spin {
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
+     * Update resize progress in the modal
+     */
+    _updateResizeProgress(step, totalSteps) {
+        const progressBar = document.getElementById('resize-progress-bar');
+        const progressText = document.getElementById('resize-progress-text');
+        const progressStep = document.getElementById('resize-progress-step');
+
+        const percent = Math.round((step / totalSteps) * 100);
+
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+        }
+        if (progressText) {
+            progressText.textContent = step >= totalSteps
+                ? 'Resize complete!'
+                : `Resizing image... ${percent}%`;
+        }
+        if (progressStep) {
+            progressStep.textContent = `Step ${step} of ${totalSteps}`;
+        }
+    }
+
+    /**
+     * Close the resize progress modal
+     */
+    _closeResizeProgressModal() {
+        if (this._activeResizeModal) {
+            this._closeModal(this._activeResizeModal);
+            this._activeResizeModal = null;
+        }
     }
 
     /**
@@ -350,15 +477,16 @@ export class ResolutionManager {
     /**
      * High-quality image resize using multi-step downsampling
      */
-    async _resizeImage(image, targetWidth, targetHeight) {
+    async _resizeImage(image, targetWidth, targetHeight, progressCallback = null) {
         const { width: origWidth, height: origHeight } = this._getImageDimensions(image);
 
         // For very large downscales, use multi-step for better quality
         if (this._needsMultiStepResize(origWidth, origHeight, targetWidth, targetHeight)) {
-            return await this._multiStepResize(image, targetWidth, targetHeight);
+            return await this._multiStepResize(image, targetWidth, targetHeight, progressCallback);
         }
 
         // Single-step resize
+        if (progressCallback) progressCallback(1, 1);
         return await this._singleStepResize(image, targetWidth, targetHeight);
     }
 
@@ -368,26 +496,47 @@ export class ResolutionManager {
         return Math.max(scaleX, scaleY) > 2.0;
     }
 
-    async _multiStepResize(image, finalWidth, finalHeight) {
+    async _multiStepResize(image, finalWidth, finalHeight, progressCallback = null) {
         let current = image;
         let currentWidth = this._getImageDimensions(image).width;
         let currentHeight = this._getImageDimensions(image).height;
 
         console.log(`Multi-step resize: ${currentWidth}×${currentHeight} → ${finalWidth}×${finalHeight}`);
 
+        // Calculate total steps first for progress reporting
+        let totalSteps = 1; // final resize step
+        let tempW = currentWidth, tempH = currentHeight;
+        while (tempW > finalWidth * 2 || tempH > finalHeight * 2) {
+            tempW = Math.max(finalWidth, Math.round(tempW / 2));
+            tempH = Math.max(finalHeight, Math.round(tempH / 2));
+            totalSteps++;
+        }
+
+        let step = 0;
+
         // Each step reduces by max 2×
         while (currentWidth > finalWidth * 2 || currentHeight > finalHeight * 2) {
             const stepWidth = Math.max(finalWidth, Math.round(currentWidth / 2));
             const stepHeight = Math.max(finalHeight, Math.round(currentHeight / 2));
 
+            step++;
+            if (progressCallback) progressCallback(step, totalSteps);
+
+            // Yield to let the UI update before the next heavy canvas operation
+            await new Promise(resolve => setTimeout(resolve, 0));
+
             current = await this._singleStepResize(current, stepWidth, stepHeight);
             currentWidth = stepWidth;
             currentHeight = stepHeight;
 
-            console.log(`  Step: ${stepWidth}×${stepHeight}`);
+            console.log(`  Step ${step}/${totalSteps}: ${stepWidth}×${stepHeight}`);
         }
 
         // Final resize to exact dimensions
+        step++;
+        if (progressCallback) progressCallback(step, totalSteps);
+        await new Promise(resolve => setTimeout(resolve, 0));
+
         return await this._singleStepResize(current, finalWidth, finalHeight);
     }
 
@@ -410,7 +559,7 @@ export class ResolutionManager {
             return await createImageBitmap(canvas);
         }
 
-        // Fallback: convert to image element
+        // Fallback: convert to image element using non-blocking Blob URL
         return new Promise((resolve, reject) => {
             if (canvas instanceof OffscreenCanvas) {
                 canvas.convertToBlob({ type: 'image/png' })
@@ -425,10 +574,20 @@ export class ResolutionManager {
                     })
                     .catch(reject);
             } else {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = canvas.toDataURL('image/png');
+                // Use toBlob instead of toDataURL to avoid synchronous base64 encoding
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Failed to create blob from canvas'));
+                        return;
+                    }
+                    const img = new Image();
+                    img.onload = () => {
+                        URL.revokeObjectURL(img.src);
+                        resolve(img);
+                    };
+                    img.onerror = reject;
+                    img.src = URL.createObjectURL(blob);
+                }, 'image/png');
             }
         });
     }

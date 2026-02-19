@@ -143,7 +143,7 @@ export class RelightingPipeline extends EventEmitter {
 
     /**
      * Process an image for relighting
-     * @param {HTMLImageElement|ImageBitmap} image - Input image
+     * @param {HTMLImageElement|HTMLCanvasElement|ImageBitmap} image - Input image
      * @param {Function} progressCallback - Progress updates
      * @returns {Promise<boolean>} Success
      */
@@ -199,52 +199,62 @@ export class RelightingPipeline extends EventEmitter {
                 this._reportProgress(progressCallback, mappedProgress, 'Estimating depth...');
             });
 
-            // Step 4: Normal estimation
+            // Step 4: Normal estimation (async chunked to avoid main thread blocking)
             this._reportProgress(progressCallback, 60, 'Computing surface normals...');
 
             // Use neural normals if enabled, with fallback to depth-derived
             if (this.useNeuralNormals) {
                 try {
                     this._reportProgress(progressCallback, 60, 'Computing neural normals...');
-                    const depthNormals = this._computeNormalsFromDepth(this.depth);
+                    const depthNormals = await this._computeNormalsFromDepth(this.depth);
 
-                    // Get image dataURL for neural estimator
+                    // Create a Blob URL instead of the blocking toDataURL() call.
+                    // toDataURL synchronously base64-encodes the full image which freezes
+                    // the main thread for seconds on 4K+ images.
                     const canvas = document.createElement('canvas');
                     canvas.width = this.width;
                     canvas.height = this.height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(processedImage, 0, 0);
-                    const imageDataURL = canvas.toDataURL('image/jpeg', 0.9);
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+                    const imageDataURL = URL.createObjectURL(blob);
 
-                    // Try neural estimation
-                    const neuralResult = await this.neuralNormalEstimator.estimate(
-                        imageDataURL,
-                        this.width,
-                        this.height,
-                        (p) => this._reportProgress(progressCallback, 60 + p.progress * 0.1, 'Neural normals...')
-                    );
+                    try {
+                        // Try neural estimation
+                        const neuralResult = await this.neuralNormalEstimator.estimate(
+                            imageDataURL,
+                            this.width,
+                            this.height,
+                            (p) => this._reportProgress(progressCallback, 60 + p.progress * 0.1, 'Neural normals...')
+                        );
 
-                    // Convert neuralResult to compatible format
-                    const neuralNormals = this._convertNormalMapToFloat32(neuralResult);
+                        // Convert neuralResult to compatible format
+                        const neuralNormals = this._convertNormalMapToFloat32(neuralResult);
 
-                    // Blend neural + depth normals for best quality
-                    this.normals = this._blendNormals(neuralNormals, depthNormals, 0.7);
-                    console.log('✓ Using hybrid neural + depth normals');
+                        // Blend neural + depth normals for best quality
+                        this.normals = this._blendNormals(neuralNormals, depthNormals, 0.7);
+                        console.log('✓ Using hybrid neural + depth normals');
+                    } finally {
+                        URL.revokeObjectURL(imageDataURL);
+                    }
                 } catch (error) {
                     console.warn('Neural normals failed, using depth-derived:', error.message);
-                    this.normals = this._computeNormalsFromDepth(this.depth);
+                    this.normals = await this._computeNormalsFromDepth(this.depth);
                 }
             } else {
-                this.normals = this._computeNormalsFromDepth(this.depth);
+                this.normals = await this._computeNormalsFromDepth(this.depth);
             }
 
-            // Step 5: Albedo estimation (use original for now)
-            this._reportProgress(progressCallback, 70, 'Analyzing materials...');
-            this.albedo = imageData; // Simple: use original image
+            // Step 5: Intrinsic Decomposition (Albedo/Shading separation)
+            this._reportProgress(progressCallback, 70, 'Extracting albedo...');
+            // TODO: Implement actual intrinsic decomposition
+            // For now, we still use the original image, but we prepare the architecture
+            // to swap this with the de-lit albedo later.
+            this.albedo = imageData;
 
-            // Step 5b: Scene Analysis — intelligent scene understanding
+            // Step 5b: Scene Analysis — intelligent scene understanding (async chunked)
             this._reportProgress(progressCallback, 75, 'Analyzing scene...');
-            this.sceneMap = this.sceneAnalyzer.analyze(imageData, this.depth, this.normals);
+            this.sceneMap = await this.sceneAnalyzer.analyze(imageData, this.depth, this.normals);
 
             // Step 6: Compute confidence
             this._reportProgress(progressCallback, 85, 'Assessing quality...');
@@ -308,61 +318,60 @@ export class RelightingPipeline extends EventEmitter {
     }
 
     /**
-     * Compute normals from depth map
+     * Compute normals from depth map.
+     * Async with chunked row processing to avoid blocking the main thread
+     * on large images (4K+ = millions of Sobel operations).
      */
-    _computeNormalsFromDepth(depth) {
+    async _computeNormalsFromDepth(depth) {
         const { data, width, height } = depth;
         const normals = new Float32Array(width * height * 3);
 
-        for (let y = 1; y < height - 1; y++) {
-            for (let x = 1; x < width - 1; x++) {
-                const idx = y * width + x;
+        // Process in row chunks, yielding to the main thread between chunks.
+        // 128 rows is a good balance between throughput and responsiveness.
+        const CHUNK_SIZE = 128;
 
-                // Sobel Operator (3x3 kernel) for smoother normals
-                // tl t tr
-                // l  c  r
-                // bl b br
-                const tl = data[(y - 1) * width + (x - 1)];
-                const t = data[(y - 1) * width + x];
-                const tr = data[(y - 1) * width + (x + 1)];
-                const l = data[y * width + (x - 1)];
-                const r = data[y * width + (x + 1)];
-                const bl = data[(y + 1) * width + (x - 1)];
-                const b = data[(y + 1) * width + x];
-                const br = data[(y + 1) * width + (x + 1)];
+        for (let startY = 1; startY < height - 1; startY += CHUNK_SIZE) {
+            const endY = Math.min(startY + CHUNK_SIZE, height - 1);
 
-                // Sobel X
-                // -1 0 1
-                // -2 0 2
-                // -1 0 1
-                const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
+            for (let y = startY; y < endY; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
 
-                // Sobel Y
-                // -1 -2 -1
-                //  0  0  0
-                //  1  2  1
-                const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
+                    // Sobel Operator (3x3 kernel) for smoother normals
+                    const tl = data[(y - 1) * width + (x - 1)];
+                    const t = data[(y - 1) * width + x];
+                    const tr = data[(y - 1) * width + (x + 1)];
+                    const l = data[y * width + (x - 1)];
+                    const r = data[y * width + (x + 1)];
+                    const bl = data[(y + 1) * width + (x - 1)];
+                    const b = data[(y + 1) * width + x];
+                    const br = data[(y + 1) * width + (x + 1)];
 
-                // Scale for steepness (tunable)
-                // Using 2.0 to match previous intensity, but Sobel naturally amplifies by 8
-                // So we divide by 8 effectively, or scale Z. 
-                // Let's use a strength factor.
-                const strength = 1.0;
-                let nx = -dX * strength;
-                let ny = -dY * strength;
-                let nz = 1.0 / 8.0; // Normalizing factor relative to kernel weight
+                    // Sobel X
+                    const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
+                    // Sobel Y
+                    const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
 
-                // Normalize
-                const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-                nx /= len;
-                ny /= len;
-                nz /= len;
+                    const strength = 1.0;
+                    let nx = -dX * strength;
+                    let ny = -dY * strength;
+                    let nz = 1.0 / 8.0;
 
-                const outIdx = idx * 3;
-                normals[outIdx] = nx;
-                normals[outIdx + 1] = ny;
-                normals[outIdx + 2] = nz;
+                    // Normalize
+                    const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                    nx /= len;
+                    ny /= len;
+                    nz /= len;
+
+                    const outIdx = idx * 3;
+                    normals[outIdx] = nx;
+                    normals[outIdx + 1] = ny;
+                    normals[outIdx + 2] = nz;
+                }
             }
+
+            // Yield to the main thread between chunks to prevent "Page Unresponsive"
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
 
         return {

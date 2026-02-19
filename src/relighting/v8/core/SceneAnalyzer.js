@@ -24,9 +24,9 @@ export class SceneAnalyzer {
      * @param {ImageData} imageData - Original image
      * @param {Object} depth - { data: Float32Array, width, height }
      * @param {Object} normals - { data: Float32Array, width, height }
-     * @returns {ImageData} Scene map (RGBA: material, roughness, curvature, depthLayer)
+     * @returns {Promise<ImageData>} Scene map (RGBA: material, roughness, curvature, depthLayer)
      */
-    analyze(imageData, depth, normals) {
+    async analyze(imageData, depth, normals) {
         const { data, width, height } = imageData;
         const sceneMap = new ImageData(width, height);
 
@@ -42,46 +42,58 @@ export class SceneAnalyzer {
         // Pre-compute normal variance (for material boundary detection)
         const normalVariance = this._computeNormalVariance(normals);
 
-        // Classify each pixel
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const i = y * width + x;
-                const px = i * 4;
+        // Classify each pixel in chunks to avoid blocking the main thread
+        // on large images (4K+ = 8+ million pixels to classify)
+        const CHUNK_SIZE = 128; // rows per chunk
 
-                // Get pixel color
-                const r = data[px] / 255;
-                const g = data[px + 1] / 255;
-                const b = data[px + 2] / 255;
+        for (let startY = 0; startY < height; startY += CHUNK_SIZE) {
+            const endY = Math.min(startY + CHUNK_SIZE, height);
 
-                // Get depth value
-                const d = depth.data[i];
+            for (let y = startY; y < endY; y++) {
+                for (let x = 0; x < width; x++) {
+                    const i = y * width + x;
+                    const px = i * 4;
 
-                // === Material Classification ===
-                const material = this._classifyMaterial(
-                    r, g, b, d,
-                    textureVariance[i],
-                    normalVariance[i],
-                    depthStats
-                );
+                    // Get pixel color
+                    const r = data[px] / 255;
+                    const g = data[px + 1] / 255;
+                    const b = data[px + 2] / 255;
 
-                // === Roughness Estimation ===
-                const roughness = this._estimateRoughness(
-                    material,
-                    textureVariance[i],
-                    normalVariance[i]
-                );
+                    // Get depth value
+                    const d = depth.data[i];
 
-                // === Curvature ===
-                const curv = curvature[i];
+                    // === Material Classification ===
+                    const material = this._classifyMaterial(
+                        r, g, b, d,
+                        textureVariance[i],
+                        normalVariance[i],
+                        depthStats
+                    );
 
-                // === Depth Layer ===
-                const depthLayer = this._computeDepthLayer(d, depthStats);
+                    // === Roughness Estimation ===
+                    const roughness = this._estimateRoughness(
+                        material,
+                        textureVariance[i],
+                        normalVariance[i]
+                    );
 
-                // Write to scene map (RGBA, 0-255)
-                sceneMap.data[px] = Math.round(material * 255);     // R: material
-                sceneMap.data[px + 1] = Math.round(roughness * 255);    // G: roughness
-                sceneMap.data[px + 2] = Math.round(curv * 255);         // B: curvature
-                sceneMap.data[px + 3] = Math.round(depthLayer * 255);   // A: depth layer
+                    // === Curvature ===
+                    const curv = curvature[i];
+
+                    // === Depth Layer ===
+                    const depthLayer = this._computeDepthLayer(d, depthStats);
+
+                    // Write to scene map (RGBA, 0-255)
+                    sceneMap.data[px] = Math.round(material * 255);     // R: material
+                    sceneMap.data[px + 1] = Math.round(roughness * 255);    // G: roughness
+                    sceneMap.data[px + 2] = Math.round(curv * 255);         // B: curvature
+                    sceneMap.data[px + 3] = Math.round(depthLayer * 255);   // A: depth layer
+                }
+            }
+
+            // Yield to the main thread between chunks to prevent "Page Unresponsive"
+            if (startY + CHUNK_SIZE < height) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
         }
 
