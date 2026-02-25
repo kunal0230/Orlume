@@ -324,6 +324,10 @@ export class RelightingPipeline extends EventEmitter {
      */
     async _computeNormalsFromDepth(depth) {
         const { data, width, height } = depth;
+
+        // Pre-smooth the depth map to eliminate quantization artifacts (uint8 = only 256 levels)
+        const smoothed = this._gaussianBlurDepth(data, width, height, 3);
+
         const normals = new Float32Array(width * height * 3);
 
         // Process in row chunks, yielding to the main thread between chunks.
@@ -337,25 +341,24 @@ export class RelightingPipeline extends EventEmitter {
                 for (let x = 1; x < width - 1; x++) {
                     const idx = y * width + x;
 
-                    // Sobel Operator (3x3 kernel) for smoother normals
-                    const tl = data[(y - 1) * width + (x - 1)];
-                    const t = data[(y - 1) * width + x];
-                    const tr = data[(y - 1) * width + (x + 1)];
-                    const l = data[y * width + (x - 1)];
-                    const r = data[y * width + (x + 1)];
-                    const bl = data[(y + 1) * width + (x - 1)];
-                    const b = data[(y + 1) * width + x];
-                    const br = data[(y + 1) * width + (x + 1)];
+                    // Sobel Operator (3x3 kernel) on smoothed depth
+                    const tl = smoothed[(y - 1) * width + (x - 1)];
+                    const t = smoothed[(y - 1) * width + x];
+                    const tr = smoothed[(y - 1) * width + (x + 1)];
+                    const l = smoothed[y * width + (x - 1)];
+                    const r = smoothed[y * width + (x + 1)];
+                    const bl = smoothed[(y + 1) * width + (x - 1)];
+                    const b = smoothed[(y + 1) * width + x];
+                    const br = smoothed[(y + 1) * width + (x + 1)];
 
                     // Sobel X
                     const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
                     // Sobel Y
                     const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
 
-                    const strength = 1.0;
-                    let nx = -dX * strength;
-                    let ny = -dY * strength;
-                    let nz = 1.0 / 8.0;
+                    let nx = -dX;
+                    let ny = -dY;
+                    let nz = 1.0; // More natural normals (was 1/8 = overly aggressive)
 
                     // Normalize
                     const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
@@ -379,6 +382,53 @@ export class RelightingPipeline extends EventEmitter {
             width,
             height
         };
+    }
+
+    /**
+     * Gaussian blur for depth map (Float32Array or Uint8Array).
+     * Separable two-pass for performance.
+     */
+    _gaussianBlurDepth(data, width, height, radius) {
+        const sigma = radius / 2.0;
+        const kernelSize = radius * 2 + 1;
+        const kernel = new Float32Array(kernelSize);
+        let sum = 0;
+        for (let i = 0; i < kernelSize; i++) {
+            const x = i - radius;
+            kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+            sum += kernel[i];
+        }
+        for (let i = 0; i < kernelSize; i++) kernel[i] /= sum;
+
+        const n = width * height;
+        const tmp = new Float32Array(n);
+        const dst = new Float32Array(n);
+
+        // Horizontal pass
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let v = 0;
+                for (let k = -radius; k <= radius; k++) {
+                    const sx = Math.min(width - 1, Math.max(0, x + k));
+                    v += data[y * width + sx] * kernel[k + radius];
+                }
+                tmp[y * width + x] = v;
+            }
+        }
+
+        // Vertical pass
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let v = 0;
+                for (let k = -radius; k <= radius; k++) {
+                    const sy = Math.min(height - 1, Math.max(0, y + k));
+                    v += tmp[sy * width + x] * kernel[k + radius];
+                }
+                dst[y * width + x] = v;
+            }
+        }
+
+        return dst;
     }
 
     /**

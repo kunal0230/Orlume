@@ -184,12 +184,14 @@ fn computeShadow(uv: vec2f, centerDepth: f32, lightDir: vec3f, depthLayer: f32) 
         let t = f32(i) / 16.0;
         let ps = reachScale;
         let suv = uv + lightDirSS * t * ps;
-        if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) { continue; }
-        let sd = textureSample(depthTex, texSampler, suv).r;
+        // Clamp UV instead of continue (textureSample requires uniform control flow)
+        let clampedUV = clamp(suv, vec2f(0.0), vec2f(1.0));
+        let inBounds = select(0.0, 1.0, suv.x >= 0.0 && suv.x <= 1.0 && suv.y >= 0.0 && suv.y <= 1.0);
+        let sd = textureSample(depthTex, texSampler, clampedUV).r;
         let ed = centerDepth + heightStep * t;
         let hd = sd - ed;
         let pen = 1.0 + t * 3.0;
-        let w = (1.0 - t) * (1.0 - t);
+        let w = (1.0 - t) * (1.0 - t) * inBounds;
         if (hd > 0.005 && hd < 0.35) {
             shadow += w * smoothstep(0.005, 0.02 * pen, hd);
         }
@@ -258,13 +260,26 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     let HdotV = max(dot(H, viewDir), 0.0);
 
     // ================================================================
-    // RATIO IMAGE RELIGHTING — core technique
-    // output = original × (newLighting / originalLighting)
+    // HYBRID ALBEDO/RATIO RELIGHTING
     // ================================================================
     let newSH  = evaluateSH9(normal);
     let origSH = evaluateOrigSH(normal);
+
+    // Ratio method (safe fallback, always works)
     let shadingRatio = newSH / max(origSH, 0.08);
     let smoothRatio  = mix(1.0, shadingRatio, u.intensity);
+    let ratioResult = linearOriginal * smoothRatio;
+
+    // Albedo method (better quality where confident)
+    // Soft de-light: extract approximate albedo by dividing out original shading
+    let origShading = max(origSH, 0.25);  // soft clamp prevents division artifacts
+    let albedo = min(linearOriginal / origShading, vec3f(1.5));  // prevent blow-out
+    // Re-light with new SH
+    let albedoResult = albedo * max(newSH, 0.0) * u.intensity * 2.0 + albedo * u.ambient;
+
+    // Blend: use albedo method where shading is confident, ratio where not
+    let albedoConfidence = smoothstep(0.15, 0.5, origSH);
+    let baseResult = mix(ratioResult, albedoResult, albedoConfidence * 0.6);
 
     // ================================================================
     // PER-MATERIAL SPECULAR — scene-aware BRDF
@@ -358,16 +373,14 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     // ================================================================
     // MULTIPLE SCATTERING COMPENSATION
     // ================================================================
-    // Standard GGX loses energy at high roughness because it models single bounce.
-    // We add a cheap compensation term to preserve brightness for rough metals/fabrics.
     let msComp = 1.0 + F0 * (roughness * roughness) * 0.5;
     specContrib *= msComp;
 
     // ================================================================
     // COMPOSE — bring it all together
     // ================================================================
-    // Base: ratio image relighting (preserves all original detail)
-    var result = linearOriginal * smoothRatio;
+    // Base: hybrid albedo/ratio relighting
+    var result = baseResult;
 
     // Apply curvature-aware modulation
     result *= curvatureBoost;

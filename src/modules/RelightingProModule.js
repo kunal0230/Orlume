@@ -95,6 +95,12 @@ export class RelightingProModule {
         // Time estimation and tips
         this.elements.estTime = document.getElementById('v8-est-time');
         this.elements.tipsSection = document.getElementById('v8-tips-section');
+
+        // Debug maps
+        this.elements.debugCanvas = document.getElementById('v8-debug-canvas');
+        this.elements.debugLabel = document.getElementById('v8-debug-label');
+        this.elements.debugInfoContent = document.getElementById('v8-debug-info-content');
+        this.elements.debugMapBtns = document.querySelectorAll('.v8-map-btn');
     }
 
     _setupEventListeners() {
@@ -169,6 +175,18 @@ export class RelightingProModule {
         // Keyboard shortcuts for light control
         this._keyboardHandler = this._onKeyDown.bind(this);
         document.addEventListener('keydown', this._keyboardHandler);
+
+        // Debug map buttons
+        if (this.elements.debugMapBtns) {
+            this.elements.debugMapBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Toggle active state
+                    this.elements.debugMapBtns.forEach(b => b.style.background = '');
+                    btn.style.background = 'rgba(102, 126, 234, 0.3)';
+                    this._renderDebugMap(btn.dataset.map);
+                });
+            });
+        }
     }
 
     _onKeyDown(e) {
@@ -696,6 +714,9 @@ export class RelightingProModule {
 
         // Render initial result
         this._render();
+
+        // Update debug info
+        this._updateDebugInfo();
     }
 
     /**
@@ -920,6 +941,192 @@ export class RelightingProModule {
         if (this.ui?.gpu) {
             this.ui.gpu.loadImage(canvas);
         }
+    }
+
+    /**
+     * Render a debug visualization map and show it on the MAIN canvas
+     */
+    _renderDebugMap(mapType) {
+        const label = this.elements.debugLabel;
+
+        // Reset: go back to the relit image
+        if (mapType === 'reset') {
+            this._activeDebugMap = null;
+            if (label) label.textContent = 'Click a map to view on canvas';
+            this.elements.debugMapBtns.forEach(b => b.style.background = '');
+            this._render();  // Restore the relit image
+            return;
+        }
+
+        if (!this.pipeline.gBuffer) return;
+
+        this._activeDebugMap = mapType;
+        const { width, height, depth, normals, sceneMap, albedo } = this.pipeline.gBuffer;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.createImageData(width, height);
+
+        const labels = {
+            depth: 'Depth Map — near=bright, far=dark',
+            normals: 'Surface Normals — RGB = XYZ direction',
+            albedo: 'Albedo — original image used as base color',
+            material: 'Material — skin=orange, hair=green, fabric=blue, metal=white',
+            roughness: 'Roughness — smooth=dark, rough=bright',
+            curvature: 'Curvature — concave=dark, flat=gray, convex=bright',
+            depthLayer: 'Depth Layers — far=dark, near=bright'
+        };
+        if (label) label.textContent = labels[mapType] || mapType;
+
+        if (mapType === 'depth') {
+            // Depth: Float32Array with arbitrary range, needs min/max normalization
+            if (depth && depth.data) {
+                let minD = Infinity, maxD = -Infinity;
+                for (let i = 0; i < depth.data.length; i++) {
+                    if (depth.data[i] < minD) minD = depth.data[i];
+                    if (depth.data[i] > maxD) maxD = depth.data[i];
+                }
+                const range = maxD - minD || 1;
+                for (let i = 0; i < depth.data.length; i++) {
+                    const v = Math.round(((depth.data[i] - minD) / range) * 255);
+                    const px = i * 4;
+                    imgData.data[px] = v;
+                    imgData.data[px + 1] = v;
+                    imgData.data[px + 2] = v;
+                    imgData.data[px + 3] = 255;
+                }
+            }
+
+        } else if (mapType === 'normals') {
+            // Normals: Float32Array (nx, ny, nz) -> map [-1,1] to [0,255]
+            if (normals && normals.data) {
+                for (let i = 0; i < width * height; i++) {
+                    const ni = i * 3;
+                    const px = i * 4;
+                    imgData.data[px] = Math.round((normals.data[ni] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 1] = Math.round((normals.data[ni + 1] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 2] = Math.round((normals.data[ni + 2] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 3] = 255;
+                }
+            }
+
+        } else if (mapType === 'albedo') {
+            // Albedo: the original image stored as ImageData (RGBA uint8)
+            if (albedo && albedo.data) {
+                for (let i = 0; i < width * height * 4; i++) {
+                    imgData.data[i] = albedo.data[i];
+                }
+            }
+
+        } else if (mapType === 'material') {
+            // Scene map R channel = material type, color-coded
+            if (sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4;
+                    const mat = sceneMap.data[px] / 255;
+                    if (mat < 0.1) {
+                        imgData.data[px] = 30; imgData.data[px + 1] = 30; imgData.data[px + 2] = 30;
+                    } else if (mat < 0.35) {
+                        imgData.data[px] = 255; imgData.data[px + 1] = 140; imgData.data[px + 2] = 100;
+                    } else if (mat < 0.6) {
+                        imgData.data[px] = 80; imgData.data[px + 1] = 200; imgData.data[px + 2] = 100;
+                    } else if (mat < 0.85) {
+                        imgData.data[px] = 100; imgData.data[px + 1] = 140; imgData.data[px + 2] = 255;
+                    } else {
+                        imgData.data[px] = 230; imgData.data[px + 1] = 230; imgData.data[px + 2] = 240;
+                    }
+                    imgData.data[px + 3] = 255;
+                }
+            }
+
+        } else if (mapType === 'roughness') {
+            if (sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4;
+                    const v = sceneMap.data[px + 1];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v;
+                    imgData.data[px + 3] = 255;
+                }
+            }
+
+        } else if (mapType === 'curvature') {
+            if (sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4;
+                    const v = sceneMap.data[px + 2];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v;
+                    imgData.data[px + 3] = 255;
+                }
+            }
+
+        } else if (mapType === 'depthLayer') {
+            if (sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4;
+                    const v = sceneMap.data[px + 3];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v;
+                    imgData.data[px + 3] = 255;
+                }
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        // Show on the MAIN canvas (big view)
+        if (this.ui?.gpu) {
+            this.ui.gpu.loadImage(canvas);
+        }
+    }
+
+    /**
+     * Update the debug info panel with scene analysis data
+     */
+    _updateDebugInfo() {
+        const el = this.elements.debugInfoContent;
+        if (!el) return;
+
+        const conf = this.pipeline.confidence;
+        const light = this.pipeline.light;
+        const gb = this.pipeline.gBuffer;
+
+        if (!conf || !gb) {
+            el.textContent = 'Analyze an image to see scene info';
+            return;
+        }
+
+        const origDir = light.originalLightDir;
+        const lighting = conf.lighting || {};
+
+        let html = '';
+        html += `<div><strong>Image:</strong> ${gb.width}×${gb.height} (${((gb.width * gb.height) / 1e6).toFixed(1)}MP)</div>`;
+        html += `<div><strong>Quality:</strong> ${conf.quality || '?'} (${Math.round((conf.overall || 0) * 100)}%)</div>`;
+        html += `<div><strong>Depth conf:</strong> ${Math.round((conf.depth?.score || 0) * 100)}%</div>`;
+        html += `<div><strong>Normal conf:</strong> ${Math.round((conf.normal?.score || 0) * 100)}%</div>`;
+        html += `<div><strong>Material conf:</strong> ${Math.round((conf.material?.score || 0) * 100)}%</div>`;
+
+        if (origDir) {
+            html += `<div style="margin-top: 6px; border-top: 1px solid var(--border-color); padding-top: 6px;">`;
+            html += `<strong>Detected light dir:</strong> (${origDir.x.toFixed(2)}, ${origDir.y.toFixed(2)})</div>`;
+        }
+        if (lighting.lightSources) {
+            html += `<div><strong>Light sources:</strong> ${lighting.lightSources}</div>`;
+        }
+        if (lighting.complexity !== undefined) {
+            html += `<div><strong>Lighting complexity:</strong> ${Math.round(lighting.complexity * 100)}%</div>`;
+        }
+        if (lighting.harshShadows) {
+            html += `<div><strong>Harsh shadows:</strong> Yes</div>`;
+        }
+        if (lighting.coloredLighting) {
+            html += `<div><strong>Colored lighting:</strong> Yes</div>`;
+        }
+
+        html += `<div style="margin-top: 6px; border-top: 1px solid var(--border-color); padding-top: 6px;">`;
+        html += `<strong>Renderer:</strong> ${this.rendererBackend || 'unknown'}</div>`;
+
+        el.innerHTML = html;
     }
 
     // === Public Methods ===

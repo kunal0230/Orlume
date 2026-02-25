@@ -742,11 +742,26 @@ void main() {
     float NdotH = max(dot(normal, H), 0.0);
     float HdotV = max(dot(H, viewDir), 0.0);
 
-    // Ratio Image Relighting
+    // === HYBRID ALBEDO/RATIO RELIGHTING ===
     float newSH = evaluateSH9(normal);
     float origSH = evaluateOrigSH(normal);
+
+    // Ratio method (safe fallback, always works)
     float shadingRatio = newSH / max(origSH, 0.08);
     float smoothRatio = mix(1.0, shadingRatio, u_lightIntensity);
+    vec3 ratioResult = linearOriginal * smoothRatio;
+
+    // Albedo method (better quality where confident)
+    // Soft de-light: extract approximate albedo by dividing out original shading
+    float origShading = max(origSH, 0.25);  // soft clamp prevents division artifacts
+    vec3 albedo = linearOriginal / origShading;
+    albedo = min(albedo, vec3(1.5));  // prevent blow-out from division
+    // Re-light with new SH
+    vec3 albedoResult = albedo * max(newSH, 0.0) * u_lightIntensity * 2.0 + albedo * u_ambient;
+
+    // Blend: use albedo method where shading is confident, ratio where not
+    float albedoConfidence = smoothstep(0.15, 0.5, origSH);  // high confidence = strong original shading
+    vec3 baseResult = mix(ratioResult, albedoResult, albedoConfidence * 0.6);
 
     // Material Classification
     float isSkin = smoothstep(0.15, 0.25, materialType) * (1.0 - smoothstep(0.25, 0.35, materialType));
@@ -808,8 +823,8 @@ void main() {
     vec3 msComp = vec3(1.0) + F0 * (roughness * roughness) * 0.5;
     specContrib *= msComp;
 
-    // Composition
-    vec3 result = linearOriginal * smoothRatio;
+    // Composition — use hybrid base instead of pure ratio
+    vec3 result = baseResult;
     result *= curvatureBoost;
     result *= depthAttenuation;
     result *= mix(1.0, combinedShadow, 0.7);
