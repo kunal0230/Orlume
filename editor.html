@@ -1768,11 +1768,22 @@
                             style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                             <span
                                 style="font-size: 10px; font-weight: 600; color: var(--accent); background: rgba(99, 102, 241, 0.2); padding: 2px 6px; border-radius: 4px;">BETA</span>
-                            <span style="font-size: 9px; color: var(--text-tertiary);">Updated 8 Feb 2026</span>
+                            <span style="font-size: 9px; color: var(--text-tertiary);">Updated 25 Feb 2026</span>
                         </div>
                         <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            In active development. Currently refining normal map fusion to preserve surface detail while
-                            minimizing edge artifacts.
+                            SH-based albedo extraction for cleaner relighting. 4-stage normal smoothing eliminates
+                            surface texture artifacts. Hybrid neural + depth-derived normals for accurate shading.
+                        </p>
+                    </div>
+
+                    <!-- Performance Notice -->
+                    <div
+                        style="padding: 8px 12px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                        <span style="font-size: 14px; line-height: 1;">⚡</span>
+                        <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                            <strong style="color: #eab308;">GPU-intensive feature.</strong>
+                            Runs AI depth estimation, normal computation, and PBR shading on your device.
+                            May take 5–15 s on slower hardware. Avoid switching tabs during analysis.
                         </p>
                     </div>
 
@@ -2013,6 +2024,17 @@
                                 <button class="btn v8-map-btn v8-map-btn-reset" data-map="reset"
                                     style="font-size: 10px; padding: 5px 4px; color: #aaa;">✕ Clear</button>
                             </div>
+                            <!-- Export All Maps button -->
+                            <button class="btn" id="btn-v8-export-maps"
+                                style="width: 100%; margin-bottom: 8px; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Export All Maps
+                            </button>
                             <!-- Active map label -->
                             <div id="v8-debug-label"
                                 style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; min-height: 14px;">

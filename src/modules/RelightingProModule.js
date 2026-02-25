@@ -101,6 +101,7 @@ export class RelightingProModule {
         this.elements.debugLabel = document.getElementById('v8-debug-label');
         this.elements.debugInfoContent = document.getElementById('v8-debug-info-content');
         this.elements.debugMapBtns = document.querySelectorAll('.v8-map-btn');
+        this.elements.exportMapsBtn = document.getElementById('btn-v8-export-maps');
     }
 
     _setupEventListeners() {
@@ -186,6 +187,10 @@ export class RelightingProModule {
                     this._renderDebugMap(btn.dataset.map);
                 });
             });
+        }
+        // Export maps button
+        if (this.elements.exportMapsBtn) {
+            this.elements.exportMapsBtn.addEventListener('click', () => this._exportAllMaps());
         }
     }
 
@@ -710,6 +715,11 @@ export class RelightingProModule {
         const betaNotice = document.getElementById('v8-beta-notice');
         if (introText) introText.style.display = 'none';
         if (betaNotice) betaNotice.style.display = 'none';
+        // Hide performance notice too
+        const perfNotice = betaNotice?.nextElementSibling;
+        if (perfNotice && perfNotice.textContent.includes('GPU-intensive')) {
+            perfNotice.style.display = 'none';
+        }
 
         // Add BETA badge with hover tooltip to header (if not already added)
         this._addBetaHeaderBadge();
@@ -776,8 +786,8 @@ export class RelightingProModule {
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         `;
         tooltip.innerHTML = `
-            <div style="font-weight: 600; color: var(--accent); margin-bottom: 4px;">BETA · Updated 8 Feb 2026</div>
-            In active development. Currently refining normal map fusion to preserve surface detail while minimizing edge artifacts.
+            <div style="font-weight: 600; color: var(--accent); margin-bottom: 4px;">BETA · Updated 25 Feb 2026</div>
+            SH-based albedo extraction for cleaner relighting. 4-stage normal smoothing eliminates surface texture artifacts. Hybrid neural + depth-derived normals for accurate shading.
         `;
         document.body.appendChild(tooltip);
 
@@ -1086,6 +1096,93 @@ export class RelightingProModule {
         if (this.ui?.gpu) {
             this.ui.gpu.loadImage(canvas);
         }
+    }
+
+    /**
+     * Export all analysis maps as PNG downloads (staggered to avoid blocking)
+     */
+    async _exportAllMaps() {
+        if (!this.pipeline.gBuffer) {
+            console.warn('No analysis data — run Analyze first');
+            return;
+        }
+
+        const mapTypes = ['depth', 'normals', 'albedo', 'material', 'roughness', 'curvature', 'depthLayer'];
+
+        for (const mapType of mapTypes) {
+            // Reuse _renderDebugMap logic to draw each map onto a temp canvas
+            const { width, height, depth, normals, sceneMap, albedo } = this.pipeline.gBuffer;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(width, height);
+
+            if (mapType === 'depth' && depth?.data) {
+                let minD = Infinity, maxD = -Infinity;
+                for (let i = 0; i < depth.data.length; i++) {
+                    if (depth.data[i] < minD) minD = depth.data[i];
+                    if (depth.data[i] > maxD) maxD = depth.data[i];
+                }
+                const range = maxD - minD || 1;
+                for (let i = 0; i < depth.data.length; i++) {
+                    const v = Math.round(((depth.data[i] - minD) / range) * 255);
+                    const px = i * 4;
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v; imgData.data[px + 3] = 255;
+                }
+            } else if (mapType === 'normals' && normals?.data) {
+                for (let i = 0; i < width * height; i++) {
+                    const ni = i * 3, px = i * 4;
+                    imgData.data[px] = Math.round((normals.data[ni] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 1] = Math.round((normals.data[ni + 1] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 2] = Math.round((normals.data[ni + 2] * 0.5 + 0.5) * 255);
+                    imgData.data[px + 3] = 255;
+                }
+            } else if (mapType === 'albedo' && albedo?.data) {
+                for (let i = 0; i < width * height * 4; i++) imgData.data[i] = albedo.data[i];
+            } else if (mapType === 'material' && sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4;
+                    const mat = sceneMap.data[px] / 255;
+                    if (mat < 0.1) { imgData.data[px] = 30; imgData.data[px + 1] = 30; imgData.data[px + 2] = 30; }
+                    else if (mat < 0.35) { imgData.data[px] = 255; imgData.data[px + 1] = 140; imgData.data[px + 2] = 100; }
+                    else if (mat < 0.6) { imgData.data[px] = 80; imgData.data[px + 1] = 200; imgData.data[px + 2] = 100; }
+                    else if (mat < 0.85) { imgData.data[px] = 100; imgData.data[px + 1] = 140; imgData.data[px + 2] = 255; }
+                    else { imgData.data[px] = 230; imgData.data[px + 1] = 230; imgData.data[px + 2] = 240; }
+                    imgData.data[px + 3] = 255;
+                }
+            } else if (mapType === 'roughness' && sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4, v = sceneMap.data[px + 1];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v; imgData.data[px + 3] = 255;
+                }
+            } else if (mapType === 'curvature' && sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4, v = sceneMap.data[px + 2];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v; imgData.data[px + 3] = 255;
+                }
+            } else if (mapType === 'depthLayer' && sceneMap) {
+                for (let i = 0; i < width * height; i++) {
+                    const px = i * 4, v = sceneMap.data[px + 3];
+                    imgData.data[px] = v; imgData.data[px + 1] = v; imgData.data[px + 2] = v; imgData.data[px + 3] = 255;
+                }
+            } else {
+                continue; // Skip if data missing
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.download = `orlume_${mapType}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            // Stagger downloads to avoid browser blocking
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        console.log('✓ Exported all 7 analysis maps');
     }
 
     /**

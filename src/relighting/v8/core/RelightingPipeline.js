@@ -326,7 +326,7 @@ export class RelightingPipeline extends EventEmitter {
         const { data, width, height } = depth;
 
         // Pre-smooth the depth map to eliminate quantization artifacts (uint8 = only 256 levels)
-        const smoothed = this._gaussianBlurDepth(data, width, height, 8);
+        const smoothed = await this._gaussianBlurDepth(data, width, height, 8);
 
         const normals = new Float32Array(width * height * 3);
 
@@ -378,7 +378,7 @@ export class RelightingPipeline extends EventEmitter {
         }
 
         // Post-Sobel Gaussian blur on normals to smooth remaining per-pixel noise
-        const blurredNormals = this._gaussianBlurNormals(normals, width, height, 6);
+        const blurredNormals = await this._gaussianBlurNormals(normals, width, height, 6);
 
         return {
             data: blurredNormals,
@@ -389,9 +389,9 @@ export class RelightingPipeline extends EventEmitter {
 
     /**
      * Gaussian blur for depth map (Float32Array or Uint8Array).
-     * Separable two-pass for performance.
+     * Separable two-pass, async with chunked yielding to prevent Page Unresponsive.
      */
-    _gaussianBlurDepth(data, width, height, radius) {
+    async _gaussianBlurDepth(data, width, height, radius) {
         const sigma = radius / 2.0;
         const kernelSize = radius * 2 + 1;
         const kernel = new Float32Array(kernelSize);
@@ -406,29 +406,38 @@ export class RelightingPipeline extends EventEmitter {
         const n = width * height;
         const tmp = new Float32Array(n);
         const dst = new Float32Array(n);
+        const CHUNK = 128;
 
         // Horizontal pass
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let v = 0;
-                for (let k = -radius; k <= radius; k++) {
-                    const sx = Math.min(width - 1, Math.max(0, x + k));
-                    v += data[y * width + sx] * kernel[k + radius];
+        for (let startY = 0; startY < height; startY += CHUNK) {
+            const endY = Math.min(startY + CHUNK, height);
+            for (let y = startY; y < endY; y++) {
+                for (let x = 0; x < width; x++) {
+                    let v = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const sx = Math.min(width - 1, Math.max(0, x + k));
+                        v += data[y * width + sx] * kernel[k + radius];
+                    }
+                    tmp[y * width + x] = v;
                 }
-                tmp[y * width + x] = v;
             }
+            if (startY + CHUNK < height) await new Promise(r => setTimeout(r, 0));
         }
 
         // Vertical pass
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let v = 0;
-                for (let k = -radius; k <= radius; k++) {
-                    const sy = Math.min(height - 1, Math.max(0, y + k));
-                    v += tmp[sy * width + x] * kernel[k + radius];
+        for (let startY = 0; startY < height; startY += CHUNK) {
+            const endY = Math.min(startY + CHUNK, height);
+            for (let y = startY; y < endY; y++) {
+                for (let x = 0; x < width; x++) {
+                    let v = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const sy = Math.min(height - 1, Math.max(0, y + k));
+                        v += tmp[sy * width + x] * kernel[k + radius];
+                    }
+                    dst[y * width + x] = v;
                 }
-                dst[y * width + x] = v;
             }
+            if (startY + CHUNK < height) await new Promise(r => setTimeout(r, 0));
         }
 
         return dst;
@@ -436,9 +445,9 @@ export class RelightingPipeline extends EventEmitter {
 
     /**
      * Gaussian blur for normals (Float32Array, 3 channels per pixel).
-     * Separable two-pass, with re-normalization after blurring.
+     * Separable two-pass with re-normalization. Async with chunked yielding.
      */
-    _gaussianBlurNormals(normals, width, height, radius) {
+    async _gaussianBlurNormals(normals, width, height, radius) {
         const sigma = radius / 2.0;
         const kernelSize = radius * 2 + 1;
         const kernel = new Float32Array(kernelSize);
@@ -453,44 +462,53 @@ export class RelightingPipeline extends EventEmitter {
         const n = width * height;
         const tmp = new Float32Array(n * 3);
         const dst = new Float32Array(n * 3);
+        const CHUNK = 128;
 
         // Horizontal pass
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let sx0 = 0, sy0 = 0, sz0 = 0;
-                for (let k = -radius; k <= radius; k++) {
-                    const cx = Math.min(width - 1, Math.max(0, x + k));
-                    const idx = (y * width + cx) * 3;
-                    const w = kernel[k + radius];
-                    sx0 += normals[idx] * w;
-                    sy0 += normals[idx + 1] * w;
-                    sz0 += normals[idx + 2] * w;
+        for (let startY = 0; startY < height; startY += CHUNK) {
+            const endY = Math.min(startY + CHUNK, height);
+            for (let y = startY; y < endY; y++) {
+                for (let x = 0; x < width; x++) {
+                    let sx0 = 0, sy0 = 0, sz0 = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const cx = Math.min(width - 1, Math.max(0, x + k));
+                        const idx = (y * width + cx) * 3;
+                        const w = kernel[k + radius];
+                        sx0 += normals[idx] * w;
+                        sy0 += normals[idx + 1] * w;
+                        sz0 += normals[idx + 2] * w;
+                    }
+                    const oi = (y * width + x) * 3;
+                    tmp[oi] = sx0;
+                    tmp[oi + 1] = sy0;
+                    tmp[oi + 2] = sz0;
                 }
-                const oi = (y * width + x) * 3;
-                tmp[oi] = sx0;
-                tmp[oi + 1] = sy0;
-                tmp[oi + 2] = sz0;
             }
+            if (startY + CHUNK < height) await new Promise(r => setTimeout(r, 0));
         }
 
         // Vertical pass + re-normalize
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let sx0 = 0, sy0 = 0, sz0 = 0;
-                for (let k = -radius; k <= radius; k++) {
-                    const cy = Math.min(height - 1, Math.max(0, y + k));
-                    const idx = (cy * width + x) * 3;
-                    const w = kernel[k + radius];
-                    sx0 += tmp[idx] * w;
-                    sy0 += tmp[idx + 1] * w;
-                    sz0 += tmp[idx + 2] * w;
+        for (let startY = 0; startY < height; startY += CHUNK) {
+            const endY = Math.min(startY + CHUNK, height);
+            for (let y = startY; y < endY; y++) {
+                for (let x = 0; x < width; x++) {
+                    let sx0 = 0, sy0 = 0, sz0 = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const cy = Math.min(height - 1, Math.max(0, y + k));
+                        const idx = (cy * width + x) * 3;
+                        const w = kernel[k + radius];
+                        sx0 += tmp[idx] * w;
+                        sy0 += tmp[idx + 1] * w;
+                        sz0 += tmp[idx + 2] * w;
+                    }
+                    const oi = (y * width + x) * 3;
+                    const len = Math.sqrt(sx0 * sx0 + sy0 * sy0 + sz0 * sz0) || 1;
+                    dst[oi] = sx0 / len;
+                    dst[oi + 1] = sy0 / len;
+                    dst[oi + 2] = sz0 / len;
                 }
-                const oi = (y * width + x) * 3;
-                const len = Math.sqrt(sx0 * sx0 + sy0 * sy0 + sz0 * sz0) || 1;
-                dst[oi] = sx0 / len;
-                dst[oi + 1] = sy0 / len;
-                dst[oi + 2] = sz0 / len;
             }
+            if (startY + CHUNK < height) await new Promise(r => setTimeout(r, 0));
         }
 
         return dst;
