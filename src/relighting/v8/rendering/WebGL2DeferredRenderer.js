@@ -723,7 +723,16 @@ float computeShadow(vec2 uv, float centerDepth, vec3 lightDir, float depthLayer)
 void main() {
     vec3 originalColor = texture(u_albedo, v_texCoord).rgb;
     float depth = texture(u_depth, v_texCoord).r;
-    vec3 normal = normalize(texture(u_normals, v_texCoord).rgb * 2.0 - 1.0);
+
+    // 5-tap cross blur on normals for smoother surfaces
+    vec2 texelSize = 1.0 / u_resolution;
+    vec3 n0 = texture(u_normals, v_texCoord).rgb * 2.0 - 1.0;
+    vec3 n1 = texture(u_normals, v_texCoord + vec2(texelSize.x, 0.0)).rgb * 2.0 - 1.0;
+    vec3 n2 = texture(u_normals, v_texCoord - vec2(texelSize.x, 0.0)).rgb * 2.0 - 1.0;
+    vec3 n3 = texture(u_normals, v_texCoord + vec2(0.0, texelSize.y)).rgb * 2.0 - 1.0;
+    vec3 n4 = texture(u_normals, v_texCoord - vec2(0.0, texelSize.y)).rgb * 2.0 - 1.0;
+    vec3 normal = normalize(n0 * 0.4 + (n1 + n2 + n3 + n4) * 0.15);
+
     vec4 scene = texture(u_sceneMap, v_texCoord);
     
     // Decode scene map

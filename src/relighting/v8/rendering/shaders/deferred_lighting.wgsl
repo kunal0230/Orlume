@@ -239,7 +239,16 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
     // === Sample G-Buffer ===
     let originalColor = textureSample(albedoTex, texSampler, uv).rgb;
     let depth         = textureSample(depthTex, texSampler, uv).r;
-    let normal        = normalize(textureSample(normalTex, texSampler, uv).rgb * 2.0 - 1.0);
+
+    // 5-tap cross blur on normals for smoother surfaces
+    let texelSize = 1.0 / u.resolution;
+    let n0 = textureSample(normalTex, texSampler, uv).rgb * 2.0 - 1.0;
+    let n1 = textureSample(normalTex, texSampler, uv + vec2f(texelSize.x, 0.0)).rgb * 2.0 - 1.0;
+    let n2 = textureSample(normalTex, texSampler, uv - vec2f(texelSize.x, 0.0)).rgb * 2.0 - 1.0;
+    let n3 = textureSample(normalTex, texSampler, uv + vec2f(0.0, texelSize.y)).rgb * 2.0 - 1.0;
+    let n4 = textureSample(normalTex, texSampler, uv - vec2f(0.0, texelSize.y)).rgb * 2.0 - 1.0;
+    let normal        = normalize(n0 * 0.4 + (n1 + n2 + n3 + n4) * 0.15);
+
     let scene         = textureSample(sceneMapTex, texSampler, uv);
 
     // === Decode Scene Map ===

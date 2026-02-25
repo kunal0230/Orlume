@@ -326,7 +326,7 @@ export class RelightingPipeline extends EventEmitter {
         const { data, width, height } = depth;
 
         // Pre-smooth the depth map to eliminate quantization artifacts (uint8 = only 256 levels)
-        const smoothed = this._gaussianBlurDepth(data, width, height, 3);
+        const smoothed = this._gaussianBlurDepth(data, width, height, 8);
 
         const normals = new Float32Array(width * height * 3);
 
@@ -358,7 +358,7 @@ export class RelightingPipeline extends EventEmitter {
 
                     let nx = -dX;
                     let ny = -dY;
-                    let nz = 1.0; // More natural normals (was 1/8 = overly aggressive)
+                    let nz = 4.0; // Flatter normals — reduces micro-bump sensitivity while preserving macro shape
 
                     // Normalize
                     const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
@@ -377,8 +377,11 @@ export class RelightingPipeline extends EventEmitter {
             await new Promise(resolve => setTimeout(resolve, 0));
         }
 
+        // Post-Sobel Gaussian blur on normals to smooth remaining per-pixel noise
+        const blurredNormals = this._gaussianBlurNormals(normals, width, height, 6);
+
         return {
-            data: normals,
+            data: blurredNormals,
             width,
             height
         };
@@ -425,6 +428,68 @@ export class RelightingPipeline extends EventEmitter {
                     v += tmp[sy * width + x] * kernel[k + radius];
                 }
                 dst[y * width + x] = v;
+            }
+        }
+
+        return dst;
+    }
+
+    /**
+     * Gaussian blur for normals (Float32Array, 3 channels per pixel).
+     * Separable two-pass, with re-normalization after blurring.
+     */
+    _gaussianBlurNormals(normals, width, height, radius) {
+        const sigma = radius / 2.0;
+        const kernelSize = radius * 2 + 1;
+        const kernel = new Float32Array(kernelSize);
+        let sum = 0;
+        for (let i = 0; i < kernelSize; i++) {
+            const x = i - radius;
+            kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+            sum += kernel[i];
+        }
+        for (let i = 0; i < kernelSize; i++) kernel[i] /= sum;
+
+        const n = width * height;
+        const tmp = new Float32Array(n * 3);
+        const dst = new Float32Array(n * 3);
+
+        // Horizontal pass
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let sx0 = 0, sy0 = 0, sz0 = 0;
+                for (let k = -radius; k <= radius; k++) {
+                    const cx = Math.min(width - 1, Math.max(0, x + k));
+                    const idx = (y * width + cx) * 3;
+                    const w = kernel[k + radius];
+                    sx0 += normals[idx] * w;
+                    sy0 += normals[idx + 1] * w;
+                    sz0 += normals[idx + 2] * w;
+                }
+                const oi = (y * width + x) * 3;
+                tmp[oi] = sx0;
+                tmp[oi + 1] = sy0;
+                tmp[oi + 2] = sz0;
+            }
+        }
+
+        // Vertical pass + re-normalize
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let sx0 = 0, sy0 = 0, sz0 = 0;
+                for (let k = -radius; k <= radius; k++) {
+                    const cy = Math.min(height - 1, Math.max(0, y + k));
+                    const idx = (cy * width + x) * 3;
+                    const w = kernel[k + radius];
+                    sx0 += tmp[idx] * w;
+                    sy0 += tmp[idx + 1] * w;
+                    sz0 += tmp[idx + 2] * w;
+                }
+                const oi = (y * width + x) * 3;
+                const len = Math.sqrt(sx0 * sx0 + sy0 * sy0 + sz0 * sz0) || 1;
+                dst[oi] = sx0 / len;
+                dst[oi + 1] = sy0 / len;
+                dst[oi + 2] = sz0 / len;
             }
         }
 
