@@ -572,7 +572,7 @@ export class RelightingProModule {
             return;
         }
 
-        // Show analysis progress and disable button immediately
+        // Show analysis progress and disable button IMMEDIATELY
         if (this.elements.analysisStatus) {
             this.elements.analysisStatus.style.display = 'block';
         }
@@ -581,11 +581,19 @@ export class RelightingProModule {
             this.elements.analyzeBtn.textContent = 'Analyzing...';
         }
         if (this.elements.analysisBar) {
-            this.elements.analysisBar.style.width = '0%';
+            this.elements.analysisBar.style.width = '2%';
+        }
+        if (this.elements.analysisStage) {
+            this.elements.analysisStage.textContent = 'Starting...';
         }
         if (this.elements.analysisPercent) {
-            this.elements.analysisPercent.textContent = '0%';
+            this.elements.analysisPercent.textContent = '2%';
         }
+
+        // CRITICAL: Force the browser to repaint BEFORE heavy work begins.
+        // Without this, the button/progress changes above are never rendered
+        // because createImageBitmap + pipeline init blocks the main thread.
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
         try {
             // Get the GPU canvas directly — avoids the expensive toImageData() readback
