@@ -36,7 +36,7 @@ The complete processing flow from image upload to final rendered output:
 
 ```mermaid
 flowchart TD
-    A["📷 User Uploads Image"] --> B{"Resolution > 4K?"}
+    A[" User Uploads Image"] --> B{"Resolution > 4K?"}
     B -->|Yes| C[" Modal: Ask to Resize"]
     C -->|Approve| D[" Multi-Step Downscale to 4K"]
     C -->|Cancel| Z[" Abort"]
