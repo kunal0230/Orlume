@@ -541,7 +541,22 @@ export class ResolutionManager {
     }
 
     async _singleStepResize(image, targetWidth, targetHeight) {
-        // Use OffscreenCanvas if available (better performance)
+        // Prefer createImageBitmap with resize options — runs entirely off the main
+        // thread, so even 50MP images won't trigger "Page Unresponsive" dialogs.
+        if (typeof createImageBitmap !== 'undefined') {
+            try {
+                const resized = await createImageBitmap(image, {
+                    resizeWidth: targetWidth,
+                    resizeHeight: targetHeight,
+                    resizeQuality: 'high'
+                });
+                return resized;
+            } catch {
+                // Some browsers don't support resize options — fall through to canvas
+            }
+        }
+
+        // Fallback: canvas-based resize (synchronous drawImage, but wrapped to yield)
         const canvas = typeof OffscreenCanvas !== 'undefined'
             ? new OffscreenCanvas(targetWidth, targetHeight)
             : document.createElement('canvas');
@@ -559,7 +574,7 @@ export class ResolutionManager {
             return await createImageBitmap(canvas);
         }
 
-        // Fallback: convert to image element using non-blocking Blob URL
+        // Last resort: convert to image element using non-blocking Blob URL
         return new Promise((resolve, reject) => {
             if (canvas instanceof OffscreenCanvas) {
                 canvas.convertToBlob({ type: 'image/png' })

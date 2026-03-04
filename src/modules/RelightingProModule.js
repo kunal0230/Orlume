@@ -283,6 +283,11 @@ export class RelightingProModule {
             this._onAnalysisComplete(confidence);
         });
 
+        // User cancelled (e.g. declined resize prompt)
+        this.pipeline.on('cancelled', () => {
+            this._resetAnalysisUI();
+        });
+
         // Confidence results
         this.pipeline.on('confidence', (confidence) => {
             this._displayConfidence(confidence);
@@ -625,15 +630,40 @@ export class RelightingProModule {
 
             if (success) {
                 this._onAnalysisComplete();
+            } else {
+                // processImage returned false — user cancelled or models not ready
+                this._resetAnalysisUI();
             }
         } catch (error) {
             this._showError(error.message);
         } finally {
             // Always re-enable button on completion or failure
-            if (this.elements.analyzeBtn && !this.hasAnalyzed) {
+            if (!this.hasAnalyzed) {
                 this.elements.analyzeBtn.disabled = false;
                 this.elements.analyzeBtn.textContent = 'Analyze Image';
             }
+        }
+    }
+
+    /**
+     * Reset the analysis UI back to its initial state (e.g. after user cancels)
+     */
+    _resetAnalysisUI() {
+        if (this.elements.analysisStatus) {
+            this.elements.analysisStatus.style.display = 'none';
+        }
+        if (this.elements.analyzeBtn) {
+            this.elements.analyzeBtn.disabled = false;
+            this.elements.analyzeBtn.textContent = 'Analyze Image';
+        }
+        if (this.elements.analysisBar) {
+            this.elements.analysisBar.style.width = '0%';
+        }
+        if (this.elements.analysisStage) {
+            this.elements.analysisStage.textContent = '';
+        }
+        if (this.elements.analysisPercent) {
+            this.elements.analysisPercent.textContent = '';
         }
     }
 
