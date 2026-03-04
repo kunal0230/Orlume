@@ -156,7 +156,7 @@
 
             <div class="cards-grid">
                 <!-- Tutorial 1: 3D Relighting -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/relight_after.png" alt="3D Relighting Tutorial">
                     </div>
@@ -174,7 +174,7 @@
                 </article>
 
                 <!-- Tutorial 2: Background Removal -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/bg_remove_after.png" alt="Background Removal Tutorial">
                     </div>
@@ -191,7 +191,7 @@
                 </article>
 
                 <!-- Tutorial 3: Color Grading -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/grading_after.png" alt="Color Grading Tutorial">
                     </div>
@@ -208,7 +208,7 @@
                 </article>
 
                 <!-- Tutorial 4: Presets -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/grading_after.png" alt="Presets Tutorial">
                     </div>
@@ -225,7 +225,7 @@
                 </article>
 
                 <!-- Tutorial 5: Portrait Retouching -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/relight_after.png" alt="Portrait Retouching Tutorial">
                     </div>
@@ -242,7 +242,7 @@
                 </article>
 
                 <!-- Tutorial 6: Export Optimization -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/bg_remove_before.png" alt="Export Tutorial">
                     </div>
@@ -293,9 +293,33 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2024 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
+
+    <script>
+        // Scroll reveal for sub-pages
+        document.querySelectorAll('.reveal-page').forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                el.classList.add('visible');
+            }
+        });
+        const revealObs = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.reveal-page').forEach(el => revealObs.observe(el));
+
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

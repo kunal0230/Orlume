@@ -29,31 +29,12 @@
         "description": "Step-by-step guide to using Orlume's AI-powered 3D relighting feature",
         "image": "https://orlume.io/relight_after.png",
         "step": [
-            {
-                "@type": "HowToStep",
-                "name": "Upload your image",
-                "text": "Open the Orlume editor and upload your photo by dragging and dropping or clicking to browse."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Select 3D Relight tool",
-                "text": "Click the lightbulb icon in the toolbar to activate the 3D relighting mode."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Position your light",
-                "text": "Click and drag on your image to position the virtual light source. The AI will calculate realistic lighting based on the 3D structure."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Adjust intensity and softness",
-                "text": "Use the sliders to control light intensity, softness, and color temperature for the perfect look."
-            }
+            { "@type": "HowToStep", "name": "Upload your image", "text": "Open the Orlume editor and upload your photo." },
+            { "@type": "HowToStep", "name": "Select 3D Relight tool", "text": "Click the lightbulb icon in the toolbar." },
+            { "@type": "HowToStep", "name": "Position your light", "text": "Click and drag to position the virtual light source." },
+            { "@type": "HowToStep", "name": "Adjust intensity and softness", "text": "Use sliders to control light properties." }
         ],
-        "author": {
-            "@type": "Organization",
-            "name": "Orlume Vision Labs"
-        }
+        "author": { "@type": "Organization", "name": "Orlume Vision Labs" }
     }
     </script>
 
@@ -62,12 +43,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/landing.css">
     <link rel="stylesheet" href="/src/styles/pages.css">
-    <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <script type="module" src="/src/utils/analytics.js"></script>
 </head>
 
 <body>
+    <div class="reading-progress" id="reading-progress"></div>
     <div class="mesh-gradient">
         <div class="mesh-orb"></div>
     </div>
@@ -77,8 +58,88 @@
             <a href="/" class="nav-logo">Orlume</a>
             <div class="nav-menu">
                 <div class="nav-item"><a href="/#features">Features</a></div>
-                <div class="nav-item"><a href="/blog">Blog</a></div>
-                <div class="nav-item"><a href="/docs">Docs</a></div>
+                <div class="nav-item">
+                    <button type="button">Resources <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <button type="button">Community <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join us</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
             <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
@@ -95,96 +156,143 @@
                 estimation and virtual lighting.</p>
         </header>
 
-        <figure class="article-hero-image">
-            <img src="/relight_after.png"
-                alt="Before and after 3D relighting example showing dramatic portrait lighting">
-            <figcaption>3D relighting adds realistic rim lighting and shadows based on AI depth analysis</figcaption>
-        </figure>
+        <div class="article-main">
+            <figure class="article-hero-image">
+                <img src="/relight_after.png"
+                    alt="Before and after 3D relighting example showing dramatic portrait lighting">
+                <figcaption>3D relighting adds realistic rim lighting and shadows based on AI depth analysis
+                </figcaption>
+            </figure>
 
-        <div class="article-content">
-            <p class="article-lead">Lighting is everything in photography. It separates amateur snapshots from
-                professional portraits. But what if you could add professional lighting to any photo, after it's already
-                been taken? That's exactly what Orlume's 3D relighting does.</p>
+            <div class="article-content">
+                <p class="article-lead">Lighting is everything in photography. It separates amateur snapshots from
+                    professional portraits. But what if you could add professional lighting to any photo, after it's
+                    already been taken? That's exactly what Orlume's 3D relighting does.</p>
 
-            <h2>What is 3D Relighting?</h2>
-            <p>3D relighting is an AI-powered technique that analyzes the depth and structure of your photo, then
-                simulates how light would realistically interact with the scene. Unlike simple brightness adjustments or
-                overlay effects, 3D relighting understands that a nose casts a shadow, that cheekbones catch highlights,
-                and that hair creates complex light patterns.</p>
+                <h2 id="what-is-3d-relighting">What is 3D Relighting?</h2>
+                <p>3D relighting is an AI-powered technique that analyzes the depth and structure of your photo, then
+                    simulates how light would realistically interact with the scene. Unlike simple brightness
+                    adjustments or overlay effects, 3D relighting understands that a nose casts a shadow, that
+                    cheekbones catch highlights, and that hair creates complex light patterns.</p>
 
-            <p>Our neural depth estimation model processes your image to create a detailed 3D map. When you place a
-                virtual light source, we calculate how that light would illuminate every surface, accounting for angles,
-                distances, and material properties.</p>
+                <p>Our neural depth estimation model processes your image to create a detailed 3D map. When you place a
+                    virtual light source, we calculate how that light would illuminate every surface, accounting for
+                    angles, distances, and material properties.</p>
 
-            <h2>How to Use 3D Relighting in Orlume</h2>
+                <h2 id="how-to-use">How to Use 3D Relighting in Orlume</h2>
 
-            <h3>Step 1: Upload Your Image</h3>
-            <p>Open the <a href="/editor">Orlume Editor</a> and upload your photo. You can drag and drop, paste from
-                clipboard, or click to browse. Orlume supports JPG, PNG, and WebP files up to 50MB.</p>
+                <h3 id="step-1">Step 1: Upload Your Image</h3>
+                <p>Open the <a href="/editor">Orlume Editor</a> and upload your photo. You can drag and drop, paste from
+                    clipboard, or click to browse. Orlume supports JPG, PNG, and WebP files up to 50MB.</p>
 
-            <h3>Step 2: Activate the 3D Relight Tool</h3>
-            <p>In the left toolbar, click the lightbulb icon to activate 3D relighting mode. You'll see an overlay
-                indicating the tool is active and ready for light placement.</p>
+                <h3 id="step-2">Step 2: Activate the 3D Relight Tool</h3>
+                <p>In the left toolbar, click the lightbulb icon to activate 3D relighting mode. You'll see an overlay
+                    indicating the tool is active and ready for light placement.</p>
 
-            <h3>Step 3: Position Your Light Source</h3>
-            <p>Click anywhere on your image to place the virtual light source. A glowing indicator shows the light's
-                position. Drag it around to see how different positions affect the lighting in real-time.</p>
+                <h3 id="step-3">Step 3: Position Your Light Source</h3>
+                <p>Click anywhere on your image to place the virtual light source. A glowing indicator shows the light's
+                    position. Drag it around to see how different positions affect the lighting in real-time.</p>
+                <p><strong>Pro tip:</strong> For portraits, try positioning the light at a 45-degree angle above and to
+                    the side of the subject. This creates classic "Rembrandt lighting" with a pleasing triangle of light
+                    on the shadowed cheek.</p>
 
-            <p><strong>Pro tip:</strong> For portraits, try positioning the light at a 45-degree angle above and to the
-                side of the subject. This creates classic "Rembrandt lighting" with a pleasing triangle of light on the
-                shadowed cheek.</p>
+                <h3 id="step-4">Step 4: Adjust Light Properties</h3>
+                <p>Use the control panel to fine-tune your lighting:</p>
+                <ul>
+                    <li><strong>Intensity:</strong> Controls how bright the light appears. Higher values create more
+                        dramatic contrast.</li>
+                    <li><strong>Direction:</strong> Rotates the light source around your subject for different angles.
+                    </li>
+                    <li><strong>Softness:</strong> Determines how sharp or diffused the shadows are. Soft light is
+                        flattering for portraits; hard light creates drama.</li>
+                    <li><strong>Color Temperature:</strong> Shift between warm (golden) and cool (blue) lighting to
+                        match your mood.</li>
+                </ul>
 
-            <h3>Step 4: Adjust Light Properties</h3>
-            <p>Use the control panel to fine-tune your lighting:</p>
-            <ul>
-                <li><strong>Intensity:</strong> Controls how bright the light appears. Higher values create more
-                    dramatic contrast.</li>
-                <li><strong>Direction:</strong> Rotates the light source around your subject for different angles.</li>
-                <li><strong>Softness:</strong> Determines how sharp or diffused the shadows are. Soft light is
-                    flattering for portraits; hard light creates drama.</li>
-                <li><strong>Color Temperature:</strong> Shift between warm (golden) and cool (blue) lighting to match
-                    your mood.</li>
-            </ul>
+                <h3 id="step-5">Step 5: Layer Multiple Lights</h3>
+                <p>For complex lighting setups, you can add multiple light sources. This is perfect for creating
+                    professional three-point lighting with a key light, fill light, and rim light.</p>
 
-            <h3>Step 5: Layer Multiple Lights</h3>
-            <p>For complex lighting setups, you can add multiple light sources. This is perfect for creating
-                professional three-point lighting with a key light, fill light, and rim light.</p>
+                <h2 id="best-use-cases">Best Use Cases for 3D Relighting</h2>
 
-            <h2>Best Use Cases for 3D Relighting</h2>
+                <h3 id="portrait-enhancement">Portrait Enhancement</h3>
+                <p>Add rim lighting to separate your subject from the background. Fill in harsh shadows from midday sun.
+                    Create studio-quality lighting from outdoor snapshots.</p>
 
-            <h3>Portrait Enhancement</h3>
-            <p>Add rim lighting to separate your subject from the background. Fill in harsh shadows from midday sun.
-                Create studio-quality lighting from outdoor snapshots.</p>
+                <h3 id="product-photography">Product Photography</h3>
+                <p>Highlight product features with strategic lighting. Create consistent lighting across multiple
+                    product shots. Add drama to flat e-commerce images.</p>
 
-            <h3>Product Photography</h3>
-            <p>Highlight product features with strategic lighting. Create consistent lighting across multiple product
-                shots. Add drama to flat e-commerce images.</p>
+                <h3 id="creative-effects">Creative Effects</h3>
+                <p>Create neon-colored lighting for cyberpunk aesthetics. Add dramatic single-source lighting for film
+                    noir effects. Simulate golden hour lighting at any time of day.</p>
 
-            <h3>Creative Effects</h3>
-            <p>Create neon-colored lighting for cyberpunk aesthetics. Add dramatic single-source lighting for film noir
-                effects. Simulate golden hour lighting at any time of day.</p>
+                <h2 id="technology">The Technology Behind 3D Relighting</h2>
+                <p>Orlume's relighting uses a combination of monocular depth estimation (predicting 3D structure from a
+                    single 2D image) and physically-based rendering. Our AI model was trained on millions of images with
+                    known lighting conditions, learning to predict how surfaces reflect and absorb light.</p>
+                <p>All processing happens directly in your browser using WebGPU acceleration. Your photos are never
+                    uploaded to our servers, ensuring complete privacy while delivering real-time performance.</p>
 
-            <h2>The Technology Behind 3D Relighting</h2>
-            <p>Orlume's relighting uses a combination of monocular depth estimation (predicting 3D structure from a
-                single 2D image) and physically-based rendering. Our AI model was trained on millions of images with
-                known lighting conditions, learning to predict how surfaces reflect and absorb light.</p>
+                <h2 id="try-it">Try It Yourself</h2>
+                <p>The best way to understand 3D relighting is to try it. <a href="/editor?tool=3d">Open the Orlume
+                        Editor</a> with the 3D Relight tool pre-selected and transform your photos with professional
+                    lighting -- completely free.</p>
+            </div>
 
-            <p>All processing happens directly in your browser using WebGPU acceleration. Your photos are never uploaded
-                to our servers, ensuring complete privacy while delivering real-time performance.</p>
-
-            <h2>Try It Yourself</h2>
-            <p>The best way to understand 3D relighting is to try it. <a href="/editor?tool=3d">Open the Orlume
-                    Editor</a> with the 3D Relight tool pre-selected and transform your photos with professional
-                lighting — completely free.</p>
+            <footer class="article-footer">
+                <div class="article-cta">
+                    <h3>Ready to relight your photos?</h3>
+                    <p>Try our AI-powered 3D relighting tool for free.</p>
+                    <a href="/editor?tool=3d" class="btn btn-primary">Try 3D Relighting</a>
+                </div>
+            </footer>
         </div>
 
-        <footer class="article-footer">
-            <div class="article-cta">
-                <h3>Ready to relight your photos?</h3>
-                <p>Try our AI-powered 3D relighting tool for free.</p>
-                <a href="/editor?tool=3d" class="btn btn-primary">Try 3D Relighting →</a>
+        <aside class="article-sidebar">
+            <nav class="article-toc">
+                <div class="article-toc-title">On this page</div>
+                <ul class="article-toc-list">
+                    <li><a href="#what-is-3d-relighting">What is 3D Relighting?</a></li>
+                    <li><a href="#how-to-use">How to Use It</a></li>
+                    <li><a href="#step-1">Upload Image</a></li>
+                    <li><a href="#step-2">Activate Tool</a></li>
+                    <li><a href="#step-3">Position Light</a></li>
+                    <li><a href="#step-4">Adjust Properties</a></li>
+                    <li><a href="#step-5">Layer Lights</a></li>
+                    <li><a href="#best-use-cases">Best Use Cases</a></li>
+                    <li><a href="#technology">Technology</a></li>
+                    <li><a href="#try-it">Try It</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <section class="article-related">
+            <h3>Related Articles</h3>
+            <div class="related-grid">
+                <a href="/blog/orlume-ai-photo-editor-introduction" class="related-card">
+                    <div class="related-card-image"><img src="/relight_after.png" alt="Introducing Orlume"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Announcement</div>
+                        <div class="related-card-title">Introducing Orlume: The Free AI Photo Editor</div>
+                    </div>
+                </a>
+                <a href="/blog/ai-background-removal-tutorial" class="related-card">
+                    <div class="related-card-image"><img src="/bg_remove_after.png" alt="Background Removal"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">AI Background Removal Tutorial</div>
+                    </div>
+                </a>
+                <a href="/blog/color-grading-hsl-tutorial" class="related-card">
+                    <div class="related-card-image"><img src="/grading_after.png" alt="Color Grading"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Deep Dive</div>
+                        <div class="related-card-title">HSL Color Mixer Deep Dive</div>
+                    </div>
+                </a>
             </div>
-        </footer>
+        </section>
     </article>
 
     <footer class="footer">
@@ -197,6 +305,7 @@
                 <h4>Product</h4>
                 <ul>
                     <li><a href="/#features">Features</a></li>
+                    <li><a href="/#pricing">Pricing</a></li>
                     <li><a href="/editor">Editor</a></li>
                 </ul>
             </div>
@@ -204,19 +313,41 @@
                 <h4>Resources</h4>
                 <ul>
                     <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/tutorials">Tutorials</a></li>
                     <li><a href="/blog">Blog</a></li>
+                    <li><a href="/changelog">Changelog</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Community</h4>
                 <ul>
                     <li><a href="/about">About</a></li>
+                    <li><a href="/contribute">Contribute</a></li>
                     <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
                 </ul>
             </div>
         </div>
-        <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+        <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
     </footer>
+
+    <script>
+        const progressBar = document.getElementById('reading-progress');
+        window.addEventListener('scroll', () => {
+            const progress = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            progressBar.style.width = progress + '%';
+        });
+        const tocLinks = document.querySelectorAll('.article-toc-list a');
+        const headings = [];
+        tocLinks.forEach(link => { const el = document.getElementById(link.getAttribute('href').substring(1)); if (el) headings.push({ el, link }); });
+        const tocObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) { tocLinks.forEach(l => l.classList.remove('active')); const m = headings.find(h => h.el === entry.target); if (m) m.link.classList.add('active'); } });
+        }, { rootMargin: '-80px 0px -60% 0px' });
+        headings.forEach(h => tocObserver.observe(h.el));
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) { toggle.addEventListener('click', () => menu.classList.toggle('open')); menu.querySelectorAll('.nav-item > button').forEach(btn => { btn.addEventListener('click', () => btn.parentElement.classList.toggle('open')); }); }
+    </script>
 </body>
 
 </html>

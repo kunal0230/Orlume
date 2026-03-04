@@ -25,223 +25,6 @@
     <link rel="stylesheet" href="/src/styles/pages.css">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <script type="module" src="/src/utils/analytics.js"></script>
-
-    <style>
-        .changelog-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 4rem;
-            position: relative;
-        }
-
-        .changelog-sidebar {
-            position: sticky;
-            top: 100px;
-            height: fit-content;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .changelog-sidebar-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        .changelog-nav-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .changelog-nav-link:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-        }
-
-        .changelog-nav-link.active {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--accent-purple);
-            font-weight: 500;
-        }
-
-        .changelog-content {
-            min-width: 0;
-            /* Prevent grid blowout */
-        }
-
-        .changelog-item {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            position: relative;
-            scroll-margin-top: 100px;
-        }
-
-        @media (max-width: 900px) {
-            .changelog-container {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-            }
-
-            .changelog-sidebar {
-                display: none;
-            }
-        }
-
-        .changelog-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-            border-radius: 4px 0 0 4px;
-        }
-
-        .changelog-version {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .changelog-tag {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-            color: white;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .changelog-date {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .changelog-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-            color: var(--text-primary);
-        }
-
-        .changelog-subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .changelog-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .changelog-list li {
-            padding: 0.6rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            gap: 0.75rem;
-            align-items: flex-start;
-        }
-
-        .changelog-list li:last-child {
-            border-bottom: none;
-        }
-
-        .badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-
-        .badge.new {
-            background: linear-gradient(135deg, #10b981, #06b6d4);
-            color: white;
-        }
-
-        .badge.improved {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-        }
-
-        .badge.fixed {
-            background: linear-gradient(135deg, #f59e0b, #f97316);
-            color: white;
-        }
-
-        .badge.perf {
-            background: linear-gradient(135deg, #ec4899, #f43f5e);
-            color: white;
-        }
-
-        .badge.breaking {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-
-        .tech-detail {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-
-        .tech-detail code {
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(99, 102, 241, 0.1);
-            padding: 0.1rem 0.3rem;
-            border-radius: 3px;
-            font-size: 0.8rem;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-            padding: 1rem;
-            background: rgba(99, 102, 241, 0.05);
-            border-radius: 8px;
-        }
-
-        .metric-item {
-            text-align: center;
-        }
-
-        .metric-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent-purple);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .metric-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-    </style>
 </head>
 
 <body>
@@ -410,7 +193,8 @@
                                     <code>toDataURL()</code> and <code>toImageData()</code> calls that blocked the main
                                     thread
                                     <div class="tech-detail">Replaced with async <code>createImageBitmap()</code> and
-                                        <code>canvas.toBlob()</code> for non-blocking image capture</div>
+                                        <code>canvas.toBlob()</code> for non-blocking image capture
+                                    </div>
                                 </div>
                             </li>
                             <li>
@@ -419,7 +203,8 @@
                                     <strong>Async chunked normal computation</strong> — Sobel filter now processes in
                                     128-row batches with main thread yielding
                                     <div class="tech-detail">Prevents UI freeze during
-                                        <code>_computeNormalsFromDepth()</code> on large depth maps</div>
+                                        <code>_computeNormalsFromDepth()</code> on large depth maps
+                                    </div>
                                 </div>
                             </li>
                             <li>
@@ -973,9 +758,21 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2024 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
+
+    <script>
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

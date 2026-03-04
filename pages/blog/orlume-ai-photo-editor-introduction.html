@@ -72,6 +72,7 @@
 </head>
 
 <body>
+    <div class="reading-progress" id="reading-progress"></div>
     <div class="mesh-gradient">
         <div class="mesh-orb"></div>
     </div>
@@ -81,8 +82,88 @@
             <a href="/" class="nav-logo">Orlume</a>
             <div class="nav-menu">
                 <div class="nav-item"><a href="/#features">Features</a></div>
-                <div class="nav-item"><a href="/blog">Blog</a></div>
-                <div class="nav-item"><a href="/docs">Docs</a></div>
+                <div class="nav-item">
+                    <button type="button">Resources <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <button type="button">Community <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join us</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
             <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
@@ -99,77 +180,131 @@
                 sign-ups, just powerful editing.</p>
         </header>
 
-        <figure class="article-hero-image">
-            <img src="/relight_after.png" alt="Orlume AI Photo Editor 3D Relighting Demo">
-            <figcaption>Orlume's 3D relighting feature transforms ordinary photos into professional portraits
-            </figcaption>
-        </figure>
+        <div class="article-main">
+            <figure class="article-hero-image">
+                <img src="/relight_after.png" alt="Orlume AI Photo Editor 3D Relighting Demo">
+                <figcaption>Orlume's 3D relighting transforms ordinary photos into professional portraits</figcaption>
+            </figure>
 
-        <div class="article-content">
-            <p class="article-lead">Today, we're launching Orlume — a free, professional-grade AI photo editor that runs
-                entirely in your browser. No downloads, no sign-ups, no subscriptions. Just open the editor and start
-                creating.</p>
+            <div class="article-content">
+                <p class="article-lead">Today, we're launching Orlume -- a free, professional-grade AI photo editor that
+                    runs entirely in your browser. No downloads, no sign-ups, no subscriptions. Just open the editor and
+                    start creating.</p>
 
-            <h2>Why We Built Orlume</h2>
-            <p>Photo editing shouldn't require expensive software subscriptions or powerful desktop computers. We built
-                Orlume because we believe professional-quality editing tools should be accessible to everyone —
-                photographers, designers, content creators, and hobbyists alike.</p>
+                <h2 id="why-we-built-orlume">Why We Built Orlume</h2>
+                <p>Photo editing shouldn't require expensive software subscriptions or powerful desktop computers. We
+                    built Orlume because we believe professional-quality editing tools should be accessible to everyone
+                    -- photographers, designers, content creators, and hobbyists alike.</p>
 
-            <p>Unlike traditional photo editors that require installations and regular updates, Orlume runs entirely in
-                your web browser. Thanks to advances in WebGPU technology, we can now run sophisticated AI models
-                directly on your device, delivering desktop-quality results without the desktop software.</p>
+                <p>Unlike traditional photo editors that require installations and regular updates, Orlume runs entirely
+                    in your web browser. Thanks to advances in WebGPU technology, we can now run sophisticated AI models
+                    directly on your device, delivering desktop-quality results without the desktop software.</p>
 
-            <h2>What Makes Orlume Different</h2>
+                <h2 id="what-makes-orlume-different">What Makes Orlume Different</h2>
 
-            <h3>3D Relighting: Our Flagship Feature</h3>
-            <p>Orlume's 3D relighting is unlike anything available in other browser-based editors. Using neural depth
-                estimation, we analyze the 3D structure of your photos and let you add realistic lighting effects as if
-                you had a virtual light source in the scene.</p>
+                <h3 id="3d-relighting">3D Relighting: Our Flagship Feature</h3>
+                <p>Orlume's 3D relighting is unlike anything available in other browser-based editors. Using neural
+                    depth
+                    estimation, we analyze the 3D structure of your photos and let you add realistic lighting effects as
+                    if you had a virtual light source in the scene.</p>
 
-            <p>Add rim lights to portraits, create dramatic side lighting, or fill in shadows — all with intuitive
-                controls. The AI understands the geometry of faces, objects, and environments, ensuring the lighting
-                looks natural and professional.</p>
+                <p>Add rim lights to portraits, create dramatic side lighting, or fill in shadows -- all with intuitive
+                    controls. The AI understands the geometry of faces, objects, and environments, ensuring the lighting
+                    looks natural and professional.</p>
 
-            <h3>AI Background Removal</h3>
-            <p>Our background removal is powered by state-of-the-art segmentation models. Whether you're working with
-                portraits, products, or complex scenes with hair and fur, Orlume delivers pixel-perfect edges that rival
-                professional masking.</p>
+                <h3 id="ai-background-removal">AI Background Removal</h3>
+                <p>Our background removal is powered by state-of-the-art segmentation models. Whether you're working
+                    with portraits, products, or complex scenes with hair and fur, Orlume delivers pixel-perfect edges
+                    that rival professional masking.</p>
 
-            <h3>Professional Color Grading</h3>
-            <p>With our 8-channel HSL color mixer, you have Lightroom-level control over your images. Adjust hue,
-                saturation, and luminance for individual color ranges. Apply one of our 40+ professional presets across
-                6 categories: Portrait, Landscape, Urban, Creative, Black & White, and Golden Hour.</p>
+                <h3 id="professional-color-grading">Professional Color Grading</h3>
+                <p>With our 8-channel HSL color mixer, you have Lightroom-level control over your images. Adjust hue,
+                    saturation, and luminance for individual color ranges. Apply one of our 40+ professional presets
+                    across 6 categories: Portrait, Landscape, Urban, Creative, Black & White, and Golden Hour.</p>
 
-            <h3>Smart Upscaling</h3>
-            <p>Increase your image resolution up to 4x while the AI reconstructs lost details. Perfect for enlarging old
-                photos or preparing images for print.</p>
+                <h3 id="smart-upscaling">Smart Upscaling</h3>
+                <p>Increase your image resolution up to 4x while the AI reconstructs lost details. Perfect for enlarging
+                    old photos or preparing images for print.</p>
 
-            <h2>100% Privacy-First</h2>
-            <p>Here's something that sets Orlume apart: your photos never leave your device. All processing happens
-                locally in your browser using your device's GPU. We don't see, store, or train on your images. Your
-                privacy isn't just a feature — it's a fundamental principle of how Orlume works.</p>
+                <h2 id="privacy-first">100% Privacy-First</h2>
+                <p>Here's something that sets Orlume apart: your photos never leave your device. All processing happens
+                    locally in your browser using your device's GPU. We don't see, store, or train on your images. Your
+                    privacy isn't just a feature -- it's a fundamental principle of how Orlume works.</p>
 
-            <h2>Free Forever</h2>
-            <p>Orlume's core features are completely free with no watermarks or limitations. We believe everyone
-                deserves access to professional photo editing tools. While we'll introduce optional premium features in
-                the future, the powerful editing capabilities you see today will always remain free.</p>
+                <h2 id="free-forever">Free Forever</h2>
+                <p>Orlume's core features are completely free with no watermarks or limitations. We believe everyone
+                    deserves access to professional photo editing tools. While we'll introduce optional premium features
+                    in the future, the powerful editing capabilities you see today will always remain free.</p>
 
-            <h2>Get Started</h2>
-            <p>Ready to transform your photos? <a href="/editor">Open the Orlume Editor</a> and start editing right now.
-                No account required, no downloads needed — just drag and drop your image and experience the future of
-                photo editing.</p>
+                <h2 id="get-started">Get Started</h2>
+                <p>Ready to transform your photos? <a href="/editor">Open the Orlume Editor</a> and start editing right
+                    now. No account required, no downloads needed -- just drag and drop your image and experience the
+                    future of photo editing.</p>
 
-            <p>We're just getting started. Follow us on Twitter and check our <a href="/changelog">changelog</a> for the
-                latest updates and new features.</p>
+                <p>We're just getting started. Follow us on <a href="https://github.com/kunal0230/Orlume"
+                        target="_blank">GitHub</a> and <a href="https://www.linkedin.com/company/orlume-vision-labs"
+                        target="_blank">LinkedIn</a>, and check our <a href="/changelog">changelog</a> for
+                    the latest updates and new features.</p>
+            </div>
+
+            <footer class="article-footer">
+                <div class="article-cta">
+                    <h3>Ready to try Orlume?</h3>
+                    <p>Start editing your photos with AI-powered tools -- completely free.</p>
+                    <a href="/editor" class="btn btn-primary">Open Editor</a>
+                </div>
+            </footer>
         </div>
 
-        <footer class="article-footer">
-            <div class="article-cta">
-                <h3>Ready to try Orlume?</h3>
-                <p>Start editing your photos with AI-powered tools — completely free.</p>
-                <a href="/editor" class="btn btn-primary">Open Editor →</a>
+        <aside class="article-sidebar">
+            <nav class="article-toc">
+                <div class="article-toc-title">On this page</div>
+                <ul class="article-toc-list">
+                    <li><a href="#why-we-built-orlume">Why We Built Orlume</a></li>
+                    <li><a href="#what-makes-orlume-different">What Makes Orlume Different</a></li>
+                    <li><a href="#3d-relighting">3D Relighting</a></li>
+                    <li><a href="#ai-background-removal">Background Removal</a></li>
+                    <li><a href="#professional-color-grading">Color Grading</a></li>
+                    <li><a href="#smart-upscaling">Smart Upscaling</a></li>
+                    <li><a href="#privacy-first">Privacy-First</a></li>
+                    <li><a href="#free-forever">Free Forever</a></li>
+                    <li><a href="#get-started">Get Started</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <section class="article-related">
+            <h3>Related Articles</h3>
+            <div class="related-grid">
+                <a href="/blog/3d-relighting-guide" class="related-card">
+                    <div class="related-card-image">
+                        <img src="/relight_after.png" alt="3D Relighting Guide">
+                    </div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">Complete Guide to 3D Relighting</div>
+                    </div>
+                </a>
+                <a href="/blog/ai-background-removal-tutorial" class="related-card">
+                    <div class="related-card-image">
+                        <img src="/bg_remove_after.png" alt="Background Removal Tutorial">
+                    </div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">AI Background Removal Tutorial</div>
+                    </div>
+                </a>
+                <a href="/blog/color-grading-hsl-tutorial" class="related-card">
+                    <div class="related-card-image">
+                        <img src="/grading_after.png" alt="Color Grading Tutorial">
+                    </div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Deep Dive</div>
+                        <div class="related-card-title">HSL Color Mixer Deep Dive</div>
+                    </div>
+                </a>
             </div>
-        </footer>
+        </section>
     </article>
 
     <footer class="footer">
@@ -192,19 +327,63 @@
                     <li><a href="/docs">Documentation</a></li>
                     <li><a href="/tutorials">Tutorials</a></li>
                     <li><a href="/blog">Blog</a></li>
+                    <li><a href="/changelog">Changelog</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Community</h4>
                 <ul>
                     <li><a href="/about">About</a></li>
+                    <li><a href="/contribute">Contribute</a></li>
                     <li><a href="/privacy">Privacy</a></li>
                     <li><a href="/terms">Terms</a></li>
                 </ul>
             </div>
         </div>
-        <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+        <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
     </footer>
+
+    <script>
+        // Reading progress bar
+        const progressBar = document.getElementById('reading-progress');
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            progressBar.style.width = progress + '%';
+        });
+
+        // TOC active state tracking
+        const tocLinks = document.querySelectorAll('.article-toc-list a');
+        const headings = [];
+        tocLinks.forEach(link => {
+            const id = link.getAttribute('href').substring(1);
+            const el = document.getElementById(id);
+            if (el) headings.push({ el, link });
+        });
+
+        const tocObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(l => l.classList.remove('active'));
+                    const match = headings.find(h => h.el === entry.target);
+                    if (match) match.link.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-80px 0px -60% 0px' });
+
+        headings.forEach(h => tocObserver.observe(h.el));
+
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

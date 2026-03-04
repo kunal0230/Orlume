@@ -167,7 +167,7 @@
             </header>
 
             <!-- Mission Section -->
-            <section class="about-section">
+            <section class="about-section reveal-page">
                 <div class="about-grid">
                     <div class="about-content">
                         <h2>Our Mission</h2>
@@ -177,9 +177,8 @@
                         <p>Built by a passionate community of developers and designers, Orlume combines cutting-edge
                             machine learning with intuitive design. Whether you're a photographer, designer, or just
                             want to enhance your photos — Orlume is here for you.</p>
-                        <p style="margin-top: 24px;">
-                            <a href="https://github.com/kunal0230/Orlume" target="_blank"
-                                style="display: inline-flex; align-items: center; gap: 8px; color: var(--accent-purple); font-weight: 600;">
+                        <p>
+                            <a href="https://github.com/kunal0230/Orlume" target="_blank" class="about-link">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2">
                                     <path
@@ -190,14 +189,13 @@
                         </p>
                     </div>
                     <div class="about-visual">
-                        <img src="/logo.png" alt="Orlume Logo"
-                            style="object-fit: contain; padding: 40px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));">
+                        <img src="/logo.png" alt="Orlume Logo" class="about-visual--logo">
                     </div>
                 </div>
             </section>
 
             <!-- Values Section -->
-            <section class="about-section">
+            <section class="about-section reveal-page">
                 <div class="container">
                     <div class="section-header" style="margin-bottom: 48px;">
                         <h2 class="section-title">Our Values</h2>
@@ -245,30 +243,52 @@
             </section>
 
             <!-- Technology Section -->
-            <section class="about-section"
-                style="background: var(--bg-secondary); margin: 0 -24px; padding: 80px 24px;">
+            <section class="about-section about-tech-bg reveal-page">
                 <div class="about-grid" style="max-width: 1200px; margin: 0 auto;">
                     <div class="about-visual" style="order: 1;">
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 32px;">
-                            <div
-                                style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; text-align: center;">
-                                <div style="font-size: 32px; margin-bottom: 8px;">🧠</div>
-                                <div style="font-weight: 600;">Neural Networks</div>
+                        <div class="about-tech-grid">
+                            <div class="about-tech-card">
+                                <div class="about-tech-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <path
+                                            d="M12 2a4 4 0 0 1 4 4v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a4 4 0 0 1 4-4z" />
+                                        <path d="M8 7v1a4 4 0 1 0 8 0V7" />
+                                        <path d="M5 13a7 7 0 0 0 14 0" />
+                                        <line x1="12" y1="20" x2="12" y2="22" />
+                                        <line x1="8" y1="22" x2="16" y2="22" />
+                                    </svg>
+                                </div>
+                                <div class="about-tech-label">Neural Networks</div>
                             </div>
-                            <div
-                                style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; text-align: center;">
-                                <div style="font-size: 32px; margin-bottom: 8px;">⚡</div>
-                                <div style="font-weight: 600;">WebGPU</div>
+                            <div class="about-tech-card">
+                                <div class="about-tech-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                    </svg>
+                                </div>
+                                <div class="about-tech-label">WebGPU</div>
                             </div>
-                            <div
-                                style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; text-align: center;">
-                                <div style="font-size: 32px; margin-bottom: 8px;">🎨</div>
-                                <div style="font-weight: 600;">Real-time Render</div>
+                            <div class="about-tech-card">
+                                <div class="about-tech-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <polyline points="21 15 16 10 5 21" />
+                                    </svg>
+                                </div>
+                                <div class="about-tech-label">Real-time Render</div>
                             </div>
-                            <div
-                                style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; text-align: center;">
-                                <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
-                                <div style="font-weight: 600;">Local Processing</div>
+                            <div class="about-tech-card">
+                                <div class="about-tech-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                    </svg>
+                                </div>
+                                <div class="about-tech-label">Local Processing</div>
                             </div>
                         </div>
                     </div>
@@ -276,14 +296,14 @@
                         <h2>Built on Cutting-Edge Technology</h2>
                         <p>Orlume leverages the latest in web technologies to deliver desktop-class performance in your
                             browser:</p>
-                        <ul style="color: var(--text-secondary); line-height: 1.8; margin-top: 16px;">
-                            <li><strong style="color: var(--text-primary);">WebGL2 & WebGPU</strong> — GPU-accelerated
+                        <ul class="about-tech-list">
+                            <li><strong>WebGL2 & WebGPU</strong> — GPU-accelerated
                                 rendering for real-time preview</li>
-                            <li><strong style="color: var(--text-primary);">TensorFlow.js</strong> — State-of-the-art
+                            <li><strong>TensorFlow.js</strong> — State-of-the-art
                                 neural networks running locally</li>
-                            <li><strong style="color: var(--text-primary);">ONNX Runtime</strong> — Optimized inference
+                            <li><strong>ONNX Runtime</strong> — Optimized inference
                                 for AI models</li>
-                            <li><strong style="color: var(--text-primary);">Web Workers</strong> — Background processing
+                            <li><strong>Web Workers</strong> — Background processing
                                 without UI blocking</li>
                         </ul>
                     </div>
@@ -291,16 +311,15 @@
             </section>
 
             <!-- Contribute Section -->
-            <section class="about-section">
-                <div class="container" style="text-align: center; max-width: 600px; margin: 0 auto;">
-                    <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">Join the Community</h2>
-                    <p style="color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px;">
+            <section class="about-section reveal-page">
+                <div class="about-contribute-section">
+                    <h2 class="about-contribute-title">Join the Community</h2>
+                    <p class="about-contribute-desc">
                         Orlume is built by people like you. Whether you're a developer, designer, or just passionate
                         about photo editing — we'd love your help!
                     </p>
-                    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-                        <a href="https://github.com/kunal0230/Orlume" target="_blank"
-                            style="display: inline-flex; align-items: center; gap: 8px; padding: 16px 32px; background: var(--gradient-primary); border-radius: 12px; font-weight: 600; color: white; transition: all 0.3s;">
+                    <div class="about-contribute-buttons">
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" class="about-btn-primary">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path
@@ -308,8 +327,7 @@
                             </svg>
                             Star on GitHub
                         </a>
-                        <a href="/contribute"
-                            style="display: inline-flex; align-items: center; gap: 8px; padding: 16px 32px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 12px; font-weight: 600; color: var(--text-primary); transition: all 0.3s;">
+                        <a href="/contribute" class="about-btn-secondary">
                             How to Contribute
                         </a>
                     </div>
@@ -350,9 +368,33 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2024 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
+
+    <script>
+        // Scroll reveal for sub-pages
+        document.querySelectorAll('.reveal-page').forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                el.classList.add('visible');
+            }
+        });
+        const revealObs = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.reveal-page').forEach(el => revealObs.observe(el));
+
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

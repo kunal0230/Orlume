@@ -383,7 +383,106 @@ img {
     }
 }
 
+/* ========================================
+   Demo Video Section
+   ======================================== */
+.demo-video-section {
+    padding: 0 24px 100px;
+    position: relative;
+}
 
+.demo-video-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.demo-video-frame {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #000;
+    box-shadow:
+        0 25px 60px -12px rgba(0, 0, 0, 0.15),
+        0 0 0 1px var(--border-glass),
+        0 0 80px rgba(124, 58, 237, 0.08);
+    transition: box-shadow 0.5s var(--ease-out-expo);
+}
+
+.demo-video-frame::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 21px;
+    padding: 1px;
+    background: linear-gradient(135deg,
+        rgba(124, 58, 237, 0.3),
+        rgba(37, 99, 235, 0.15),
+        rgba(8, 145, 178, 0.3));
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.6;
+    transition: opacity 0.5s;
+}
+
+.demo-video-frame:hover::before {
+    opacity: 1;
+}
+
+.demo-video-frame:hover {
+    box-shadow:
+        0 30px 80px -12px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(124, 58, 237, 0.2),
+        0 0 120px rgba(124, 58, 237, 0.12);
+}
+
+.demo-video-frame video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 20px;
+}
+
+.demo-video-caption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.demo-video-caption svg {
+    flex-shrink: 0;
+    color: var(--accent-purple);
+    opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .demo-video-section {
+        padding: 0 16px 80px;
+    }
+
+    .demo-video-frame {
+        border-radius: 14px;
+    }
+
+    .demo-video-frame video {
+        border-radius: 14px;
+    }
+
+    .demo-video-caption {
+        font-size: 12px;
+    }
+}
 
 
 

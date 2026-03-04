@@ -28,18 +28,8 @@
         "headline": "The Future of Browser-Based Photo Editing: WebGPU, AI, and Beyond",
         "image": "https://orlume.io/og-image.jpg",
         "datePublished": "2025-12-22T00:00:00Z",
-        "author": {
-            "@type": "Organization",
-            "name": "Orlume Vision Labs"
-        },
-        "publisher": {
-            "@type": "Organization",
-            "name": "Orlume Vision Labs",
-            "logo": {
-                "@type": "ImageObject",
-                "url": "https://orlume.io/logo.png"
-            }
-        },
+        "author": { "@type": "Organization", "name": "Orlume Vision Labs" },
+        "publisher": { "@type": "Organization", "name": "Orlume Vision Labs", "logo": { "@type": "ImageObject", "url": "https://orlume.io/logo.png" } },
         "description": "Technical exploration of how WebGPU, transformer models, and on-device AI are revolutionizing browser-based photo editing."
     }
     </script>
@@ -49,12 +39,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/landing.css">
     <link rel="stylesheet" href="/src/styles/pages.css">
-    <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <script type="module" src="/src/utils/analytics.js"></script>
 </head>
 
 <body>
+    <div class="reading-progress" id="reading-progress"></div>
     <div class="mesh-gradient">
         <div class="mesh-orb"></div>
     </div>
@@ -64,8 +54,88 @@
             <a href="/" class="nav-logo">Orlume</a>
             <div class="nav-menu">
                 <div class="nav-item"><a href="/#features">Features</a></div>
-                <div class="nav-item"><a href="/blog">Blog</a></div>
-                <div class="nav-item"><a href="/docs">Docs</a></div>
+                <div class="nav-item">
+                    <button type="button">Resources <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <button type="button">Community <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join us</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
             <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
@@ -82,98 +152,141 @@
                 without downloads or installations.</p>
         </header>
 
-        <div class="article-content">
-            <p class="article-lead">For decades, professional photo editing meant expensive desktop software, powerful
-                hardware, and complicated installations. But the landscape is changing rapidly. With WebGPU, on-device
-                AI, and modern browser capabilities, we're entering an era where your browser is as powerful as any
-                desktop application.</p>
+        <div class="article-main">
+            <div class="article-content">
+                <p class="article-lead">For decades, professional photo editing meant expensive desktop software,
+                    powerful hardware, and complicated installations. But the landscape is changing rapidly. With
+                    WebGPU, on-device AI, and modern browser capabilities, we're entering an era where your browser is
+                    as powerful as any desktop application.</p>
 
-            <h2>The Limitations of Traditional Web Editors</h2>
-            <p>Early online photo editors were severely limited. Without access to GPU acceleration, they relied on slow
-                JavaScript processing. Complex operations took seconds or minutes. Real-time previews were impossible.
-                Users accepted these limitations because the convenience of browser-based tools outweighed the
-                performance penalties.</p>
+                <h2 id="limitations">The Limitations of Traditional Web Editors</h2>
+                <p>Early online photo editors were severely limited. Without access to GPU acceleration, they relied on
+                    slow JavaScript processing. Complex operations took seconds or minutes. Real-time previews were
+                    impossible. Users accepted these limitations because the convenience of browser-based tools
+                    outweighed the performance penalties.</p>
+                <p>Some tools worked around this by uploading images to servers for processing. This introduced privacy
+                    concerns, required internet connectivity, and added latency to every operation. It was a compromise,
+                    not a solution.</p>
 
-            <p>Some tools worked around this by uploading images to servers for processing. This introduced privacy
-                concerns, required internet connectivity, and added latency to every operation. It was a compromise, not
-                a solution.</p>
+                <h2 id="webgpu">Enter WebGPU: GPU Power in the Browser</h2>
+                <p>WebGPU is a game-changer. It provides web applications with direct access to modern GPU hardware --
+                    the same chips that power desktop graphics applications and AI workloads. For photo editing, this
+                    means:</p>
+                <ul>
+                    <li><strong>Real-time image processing:</strong> Apply filters, adjustments, and effects
+                        instantaneously</li>
+                    <li><strong>Large image support:</strong> Edit high-resolution photos without lag</li>
+                    <li><strong>AI inference:</strong> Run sophisticated neural networks directly in the browser</li>
+                    <li><strong>Parallel processing:</strong> Apply multiple effects simultaneously</li>
+                </ul>
+                <p>At Orlume, we utilize WebGPU to deliver features that were previously impossible in browsers. Our 3D
+                    relighting, background removal, and AI upscaling all run on your device's GPU, providing instant
+                    results without compromising your privacy.</p>
 
-            <h2>Enter WebGPU: GPU Power in the Browser</h2>
-            <p>WebGPU is a game-changer. It provides web applications with direct access to modern GPU hardware — the
-                same chips that power desktop graphics applications and AI workloads. For photo editing, this means:</p>
+                <h2 id="on-device-ai">On-Device AI: Power Without Privacy Compromise</h2>
+                <p>The AI revolution brought powerful image editing capabilities -- but initially, they required cloud
+                    processing. Your photos would be uploaded, processed on remote servers, and returned. This creates
+                    obvious privacy concerns, especially for sensitive personal or professional images.</p>
+                <p>Modern browser technologies enable on-device AI inference. Using frameworks like ONNX Runtime Web and
+                    TensorFlow.js, we can run sophisticated neural networks entirely in your browser. Your photos never
+                    leave your device.</p>
 
-            <ul>
-                <li><strong>Real-time image processing:</strong> Apply filters, adjustments, and effects instantaneously
-                </li>
-                <li><strong>Large image support:</strong> Edit high-resolution photos without lag</li>
-                <li><strong>AI inference:</strong> Run sophisticated neural networks directly in the browser</li>
-                <li><strong>Parallel processing:</strong> Apply multiple effects simultaneously</li>
-            </ul>
+                <h3 id="what-this-means">What This Means for You</h3>
+                <ul>
+                    <li><strong>Complete privacy:</strong> Your images are processed locally, never uploaded</li>
+                    <li><strong>Works offline:</strong> Once loaded, the app functions without internet</li>
+                    <li><strong>No account required:</strong> No sign-ups, no tracking, just editing</li>
+                    <li><strong>Instant processing:</strong> No upload/download latency</li>
+                </ul>
 
-            <p>At Orlume, we utilize WebGPU to deliver features that were previously impossible in browsers. Our 3D
-                relighting, background removal, and AI upscaling all run on your device's GPU, providing instant results
-                without compromising your privacy.</p>
+                <h2 id="tech-stack">The Technology Stack Behind Orlume</h2>
 
-            <h2>On-Device AI: Power Without Privacy Compromise</h2>
-            <p>The AI revolution brought powerful image editing capabilities — but initially, they required cloud
-                processing. Your photos would be uploaded, processed on remote servers, and returned. This creates
-                obvious privacy concerns, especially for sensitive personal or professional images.</p>
+                <h3 id="depth-estimation">Depth Estimation for 3D Relighting</h3>
+                <p>Our flagship 3D relighting feature uses monocular depth estimation -- predicting 3D structure from a
+                    single 2D image. We run a transformer-based model that analyzes your photo and generates a detailed
+                    depth map. This enables realistic lighting simulation that understands the geometry of faces,
+                    objects, and environments.</p>
 
-            <p>Modern browser technologies enable on-device AI inference. Using frameworks like ONNX Runtime Web and
-                TensorFlow.js, we can run sophisticated neural networks entirely in your browser. Your photos never
-                leave your device.</p>
+                <h3 id="segmentation">Semantic Segmentation for Background Removal</h3>
+                <p>Background removal uses a U-Net architecture trained on millions of images. The model classifies each
+                    pixel as foreground or background, with special attention to challenging edges like hair, fur, and
+                    semi-transparent elements. Edge refinement algorithms then smooth the mask for professional results.
+                </p>
 
-            <h3>What This Means for You</h3>
-            <ul>
-                <li><strong>Complete privacy:</strong> Your images are processed locally, never uploaded</li>
-                <li><strong>Works offline:</strong> Once loaded, the app functions without internet</li>
-                <li><strong>No account required:</strong> No sign-ups, no tracking, just editing</li>
-                <li><strong>Instant processing:</strong> No upload/download latency</li>
-            </ul>
+                <h3 id="super-resolution">Super-Resolution for Upscaling</h3>
+                <p>Our upscaling uses a neural network trained on paired low/high-resolution images. It learns to
+                    predict missing details, reconstructing textures and sharpening edges as it increases resolution.
+                    The result is enlargement that adds detail rather than just blurring.</p>
 
-            <h2>The Technology Stack Behind Orlume</h2>
+                <h2 id="whats-next">What's Next for Browser-Based Editing</h2>
+                <p>The capabilities we're seeing today are just the beginning. As hardware improves and web standards
+                    evolve, expect:</p>
+                <ul>
+                    <li><strong>Larger AI models:</strong> More sophisticated models will enable even more powerful
+                        features</li>
+                    <li><strong>Video editing:</strong> The same techniques will extend to video processing</li>
+                    <li><strong>Collaborative editing:</strong> Real-time multi-user editing in the browser</li>
+                    <li><strong>AR integration:</strong> Combining photo editing with augmented reality previews</li>
+                </ul>
 
-            <h3>Depth Estimation for 3D Relighting</h3>
-            <p>Our flagship 3D relighting feature uses monocular depth estimation — predicting 3D structure from a
-                single 2D image. We run a transformer-based model that analyzes your photo and generates a detailed
-                depth map. This enables realistic lighting simulation that understands the geometry of faces, objects,
-                and environments.</p>
+                <h2 id="try-it">Try Browser-Based AI Editing</h2>
+                <p>Experience the future of photo editing today. <a href="/editor">Open the Orlume Editor</a> and see
+                    what's possible when professional AI tools meet the convenience of your web browser -- completely
+                    free, completely private.</p>
+            </div>
 
-            <h3>Semantic Segmentation for Background Removal</h3>
-            <p>Background removal uses a U-Net architecture trained on millions of images. The model classifies each
-                pixel as foreground or background, with special attention to challenging edges like hair, fur, and
-                semi-transparent elements. Edge refinement algorithms then smooth the mask for professional results.</p>
-
-            <h3>Super-Resolution for Upscaling</h3>
-            <p>Our upscaling uses a neural network trained on paired low/high-resolution images. It learns to predict
-                missing details, reconstructing textures and sharpening edges as it increases resolution. The result is
-                enlargement that adds detail rather than just blurring.</p>
-
-            <h2>What's Next for Browser-Based Editing</h2>
-            <p>The capabilities we're seeing today are just the beginning. As hardware improves and web standards
-                evolve, expect:</p>
-
-            <ul>
-                <li><strong>Larger AI models:</strong> More sophisticated models will enable even more powerful features
-                </li>
-                <li><strong>Video editing:</strong> The same techniques will extend to video processing</li>
-                <li><strong>Collaborative editing:</strong> Real-time multi-user editing in the browser</li>
-                <li><strong>AR integration:</strong> Combining photo editing with augmented reality previews</li>
-            </ul>
-
-            <h2>Try Browser-Based AI Editing</h2>
-            <p>Experience the future of photo editing today. <a href="/editor">Open the Orlume Editor</a> and see what's
-                possible when professional AI tools meet the convenience of your web browser — completely free,
-                completely private.</p>
+            <footer class="article-footer">
+                <div class="article-cta">
+                    <h3>Experience the future of photo editing</h3>
+                    <p>Professional AI tools that run entirely in your browser.</p>
+                    <a href="/editor" class="btn btn-primary">Open Editor</a>
+                </div>
+            </footer>
         </div>
 
-        <footer class="article-footer">
-            <div class="article-cta">
-                <h3>Experience the future of photo editing</h3>
-                <p>Professional AI tools that run entirely in your browser.</p>
-                <a href="/editor" class="btn btn-primary">Open Editor →</a>
+        <aside class="article-sidebar">
+            <nav class="article-toc">
+                <div class="article-toc-title">On this page</div>
+                <ul class="article-toc-list">
+                    <li><a href="#limitations">Traditional Web Editors</a></li>
+                    <li><a href="#webgpu">WebGPU</a></li>
+                    <li><a href="#on-device-ai">On-Device AI</a></li>
+                    <li><a href="#tech-stack">Technology Stack</a></li>
+                    <li><a href="#depth-estimation">Depth Estimation</a></li>
+                    <li><a href="#segmentation">Segmentation</a></li>
+                    <li><a href="#super-resolution">Super-Resolution</a></li>
+                    <li><a href="#whats-next">What's Next</a></li>
+                    <li><a href="#try-it">Try It</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <section class="article-related">
+            <h3>Related Articles</h3>
+            <div class="related-grid">
+                <a href="/blog/orlume-ai-photo-editor-introduction" class="related-card">
+                    <div class="related-card-image"><img src="/relight_after.png" alt="Introducing Orlume"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Announcement</div>
+                        <div class="related-card-title">Introducing Orlume: The Free AI Photo Editor</div>
+                    </div>
+                </a>
+                <a href="/blog/3d-relighting-guide" class="related-card">
+                    <div class="related-card-image"><img src="/relight_after.png" alt="3D Relighting Guide"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">Complete Guide to 3D Relighting</div>
+                    </div>
+                </a>
+                <a href="/blog/ai-background-removal-tutorial" class="related-card">
+                    <div class="related-card-image"><img src="/bg_remove_after.png" alt="Background Removal"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">AI Background Removal Tutorial</div>
+                    </div>
+                </a>
             </div>
-        </footer>
+        </section>
     </article>
 
     <footer class="footer">
@@ -186,6 +299,7 @@
                 <h4>Product</h4>
                 <ul>
                     <li><a href="/#features">Features</a></li>
+                    <li><a href="/#pricing">Pricing</a></li>
                     <li><a href="/editor">Editor</a></li>
                 </ul>
             </div>
@@ -193,19 +307,35 @@
                 <h4>Resources</h4>
                 <ul>
                     <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/tutorials">Tutorials</a></li>
                     <li><a href="/blog">Blog</a></li>
+                    <li><a href="/changelog">Changelog</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Community</h4>
                 <ul>
                     <li><a href="/about">About</a></li>
+                    <li><a href="/contribute">Contribute</a></li>
                     <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
                 </ul>
             </div>
         </div>
-        <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+        <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
     </footer>
+
+    <script>
+        const progressBar = document.getElementById('reading-progress');
+        window.addEventListener('scroll', () => { progressBar.style.width = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100 + '%'; });
+        const tocLinks = document.querySelectorAll('.article-toc-list a');
+        const headings = [];
+        tocLinks.forEach(link => { const el = document.getElementById(link.getAttribute('href').substring(1)); if (el) headings.push({ el, link }); });
+        const tocObserver = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { tocLinks.forEach(l => l.classList.remove('active')); const m = headings.find(h => h.el === entry.target); if (m) m.link.classList.add('active'); } }); }, { rootMargin: '-80px 0px -60% 0px' });
+        headings.forEach(h => tocObserver.observe(h.el));
+        const toggle = document.querySelector('.nav-mobile-toggle'); const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) { toggle.addEventListener('click', () => menu.classList.toggle('open')); menu.querySelectorAll('.nav-item > button').forEach(btn => { btn.addEventListener('click', () => btn.parentElement.classList.toggle('open')); }); }
+    </script>
 </body>
 
 </html>

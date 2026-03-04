@@ -21,10 +21,120 @@
     <div class="mesh-gradient">
         <div class="mesh-orb"></div>
     </div>
-    <nav class="nav scrolled">
-        <div class="nav-inner"><a href="/" class="nav-logo">Orlume</a><a href="/editor" class="nav-cta">Open Editor</a>
+
+    <nav class="nav scrolled" id="nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">Orlume</a>
+            <div class="nav-menu">
+                <div class="nav-item"><a href="/#features">Features</a></div>
+                <div class="nav-item">
+                    <button type="button">Resources <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <button type="button">Community <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join us</div>
+                            </div>
+                        </a>
+                        <a href="/privacy">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Privacy</div>
+                                <div class="nav-dropdown-desc">Data protection</div>
+                            </div>
+                        </a>
+                        <a href="/terms">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Terms</div>
+                                <div class="nav-dropdown-desc">Terms of service</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
     </nav>
+
     <div class="page-wrapper">
         <div class="page-content">
             <header class="page-header">
@@ -77,14 +187,59 @@
                     terms.</p>
 
                 <h2>10. Contact</h2>
-                <p>Questions about these terms? Contact us at <a href="mailto:orlumevisionlabs@gmail.com"
-                        style="color: var(--accent-purple);">orlumevisionlabs@gmail.com</a></p>
+                <p>Questions about these terms? Contact us at <a
+                        href="mailto:orlumevisionlabs@gmail.com">orlumevisionlabs@gmail.com</a></p>
             </div>
         </div>
+
         <footer class="footer">
-            <div class="footer-bottom"><span>© 2024 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">Orlume</div>
+                    <p class="footer-desc">AI-powered photo editing that runs entirely in your browser.</p>
+                </div>
+                <div class="footer-column">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="/#features">Features</a></li>
+                        <li><a href="/#pricing">Pricing</a></li>
+                        <li><a href="/editor">Editor</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="/tutorials">Tutorials</a></li>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/changelog">Changelog</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="/about">About</a></li>
+                        <li><a href="/contribute">Contribute</a></li>
+                        <li><a href="/privacy">Privacy</a></li>
+                        <li><a href="/terms">Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
+
+    <script>
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

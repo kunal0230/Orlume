@@ -153,8 +153,8 @@
             </header>
 
             <div class="cards-grid">
-                <!-- Blog Post 1 -->
-                <article class="content-card">
+                <!-- Featured Blog Post -->
+                <article class="content-card featured reveal-page">
                     <div class="content-card-image">
                         <img src="/relight_after.png" alt="Introducing Professional Presets">
                     </div>
@@ -168,12 +168,13 @@
                         <p class="content-card-excerpt">Today we're launching Orlume — a free, professional-grade AI
                             photo editor that runs entirely in your browser. No downloads, no sign-ups, just powerful
                             editing.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More →</a>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More
+                            →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 2 -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/grading_after.png" alt="HSL Color Mixer Deep Dive">
                     </div>
@@ -190,7 +191,7 @@
                 </article>
 
                 <!-- Blog Post 3 -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/bg_remove_after.png" alt="The Future of Browser-Based Editing">
                     </div>
@@ -207,7 +208,7 @@
                 </article>
 
                 <!-- Blog Post 4 -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/relight_after.png" alt="3D Relighting Explained">
                     </div>
@@ -224,7 +225,7 @@
                 </article>
 
                 <!-- Blog Post 5 -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/bg_remove_before.png" alt="Privacy First Design">
                     </div>
@@ -241,7 +242,7 @@
                 </article>
 
                 <!-- Blog Post 6 -->
-                <article class="content-card">
+                <article class="content-card reveal-page">
                     <div class="content-card-image">
                         <img src="/grading_after.png" alt="Orlume Launch">
                     </div>
@@ -254,7 +255,8 @@
                         <p class="content-card-excerpt">Today we're launching Orlume — a free, professional-grade AI
                             photo editor that runs entirely in your browser. No downloads, no sign-ups, just powerful
                             editing.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More →</a>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More
+                            →</a>
                     </div>
                 </article>
             </div>
@@ -293,9 +295,33 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2024 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
+
+    <script>
+        // Scroll reveal for sub-pages
+        document.querySelectorAll('.reveal-page').forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                el.classList.add('visible');
+            }
+        });
+        const revealObs = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.reveal-page').forEach(el => revealObs.observe(el));
+
+        // Mobile nav toggle
+        const toggle = document.querySelector('.nav-mobile-toggle');
+        const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', () => menu.classList.toggle('open'));
+            menu.querySelectorAll('.nav-item > button').forEach(btn => {
+                btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+            });
+        }
+    </script>
 </body>
 
 </html>

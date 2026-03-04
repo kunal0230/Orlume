@@ -26,34 +26,15 @@
         "@context": "https://schema.org",
         "@type": "HowTo",
         "name": "How to Color Grade Photos with HSL Controls",
-        "description": "Professional color grading tutorial using the HSL (Hue, Saturation, Luminance) color mixer",
+        "description": "Professional color grading tutorial using the HSL color mixer",
         "image": "https://orlume.io/grading_after.png",
         "step": [
-            {
-                "@type": "HowToStep",
-                "name": "Understand HSL channels",
-                "text": "Learn what Hue, Saturation, and Luminance control for each color range."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Adjust skin tones",
-                "text": "Use the Orange and Red channels to perfect skin tones in portraits."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Enhance skies and foliage",
-                "text": "Adjust Blue and Green channels to make landscapes pop."
-            },
-            {
-                "@type": "HowToStep",
-                "name": "Create a cohesive look",
-                "text": "Use multiple channel adjustments together for a unified color grade."
-            }
+            { "@type": "HowToStep", "name": "Understand HSL channels", "text": "Learn what Hue, Saturation, and Luminance control." },
+            { "@type": "HowToStep", "name": "Adjust skin tones", "text": "Use Orange and Red channels to perfect skin tones." },
+            { "@type": "HowToStep", "name": "Enhance skies and foliage", "text": "Adjust Blue and Green channels." },
+            { "@type": "HowToStep", "name": "Create a cohesive look", "text": "Use multiple channel adjustments together." }
         ],
-        "author": {
-            "@type": "Organization",
-            "name": "Orlume Vision Labs"
-        }
+        "author": { "@type": "Organization", "name": "Orlume Vision Labs" }
     }
     </script>
 
@@ -62,12 +43,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/landing.css">
     <link rel="stylesheet" href="/src/styles/pages.css">
-    <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <script type="module" src="/src/utils/analytics.js"></script>
 </head>
 
 <body>
+    <div class="reading-progress" id="reading-progress"></div>
     <div class="mesh-gradient">
         <div class="mesh-orb"></div>
     </div>
@@ -77,8 +58,88 @@
             <a href="/" class="nav-logo">Orlume</a>
             <div class="nav-menu">
                 <div class="nav-item"><a href="/#features">Features</a></div>
-                <div class="nav-item"><a href="/blog">Blog</a></div>
-                <div class="nav-item"><a href="/docs">Docs</a></div>
+                <div class="nav-item">
+                    <button type="button">Resources <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/docs">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Documentation</div>
+                                <div class="nav-dropdown-desc">Learn how to use Orlume</div>
+                            </div>
+                        </a>
+                        <a href="/tutorials">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7" />
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Tutorials</div>
+                                <div class="nav-dropdown-desc">Step-by-step guides</div>
+                            </div>
+                        </a>
+                        <a href="/blog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Blog</div>
+                                <div class="nav-dropdown-desc">News and updates</div>
+                            </div>
+                        </a>
+                        <a href="/changelog">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Changelog</div>
+                                <div class="nav-dropdown-desc">What's new</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <button type="button">Community <svg class="chevron" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg></button>
+                    <div class="nav-dropdown">
+                        <a href="/about">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">About</div>
+                                <div class="nav-dropdown-desc">Our story</div>
+                            </div>
+                        </a>
+                        <a href="/contribute">
+                            <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg></div>
+                            <div class="nav-dropdown-content">
+                                <div class="nav-dropdown-title">Contribute</div>
+                                <div class="nav-dropdown-desc">Join us</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
             <a href="/editor" class="nav-cta">Open Editor</a>
         </div>
@@ -95,120 +156,165 @@
                 colors.</p>
         </header>
 
-        <figure class="article-hero-image">
-            <img src="/grading_after.png" alt="Color grading example showing before and after HSL adjustments">
-            <figcaption>Professional color grading transforms ordinary photos into cinematic images</figcaption>
-        </figure>
+        <div class="article-main">
+            <figure class="article-hero-image">
+                <img src="/grading_after.png" alt="Color grading example showing before and after HSL adjustments">
+                <figcaption>Professional color grading transforms ordinary photos into cinematic images</figcaption>
+            </figure>
 
-        <div class="article-content">
-            <p class="article-lead">Color grading separates good photos from great ones. It's how filmmakers create
-                mood, how fashion photographers create their signature look, and how you can transform your images from
-                snapshots into art. Orlume's HSL color mixer gives you precise control over every color in your image.
-            </p>
+            <div class="article-content">
+                <p class="article-lead">Color grading separates good photos from great ones. It's how filmmakers create
+                    mood, how fashion photographers create their signature look, and how you can transform your images
+                    from snapshots into art. Orlume's HSL color mixer gives you precise control over every color in your
+                    image.</p>
 
-            <h2>Understanding HSL</h2>
-            <p>HSL stands for Hue, Saturation, and Luminance — three properties that together define any color:</p>
+                <h2 id="understanding-hsl">Understanding HSL</h2>
+                <p>HSL stands for Hue, Saturation, and Luminance -- three properties that together define any color:</p>
+                <ul>
+                    <li><strong>Hue:</strong> The actual color -- red, orange, yellow, green, etc. Shifting hue changes
+                        colors to adjacent colors on the color wheel.</li>
+                    <li><strong>Saturation:</strong> The intensity or purity of the color. High saturation means vibrant
+                        colors; low saturation moves toward gray.</li>
+                    <li><strong>Luminance:</strong> The brightness of the color. Affects how light or dark specific
+                        colors appear.</li>
+                </ul>
 
-            <ul>
-                <li><strong>Hue:</strong> The actual color — red, orange, yellow, green, etc. Shifting hue changes
-                    colors to adjacent colors on the color wheel.</li>
-                <li><strong>Saturation:</strong> The intensity or purity of the color. High saturation means vibrant
-                    colors; low saturation moves toward gray.</li>
-                <li><strong>Luminance:</strong> The brightness of the color. Affects how light or dark specific colors
-                    appear.</li>
-            </ul>
+                <h2 id="color-channels">The 8 Color Channels</h2>
+                <p>Orlume's HSL mixer provides independent control for 8 color ranges:</p>
+                <ol>
+                    <li><strong>Red:</strong> Affects reds, some skin tones, lips, red clothing</li>
+                    <li><strong>Orange:</strong> The most important channel for skin tones, also affects warm elements
+                    </li>
+                    <li><strong>Yellow:</strong> Yellow elements, some foliage, warm highlights</li>
+                    <li><strong>Green:</strong> Grass, trees, foliage, green objects</li>
+                    <li><strong>Aqua:</strong> Teal tones, some skies, water</li>
+                    <li><strong>Blue:</strong> Skies, blue clothing, shadows often have blue tones</li>
+                    <li><strong>Purple:</strong> Lavender, violet flowers, some twilight skies</li>
+                    <li><strong>Magenta:</strong> Pink tones, some flowers, certain skin undertones</li>
+                </ol>
 
-            <h2>The 8 Color Channels</h2>
-            <p>Orlume's HSL mixer provides independent control for 8 color ranges:</p>
+                <h2 id="techniques">Essential Color Grading Techniques</h2>
 
-            <ol>
-                <li><strong>Red:</strong> Affects reds, some skin tones, lips, red clothing</li>
-                <li><strong>Orange:</strong> The most important channel for skin tones, also affects warm elements</li>
-                <li><strong>Yellow:</strong> Yellow elements, some foliage, warm highlights</li>
-                <li><strong>Green:</strong> Grass, trees, foliage, green objects</li>
-                <li><strong>Aqua:</strong> Teal tones, some skies, water</li>
-                <li><strong>Blue:</strong> Skies, blue clothing, shadows often have blue tones</li>
-                <li><strong>Purple:</strong> Lavender, violet flowers, some twilight skies</li>
-                <li><strong>Magenta:</strong> Pink tones, some flowers, certain skin undertones</li>
-            </ol>
+                <h3 id="skin-tones">Perfecting Skin Tones</h3>
+                <p>Skin tones primarily fall in the Orange and Red channels. For natural-looking skin:</p>
+                <ul>
+                    <li>Reduce Orange saturation slightly to avoid overly warm skin</li>
+                    <li>Shift Orange hue slightly toward yellow for a healthier glow</li>
+                    <li>Increase Orange luminance to brighten skin without affecting other colors</li>
+                    <li>Be gentle with Red -- aggressive changes affect lips and can look unnatural</li>
+                </ul>
 
-            <h2>Essential Color Grading Techniques</h2>
+                <h3 id="teal-orange">Cinematic Teal and Orange</h3>
+                <p>The classic Hollywood look uses complementary colors -- teal shadows and orange highlights:</p>
+                <ul>
+                    <li>Shift Blue hue toward Aqua (teal)</li>
+                    <li>Increase Aqua saturation</li>
+                    <li>Push Orange saturation up and shift slightly toward yellow</li>
+                    <li>Reduce Green saturation to keep the palette focused</li>
+                </ul>
 
-            <h3>Perfecting Skin Tones</h3>
-            <p>Skin tones primarily fall in the Orange and Red channels. For natural-looking skin:</p>
-            <ul>
-                <li>Reduce Orange saturation slightly to avoid overly warm skin</li>
-                <li>Shift Orange hue slightly toward yellow for a healthier glow</li>
-                <li>Increase Orange luminance to brighten skin without affecting other colors</li>
-                <li>Be gentle with Red — aggressive changes affect lips and can look unnatural</li>
-            </ul>
+                <h3 id="landscapes">Enhancing Landscapes</h3>
+                <p>For impactful nature photos:</p>
+                <ul>
+                    <li>Shift Green hue slightly toward yellow for warmer foliage</li>
+                    <li>Increase Blue saturation for dramatic skies</li>
+                    <li>Reduce Blue luminance to deepen sky colors</li>
+                    <li>Boost Yellow luminance for glowing golden hour effects</li>
+                </ul>
 
-            <h3>Cinematic Teal and Orange</h3>
-            <p>The classic Hollywood look uses complementary colors — teal shadows and orange highlights:</p>
-            <ul>
-                <li>Shift Blue hue toward Aqua (teal)</li>
-                <li>Increase Aqua saturation</li>
-                <li>Push Orange saturation up and shift slightly toward yellow</li>
-                <li>Reduce Green saturation to keep the palette focused</li>
-            </ul>
+                <h3 id="moody">Moody Desaturation</h3>
+                <p>For a muted, editorial look:</p>
+                <ul>
+                    <li>Reduce saturation across all channels by 10-20%</li>
+                    <li>Shift greens toward yellow or aqua</li>
+                    <li>Keep one accent color saturated for visual interest</li>
+                    <li>Adjust luminance to maintain contrast</li>
+                </ul>
 
-            <h3>Enhancing Landscapes</h3>
-            <p>For impactful nature photos:</p>
-            <ul>
-                <li>Shift Green hue slightly toward yellow for warmer foliage</li>
-                <li>Increase Blue saturation for dramatic skies</li>
-                <li>Reduce Blue luminance to deepen sky colors</li>
-                <li>Boost Yellow luminance for glowing golden hour effects</li>
-            </ul>
+                <h2 id="presets">Using Orlume Presets</h2>
+                <p>Want a starting point? Orlume includes 40+ professional presets across 6 categories:</p>
+                <ul>
+                    <li><strong>Portrait:</strong> Optimized for skin tones and flattering color</li>
+                    <li><strong>Landscape:</strong> Enhanced greens, blues, and natural tones</li>
+                    <li><strong>Urban:</strong> Contrasty looks for street and city photography</li>
+                    <li><strong>Creative:</strong> Bold, artistic color treatments</li>
+                    <li><strong>Black & White:</strong> Monochrome conversions with various tonal qualities</li>
+                    <li><strong>Golden Hour:</strong> Warm, sunset-inspired looks</li>
+                </ul>
+                <p>Apply a preset, then use the HSL mixer to fine-tune to your taste. Presets are a starting point, not
+                    a destination.</p>
 
-            <h3>Moody Desaturation</h3>
-            <p>For a muted, editorial look:</p>
-            <ul>
-                <li>Reduce saturation across all channels by 10-20%</li>
-                <li>Shift greens toward yellow or aqua</li>
-                <li>Keep one accent color saturated for visual interest</li>
-                <li>Adjust luminance to maintain contrast</li>
-            </ul>
+                <h2 id="pro-tips">Pro Tips</h2>
+                <ul>
+                    <li><strong>Work in order:</strong> Adjust hue first, then saturation, then luminance</li>
+                    <li><strong>Make small changes:</strong> Subtle adjustments often look more professional than
+                        dramatic shifts</li>
+                    <li><strong>Check skin tones:</strong> After any adjustment, verify that skin still looks natural
+                    </li>
+                    <li><strong>Use the color picker:</strong> Not sure which channel affects a color? Use the picker to
+                        identify it</li>
+                    <li><strong>Compare often:</strong> Toggle the effect on and off to evaluate your changes</li>
+                </ul>
 
-            <h2>Using Orlume Presets</h2>
-            <p>Want a starting point? Orlume includes 40+ professional presets across 6 categories:</p>
+                <h2 id="start">Start Color Grading</h2>
+                <p>Ready to master color? <a href="/editor?tool=hsl">Open the Orlume Editor</a> with the HSL panel and
+                    start experimenting. It's completely free, runs in your browser, and your photos stay private on
+                    your device.</p>
+            </div>
 
-            <ul>
-                <li><strong>Portrait:</strong> Optimized for skin tones and flattering color</li>
-                <li><strong>Landscape:</strong> Enhanced greens, blues, and natural tones</li>
-                <li><strong>Urban:</strong> Contrasty looks for street and city photography</li>
-                <li><strong>Creative:</strong> Bold, artistic color treatments</li>
-                <li><strong>Black & White:</strong> Monochrome conversions with various tonal qualities</li>
-                <li><strong>Golden Hour:</strong> Warm, sunset-inspired looks</li>
-            </ul>
-
-            <p>Apply a preset, then use the HSL mixer to fine-tune to your taste. Presets are a starting point, not a
-                destination.</p>
-
-            <h2>Pro Tips</h2>
-            <ul>
-                <li><strong>Work in order:</strong> Adjust hue first, then saturation, then luminance</li>
-                <li><strong>Make small changes:</strong> Subtle adjustments often look more professional than dramatic
-                    shifts</li>
-                <li><strong>Check skin tones:</strong> After any adjustment, verify that skin still looks natural</li>
-                <li><strong>Use the color picker:</strong> Not sure which channel affects a color? Use the picker to
-                    identify it</li>
-                <li><strong>Compare often:</strong> Toggle the effect on and off to evaluate your changes</li>
-            </ul>
-
-            <h2>Start Color Grading</h2>
-            <p>Ready to master color? <a href="/editor?tool=hsl">Open the Orlume Editor</a> with the HSL panel and start
-                experimenting. It's completely free, runs in your browser, and your photos stay private on your device.
-            </p>
+            <footer class="article-footer">
+                <div class="article-cta">
+                    <h3>Master color grading</h3>
+                    <p>Try our professional HSL color mixer -- completely free.</p>
+                    <a href="/editor?tool=hsl" class="btn btn-primary">Open Color Panel</a>
+                </div>
+            </footer>
         </div>
 
-        <footer class="article-footer">
-            <div class="article-cta">
-                <h3>Master color grading</h3>
-                <p>Try our professional HSL color mixer — completely free.</p>
-                <a href="/editor?tool=hsl" class="btn btn-primary">Open Color Panel →</a>
+        <aside class="article-sidebar">
+            <nav class="article-toc">
+                <div class="article-toc-title">On this page</div>
+                <ul class="article-toc-list">
+                    <li><a href="#understanding-hsl">Understanding HSL</a></li>
+                    <li><a href="#color-channels">The 8 Color Channels</a></li>
+                    <li><a href="#techniques">Grading Techniques</a></li>
+                    <li><a href="#skin-tones">Skin Tones</a></li>
+                    <li><a href="#teal-orange">Teal and Orange</a></li>
+                    <li><a href="#landscapes">Landscapes</a></li>
+                    <li><a href="#moody">Moody Desaturation</a></li>
+                    <li><a href="#presets">Orlume Presets</a></li>
+                    <li><a href="#pro-tips">Pro Tips</a></li>
+                    <li><a href="#start">Start Color Grading</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <section class="article-related">
+            <h3>Related Articles</h3>
+            <div class="related-grid">
+                <a href="/blog/orlume-ai-photo-editor-introduction" class="related-card">
+                    <div class="related-card-image"><img src="/relight_after.png" alt="Introducing Orlume"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Announcement</div>
+                        <div class="related-card-title">Introducing Orlume: The Free AI Photo Editor</div>
+                    </div>
+                </a>
+                <a href="/blog/3d-relighting-guide" class="related-card">
+                    <div class="related-card-image"><img src="/relight_after.png" alt="3D Relighting Guide"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Tutorial</div>
+                        <div class="related-card-title">Complete Guide to 3D Relighting</div>
+                    </div>
+                </a>
+                <a href="/blog/browser-based-photo-editing" class="related-card">
+                    <div class="related-card-image"><img src="/bg_remove_after.png" alt="Browser-Based Editing"></div>
+                    <div class="related-card-body">
+                        <div class="related-card-tag">Technology</div>
+                        <div class="related-card-title">The Future of Browser-Based Photo Editing</div>
+                    </div>
+                </a>
             </div>
-        </footer>
+        </section>
     </article>
 
     <footer class="footer">
@@ -221,6 +327,7 @@
                 <h4>Product</h4>
                 <ul>
                     <li><a href="/#features">Features</a></li>
+                    <li><a href="/#pricing">Pricing</a></li>
                     <li><a href="/editor">Editor</a></li>
                 </ul>
             </div>
@@ -228,19 +335,35 @@
                 <h4>Resources</h4>
                 <ul>
                     <li><a href="/docs">Documentation</a></li>
+                    <li><a href="/tutorials">Tutorials</a></li>
                     <li><a href="/blog">Blog</a></li>
+                    <li><a href="/changelog">Changelog</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Community</h4>
                 <ul>
                     <li><a href="/about">About</a></li>
+                    <li><a href="/contribute">Contribute</a></li>
                     <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
                 </ul>
             </div>
         </div>
-        <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+        <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
     </footer>
+
+    <script>
+        const progressBar = document.getElementById('reading-progress');
+        window.addEventListener('scroll', () => { progressBar.style.width = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100 + '%'; });
+        const tocLinks = document.querySelectorAll('.article-toc-list a');
+        const headings = [];
+        tocLinks.forEach(link => { const el = document.getElementById(link.getAttribute('href').substring(1)); if (el) headings.push({ el, link }); });
+        const tocObserver = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { tocLinks.forEach(l => l.classList.remove('active')); const m = headings.find(h => h.el === entry.target); if (m) m.link.classList.add('active'); } }); }, { rootMargin: '-80px 0px -60% 0px' });
+        headings.forEach(h => tocObserver.observe(h.el));
+        const toggle = document.querySelector('.nav-mobile-toggle'); const menu = document.querySelector('.nav-menu');
+        if (toggle && menu) { toggle.addEventListener('click', () => menu.classList.toggle('open')); menu.querySelectorAll('.nav-item > button').forEach(btn => { btn.addEventListener('click', () => btn.parentElement.classList.toggle('open')); }); }
+    </script>
 </body>
 
 </html>
