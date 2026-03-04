@@ -1778,13 +1778,25 @@
 
                     <!-- Performance Notice -->
                     <div
-                        style="padding: 8px 12px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                        style="padding: 10px 12px; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                         <span style="font-size: 14px; line-height: 1;">⚡</span>
-                        <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            <strong style="color: #eab308;">GPU-intensive feature.</strong>
-                            Runs AI depth estimation, normal computation, and PBR shading on your device.
-                            May take 5–15 s on slower hardware. Avoid switching tabs during analysis.
-                        </p>
+                        <div style="font-size: 10px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                            <p style="margin: 0 0 6px 0;">
+                                <strong style="color: #eab308;">GPU-intensive feature.</strong>
+                                Runs AI depth estimation, normal computation, and PBR shading entirely on your device.
+                            </p>
+                            <p style="margin: 0 0 4px 0;">
+                                <strong style="color: var(--text-primary);">First run:</strong> 60–120 seconds
+                                (downloads AI models, depends on internet speed). Models are cached for future use.
+                            </p>
+                            <p style="margin: 0 0 4px 0;">
+                                <strong style="color: var(--text-primary);">Regular runs:</strong> 15–30 seconds for
+                                standard HD images. Larger images (4K+) will take longer.
+                            </p>
+                            <p style="margin: 0; color: var(--text-tertiary);">
+                                Avoid switching tabs during analysis for best performance.
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Model Loading Status -->
