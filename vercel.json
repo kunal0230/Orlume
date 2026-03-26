@@ -35,6 +35,10 @@
             "destination": "/pages/contribute.html"
         },
         {
+            "source": "/feedback",
+            "destination": "/pages/feedback.html"
+        },
+        {
             "source": "/privacy",
             "destination": "/pages/privacy.html"
         },
