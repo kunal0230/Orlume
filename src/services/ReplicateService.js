@@ -100,8 +100,16 @@ export class ReplicateService {
         }
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`API error: ${error.detail || error.error || response.statusText}`);
+            if (response.status === 413) {
+                throw new Error("Image is too large for the AI service. Please use a smaller image (under 3MB).");
+            }
+            try {
+                const error = await response.json();
+                throw new Error(`API error: ${error.detail || error.error || response.statusText}`);
+            } catch (jsonErr) {
+                // In case Vercel returns an HTML error page instead of JSON
+                throw new Error(`Server error (${response.status}): Request failed.`);
+            }
         }
 
         const prediction = await response.json();

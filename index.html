@@ -478,17 +478,7 @@
         nav.style.boxShadow = window.scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.05)' : 'none';
     });
 
-    // Subdomain routing for production
-    (function() {
-        if (window.location.hostname === 'orlume.io') {
-            document.querySelectorAll('a[href*="editor"]').forEach(link => {
-                if (link.href.includes('/editor')) {
-                    const url = new URL(link.href, window.location.origin);
-                    link.href = 'https://editor.orlume.io' + (url.search || '/');
-                }
-            });
-        }
-    })();
+
 </script>
 </body>
 </html>
