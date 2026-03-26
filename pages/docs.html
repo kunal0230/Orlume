@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical Documentation — Orlume AI Photo Editor</title>
+    <title>Technical Documentation | Orlume AI Photo Editor</title>
     <meta name="description"
         content="Comprehensive technical documentation for Orlume's AI photo editing architecture. Deep dive into depth estimation, neural rendering, WebGL2/WebGPU acceleration, and physically-based rendering.">
     <meta name="keywords"
@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://orlume.io/docs">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="Technical Documentation — Orlume AI Photo Editor">
+    <meta property="og:title" content="Technical Documentation | Orlume AI Photo Editor">
     <meta property="og:description"
         content="Comprehensive technical documentation for Orlume's AI-powered photo editing architecture.">
     <meta property="og:url" content="https://orlume.io/docs">
@@ -37,7 +37,7 @@
     <script type="module" src="/src/utils/analytics.js"></script>
 
     <style>
-        /* Documentation-specific styles */
+        /* Documentation-specific styles: Light Theme */
         .docs-content h1 {
             font-size: 2rem;
             margin-top: 0;
@@ -73,70 +73,53 @@
             padding: 0.75rem 1rem;
             text-align: left;
             border: 1px solid var(--border-glass);
+            color: var(--text-primary);
         }
 
         .docs-content th {
-            background: var(--bg-glass);
+            background: #f3f3f3;
             font-weight: 600;
         }
 
         .docs-content tr:hover {
-            background: rgba(99, 102, 241, 0.05);
+            background: rgba(70, 72, 212, 0.04);
         }
 
         .docs-content pre {
-            background: #1a1a2e !important;
-            border: 1px solid rgba(99, 102, 241, 0.3) !important;
+            background: #f5f5f7;
+            border: 1px solid var(--border-glass);
             border-radius: 8px;
             padding: 1.25rem;
             overflow-x: auto;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
             line-height: 1.6;
-            color: #e2e8f0 !important;
+            color: #1a1a2e;
         }
 
         .docs-content code {
             font-family: 'JetBrains Mono', monospace;
-            background: #1a1a2e !important;
+            background: #f0f0f5;
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-size: 0.85em;
-            color: #a5b4fc !important;
+            color: #4648D4;
             font-weight: 500;
         }
 
         .docs-content pre code {
-            background: transparent !important;
+            background: transparent;
             padding: 0;
-            color: #e2e8f0 !important;
+            color: #1a1a2e;
         }
 
         /* Syntax highlighting classes */
-        .docs-content pre .keyword {
-            color: #c792ea !important;
-        }
-
-        .docs-content pre .type {
-            color: #82aaff !important;
-        }
-
-        .docs-content pre .function {
-            color: #82aaff !important;
-        }
-
-        .docs-content pre .number {
-            color: #f78c6c !important;
-        }
-
-        .docs-content pre .string {
-            color: #c3e88d !important;
-        }
-
-        .docs-content pre .comment {
-            color: #9ca3af !important;
-            font-style: italic;
-        }
+        .docs-content pre .keyword { color: #7c3aed; }
+        .docs-content pre .type { color: #2563eb; }
+        .docs-content pre .function { color: #4648D4; }
+        .docs-content pre .number { color: #d97706; }
+        .docs-content pre .string { color: #16a34a; }
+        .docs-content pre .comment { color: #9ca3af; font-style: italic; }
 
         .tech-badge {
             display: inline-block;
@@ -148,7 +131,7 @@
         }
 
         .tech-badge.ml {
-            background: linear-gradient(135deg, #a855f7, #6366f1);
+            background: linear-gradient(135deg, #4648D4, #6063EE);
             color: white;
         }
 
@@ -163,8 +146,8 @@
         }
 
         .architecture-diagram {
-            background: #1a1a2e !important;
-            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: #f5f5f7;
+            border: 1px solid var(--border-glass);
             border-radius: 12px;
             padding: 1.5rem;
             margin: 1.5rem 0;
@@ -177,30 +160,30 @@
             border: none !important;
             margin: 0;
             text-align: left;
-            color: #e2e8f0 !important;
+            color: #1a1a2e;
             font-size: 0.8rem;
             line-height: 1.4;
         }
 
         .equation-block {
-            background: #1a1a2e !important;
+            background: #f5f5f7;
             border-left: 3px solid var(--accent-purple);
             padding: 1rem 1.5rem;
             margin: 1rem 0;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
-            color: #e2e8f0 !important;
+            color: #1a1a2e;
             border-radius: 0 8px 8px 0;
         }
 
         .paper-reference {
-            background: rgba(99, 102, 241, 0.15) !important;
-            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: rgba(70, 72, 212, 0.06);
+            border: 1px solid rgba(70, 72, 212, 0.15);
             border-radius: 8px;
             padding: 1rem;
             margin: 1rem 0;
             font-size: 0.9rem;
-            color: #1a1a2e !important;
+            color: #1a1a2e;
         }
 
         .paper-reference strong {
@@ -215,7 +198,7 @@
         }
 
         .feature-highlight-item {
-            background: var(--bg-glass);
+            background: #f3f3f3;
             border: 1px solid var(--border-glass);
             border-radius: 8px;
             padding: 1rem;
@@ -232,22 +215,22 @@
         /* High-contrast overrides for readability */
         .docs-content td,
         .docs-content th {
-            color: #1a1a2e !important;
+            color: #1a1a2e;
         }
 
         .docs-content td code {
-            background: #1a1a2e !important;
-            color: #a5b4fc !important;
+            background: #f0f0f5;
+            color: #4648D4;
             font-weight: 500;
         }
 
         .docs-content p,
         .docs-content li {
-            color: #1a1a2e !important;
+            color: var(--text-secondary);
         }
 
         .docs-content strong {
-            color: #1a1a2e !important;
+            color: var(--text-primary);
         }
     </style>
 </head>
@@ -729,10 +712,10 @@ const smoothedDepth = bilateralFilter(depthMap, {
 
                         <h3>Mesh Generation</h3>
                         <ul>
-                            <li><strong>468 vertices</strong> — Sparse 3D landmark positions</li>
-                            <li><strong>~900 triangles</strong> — Dense tessellation via Delaunay triangulation</li>
-                            <li><strong>Smooth normals</strong> — Area-weighted vertex normal averaging</li>
-                            <li><strong>Depth interpolation</strong> — Barycentric coordinates for dense depth map</li>
+                            <li><strong>468 vertices</strong>: Sparse 3D landmark positions</li>
+                            <li><strong>~900 triangles</strong>: Dense tessellation via Delaunay triangulation</li>
+                            <li><strong>Smooth normals</strong>: Area-weighted vertex normal averaging</li>
+                            <li><strong>Depth interpolation</strong>: Barycentric coordinates for dense depth map</li>
                         </ul>
 
                         <pre><code class="language-glsl">// Per-vertex normal via area-weighted averaging
@@ -961,10 +944,10 @@ vec3 computeNormal(vec2 uv, sampler2D depthTex) {
 
                         <h3>Anti-Banding Techniques</h3>
                         <ul>
-                            <li><strong>Pseudo-random dithering</strong> — Per-pixel offset using hash function</li>
-                            <li><strong>9-tap Gaussian blur</strong> — Smooth depth sampling at 3px radius</li>
-                            <li><strong>Gradient accumulation</strong> — Soft blocking instead of hard thresholds</li>
-                            <li><strong>48 ray steps</strong> — Quadratic distribution (denser near fragment)</li>
+                            <li><strong>Pseudo-random dithering</strong>: Per-pixel offset using hash function</li>
+                            <li><strong>9-tap Gaussian blur</strong>: Smooth depth sampling at 3px radius</li>
+                            <li><strong>Gradient accumulation</strong>: Soft blocking instead of hard thresholds</li>
+                            <li><strong>48 ray steps</strong>: Quadratic distribution (denser near fragment)</li>
                         </ul>
 
                         <pre><code class="language-glsl">float hash(vec2 p) {
@@ -1084,9 +1067,9 @@ float calculateSoftShadow(vec2 uv, vec2 lightPos) {
 
                         <h3>Required Extensions</h3>
                         <ul>
-                            <li><code>EXT_color_buffer_float</code> — Floating-point render targets</li>
-                            <li><code>OES_texture_float_linear</code> — Linear filtering for float textures</li>
-                            <li><code>EXT_float_blend</code> — Blending with float framebuffers</li>
+                            <li><code>EXT_color_buffer_float</code>: Floating-point render targets</li>
+                            <li><code>OES_texture_float_linear</code>: Linear filtering for float textures</li>
+                            <li><code>EXT_float_blend</code>: Blending with float framebuffers</li>
                         </ul>
                     </section>
 
@@ -1151,13 +1134,13 @@ float calculateSoftShadow(vec2 uv, vec2 lightPos) {
                         </p>
 
                         <ol>
-                            <li><strong>Exposure</strong> — EV stops (-5 to +5)</li>
-                            <li><strong>White Balance</strong> — Temperature (2000K-12000K) + Tint</li>
-                            <li><strong>Contrast</strong> — S-curve with midpoint preservation</li>
-                            <li><strong>Highlights/Shadows</strong> — Luminance-selective adjustment</li>
-                            <li><strong>Whites/Blacks</strong> — Endpoint clipping control</li>
-                            <li><strong>HSL</strong> — Per-channel hue/saturation/luminance</li>
-                            <li><strong>Vibrance</strong> — Saturation-aware saturation boost</li>
+                            <li><strong>Exposure</strong>: EV stops (-5 to +5)</li>
+                            <li><strong>White Balance</strong>: Temperature (2000K-12000K) + Tint</li>
+                            <li><strong>Contrast</strong>: S-curve with midpoint preservation</li>
+                            <li><strong>Highlights/Shadows</strong>: Luminance-selective adjustment</li>
+                            <li><strong>Whites/Blacks</strong>: Endpoint clipping control</li>
+                            <li><strong>HSL</strong>: Per-channel hue/saturation/luminance</li>
+                            <li><strong>Vibrance</strong>: Saturation-aware saturation boost</li>
                         </ol>
                     </section>
 

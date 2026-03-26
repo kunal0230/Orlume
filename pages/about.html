@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About — Orlume Open Source Project</title>
+    <title>About | Orlume Open Source Project</title>
     <meta name="description"
         content="Orlume is a free, open-source AI photo editor built by the community. Our mission is to make professional photo editing accessible to everyone.">
     <meta name="keywords"
@@ -12,7 +12,7 @@
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/about">
 
-    <meta property="og:title" content="About — Orlume Open Source Project">
+    <meta property="og:title" content="About | Orlume Open Source Project">
     <meta property="og:description" content="The story behind Orlume's community-driven AI photo editor.">
     <meta property="og:url" content="https://orlume.io/about">
 
@@ -25,6 +25,404 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <!-- Vercel Analytics -->
     <script type="module" src="/src/utils/analytics.js"></script>
+
+    <style>
+        /* About page refinements */
+        .about-hero {
+            text-align: center;
+            padding: 40px 24px 80px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .about-hero h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .about-hero p {
+            font-size: 17px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .about-hero .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 28px;
+            padding: 14px 28px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .about-hero .hero-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(70, 72, 212, 0.3);
+        }
+
+        /* Stats row */
+        .about-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            max-width: 900px;
+            margin: 0 auto 64px;
+            padding: 0 24px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 28px 16px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            transition: transform 0.3s var(--ease-out-expo);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Principles grid */
+        .principles-section {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .principles-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .principles-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .principles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .principle-card {
+            padding: 32px 28px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .principle-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(70, 72, 212, 0.3);
+        }
+
+        .principle-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .principle-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .principle-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .principle-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Tech stack section */
+        .tech-section {
+            background: var(--bg-secondary);
+            margin: 0 -24px;
+            padding: 72px 24px;
+        }
+
+        .tech-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tech-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .tech-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .tech-header p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .tech-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 28px 20px;
+            text-align: center;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .tech-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(70, 72, 212, 0.3);
+        }
+
+        .tech-card-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            color: white;
+        }
+
+        .tech-card-name {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .tech-card-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Join CTA */
+        .join-section {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 80px 24px;
+        }
+
+        .join-section h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+
+        .join-section p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 28px;
+        }
+
+        .join-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .join-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            color: white;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .join-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(70, 72, 212, 0.3);
+        }
+
+        .join-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .join-btn-secondary:hover {
+            border-color: rgba(70, 72, 212, 0.4);
+            background: rgba(70, 72, 212, 0.04);
+        }
+
+        /* Founder section */
+        .founder-section {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .founder-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .founder-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .founder-card {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+            padding: 36px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            transition: transform 0.3s var(--ease-out-expo);
+        }
+
+        .founder-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .founder-avatar {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 36px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -1px;
+        }
+
+        .founder-info h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .founder-role {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-purple);
+            background: rgba(70, 72, 212, 0.08);
+            padding: 4px 12px;
+            border-radius: 100px;
+            margin-bottom: 12px;
+        }
+
+        .founder-info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .founder-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-purple);
+            transition: gap 0.3s;
+        }
+
+        .founder-link:hover {
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .founder-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .about-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .principles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tech-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -161,176 +559,170 @@
     <div class="page-wrapper">
         <div class="page-content">
             <header class="page-header">
-                <div class="page-eyebrow">Open Source</div>
-                <h1 class="page-title">Orlume is Open Source</h1>
-                <p class="page-subtitle">Professional photo editing for everyone, built by the community.</p>
+                <div class="page-eyebrow">About</div>
+                <h1 class="page-title">Built for creators, by creators.</h1>
+                <p class="page-subtitle">Orlume is a free, open-source AI photo editor that runs entirely in your browser. No subscriptions. No uploads. No compromises.</p>
             </header>
 
-            <!-- Mission Section -->
-            <section class="about-section reveal-page">
-                <div class="about-grid">
-                    <div class="about-content">
-                        <h2>Our Mission</h2>
-                        <p>Orlume is a free, open-source AI photo editor that runs entirely in your browser. We believe
-                            professional-grade creative tools should be accessible to everyone — without expensive
-                            subscriptions, software installations, or privacy concerns.</p>
-                        <p>Built by a passionate community of developers and designers, Orlume combines cutting-edge
-                            machine learning with intuitive design. Whether you're a photographer, designer, or just
-                            want to enhance your photos — Orlume is here for you.</p>
-                        <p>
-                            <a href="https://github.com/kunal0230/Orlume" target="_blank" class="about-link">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path
-                                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                                </svg>
-                                View on GitHub →
-                            </a>
-                        </p>
+            <!-- Stats -->
+            <div class="about-stats reveal-page">
+                <div class="stat-item">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Free & Open Source</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Server Uploads</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">60fps</div>
+                    <div class="stat-label">GPU Rendering</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">MIT</div>
+                    <div class="stat-label">License</div>
+                </div>
+            </div>
+
+            <!-- Principles -->
+            <section class="principles-section reveal-page">
+                <div class="principles-header">
+                    <h2>What we stand for</h2>
+                </div>
+                <div class="principles-grid">
+                    <div class="principle-card">
+                        <div class="principle-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
+                        <h3>Privacy First</h3>
+                        <p>Your photos never leave your device. All AI processing happens locally in the browser. We never see, upload, or store your images.</p>
                     </div>
-                    <div class="about-visual">
-                        <img src="/logo.png" alt="Orlume Logo" class="about-visual--logo">
+                    <div class="principle-card">
+                        <div class="principle-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                                <line x1="6" y1="1" x2="6" y2="4" />
+                                <line x1="10" y1="1" x2="10" y2="4" />
+                                <line x1="14" y1="1" x2="14" y2="4" />
+                            </svg>
+                        </div>
+                        <h3>Free Forever</h3>
+                        <p>No subscriptions, no paywalls, no hidden costs. Orlume is and will always be free. Open source under the MIT license.</p>
+                    </div>
+                    <div class="principle-card">
+                        <div class="principle-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <h3>Community Driven</h3>
+                        <p>Built by contributors worldwide. Anyone can suggest features, report bugs, or contribute code. Every contribution matters.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Values Section -->
-            <section class="about-section reveal-page">
-                <div class="container">
-                    <div class="section-header" style="margin-bottom: 48px;">
-                        <h2 class="section-title">Our Values</h2>
+            <!-- Founder -->
+            <section class="founder-section reveal-page">
+                <div class="founder-header">
+                    <h2>Meet the founder</h2>
+                </div>
+                <div class="founder-card">
+                    <div class="founder-avatar">KC</div>
+                    <div class="founder-info">
+                        <h3>Kunal Chaugule</h3>
+                        <span class="founder-role">Co-Founder & Lead Engineer</span>
+                        <p>Computer Vision and Image Processing Engineer working at the intersection of applied machine learning and visual perception. Kunal architected Orlume's core rendering pipeline, including the WebGPU-powered 3D relighting system, depth estimation, and physically-based rendering engine.</p>
+                        <a href="https://kunalchaugule.com" target="_blank" class="founder-link">
+                            kunalchaugule.com
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                                <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                        </a>
                     </div>
-                    <div class="values-grid">
-                        <div class="value-card">
-                            <div class="value-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                </div>
+            </section>
+
+            <!-- Technology -->
+            <section class="tech-section reveal-page">
+                <div class="tech-inner">
+                    <div class="tech-header">
+                        <h2>Built on modern technology</h2>
+                        <p>Desktop-class performance delivered through the browser.</p>
+                    </div>
+                    <div class="tech-grid">
+                        <div class="tech-card">
+                            <div class="tech-card-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                </svg>
+                            </div>
+                            <div class="tech-card-name">WebGL2 & WebGPU</div>
+                            <div class="tech-card-desc">GPU-accelerated real-time rendering</div>
+                        </div>
+                        <div class="tech-card">
+                            <div class="tech-card-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <path d="M12 2a4 4 0 0 1 4 4v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a4 4 0 0 1 4-4z" />
+                                    <path d="M8 7v1a4 4 0 1 0 8 0V7" />
+                                    <path d="M5 13a7 7 0 0 0 14 0" />
+                                    <line x1="12" y1="20" x2="12" y2="22" />
+                                    <line x1="8" y1="22" x2="16" y2="22" />
+                                </svg>
+                            </div>
+                            <div class="tech-card-name">TensorFlow.js</div>
+                            <div class="tech-card-desc">Neural networks running locally</div>
+                        </div>
+                        <div class="tech-card">
+                            <div class="tech-card-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                            </div>
+                            <div class="tech-card-name">ONNX Runtime</div>
+                            <div class="tech-card-desc">Optimized AI model inference</div>
+                        </div>
+                        <div class="tech-card">
+                            <div class="tech-card-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                                 </svg>
                             </div>
-                            <h3>Privacy First</h3>
-                            <p>Your photos are personal. All processing happens locally on your device. We never see,
-                                upload, or store your images.</p>
-                        </div>
-                        <div class="value-card">
-                            <div class="value-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-                                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                                    <line x1="6" y1="1" x2="6" y2="4" />
-                                    <line x1="10" y1="1" x2="10" y2="4" />
-                                    <line x1="14" y1="1" x2="14" y2="4" />
-                                </svg>
-                            </div>
-                            <h3>Free Forever</h3>
-                            <p>Orlume is and will always be free. No subscriptions, no paywalls, no hidden costs.
-                                Open source under the MIT license.</p>
-                        </div>
-                        <div class="value-card">
-                            <div class="value-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                </svg>
-                            </div>
-                            <h3>Community Driven</h3>
-                            <p>Built by contributors from around the world. Anyone can suggest features, report bugs,
-                                or contribute code.</p>
+                            <div class="tech-card-name">Web Workers</div>
+                            <div class="tech-card-desc">Background processing, zero UI blocking</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Technology Section -->
-            <section class="about-section about-tech-bg reveal-page">
-                <div class="about-grid" style="max-width: 1200px; margin: 0 auto;">
-                    <div class="about-visual" style="order: 1;">
-                        <div class="about-tech-grid">
-                            <div class="about-tech-card">
-                                <div class="about-tech-icon">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <path
-                                            d="M12 2a4 4 0 0 1 4 4v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a4 4 0 0 1 4-4z" />
-                                        <path d="M8 7v1a4 4 0 1 0 8 0V7" />
-                                        <path d="M5 13a7 7 0 0 0 14 0" />
-                                        <line x1="12" y1="20" x2="12" y2="22" />
-                                        <line x1="8" y1="22" x2="16" y2="22" />
-                                    </svg>
-                                </div>
-                                <div class="about-tech-label">Neural Networks</div>
-                            </div>
-                            <div class="about-tech-card">
-                                <div class="about-tech-icon">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                    </svg>
-                                </div>
-                                <div class="about-tech-label">WebGPU</div>
-                            </div>
-                            <div class="about-tech-card">
-                                <div class="about-tech-icon">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                        <circle cx="8.5" cy="8.5" r="1.5" />
-                                        <polyline points="21 15 16 10 5 21" />
-                                    </svg>
-                                </div>
-                                <div class="about-tech-label">Real-time Render</div>
-                            </div>
-                            <div class="about-tech-card">
-                                <div class="about-tech-icon">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                    </svg>
-                                </div>
-                                <div class="about-tech-label">Local Processing</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="about-content" style="order: 2;">
-                        <h2>Built on Cutting-Edge Technology</h2>
-                        <p>Orlume leverages the latest in web technologies to deliver desktop-class performance in your
-                            browser:</p>
-                        <ul class="about-tech-list">
-                            <li><strong>WebGL2 & WebGPU</strong> — GPU-accelerated
-                                rendering for real-time preview</li>
-                            <li><strong>TensorFlow.js</strong> — State-of-the-art
-                                neural networks running locally</li>
-                            <li><strong>ONNX Runtime</strong> — Optimized inference
-                                for AI models</li>
-                            <li><strong>Web Workers</strong> — Background processing
-                                without UI blocking</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Contribute Section -->
-            <section class="about-section reveal-page">
-                <div class="about-contribute-section">
-                    <h2 class="about-contribute-title">Join the Community</h2>
-                    <p class="about-contribute-desc">
-                        Orlume is built by people like you. Whether you're a developer, designer, or just passionate
-                        about photo editing — we'd love your help!
-                    </p>
-                    <div class="about-contribute-buttons">
-                        <a href="https://github.com/kunal0230/Orlume" target="_blank" class="about-btn-primary">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                            </svg>
-                            Star on GitHub
-                        </a>
-                        <a href="/contribute" class="about-btn-secondary">
-                            How to Contribute
-                        </a>
-                    </div>
+            <!-- Join Community -->
+            <section class="join-section reveal-page">
+                <h2>Join the community</h2>
+                <p>Whether you're a developer, designer, or just passionate about photo editing, we'd love your help building the future of creative tools.</p>
+                <div class="join-buttons">
+                    <a href="https://github.com/kunal0230/Orlume" target="_blank" class="join-btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                        </svg>
+                        Star on GitHub
+                    </a>
+                    <a href="/contribute" class="join-btn-secondary">
+                        How to Contribute
+                    </a>
                 </div>
             </section>
         </div>
@@ -368,7 +760,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
 

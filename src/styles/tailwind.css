@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Custom theme tokens for Orlume's light-themed design system */
+@theme {
+    --color-primary: #4648d4;
+    --color-primary-container: #6063ee;
+    --color-primary-fixed: #e1e0ff;
+    --color-primary-fixed-dim: #c0c1ff;
+    --color-secondary: #6b38d4;
+    --color-secondary-container: #8455ef;
+    --color-tertiary: #904900;
+    --color-tertiary-container: #b55d00;
+    --color-error: #ba1a1a;
+    --color-surface: #f9f9f9;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f3f3f3;
+    --color-surface-container: #eeeeee;
+    --color-surface-container-high: #e8e8e8;
+    --color-surface-container-highest: #e2e2e2;
+    --color-surface-variant: #e2e2e2;
+    --color-background: #f9f9f9;
+    --color-on-surface: #1a1c1c;
+    --color-on-surface-variant: #464554;
+    --color-on-primary: #ffffff;
+    --color-on-secondary: #ffffff;
+    --color-outline: #767586;
+    --color-outline-variant: #c7c4d7;
+    --font-family-headline: "Inter", sans-serif;
+    --font-family-body: "Inter", sans-serif;
+    --font-family-label: "Inter", sans-serif;
+}

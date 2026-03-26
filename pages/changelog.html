@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Changelog — Orlume AI Photo Editor</title>
+    <title>Changelog | Orlume AI Photo Editor</title>
     <meta name="description"
         content="Complete release history for Orlume. Track all product updates, new features, performance improvements, and technical enhancements.">
     <meta name="keywords" content="orlume changelog, orlume updates, new features, release notes, version history">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/changelog">
 
-    <meta property="og:title" content="Changelog — Orlume AI Photo Editor">
+    <meta property="og:title" content="Changelog | Orlume AI Photo Editor">
     <meta property="og:description" content="Complete version history and release notes for Orlume.">
     <meta property="og:url" content="https://orlume.io/changelog">
 
@@ -189,7 +189,7 @@
                             <li>
                                 <span class="badge fixed">Fixed</span>
                                 <div>
-                                    <strong>Page Unresponsive crash on 4K+ images</strong> — Eliminated synchronous
+                                    <strong>Page Unresponsive crash on 4K+ images</strong>: Eliminated synchronous
                                     <code>toDataURL()</code> and <code>toImageData()</code> calls that blocked the main
                                     thread
                                     <div class="tech-detail">Replaced with async <code>createImageBitmap()</code> and
@@ -200,7 +200,7 @@
                             <li>
                                 <span class="badge perf">Perf</span>
                                 <div>
-                                    <strong>Async chunked normal computation</strong> — Sobel filter now processes in
+                                    <strong>Async chunked normal computation</strong>: Sobel filter now processes in
                                     128-row batches with main thread yielding
                                     <div class="tech-detail">Prevents UI freeze during
                                         <code>_computeNormalsFromDepth()</code> on large depth maps
@@ -210,7 +210,7 @@
                             <li>
                                 <span class="badge perf">Perf</span>
                                 <div>
-                                    <strong>Async scene analysis</strong> — Material classification loop yields to the
+                                    <strong>Async scene analysis</strong>: Material classification loop yields to the
                                     browser between chunks
                                     <div class="tech-detail"><code>SceneAnalyzer.analyze()</code> now processes 128 rows
                                         per frame, keeping UI responsive</div>
@@ -219,7 +219,7 @@
                             <li>
                                 <span class="badge improved">Improved</span>
                                 <div>
-                                    <strong>Resolution check runs first</strong> — Pipeline now downscales oversized
+                                    <strong>Resolution check runs first</strong>: Pipeline now downscales oversized
                                     images before any heavy processing begins
                                     <div class="tech-detail">Previously, full-resolution pixel data was read and encoded
                                         before <code>ResolutionManager</code> could intervene</div>
@@ -227,7 +227,7 @@
                             </li>
                             <li>
                                 <span class="badge improved">Improved</span>
-                                <div>Error recovery for analysis button — Always re-enables on failure, preventing stuck
+                                <div>Error recovery for analysis button: Always re-enables on failure, preventing stuck
                                     UI state</div>
                             </li>
                         </ul>
@@ -248,7 +248,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>3-Way Color Grading</strong> — Independent shadow, midtone, and highlight
+                                    <strong>3-Way Color Grading</strong>: Independent shadow, midtone, and highlight
                                     color
                                     wheels
                                     <div class="tech-detail">GPU shader uses lift-gamma-gain algorithm:
@@ -259,7 +259,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Technical Documentation Portal</strong> — Comprehensive academic-level
+                                    <strong>Technical Documentation Portal</strong>: Comprehensive academic-level
                                     documentation
                                     <div class="tech-detail">Covers ML models, PBR rendering, GLSL shaders, and HBAO
                                         implementation</div>
@@ -268,7 +268,7 @@
                             <li>
                                 <span class="badge improved">Improved</span>
                                 <div>
-                                    <strong>Navigation Routing</strong> — Fixed page routing for documentation,
+                                    <strong>Navigation Routing</strong>: Fixed page routing for documentation,
                                     tutorials,
                                     and blog
                                     <div class="tech-detail">Added <code>pageRoutesPlugin</code> middleware for Vite dev
@@ -312,7 +312,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Clarity slider</strong> — Local contrast enhancement using unsharp mask
+                                    <strong>Clarity slider</strong>: Local contrast enhancement using unsharp mask
                                     <div class="tech-detail">Algorithm:
                                         <code>clarity = original + (original - blur) × strength</code>
                                     </div>
@@ -321,14 +321,14 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Texture slider</strong> — High-frequency detail enhancement
+                                    <strong>Texture slider</strong>: High-frequency detail enhancement
                                     <div class="tech-detail">Preserves edges while boosting micro-contrast</div>
                                 </div>
                             </li>
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Dehaze slider</strong> — Atmospheric haze removal
+                                    <strong>Dehaze slider</strong>: Atmospheric haze removal
                                     <div class="tech-detail">Based on dark channel prior with transmission map
                                         estimation
                                     </div>
@@ -355,7 +355,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>God Rays (Volumetric Lighting)</strong> — Screen-space light scattering
+                                    <strong>God Rays (Volumetric Lighting)</strong>: Screen-space light scattering
                                     effect
                                     <div class="tech-detail">Ray marching with 32-128 samples, chromatic aberration, and
                                         bloom integration</div>
@@ -364,7 +364,7 @@
                             <li>
                                 <span class="badge breaking">Breaking</span>
                                 <div>
-                                    <strong>History System Rewrite</strong> — Complete overhaul of undo/redo logic
+                                    <strong>History System Rewrite</strong>: Complete overhaul of undo/redo logic
                                     <div class="tech-detail">Command pattern implementation with
                                         <code>pushDebounced</code>
                                         calls across all modules
@@ -414,7 +414,7 @@
                             <span class="changelog-tag">v3.0.0</span>
                             <span class="changelog-date">January 15, 2026</span>
                         </div>
-                        <h3 class="changelog-title">3D Relighting V2 — Complete Rewrite</h3>
+                        <h3 class="changelog-title">3D Relighting V2: Complete Rewrite</h3>
                         <p class="changelog-subtitle">Second-generation relighting system with HBAO, soft shadows, and
                             material-aware rendering.</p>
 
@@ -441,7 +441,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Depth Anything V2</strong> — State-of-the-art monocular depth estimation
+                                    <strong>Depth Anything V2</strong>: State-of-the-art monocular depth estimation
                                     <div class="tech-detail">ViT-Small architecture via
                                         <code>Xenova/depth-anything-small-hf</code>
                                     </div>
@@ -450,7 +450,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>SegFormer B0</strong> — Material-aware semantic segmentation
+                                    <strong>SegFormer B0</strong>: Material-aware semantic segmentation
                                     <div class="tech-detail">150-class ADE20K with per-pixel roughness/metallic/SSS
                                         properties</div>
                                 </div>
@@ -466,21 +466,21 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>GGX BRDF</strong> — Cook-Torrance specular with Fresnel-Schlick
+                                    <strong>GGX BRDF</strong>: Cook-Torrance specular with Fresnel-Schlick
                                     <div class="tech-detail">Physically-based rendering with energy conservation</div>
                                 </div>
                             </li>
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Dithered Soft Shadows</strong> — Anti-banded screen-space shadows
+                                    <strong>Dithered Soft Shadows</strong>: Anti-banded screen-space shadows
                                     <div class="tech-detail">Hash-based dithering + 9-tap Gaussian depth sampling</div>
                                 </div>
                             </li>
                             <li>
                                 <span class="badge improved">Improved</span>
                                 <div>
-                                    <strong>Scharr Normal Estimation</strong> — Better rotational symmetry than Sobel
+                                    <strong>Scharr Normal Estimation</strong>: Better rotational symmetry than Sobel
                                 </div>
                             </li>
                         </ul>
@@ -500,7 +500,7 @@
                         <ul class="changelog-list">
                             <li>
                                 <span class="badge new">New</span>
-                                <div>Professional Presets library — 40+ cinematic looks across 6 categories</div>
+                                <div>Professional Presets library: 40+ cinematic looks across 6 categories</div>
                             </li>
                             <li>
                                 <span class="badge new">New</span>
@@ -539,7 +539,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>3D OBJ Mesh Export</strong> — Depth-displaced geometry with UV-mapped
+                                    <strong>3D OBJ Mesh Export</strong>: Depth-displaced geometry with UV-mapped
                                     textures
                                     <div class="tech-detail">Three.js PlaneGeometry with configurable 64-512 segment
                                         resolution</div>
@@ -548,7 +548,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>Interactive 3D Preview</strong> — OrbitControls with zoom/pan/rotate
+                                    <strong>Interactive 3D Preview</strong>: OrbitControls with zoom/pan/rotate
                                 </div>
                             </li>
                             <li>
@@ -580,7 +580,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>8-Channel HSL Mixer</strong> — Red, Orange, Yellow, Green, Aqua, Blue,
+                                    <strong>8-Channel HSL Mixer</strong>: Red, Orange, Yellow, Green, Aqua, Blue,
                                     Purple,
                                     Magenta
                                     <div class="tech-detail">Single-pass GPU shader with hue-range based masking</div>
@@ -692,7 +692,7 @@
                             <li>
                                 <span class="badge new">New</span>
                                 <div>
-                                    <strong>3D Relighting</strong> — AI depth estimation with WebGL2 lighting
+                                    <strong>3D Relighting</strong>: AI depth estimation with WebGL2 lighting
                                 </div>
                             </li>
                             <li>

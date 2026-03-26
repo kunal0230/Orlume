@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog — Orlume AI Photo Editor</title>
+    <title>Blog | Orlume AI Photo Editor</title>
     <meta name="description"
         content="Latest news, updates, and insights from Orlume Vision Labs. Stay up to date with AI photo editing trends and product announcements.">
     <meta name="keywords" content="orlume blog, ai photo editing news, photo editor updates, digital photography tips">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/blog">
 
-    <meta property="og:title" content="Blog — Orlume AI Photo Editor">
+    <meta property="og:title" content="Blog | Orlume AI Photo Editor">
     <meta property="og:description" content="Latest news and insights from Orlume Vision Labs.">
     <meta property="og:url" content="https://orlume.io/blog">
 
@@ -148,115 +148,104 @@
         <div class="page-content">
             <header class="page-header">
                 <div class="page-eyebrow">Blog</div>
-                <h1 class="page-title">News & Insights</h1>
-                <p class="page-subtitle">Latest updates, tutorials, and behind-the-scenes from Orlume Vision Labs.</p>
+                <h1 class="page-title">Engineering &amp; Insights</h1>
+                <p class="page-subtitle">Deep dives into computer vision research, product updates, and the engineering decisions behind Orlume's local-first AI editor.</p>
             </header>
 
             <div class="cards-grid">
                 <!-- Featured Blog Post -->
                 <article class="content-card featured reveal-page">
                     <div class="content-card-image">
-                        <img src="/relight_after.png" alt="Introducing Professional Presets">
+                        <img src="/relight_after.png" alt="Orlume 3D Relighting Engine">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
-                            <span class="content-card-tag">Product</span>
-                            <span class="content-card-date">Jan 2, 2026</span>
+                            <span class="content-card-tag">Engineering</span>
+                            <span class="content-card-date">Jan 2, 2026 · 12 min read</span>
                         </div>
-                        <h2 class="content-card-title">Introducing Orlume: The Free AI Photo Editor That Changes
-                            Everything</h2>
-                        <p class="content-card-excerpt">Today we're launching Orlume — a free, professional-grade AI
-                            photo editor that runs entirely in your browser. No downloads, no sign-ups, just powerful
-                            editing.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More
-                            →</a>
+                        <h2 class="content-card-title">How We Built a Real-Time 3D Relighting Engine in the Browser</h2>
+                        <p class="content-card-excerpt">A technical deep-dive into Orlume's flagship feature: real-time 3D relighting powered by monocular depth estimation, surface normal computation, and physically-based rendering. We explain how we achieve 60fps PBR shading using WebGPU compute shaders and the Depth Anything V2 model running locally via ONNX Runtime Web, without sending a single pixel to any server.</p>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 2 -->
                 <article class="content-card reveal-page">
                     <div class="content-card-image">
-                        <img src="/grading_after.png" alt="HSL Color Mixer Deep Dive">
+                        <img src="/grading_after.png" alt="HSL Color Science">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
-                            <span class="content-card-tag">Tutorial</span>
-                            <span class="content-card-date">Dec 28, 2025</span>
+                            <span class="content-card-tag">Color Science</span>
+                            <span class="content-card-date">Dec 28, 2025 · 8 min read</span>
                         </div>
-                        <h2 class="content-card-title">Professional Color Grading with HSL: Complete Tutorial</h2>
-                        <p class="content-card-excerpt">Master the 8-channel HSL color mixer for Lightroom-level control
-                            over your photos. Learn professional techniques for stunning color grades.</p>
-                        <a href="/pages/blog/color-grading-hsl-tutorial" class="content-card-link">Read More →</a>
+                        <h2 class="content-card-title">Perceptual Color Grading: Building a Professional 8-Channel HSL Mixer</h2>
+                        <p class="content-card-excerpt">How we implemented an 8-channel HSL color mixer that gives you Lightroom-level control entirely in WebGL2 fragment shaders. This article covers our approach to perceptually linear color spaces, smooth channel crossfade, and real-time histogram computation on the GPU.</p>
+                        <a href="/pages/blog/color-grading-hsl-tutorial" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 3 -->
                 <article class="content-card reveal-page">
                     <div class="content-card-image">
-                        <img src="/bg_remove_after.png" alt="The Future of Browser-Based Editing">
+                        <img src="/bg_remove_after.png" alt="WebGPU AI Architecture">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
-                            <span class="content-card-tag">Technology</span>
-                            <span class="content-card-date">Dec 20, 2025</span>
+                            <span class="content-card-tag">Architecture</span>
+                            <span class="content-card-date">Dec 20, 2025 · 10 min read</span>
                         </div>
-                        <h2 class="content-card-title">The Future of Browser-Based Photo Editing: WebGPU and AI</h2>
-                        <p class="content-card-excerpt">WebGPU, transformer models, and real-time AI — discover how
-                            we're pushing the boundaries of what's possible in a web browser.</p>
-                        <a href="/pages/blog/browser-based-photo-editing" class="content-card-link">Read More →</a>
+                        <h2 class="content-card-title">Client-Side AI at Scale: Our WebGPU + ONNX Runtime Architecture</h2>
+                        <p class="content-card-excerpt">An architectural overview of how Orlume runs multiple deep learning models (depth estimation, semantic segmentation, background removal) entirely in the browser. We discuss model quantization strategies, IndexedDB caching, Web Worker threading, and how we achieve sub-second inference on consumer hardware without any cloud API dependency.</p>
+                        <a href="/pages/blog/browser-based-photo-editing" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 4 -->
                 <article class="content-card reveal-page">
                     <div class="content-card-image">
-                        <img src="/relight_after.png" alt="3D Relighting Explained">
+                        <img src="/relight_after.png" alt="Depth Estimation Pipeline">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
-                            <span class="content-card-tag">AI</span>
-                            <span class="content-card-date">Dec 15, 2025</span>
+                            <span class="content-card-tag">Research</span>
+                            <span class="content-card-date">Dec 15, 2025 · 9 min read</span>
                         </div>
-                        <h2 class="content-card-title">Complete Guide to 3D Relighting: Add Professional Lighting</h2>
-                        <p class="content-card-excerpt">Learn how to use Orlume's 3D relighting feature to add realistic
-                            lighting effects to your photos. Transform flat photos into professionally-lit images.</p>
-                        <a href="/pages/blog/3d-relighting-guide" class="content-card-link">Read More →</a>
+                        <h2 class="content-card-title">From Monocular Depth to Surface Normals: The Relighting Pipeline Explained</h2>
+                        <p class="content-card-excerpt">A step-by-step breakdown of our relighting pipeline: we start with a single 2D photograph, estimate a dense depth map using a Vision Transformer model, compute surface normals via screen-space derivatives, and apply real-time Blinn-Phong and Cook-Torrance shading with user-controllable light sources. All of it runs at 60fps on your GPU.</p>
+                        <a href="/pages/blog/3d-relighting-guide" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 5 -->
                 <article class="content-card reveal-page">
                     <div class="content-card-image">
-                        <img src="/bg_remove_before.png" alt="Privacy First Design">
+                        <img src="/bg_remove_before.png" alt="AI Background Removal">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
-                            <span class="content-card-tag">Community</span>
-                            <span class="content-card-date">Dec 10, 2025</span>
+                            <span class="content-card-tag">Tutorial</span>
+                            <span class="content-card-date">Dec 10, 2025 · 6 min read</span>
                         </div>
-                        <h2 class="content-card-title">AI Background Removal: Free Tool for Perfect Cutouts</h2>
-                        <p class="content-card-excerpt">Remove backgrounds from photos instantly with AI. Free online
-                            background remover with perfect edges for portraits, products, and complex images.</p>
-                        <a href="/pages/blog/ai-background-removal-tutorial" class="content-card-link">Read More →</a>
+                        <h2 class="content-card-title">Zero-Upload Background Removal: How Our Segmentation Model Works</h2>
+                        <p class="content-card-excerpt">Most "free" background removers upload your photos to a cloud server. Orlume doesn't. This article explains our local semantic segmentation pipeline using a SegFormer model running in TensorFlow.js, how we handle edge refinement with guided filtering, and why privacy-first design decisions lead to a fundamentally better product.</p>
+                        <a href="/pages/blog/ai-background-removal-tutorial" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
 
                 <!-- Blog Post 6 -->
                 <article class="content-card reveal-page">
                     <div class="content-card-image">
-                        <img src="/grading_after.png" alt="Orlume Launch">
+                        <img src="/grading_after.png" alt="Orlume Launch Announcement">
                     </div>
                     <div class="content-card-body">
                         <div class="content-card-meta">
                             <span class="content-card-tag">Announcement</span>
-                            <span class="content-card-date">Dec 1, 2025</span>
+                            <span class="content-card-date">Dec 1, 2025 · 5 min read</span>
                         </div>
-                        <h2 class="content-card-title">Introducing Orlume: Professional AI Editing for Everyone</h2>
-                        <p class="content-card-excerpt">Today we're launching Orlume — a free, professional-grade AI
-                            photo editor that runs entirely in your browser. No downloads, no sign-ups, just powerful
-                            editing.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read More
-                            →</a>
+                        <h2 class="content-card-title">Introducing Orlume: Professional AI Photo Editing, Free and Open Source</h2>
+                        <p class="content-card-excerpt">Today we are launching Orlume, a free, open-source AI photo editor that runs entirely in your browser. We built it because we believe professional-grade creative tools should be accessible to everyone, not locked behind $10/month subscriptions. This post explains our mission, our architecture, and our roadmap.</p>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
             </div>

@@ -204,7 +204,7 @@
     transform: translateX(-50%);
     width: 600px;
     height: 400px;
-    background: radial-gradient(circle, rgba(168, 85, 247, 0.15), transparent 70%);
+    background: radial-gradient(circle, rgba(70, 72, 212, 0.15), transparent 70%);
     pointer-events: none;
 }
 
@@ -368,7 +368,7 @@
 
 .docs-callout {
     padding: 20px 24px;
-    background: rgba(168, 85, 247, 0.1);
+    background: rgba(70, 72, 212, 0.1);
     border-left: 4px solid var(--accent-purple);
     border-radius: 0 12px 12px 0;
     margin-bottom: 24px;
@@ -402,7 +402,7 @@
 .content-card:hover {
     transform: translateY(-8px);
     border-color: var(--accent-purple);
-    box-shadow: 0 20px 60px rgba(168, 85, 247, 0.15);
+    box-shadow: 0 20px 60px rgba(70, 72, 212, 0.15);
 }
 
 .content-card-image {
@@ -435,7 +435,7 @@
 
 .content-card-tag {
     padding: 4px 12px;
-    background: rgba(168, 85, 247, 0.15);
+    background: rgba(70, 72, 212, 0.15);
     color: var(--accent-purple);
     border-radius: 100px;
     font-size: 12px;
@@ -519,7 +519,7 @@
 }
 
 .changelog-nav-link:hover {
-    background: rgba(168, 85, 247, 0.08);
+    background: rgba(70, 72, 212, 0.08);
     color: var(--text-primary);
 }
 
@@ -545,8 +545,8 @@
 }
 
 .changelog-item:hover {
-    border-color: rgba(168, 85, 247, 0.3);
-    box-shadow: 0 8px 32px rgba(168, 85, 247, 0.08);
+    border-color: rgba(70, 72, 212, 0.3);
+    box-shadow: 0 8px 32px rgba(70, 72, 212, 0.08);
 }
 
 .changelog-item::before {
@@ -838,7 +838,7 @@
 
 .careers-cta:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 8px 30px rgba(70, 72, 212, 0.4);
 }
 
 .perks-grid {
@@ -1008,7 +1008,7 @@
 
 .newsletter-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 8px 30px rgba(70, 72, 212, 0.4);
 }
 
 /* ========================================
@@ -1040,7 +1040,7 @@
 
 .article-tag {
     padding: 6px 14px;
-    background: rgba(168, 85, 247, 0.15);
+    background: rgba(70, 72, 212, 0.15);
     color: var(--accent-purple);
     border-radius: 100px;
     font-size: 13px;
@@ -1135,7 +1135,7 @@
 .article-content a {
     color: var(--accent-purple);
     text-decoration: underline;
-    text-decoration-color: rgba(168, 85, 247, 0.3);
+    text-decoration-color: rgba(70, 72, 212, 0.3);
     text-underline-offset: 3px;
     transition: text-decoration-color 0.2s;
 }
@@ -1207,13 +1207,13 @@
 
 .article-toc-list a:hover {
     color: var(--text-primary);
-    background: rgba(168, 85, 247, 0.06);
-    border-left-color: rgba(168, 85, 247, 0.3);
+    background: rgba(70, 72, 212, 0.06);
+    border-left-color: rgba(70, 72, 212, 0.3);
 }
 
 .article-toc-list a.active {
     color: var(--accent-purple);
-    background: rgba(168, 85, 247, 0.08);
+    background: rgba(70, 72, 212, 0.08);
     border-left-color: var(--accent-purple);
     font-weight: 500;
 }
@@ -1278,7 +1278,7 @@
 .related-card:hover {
     transform: translateY(-4px);
     border-color: var(--accent-purple);
-    box-shadow: 0 12px 40px rgba(168, 85, 247, 0.1);
+    box-shadow: 0 12px 40px rgba(70, 72, 212, 0.1);
 }
 
 .related-card-image {
@@ -1406,7 +1406,7 @@
 .about-visual--logo {
     object-fit: contain;
     padding: 40px;
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+    background: linear-gradient(135deg, rgba(70, 72, 212, 0.1), rgba(59, 130, 246, 0.1));
 }
 
 .about-tech-bg {
@@ -1501,7 +1501,7 @@
 
 .about-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 8px 30px rgba(70, 72, 212, 0.4);
 }
 
 .about-btn-secondary {
@@ -1529,7 +1529,7 @@
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(70, 72, 212, 0.2);
 }
 
 .content-card.featured .content-card-image {
@@ -1565,7 +1565,7 @@
 .legal-content a {
     color: var(--accent-purple);
     text-decoration: none;
-    border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+    border-bottom: 1px solid rgba(70, 72, 212, 0.3);
     transition: border-color 0.2s;
 }
 

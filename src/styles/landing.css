@@ -18,13 +18,13 @@
     --text-secondary: rgba(26, 26, 46, 0.7);
     --text-muted: rgba(26, 26, 46, 0.5);
 
-    --accent-purple: #7c3aed;
-    --accent-blue: #2563eb;
-    --accent-pink: #db2777;
-    --accent-cyan: #0891b2;
+    --accent-purple: #4648D4;
+    --accent-blue: #6063EE;
+    --accent-pink: #6b38d4;
+    --accent-cyan: #4648D4;
 
-    --gradient-primary: linear-gradient(135deg, #7c3aed 0%, #2563eb 50%, #0891b2 100%);
-    --gradient-glow: radial-gradient(circle at center, rgba(124, 58, 237, 0.08), transparent 70%);
+    --gradient-primary: linear-gradient(135deg, #4648D4 0%, #6063EE 100%);
+    --gradient-glow: radial-gradient(circle at center, rgba(70, 72, 212, 0.06), transparent 70%);
 
     --border-subtle: rgba(0, 0, 0, 0.06);
     --border-glass: rgba(0, 0, 0, 0.08);
@@ -42,8 +42,8 @@
     --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
     /* Shadows - Softer for light theme */
-    --shadow-glow: 0 0 80px rgba(124, 58, 237, 0.15);
-    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 80px rgba(70, 72, 212, 0.12);
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 /* ========================================
@@ -122,8 +122,8 @@ img {
     width: 150%;
     height: 150%;
     border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.25;
+    filter: blur(160px);
+    opacity: 0.10;
     animation: meshFloat 20s ease-in-out infinite;
 }
 
@@ -146,8 +146,8 @@ img {
     width: 600px;
     height: 600px;
     border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.2;
+    filter: blur(140px);
+    opacity: 0.08;
     background: radial-gradient(circle, var(--accent-pink) 0%, transparent 60%);
     top: 30%;
     left: 50%;
@@ -249,12 +249,12 @@ img {
     font-weight: 600;
     color: white;
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 4px 20px rgba(70, 72, 212, 0.3);
 }
 
 .nav-cta:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 8px 30px rgba(70, 72, 212, 0.4);
 }
 
 /* ========================================
@@ -352,12 +352,12 @@ img {
 .btn-primary {
     background: var(--gradient-primary);
     color: white;
-    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 4px 20px rgba(70, 72, 212, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 40px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 8px 40px rgba(70, 72, 212, 0.4);
 }
 
 .btn-secondary {
@@ -767,7 +767,7 @@ img {
 
 .bento-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(70, 72, 212, 0.3);
 }
 
 .bento-card:hover::before {
@@ -1003,7 +1003,7 @@ img {
 }
 
 .pricing-card.featured {
-    background: linear-gradient(180deg, rgba(168, 85, 247, 0.1), var(--bg-glass));
+    background: linear-gradient(180deg, rgba(70, 72, 212, 0.1), var(--bg-glass));
     border-color: var(--accent-purple);
     transform: scale(1.05);
     z-index: 10;

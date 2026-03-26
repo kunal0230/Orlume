@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy — Orlume Vision Labs</title>
+    <title>Privacy Policy | Orlume Vision Labs</title>
     <meta name="description"
         content="Orlume's privacy policy. Your photos are processed locally - we never see your images.">
     <link rel="canonical" href="https://orlume.io/privacy">
@@ -141,41 +141,364 @@
             <header class="page-header">
                 <div class="page-eyebrow">Legal</div>
                 <h1 class="page-title">Privacy Policy</h1>
-                <p class="page-subtitle">Your privacy is fundamental to how we build Orlume.</p>
+                <p class="page-subtitle">Your privacy is fundamental to how we build Orlume. This document explains exactly what data we handle and, more importantly, what we don't.</p>
             </header>
+
+            <style>
+                .privacy-callout {
+                    padding: 24px 28px;
+                    background: rgba(70, 72, 212, 0.06);
+                    border-left: 4px solid var(--accent-purple);
+                    border-radius: 0 12px 12px 0;
+                    margin: 24px 0;
+                    font-size: 15px;
+                    line-height: 1.7;
+                }
+                .privacy-callout strong {
+                    color: var(--text-primary);
+                }
+                .evidence-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin: 28px 0 32px;
+                }
+                .evidence-card {
+                    padding: 24px;
+                    background: var(--bg-glass);
+                    border: 1px solid var(--border-glass);
+                    border-radius: 16px;
+                    text-align: center;
+                }
+                .evidence-icon {
+                    width: 44px;
+                    height: 44px;
+                    background: var(--gradient-primary);
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 12px;
+                    color: white;
+                }
+                .evidence-card h4 {
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 6px;
+                    color: var(--text-primary);
+                }
+                .evidence-card p {
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                    line-height: 1.5;
+                    margin-bottom: 0;
+                }
+                .data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0 28px;
+                    font-size: 14px;
+                }
+                .data-table th {
+                    text-align: left;
+                    padding: 12px 16px;
+                    background: var(--bg-secondary);
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    border-bottom: 2px solid var(--border-glass);
+                    font-size: 13px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .data-table td {
+                    padding: 12px 16px;
+                    border-bottom: 1px solid var(--border-glass);
+                    color: var(--text-secondary);
+                    line-height: 1.5;
+                }
+                .data-table tr:last-child td {
+                    border-bottom: none;
+                }
+                .badge-no {
+                    display: inline-block;
+                    padding: 2px 10px;
+                    background: rgba(16, 185, 129, 0.1);
+                    color: #059669;
+                    border-radius: 100px;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+                .badge-limited {
+                    display: inline-block;
+                    padding: 2px 10px;
+                    background: rgba(245, 158, 11, 0.1);
+                    color: #d97706;
+                    border-radius: 100px;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+                .code-proof {
+                    background: #1e1e2e;
+                    color: #cdd6f4;
+                    padding: 20px 24px;
+                    border-radius: 12px;
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 13px;
+                    line-height: 1.7;
+                    overflow-x: auto;
+                    margin: 16px 0 24px;
+                }
+                .code-comment { color: #6c7086; }
+                .code-keyword { color: #cba6f7; }
+                .code-string { color: #a6e3a1; }
+                .code-function { color: #89b4fa; }
+                @media (max-width: 768px) {
+                    .evidence-grid { grid-template-columns: 1fr; }
+                }
+            </style>
+
             <div class="legal-content">
-                <div class="legal-update"><strong>Last Updated:</strong> January 2, 2026</div>
-                <p>At Orlume Vision Labs, we take your privacy seriously. <strong>Your photos are processed entirely on
-                        your device.</strong> We do not upload, store, or analyze your images.</p>
+                <div class="legal-update"><strong>Last Updated:</strong> March 26, 2026 &nbsp;|&nbsp; <strong>Effective:</strong> December 1, 2025</div>
 
-                <h2>Our Privacy-First Approach</h2>
-                <p>Orlume uses WebGL2/WebGPU to process images in your browser. Your images never leave your device
-                    unless you explicitly use cloud AI features.</p>
+                <p>At Orlume Vision Labs, privacy is not a feature we added after the fact. <strong>It is the foundation our entire architecture is built on.</strong> Orlume processes your photos locally on your device using WebGL2, WebGPU, and client-side AI models. Your images never leave your browser.</p>
 
-                <h2>What We Collect</h2>
+                <div class="privacy-callout">
+                    <strong>The short version:</strong> Orlume is a 100% client-side application. Your photos are processed by your GPU, inside your browser. We have no server infrastructure that touches your images. We cannot see your photos because they never reach us.
+                </div>
+
+                <!-- Technical Proof -->
+                <h2>Technical Proof of Local Processing</h2>
+                <p>Orlume's privacy guarantees are not just policy statements. They are enforced by the application's architecture. Here is verifiable evidence:</p>
+
+                <div class="evidence-grid">
+                    <div class="evidence-card">
+                        <div class="evidence-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                <line x1="8" y1="21" x2="16" y2="21" />
+                                <line x1="12" y1="17" x2="12" y2="21" />
+                            </svg>
+                        </div>
+                        <h4>100% Client-Side</h4>
+                        <p>All image processing uses WebGL2/WebGPU shaders running on your local GPU. No server round-trips.</p>
+                    </div>
+                    <div class="evidence-card">
+                        <div class="evidence-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
+                        <h4>Zero Image Upload</h4>
+                        <p>Inspect your browser's Network tab while editing. You will see zero outbound image data.</p>
+                    </div>
+                    <div class="evidence-card">
+                        <div class="evidence-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <polyline points="16 18 22 12 16 6" />
+                                <polyline points="8 6 2 12 8 18" />
+                            </svg>
+                        </div>
+                        <h4>Open Source Code</h4>
+                        <p>Our entire codebase is public on GitHub. Audit every line yourself at <a href="https://github.com/kunal0230/Orlume" style="color:var(--accent-purple)">github.com/kunal0230/Orlume</a>.</p>
+                    </div>
+                </div>
+
+                <h3>Verify It Yourself</h3>
+                <p>You don't have to trust our promises. You can verify our privacy claims independently using any modern browser's developer tools:</p>
+                <ol>
+                    <li>Open Orlume in your browser and press <strong>F12</strong> to open DevTools</li>
+                    <li>Navigate to the <strong>Network</strong> tab and clear existing entries</li>
+                    <li>Upload a photo and perform any edits (relighting, color grading, background removal)</li>
+                    <li>Filter the Network tab for image types (PNG, JPEG, WebP, blob)</li>
+                    <li><strong>Result:</strong> Zero outbound image requests. Every processing call is a local GPU operation.</li>
+                </ol>
+
+                <h3>Architecture: How Local Processing Works</h3>
+                <p>When you upload an image, the following pipeline executes entirely within your browser's sandboxed environment:</p>
+                <div class="code-proof">
+                    <span class="code-comment">// Simplified Orlume processing pipeline (client-side only)</span><br>
+                    <span class="code-keyword">const</span> image = <span class="code-keyword">await</span> <span class="code-function">loadImageFromFile</span>(userFile); <span class="code-comment">// File API - no upload</span><br>
+                    <span class="code-keyword">const</span> depthMap = <span class="code-keyword">await</span> <span class="code-function">runDepthModel</span>(image); <span class="code-comment">// ONNX Runtime - local GPU</span><br>
+                    <span class="code-keyword">const</span> normals = <span class="code-function">computeNormals</span>(depthMap); <span class="code-comment">// WebGL2 shader - local GPU</span><br>
+                    <span class="code-keyword">const</span> result = <span class="code-function">renderPBR</span>(image, normals, light); <span class="code-comment">// WebGPU - local GPU</span><br>
+                    <span class="code-function">downloadToDevice</span>(result); <span class="code-comment">// Blob URL - stays local</span><br>
+                    <span class="code-comment">// Network calls: 0. Server uploads: 0. Data transmitted: 0 bytes.</span>
+                </div>
+
+                <!-- What We Collect -->
+                <h2>Information We Collect</h2>
+                <p>We collect the minimum amount of data necessary to operate and improve Orlume. Here is an exhaustive list:</p>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data Type</th>
+                            <th>Collected?</th>
+                            <th>Purpose</th>
+                            <th>Retention</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Your photos</strong></td>
+                            <td><span class="badge-no">Never</span></td>
+                            <td>N/A</td>
+                            <td>N/A (never leaves your device)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Image metadata (EXIF)</strong></td>
+                            <td><span class="badge-no">Never</span></td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Facial recognition data</strong></td>
+                            <td><span class="badge-no">Never</span></td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Editing history/actions</strong></td>
+                            <td><span class="badge-no">Never</span></td>
+                            <td>N/A</td>
+                            <td>Session only (browser memory)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Page views &amp; feature usage</strong></td>
+                            <td><span class="badge-limited">Anonymized</span></td>
+                            <td>Understand which features are used</td>
+                            <td>Aggregated, no individual profiles</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Core Web Vitals</strong></td>
+                            <td><span class="badge-limited">Anonymized</span></td>
+                            <td>Performance monitoring (LCP, CLS, FID)</td>
+                            <td>Aggregated via Vercel Analytics</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Browser &amp; device type</strong></td>
+                            <td><span class="badge-limited">Anonymized</span></td>
+                            <td>Optimize for common environments</td>
+                            <td>Aggregated, not linked to individuals</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- What We Don't Collect -->
+                <h2>Information We Never Collect</h2>
+                <p>To be absolutely clear, Orlume does <strong>not</strong> collect, process, store, or transmit:</p>
                 <ul>
-                    <li><strong>Account info</strong> (if you sign up): email address</li>
-                    <li><strong>Usage analytics:</strong> anonymized data on features used</li>
-                    <li><strong>Device info:</strong> browser type, screen size for optimization</li>
+                    <li><strong>Your photos or edited images</strong> in any form</li>
+                    <li><strong>Image contents, thumbnails, or previews</strong></li>
+                    <li><strong>EXIF metadata</strong> (GPS location, camera model, timestamps)</li>
+                    <li><strong>Facial features or biometric data</strong></li>
+                    <li><strong>Clipboard contents</strong></li>
+                    <li><strong>Local file system paths</strong></li>
+                    <li><strong>Contacts, calendar, or other personal data</strong></li>
+                    <li><strong>Browsing history</strong> outside of Orlume</li>
                 </ul>
 
-                <h2>What We DON'T Collect</h2>
+                <!-- AI Models -->
+                <h2>AI Model Privacy</h2>
+                <p>Orlume uses multiple AI models for features like depth estimation, segmentation, and background removal. All of these models run locally:</p>
                 <ul>
-                    <li>Your photos or edited images</li>
-                    <li>Image contents or metadata</li>
-                    <li>Facial recognition data</li>
+                    <li><strong>Depth Anything V2</strong> (ViT-Small): Downloaded once, cached in IndexedDB, runs entirely via ONNX Runtime Web on your GPU. No inference API calls.</li>
+                    <li><strong>SegFormer B0</strong> (Semantic Segmentation): Same local execution model. The 150-class ADE20K model runs in your browser.</li>
+                    <li><strong>Background Removal</strong>: Uses a client-side TensorFlow.js model. Your photos are never sent to any cloud API.</li>
                 </ul>
+                <p>Model weights are downloaded from public CDNs (Hugging Face) over HTTPS the first time you use a feature. After the initial download, models are cached locally and no further network requests are made.</p>
 
+                <!-- Third-Party Services -->
+                <h2>Third-Party Services</h2>
+                <p>Orlume uses a minimal set of third-party services. Here is a complete, transparent list:</p>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Purpose</th>
+                            <th>Data Shared</th>
+                            <th>Privacy Policy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Vercel</strong></td>
+                            <td>Hosting &amp; edge delivery</td>
+                            <td>Standard HTTP request data (IP, user-agent)</td>
+                            <td><a href="https://vercel.com/legal/privacy-policy" style="color:var(--accent-purple)">vercel.com/privacy</a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Vercel Analytics</strong></td>
+                            <td>Anonymized performance metrics</td>
+                            <td>Page views, Web Vitals (no personal data)</td>
+                            <td><a href="https://vercel.com/docs/analytics/privacy" style="color:var(--accent-purple)">vercel.com/analytics/privacy</a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Google Fonts</strong></td>
+                            <td>Typography (Inter font family)</td>
+                            <td>Standard HTTP request data</td>
+                            <td><a href="https://policies.google.com/privacy" style="color:var(--accent-purple)">Google Privacy Policy</a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hugging Face CDN</strong></td>
+                            <td>AI model weight delivery</td>
+                            <td>Standard HTTP request data (one-time download)</td>
+                            <td><a href="https://huggingface.co/privacy" style="color:var(--accent-purple)">huggingface.co/privacy</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>We do <strong>not</strong> use Google Analytics, Facebook Pixel, advertising trackers, or any personal data brokers.</p>
+
+                <!-- Cookies -->
+                <h2>Cookies &amp; Local Storage</h2>
+                <p>Orlume uses minimal browser storage, exclusively for functional purposes:</p>
+                <ul>
+                    <li><strong>IndexedDB:</strong> Cached AI model weights (so you don't re-download them every session)</li>
+                    <li><strong>LocalStorage:</strong> Editor UI preferences (panel layout, last-used tool)</li>
+                    <li><strong>Session storage:</strong> Temporary editing state (cleared when you close the tab)</li>
+                </ul>
+                <p>We do not use tracking cookies, advertising cookies, or cross-site cookies of any kind.</p>
+
+                <!-- Data Security -->
                 <h2>Data Security</h2>
-                <p>We use HTTPS encryption, secure storage, and follow industry best practices to protect any data we do
-                    collect.</p>
+                <p>Although we collect minimal data, we take security seriously for what we do handle:</p>
+                <ul>
+                    <li><strong>HTTPS everywhere:</strong> All connections to orlume.io use TLS 1.3 encryption</li>
+                    <li><strong>No database of user data:</strong> We do not maintain a user database since there are no accounts</li>
+                    <li><strong>Content Security Policy:</strong> Strict CSP headers prevent cross-site scripting attacks</li>
+                    <li><strong>Open source:</strong> Our entire codebase is auditable at <a href="https://github.com/kunal0230/Orlume" style="color:var(--accent-purple)">GitHub</a></li>
+                    <li><strong>No server-side image processing:</strong> There is no server endpoint that accepts image data</li>
+                </ul>
 
+                <!-- Children's Privacy -->
+                <h2>Children's Privacy</h2>
+                <p>Orlume does not knowingly collect personal information from children under 13. Since Orlume requires no account creation and collects no personal data, children can use the editor safely. The anonymized analytics we collect cannot identify any individual user, regardless of age.</p>
+
+                <!-- Your Rights -->
                 <h2>Your Rights</h2>
-                <p>You can access, correct, or delete your data anytime. Contact us at <a
-                        href="mailto:orlumevisionlabs@gmail.com">orlumevisionlabs@gmail.com</a>.</p>
+                <p>Depending on your jurisdiction, you may have the following rights regarding your data:</p>
+                <ul>
+                    <li><strong>Right to access:</strong> Request a copy of any data we hold about you</li>
+                    <li><strong>Right to deletion:</strong> Request that we delete any data associated with you</li>
+                    <li><strong>Right to portability:</strong> Receive your data in a machine-readable format</li>
+                    <li><strong>Right to object:</strong> Object to the processing of your data for specific purposes</li>
+                    <li><strong>Right to restriction:</strong> Request that we limit how we use your data</li>
+                </ul>
+                <p>In practice, because we collect almost no personal data and maintain no user accounts, most of these rights are already satisfied by default. If you have any concerns, contact us and we will respond within 30 days.</p>
 
-                <h2>Contact</h2>
-                <p>Questions? Email <a href="mailto:orlumevisionlabs@gmail.com">orlumevisionlabs@gmail.com</a></p>
+                <!-- Changes to Policy -->
+                <h2>Changes to This Policy</h2>
+                <p>We may update this privacy policy from time to time. When we make material changes, we will update the "Last Updated" date at the top of this page. We encourage you to review this policy periodically. Our commitment to local-first, privacy-respecting architecture will not change.</p>
+
+                <!-- Contact -->
+                <h2>Contact Us</h2>
+                <p>If you have any questions, concerns, or requests related to this privacy policy, please contact us:</p>
+                <ul>
+                    <li><strong>Email:</strong> <a href="mailto:orlumevisionlabs@gmail.com" style="color:var(--accent-purple)">orlumevisionlabs@gmail.com</a></li>
+                    <li><strong>GitHub:</strong> <a href="https://github.com/kunal0230/Orlume/issues" style="color:var(--accent-purple)">Open an issue</a> on our public repository</li>
+                </ul>
+                <p>We aim to respond to all privacy-related inquiries within 30 business days.</p>
             </div>
         </div>
 

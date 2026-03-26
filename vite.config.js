@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
+import tailwindcss from '@tailwindcss/vite';
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 
 /**
@@ -118,6 +119,7 @@ export default defineConfig({
   // Note: Don't exclude @huggingface/transformers - let Vite pre-bundle it
 
   plugins: [
+    tailwindcss(),
     pageRoutesPlugin(),
     copyWasmPlugin(),
     VitePWA({
