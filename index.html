@@ -341,17 +341,15 @@
             <h3 class="text-3xl mb-4">Stay in the loop</h3>
             <p class="text-on-surface-variant">Get the latest updates, tutorials, and tips delivered to your inbox.</p>
         </div>
-        <div class="w-full max-w-md">
-            <form action="https://formsubmit.co/orlumevisionlabs@gmail.com" method="POST" class="flex gap-4 w-full" id="newsletter-form">
+            <form id="newsletter-form" class="flex gap-4 w-full">
                 <!-- Configuration -->
                 <input type="hidden" name="_subject" value="New Newsletter Subscription">
-                <input type="hidden" name="_next" value="https://orlume.io/#newsletter?subscribed=true">
                 <input type="hidden" name="_captcha" value="false">
                 <input type="text" name="_honey" style="display:none">
 
                 <!-- Input -->
                 <input class="flex-1 px-6 py-4 rounded-xl border-none bg-white text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline" name="Email" placeholder="Enter your email" type="email" required/>
-                <button class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:bg-primary-container transition-all" type="submit">Subscribe</button>
+                <button id="nl-submit-btn" class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:bg-primary-container transition-all" type="submit">Subscribe</button>
             </form>
             
             <div id="newsletter-success" style="display: none;" class="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
@@ -359,12 +357,40 @@
                 <div class="font-medium">Thanks for subscribing to Orlume!</div>
             </div>
             <script>
-                if (window.location.href.includes('subscribed=true')) {
-                    document.getElementById('newsletter-form').style.display = 'none';
-                    document.getElementById('newsletter-success').style.display = 'flex';
-                    // We remove the query string but keep the hash so it stays anchored without the ugly URL
-                    window.history.replaceState({}, document.title, window.location.pathname + '#newsletter');
-                }
+                document.getElementById('newsletter-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const btn = document.getElementById('nl-submit-btn');
+                    const originalText = btn.innerHTML;
+                    
+                    btn.innerHTML = 'Subscribing...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.7';
+                    
+                    try {
+                        const formData = new FormData(form);
+                        const response = await fetch('https://formsubmit.co/ajax/orlumevisionlabs@gmail.com', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            document.getElementById('newsletter-form').style.display = 'none';
+                            document.getElementById('newsletter-success').style.display = 'flex';
+                        } else {
+                            throw new Error('Subscription failed');
+                        }
+                    } catch (err) {
+                        console.error('Subscription error:', err);
+                        alert('Something went wrong. Please try again.');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
+                });
             </script>
         </div>
     </div>
