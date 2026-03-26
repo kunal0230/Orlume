@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-high": "#e8e8e8",
+              "on-tertiary-container": "#fffbff",
+              "on-primary": "#ffffff",
+              "on-tertiary-fixed": "#301400",
+              "primary": "#4648d4",
+              "surface-container-low": "#f3f3f3",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#2f3131",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#07006c",
+              "on-secondary-fixed-variant": "#5516be",
+              "surface": "#f9f9f9",
+              "primary-fixed-dim": "#c0c1ff",
+              "error": "#ba1a1a",
+              "on-tertiary-fixed-variant": "#703700",
+              "tertiary-container": "#b55d00",
+              "surface-container-highest": "#e2e2e2",
+              "secondary-fixed": "#e9ddff",
+              "secondary-container": "#8455ef",
+              "primary-fixed": "#e1e0ff",
+              "surface-dim": "#dadada",
+              "on-secondary-container": "#fffbff",
+              "on-tertiary": "#ffffff",
+              "on-error": "#ffffff",
+              "surface-bright": "#f9f9f9",
+              "secondary": "#6b38d4",
+              "surface-tint": "#494bd6",
+              "on-surface": "#1a1c1c",
+              "on-error-container": "#93000a",
+              "on-primary-container": "#fffbff",
+              "tertiary": "#904900",
+              "outline": "#767586",
+              "tertiary-fixed-dim": "#ffb783",
+              "on-secondary-fixed": "#23005c",
+              "on-primary-fixed-variant": "#2f2ebe",
+              "tertiary-fixed": "#ffdcc5",
+              "surface-variant": "#e2e2e2",
+              "background": "#f9f9f9",
+              "primary-container": "#6063ee",
+              "on-secondary": "#ffffff",
+              "outline-variant": "#c7c4d7",
+              "on-surface-variant": "#464554",
+              "secondary-fixed-dim": "#d0bcff",
+              "inverse-on-surface": "#f0f1f1",
+              "on-background": "#1a1c1c",
+              "surface-container": "#eeeeee",
+              "inverse-primary": "#c0c1ff"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .bg-primary-gradient {
+        background: linear-gradient(135deg, #4648D4 0%, #6063EE 100%);
+      }
+      .text-gradient {
+        background: linear-gradient(135deg, #4648D4 0%, #8B5CF6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      body { font-family: 'Inter', sans-serif; background-color: #f9f9f9; color: #1a1c1c; }
+      h1, h2, h3 { letter-spacing: -0.03em; font-weight: 800; }
+    </style>
+</head>
+<body class="antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#F9F9F9] dark:bg-slate-950">
+<div class="flex justify-between items-center px-12 py-6 max-w-[1440px] mx-auto">
+<div class="text-2xl font-extrabold tracking-[-0.03em] text-[#1A1C1C] dark:text-white">Orlume</div>
+<div class="hidden md:flex gap-10 font-['Inter'] font-medium text-sm tracking-tight">
+<a class="text-[#464554] hover:text-[#4648D4] transition-colors duration-300" href="#">Features</a>
+<a class="text-[#464554] hover:text-[#4648D4] transition-colors duration-300" href="#">Resources</a>
+<a class="text-[#464554] hover:text-[#4648D4] transition-colors duration-300" href="#">Community</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden lg:block px-5 py-2.5 text-xs font-semibold rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-all">
+                    3D Relighting BETA
+                </button>
+<button class="bg-primary-gradient text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-sm active:opacity-90 active:scale-[0.98] transition-all">
+                    Open Editor
+                </button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<header class="pt-48 pb-24 px-6 md:px-12 max-w-[1440px] mx-auto text-center">
+<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-low mb-8">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-xs font-medium text-on-surface-variant tracking-tight uppercase">Now with Professional Presets &amp; HSL Color Mixer</span>
+</div>
+<h1 class="text-5xl md:text-7xl lg:text-8xl mb-6 max-w-5xl mx-auto leading-[1.05]">
+            The Future of <br/>
+<span class="text-gradient">AI Photo Editing</span>
+</h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 font-medium">
+            Professional-grade photography tools powered by advanced neural networks. Precision relighting, depth-aware masking, and editorial color grading right in your browser.
+        </p>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20">
+<button class="bg-primary-gradient text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center gap-2 active:scale-95 transition-all">
+                Start Editing Free
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="px-8 py-4 rounded-xl font-semibold text-lg border border-outline-variant/30 text-on-surface hover:bg-surface-container-low transition-all">
+                See Features
+            </button>
+<a class="text-primary font-semibold hover:underline decoration-2 underline-offset-8" href="#">Try 3D Relighting BETA</a>
+</div>
+<div class="pt-12">
+<p class="text-xs uppercase tracking-widest font-bold text-outline mb-8">Trusted by industry leaders</p>
+<div class="flex flex-wrap justify-center gap-x-16 gap-y-8 grayscale opacity-50">
+<span class="text-xl font-extrabold tracking-tighter">PHOTOGRAPHERS</span>
+<span class="text-xl font-extrabold tracking-tighter">DESIGNERS</span>
+<span class="text-xl font-extrabold tracking-tighter">MARKETERS</span>
+<span class="text-xl font-extrabold tracking-tighter">CREATORS</span>
+</div>
+</div>
+</header>
+<!-- Demo Video Section -->
+<section class="py-24 px-6 md:px-12 max-w-[1440px] mx-auto">
+<div class="text-center mb-16">
+<span class="text-primary font-bold tracking-widest uppercase text-xs">See It In Action</span>
+<h2 class="text-4xl md:text-5xl mt-4">Real-Time 3D Relighting</h2>
+</div>
+<div class="relative rounded-3xl overflow-hidden bg-surface-container-low shadow-2xl shadow-primary/5 group">
+<img class="w-full aspect-[21/9] object-cover" data-alt="Cinematic wide shot of a futuristic dark photo editing studio workspace with a large ultra-wide monitor showing professional portrait software" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa3ODMWPE2ckEn3P7Rr76UWMtfIHB7e-DoFfalqEHuaSFbZysF-6NZwPQIHEBv5SjC-_AnH81Rr4RDqn7AlOHuHDjc4c8Lwfx7o7VRKl1Ln0Ml0tXPG4ugxObciUxZVQ45aKkbXwNR2gDvZVFjpCsOHLEp3L0XCX1QvNTDnT33FAwGZPm0fgoRrg60ynlvrAVqgI9FkSbppZXbqTEWam3gCaz0ly-BFkqBNXmCLOWALzWbQKvHikfvG5SvkMLbKp0wZgUe5zX5ozq9"/>
+<div class="absolute inset-0 flex items-center justify-center bg-on-surface/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+<button class="w-24 h-24 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+<span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</section>
+<!-- How It Works -->
+<section class="py-24 px-6 md:px-12 bg-surface-container-low">
+<div class="max-w-[1440px] mx-auto">
+<div class="grid md:grid-cols-3 gap-8">
+<div class="bg-white p-12 rounded-3xl">
+<div class="text-primary text-4xl font-extrabold mb-6 opacity-20">01</div>
+<h3 class="text-2xl mb-4">Upload</h3>
+<p class="text-on-surface-variant leading-relaxed">Simply drag and drop your RAW or JPEG files. Our engine handles up to 100MB per image instantly.</p>
+</div>
+<div class="bg-white p-12 rounded-3xl translate-y-4 md:translate-y-8">
+<div class="text-primary text-4xl font-extrabold mb-6 opacity-20">02</div>
+<h3 class="text-2xl mb-4">Apply AI Magic</h3>
+<p class="text-on-surface-variant leading-relaxed">One click relighting, automatic mask generation, and neural sky replacement at your fingertips.</p>
+</div>
+<div class="bg-white p-12 rounded-3xl">
+<div class="text-primary text-4xl font-extrabold mb-6 opacity-20">03</div>
+<h3 class="text-2xl mb-4">Export &amp; Share</h3>
+<p class="text-on-surface-variant leading-relaxed">Export in lossless formats or optimized for web. Your history is saved non-destructively.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Complete Toolkit Grid -->
+<section class="py-32 px-6 md:px-12 max-w-[1440px] mx-auto">
+<h2 class="text-4xl md:text-5xl text-center mb-20">A Complete Creative Toolkit</h2>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 text-primary">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<h4 class="text-xl mb-3">AI &amp; Machine Learning</h4>
+<p class="text-on-surface-variant text-sm">Semantic segmentation automatically identifies subjects, hair, and backgrounds.</p>
+</div>
+<!-- Card 2 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-6 text-secondary">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<h4 class="text-xl mb-3">3D &amp; Lighting</h4>
+<p class="text-on-surface-variant text-sm">Change light direction, intensity, and temperature in post-production.</p>
+</div>
+<!-- Card 3 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center mb-6 text-tertiary">
+<span class="material-symbols-outlined">palette</span>
+</div>
+<h4 class="text-xl mb-3">Color &amp; Grading</h4>
+<p class="text-on-surface-variant text-sm">Professional HSL, curves, and split-toning tools for cinematic results.</p>
+</div>
+<!-- Card 4 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-error/10 flex items-center justify-center mb-6 text-error">
+<span class="material-symbols-outlined">face_retouching_natural</span>
+</div>
+<h4 class="text-xl mb-3">Retouching</h4>
+<p class="text-on-surface-variant text-sm">Advanced neural skin smoothing and frequency separation simplified.</p>
+</div>
+<!-- Card 5 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary-container">
+<span class="material-symbols-outlined">transform</span>
+</div>
+<h4 class="text-xl mb-3">Transform &amp; Export</h4>
+<p class="text-on-surface-variant text-sm">Perspective correction, content-aware scale, and batch exporting.</p>
+</div>
+<!-- Card 6 -->
+<div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 transition-all group">
+<div class="w-12 h-12 rounded-xl bg-on-surface/5 flex items-center justify-center mb-6 text-on-surface">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<h4 class="text-xl mb-3">Technical Detail</h4>
+<p class="text-on-surface-variant text-sm">Histogram visualization, EXIF data management, and color profiles.</p>
+</div>
+</div>
+</section>
+<!-- Features Carousel -->
+<section class="py-24 overflow-hidden bg-surface">
+<div class="max-w-[1440px] mx-auto px-6 md:px-12 mb-12 flex justify-between items-end">
+<div>
+<span class="text-primary font-bold tracking-widest uppercase text-xs">Innovation</span>
+<h2 class="text-4xl md:text-5xl mt-4">Powerful New Tools</h2>
+</div>
+<div class="flex gap-4">
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-white transition-all">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-white transition-all">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="flex gap-8 overflow-x-auto pb-12 px-6 md:px-12 no-scrollbar scroll-smooth">
+<!-- Feature Card 1 -->
+<div class="min-w-[400px] bg-white rounded-3xl p-4 shadow-sm border border-outline-variant/10">
+<img class="w-full h-64 object-cover rounded-2xl mb-6" data-alt="Professional camera lens detail with beautiful bokeh and golden lighting reflecting on the glass" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOdk1drEB8yaniJK2cL6STYwypE6rMM3ldHUEL3oZPV1SNZSaAWhFQCPXVqByZTK8ydBS3R9AMXFc2313OJrMzaKOc3_ovrn42-cr8Nwf24qVy4dleB1L3GQnSZSWUmsENZ6mYAHxlz4BEiEfAdoYIKv4eSIstO76YTX0vgLhxuZHeXpR5dBbhO7AjV7V4_P8iVLHk-3kn3m0KfL-m-fp10M6798_jiDnVw0Hx-Z1YXm0esGeM-VuByQa_IahpKSeezRtNDlqfFlkY"/>
+<div class="px-4 pb-4">
+<h4 class="text-2xl mb-2">Smart Masking</h4>
+<p class="text-on-surface-variant text-sm mb-6">AI that understands what's in your photo. Mask hair, skin, and backgrounds with one click.</p>
+<a class="text-primary font-semibold flex items-center gap-1" href="#">Learn more <span class="material-symbols-outlined text-sm">north_east</span></a>
+</div>
+</div>
+<!-- Feature Card 2 -->
+<div class="min-w-[400px] bg-white rounded-3xl p-4 shadow-sm border border-outline-variant/10">
+<img class="w-full h-64 object-cover rounded-2xl mb-6" data-alt="Modern minimalist living room with soft window light casting long shadows across textured walls" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyumhRmCX4oULB_ra6qvywXEx_3bnnPC_M7FF1iObkV7Usv-AcdAQ8qgmv84nE047jz3R-tJvad2Cc92nHI0ORg044ezHa8MqNwkj01OtNqyt-8a-WemLRisEngiNztIbTj5MKMtrS2fRaubuuU-HF6xaMVY5y3CBChlbIDTPP0KcqTQzeaOo13JFcanlDeNpJcQ5j7cVXSg_VJ9T8jkSzvoE6h7MFEP474K7_TMSKQ4KftsOgz35dsOS8Hl5r3SNmwB0uv1cYPad-"/>
+<div class="px-4 pb-4">
+<h4 class="text-2xl mb-2">Global Lighting</h4>
+<p class="text-on-surface-variant text-sm mb-6">Manipulate the environment's ambient light and shadows for total mood control.</p>
+<a class="text-primary font-semibold flex items-center gap-1" href="#">Learn more <span class="material-symbols-outlined text-sm">north_east</span></a>
+</div>
+</div>
+<!-- Feature Card 3 -->
+<div class="min-w-[400px] bg-white rounded-3xl p-4 shadow-sm border border-outline-variant/10">
+<img class="w-full h-64 object-cover rounded-2xl mb-6" data-alt="Close-up of high-end camera sensor and internal electronics glowing with soft blue and purple led lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBv3srb9wh2Eur5vFxd6ErNcNK67zU_7YVVYlAJCX2lzbZDhv3YUPs42DDq2G03PAS2yrc-spWpIcB-_DjFbzRRhY1t6DaetqGIqLyNTL6hExGo-qmJrpxPK8JLedzHlpsuqm6UoST16VtaBDMJXBW7ShK4UWgqKPXAtUXwI6feFY3qYgmEVqvHhWuKkEMMuCCYPkFLh1Owk5RpEROh04eJVbqZEGBetVj875shNHqLmCuRIS-zF7Jbg1rePDPjzbYWQYgG9P_qwLv5"/>
+<div class="px-4 pb-4">
+<h4 class="text-2xl mb-2">Neural Sharpness</h4>
+<p class="text-on-surface-variant text-sm mb-6">Recover lost detail in out-of-focus images using advanced deblurring algorithms.</p>
+<a class="text-primary font-semibold flex items-center gap-1" href="#">Learn more <span class="material-symbols-outlined text-sm">north_east</span></a>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid -->
+<section class="py-32 px-6 md:px-12 max-w-[1440px] mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-6 h-auto md:h-[800px]">
+<!-- Large Item -->
+<div class="md:col-span-2 md:row-span-2 bg-white rounded-3xl p-12 flex flex-col justify-between border border-outline-variant/10 hover:shadow-xl transition-shadow">
+<div>
+<h3 class="text-4xl mb-6">Browser-Based <br/>Engine</h3>
+<p class="text-lg text-on-surface-variant max-w-sm">No software to install. No heavy downloads. Full RAW processing directly in your Chrome, Safari, or Firefox browser using WebGPU technology.</p>
+</div>
+<div class="mt-12">
+<img class="rounded-2xl w-full h-64 object-cover" data-alt="Top-down view of a designer's desk with a laptop displaying professional creative software and coffee" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr109HRFKCQxjaxtObQRWPkArK9AjPLGk3qc2yjULhW7UGVUnhJThdCuofUibrgLJ9LrXQsD9lv-h43SFh3EJ9usuhhhahw_f2T5E8pTH_f1UyXgwPW2HfZ1Z00H40AxnH-B3CL01khuPyh1W8XTEQ4F4LLvv_UpDoWCLa6Y7U4_6vRZNVi45I0L74mDzsqEIhPRPCnDMXC7XD_3clAqhc4oA_ju3VxSNGKCvJyBg0KKq0LNmgatpysNWQ-0a-KqNjnvVL0zZAX3Nx"/>
+</div>
+</div>
+<!-- Privacy -->
+<div class="bg-primary text-white rounded-3xl p-8 flex flex-col justify-between hover:shadow-xl transition-shadow">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div>
+<h4 class="text-xl mb-2">Privacy First</h4>
+<p class="text-white/70 text-sm">Your photos never leave your device. All AI processing happens locally on your GPU.</p>
+</div>
+</div>
+<!-- Real-Time -->
+<div class="bg-surface-container-high rounded-3xl p-8 flex flex-col justify-between hover:shadow-xl transition-shadow">
+<span class="material-symbols-outlined text-4xl text-primary">timer</span>
+<div>
+<h4 class="text-xl mb-2">Real-Time Preview</h4>
+<p class="text-on-surface-variant text-sm">Zero lag. Adjust sliders and see the AI results instantly without rendering.</p>
+</div>
+</div>
+<!-- AI-Powered -->
+<div class="md:col-span-2 bg-on-surface text-white rounded-3xl p-10 flex flex-col md:flex-row items-center gap-8 hover:shadow-xl transition-shadow">
+<div class="flex-1">
+<h3 class="text-3xl mb-4 text-white">AI-Powered Core</h3>
+<p class="text-white/60">Leveraging the world's most advanced visual models for unprecedented quality.</p>
+</div>
+<div class="flex gap-4">
+<div class="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center">AI</div>
+<div class="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center">ML</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Section -->
+<section class="py-24 px-6 md:px-12 max-w-[1440px] mx-auto border-t border-outline-variant/10">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
+<div>
+<div class="text-5xl font-extrabold mb-2 text-primary">50+</div>
+<div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">AI Features</div>
+</div>
+<div>
+<div class="text-5xl font-extrabold mb-2 text-primary">100%</div>
+<div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Browser-Based</div>
+</div>
+<div>
+<div class="text-5xl font-extrabold mb-2 text-primary">$0</div>
+<div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Free Forever</div>
+</div>
+<div>
+<div class="text-5xl font-extrabold mb-2 text-primary">∞</div>
+<div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Unlimited Edits</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="py-32 px-6">
+<div class="max-w-[1000px] mx-auto bg-surface-container-lowest p-16 md:p-24 rounded-[3rem] text-center border border-outline-variant/10 shadow-sm">
+<h2 class="text-5xl md:text-6xl mb-8 leading-tight">
+                Ready to transform <br/>
+<span class="text-gradient">your photos?</span>
+</h2>
+<p class="text-xl text-on-surface-variant mb-12 max-w-xl mx-auto">
+                Join over 200,000 creators using Orlume to push the boundaries of digital photography.
+            </p>
+<div class="flex flex-col sm:flex-row justify-center gap-4">
+<button class="bg-primary-gradient text-white px-10 py-5 rounded-2xl font-bold text-xl active:scale-95 transition-all">
+                    Get Started Now
+                </button>
+<button class="bg-white border border-outline-variant px-10 py-5 rounded-2xl font-bold text-xl hover:bg-surface transition-all">
+                    View Pricing
+                </button>
+</div>
+</div>
+</section>
+<!-- Newsletter -->
+<section class="py-24 px-6 md:px-12 bg-surface-container-low">
+<div class="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
+<div class="max-w-md">
+<h3 class="text-3xl mb-4">Stay updated</h3>
+<p class="text-on-surface-variant">Get the latest AI tips, preset packs, and product updates delivered to your inbox.</p>
+</div>
+<div class="w-full max-w-md">
+<form class="flex gap-4">
+<input class="flex-1 px-6 py-4 rounded-xl border-none bg-white text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline" placeholder="Enter your email" type="email"/>
+<button class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:bg-primary-container transition-all" type="submit">Join</button>
+</form>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-[#F3F3F3] dark:bg-slate-900 w-full py-24 px-12">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 max-w-[1440px] mx-auto">
+<div class="col-span-1">
+<div class="text-xl font-extrabold tracking-[-0.03em] text-[#1A1C1C] dark:text-white mb-6">Orlume</div>
+<p class="text-[#464554] dark:text-slate-500 font-['Inter'] text-[0.75rem] font-normal leading-relaxed mb-8">
+                    Precision in every pixel. Professional photography tools powered by advanced AI neural networks.
+                </p>
+<div class="flex gap-4">
+<a class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">public</span>
+</a>
+<a class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">camera</span>
+</a>
+</div>
+</div>
+<div class="space-y-4">
+<h5 class="font-bold text-sm text-[#1A1C1C] dark:text-white">Product</h5>
+<ul class="font-['Inter'] text-[0.75rem] space-y-3">
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Features</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Pricing</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Showcase</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">API Documentation</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h5 class="font-bold text-sm text-[#1A1C1C] dark:text-white">Company</h5>
+<ul class="font-['Inter'] text-[0.75rem] space-y-3">
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">About</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Blog</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Careers</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Contact</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h5 class="font-bold text-sm text-[#1A1C1C] dark:text-white">Legal</h5>
+<ul class="font-['Inter'] text-[0.75rem] space-y-3">
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Terms of Service</a></li>
+<li><a class="text-[#464554] dark:text-slate-500 hover:text-[#6366F1] transition-colors" href="#">Cookie Policy</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-[1440px] mx-auto border-t border-outline-variant/10 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="font-['Inter'] text-[0.75rem] text-[#464554] dark:text-slate-500">© 2024 Orlume AI. Precision in every pixel.</p>
+<p class="font-['Inter'] text-[0.75rem] text-[#464554] dark:text-slate-500">Made for photographers, by photographers.</p>
+</div>
+</footer>
+</body></html>

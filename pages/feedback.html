@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback | Orlume Vision Labs</title>
+    <meta name="description"
+        content="Share feedback, report bugs, or suggest improvements for Orlume AI Photo Editor. Your input shapes the future of Orlume.">
+    <meta name="keywords" content="orlume feedback, bug report, feature request, contact orlume">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://orlume.io/feedback">
+
+    <meta property="og:title" content="Feedback | Orlume Vision Labs">
+    <meta property="og:description" content="Help us improve Orlume. Share feedback, report bugs, or request features.">
+    <meta property="og:url" content="https://orlume.io/feedback">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/src/styles/landing.css">
+    <link rel="stylesheet" href="/src/styles/pages.css">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <script type="module" src="/src/utils/analytics.js"></script>
+</head>
+
+<body class="fb-page-body">
+    <div class="mesh-gradient" style="opacity: 0.6;">
+        <div class="mesh-orb"></div>
+    </div>
+
+    <a href="#feedback-form" class="skip-to-content" aria-label="Skip to feedback form">Skip to form</a>
+
+    <!-- Minimal Header for "One Page" feel -->
+    <nav class="nav scrolled" id="nav" role="navigation" aria-label="Main navigation" style="position: fixed; background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05);">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">Orlume</a>
+            <div class="nav-menu">
+                <a href="/" class="nav-item" style="color: var(--text-secondary); font-size: 14px; font-weight: 500; text-decoration: none;">&larr; Back to Home</a>
+            </div>
+            <a href="/editor" class="nav-cta" style="padding: 8px 16px; font-size: 13px;">Open Editor</a>
+        </div>
+    </nav>
+
+    <!-- Split Layout Wrapper -->
+    <main class="fb-split-layout">
+        
+        <!-- Left Column: Context & Alternative Contact -->
+        <div class="fb-split-left">
+            <div class="fb-left-content">
+                <div class="fb-eyebrow">Feedback</div>
+                <h1 class="fb-title">Help us improve Orlume</h1>
+                <p class="fb-subtitle">Have an idea, found a bug, or just want to share your thoughts? We read every submission to make Orlume better for everyone.</p>
+
+                <div class="fb-alt-contact">
+                    <p class="fb-alt-heading">Prefer other ways to connect?</p>
+                    <a href="https://github.com/kunal0230/Orlume/issues" target="_blank" rel="noopener" class="fb-alt-row">
+                        <div class="fb-alt-icon github">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                        </div>
+                        <div class="fb-alt-text">
+                            <span class="fb-alt-label">GitHub Issues</span>
+                            <span class="fb-alt-desc">Report technical bugs openly</span>
+                        </div>
+                        <svg class="fb-alt-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </a>
+                    
+                    <a href="mailto:orlumevisionlabs@gmail.com" class="fb-alt-row">
+                        <div class="fb-alt-icon email">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        </div>
+                        <div class="fb-alt-text">
+                            <span class="fb-alt-label">Email Us</span>
+                            <span class="fb-alt-desc">orlumevisionlabs@gmail.com</span>
+                        </div>
+                        <svg class="fb-alt-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: The Form -->
+        <div class="fb-split-right" id="feedback-form">
+            <div class="fb-panel">
+                <form action="https://formsubmit.co/orlumevisionlabs@gmail.com" method="POST" id="fb-form" novalidate>
+                    <input type="hidden" name="_subject" id="form-subject" value="New Feedback: Bug Report">
+                    <input type="hidden" name="_captcha" value="true">
+                    <input type="hidden" name="_template" value="box">
+                    <input type="hidden" name="_next" id="form-next" value="">
+                    <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+                    <input type="hidden" name="Category" id="form-category" value="Bug Report">
+                    <input type="hidden" id="fb-browser" name="Environment" value="">
+
+                    <!-- Compact Grid for Categories & Severity -->
+                    <div class="fb-form-grid">
+                        <div class="fb-group">
+                            <label class="fb-group-label" id="cat-label">What kind of feedback?</label>
+                            <div class="fb-chips" role="radiogroup" aria-labelledby="cat-label">
+                                <button type="button" class="fb-chip active" data-cat="bug" role="radio" aria-checked="true">Bug Report</button>
+                                <button type="button" class="fb-chip" data-cat="feature" role="radio" aria-checked="false">Feature</button>
+                                <button type="button" class="fb-chip" data-cat="improvement" role="radio" aria-checked="false">Idea</button>
+                                <button type="button" class="fb-chip" data-cat="general" role="radio" aria-checked="false">Other</button>
+                            </div>
+                        </div>
+
+                        <div class="fb-group" id="severity-group">
+                            <label class="fb-group-label">Priority Level</label>
+                            <div class="fb-chips">
+                                <label class="fb-chip-label"><input type="radio" name="Priority" value="Low" checked><span class="fb-chip-text">Low</span></label>
+                                <label class="fb-chip-label"><input type="radio" name="Priority" value="Medium"><span class="fb-chip-text">Med</span></label>
+                                <label class="fb-chip-label"><input type="radio" name="Priority" value="High"><span class="fb-chip-text">High</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fb-group">
+                        <label for="fb-subject" class="fb-group-label">Subject <span class="fb-req">*</span></label>
+                        <input type="text" id="fb-subject" name="Subject" class="fb-control" placeholder="Briefly summarize your feedback..." required>
+                    </div>
+
+                    <div class="fb-group">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <label for="fb-desc" class="fb-group-label">Description <span class="fb-req">*</span></label>
+                            <span class="fb-charcount" aria-live="polite"><span id="char-ct">0</span>/3K</span>
+                        </div>
+                        <textarea id="fb-desc" name="Description" class="fb-control fb-textarea" rows="4" placeholder="Please provide details, expectations, or current outcomes..." required maxlength="3000"></textarea>
+                    </div>
+
+                    <div class="fb-form-grid">
+                        <div class="fb-group">
+                            <label for="fb-name" class="fb-group-label">Name <span class="fb-opt">(optional)</span></label>
+                            <input type="text" id="fb-name" name="Name" class="fb-control" placeholder="Jane Doe" autocomplete="name">
+                        </div>
+                        <div class="fb-group">
+                            <label for="fb-email" class="fb-group-label">Email <span class="fb-opt">(optional)</span></label>
+                            <input type="email" id="fb-email" name="Email" class="fb-control" placeholder="you@example.com" autocomplete="email">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="fb-btn" id="fb-submit-btn">
+                        <span>Send Feedback</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                    
+                    <p class="fb-secure-note">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Environment details auto-attached securely.
+                    </p>
+                </form>
+
+                <!-- Success State -->
+                <div class="fb-success-panel" id="fb-success" style="display:none" role="alert" tabindex="-1">
+                    <div class="fb-success-circle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2 class="fb-success-title">Feedback Received</h2>
+                    <p class="fb-success-desc">Thank you for taking the time to help us improve Orlume. Our team has been notified.</p>
+                    <button class="fb-btn secondary" onclick="location.href='/feedback'" type="button">Send another message</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Auto-detect browser/OS silently
+        (() => {
+            const ua = navigator.userAgent;
+            const v = r => { const m = ua.match(r); return m ? m[1] : ''; };
+            let b = 'Unknown';
+            if (ua.includes('Firefox/')) b = 'Firefox ' + v(/Firefox\/(\d+)/);
+            else if (ua.includes('Edg/')) b = 'Edge ' + v(/Edg\/(\d+)/);
+            else if (ua.includes('Chrome/')) b = 'Chrome ' + v(/Chrome\/(\d+)/);
+            else if (ua.includes('Safari/') && !ua.includes('Chrome')) b = 'Safari ' + v(/Version\/(\d+)/);
+            let os = 'Unknown';
+            if (ua.includes('Mac OS')) os = 'macOS';
+            else if (ua.includes('Windows')) os = 'Windows';
+            else if (ua.includes('Linux')) os = 'Linux';
+            else if (ua.includes('Android')) os = 'Android';
+            else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+            document.getElementById('fb-browser').value = `${b} on ${os}`;
+        })();
+
+        // Category switching
+        const chips = document.querySelectorAll('.fb-chip');
+        const cfg = {
+            bug:         { label: 'Bug Report',       showSev: true  },
+            feature:     { label: 'Feature Request',  showSev: false },
+            improvement: { label: 'Improvement',      showSev: false },
+            general:     { label: 'Gen Feedback',     showSev: false }
+        };
+
+        function setCat(c) {
+            const o = cfg[c];
+            chips.forEach(b => {
+                const on = b.dataset.cat === c;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-checked', on);
+            });
+            document.getElementById('form-category').value = o.label;
+            document.getElementById('form-subject').value = 'New Feedback: ' + o.label;
+            document.getElementById('severity-group').style.display = o.showSev ? 'block' : 'none';
+        }
+
+        chips.forEach(b => b.addEventListener('click', () => setCat(b.dataset.cat)));
+
+        // Keyboard navigation for chips
+        document.querySelector('.fb-chips').addEventListener('keydown', e => {
+            const arr = [...chips];
+            const cur = arr.findIndex(b => b.classList.contains('active'));
+            let next = cur;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { next = (cur + 1) % arr.length; e.preventDefault(); }
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { next = (cur - 1 + arr.length) % arr.length; e.preventDefault(); }
+            if (next !== cur) { setCat(arr[next].dataset.cat); arr[next].focus(); }
+        });
+
+        // Character count
+        const desc = document.getElementById('fb-desc');
+        const ct = document.getElementById('char-ct');
+        desc.addEventListener('input', () => {
+            ct.textContent = desc.value.length.toLocaleString();
+        });
+
+        // Form Submission Setup
+        document.getElementById('form-next').value = location.origin + '/feedback?sent=true';
+
+        document.getElementById('fb-form').addEventListener('submit', e => {
+            let ok = true;
+            ['fb-subject', 'fb-desc'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value.trim()) { el.classList.add('error'); ok = false; }
+                else el.classList.remove('error');
+            });
+            if (!ok) { e.preventDefault(); document.querySelector('.error')?.focus(); }
+        });
+
+        document.querySelectorAll('.fb-control').forEach(el =>
+            el.addEventListener('input', () => el.classList.remove('error'))
+        );
+
+        // Success state check
+        if (location.search.includes('sent=true')) {
+            document.getElementById('fb-form').style.display = 'none';
+            document.getElementById('fb-success').style.display = 'flex';
+            document.getElementById('fb-success').focus();
+        }
+    </script>
+</body>
+</html>

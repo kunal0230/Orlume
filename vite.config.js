@@ -53,6 +53,7 @@ const pageRoutesPlugin = () => ({
         '/about': '/pages/about.html',
         '/careers': '/pages/careers.html',
         '/contribute': '/pages/contribute.html',
+        '/feedback': '/pages/feedback.html',
         '/privacy': '/pages/privacy.html',
         '/terms': '/pages/terms.html'
       };
@@ -104,6 +105,7 @@ export default defineConfig({
         about: resolve(__dirname, 'pages/about.html'),
         careers: resolve(__dirname, 'pages/careers.html'),
         contribute: resolve(__dirname, 'pages/contribute.html'),
+        feedback: resolve(__dirname, 'pages/feedback.html'),
         privacy: resolve(__dirname, 'pages/privacy.html'),
         terms: resolve(__dirname, 'pages/terms.html'),
         // Blog Posts
@@ -169,6 +171,7 @@ export default defineConfig({
           /^\/changelog/,
           /^\/careers/,
           /^\/contribute/,
+          /^\/feedback/,
           /^\/privacy/,
           /^\/terms/,
           /^\/pages\//

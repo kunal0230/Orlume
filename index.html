@@ -342,8 +342,15 @@
             <p class="text-on-surface-variant">Get the latest updates, tutorials, and tips delivered to your inbox.</p>
         </div>
         <div class="w-full max-w-md">
-            <form class="flex gap-4" onsubmit="event.preventDefault(); alert('Thanks for subscribing!');">
-                <input class="flex-1 px-6 py-4 rounded-xl border-none bg-white text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline" placeholder="Enter your email" type="email" required/>
+            <form action="https://formsubmit.co/orlumevisionlabs@gmail.com" method="POST" class="flex gap-4 w-full">
+                <!-- Configuration -->
+                <input type="hidden" name="_subject" value="New Newsletter Subscription">
+                <input type="hidden" name="_next" value="https://orlume.io/?subscribed=true">
+                <input type="hidden" name="_captcha" value="false">
+                <input type="text" name="_honey" style="display:none">
+
+                <!-- Input -->
+                <input class="flex-1 px-6 py-4 rounded-xl border-none bg-white text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline" name="Email" placeholder="Enter your email" type="email" required/>
                 <button class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:bg-primary-container transition-all" type="submit">Subscribe</button>
             </form>
         </div>
@@ -389,6 +396,7 @@
                 <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/about">About</a></li>
                 <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="https://github.com/kunal0230/Orlume" target="_blank">GitHub</a></li>
                 <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/contribute">Contribute</a></li>
+                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/feedback">Feedback</a></li>
                 <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/privacy">Privacy</a></li>
                 <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/terms">Terms</a></li>
             </ul>
