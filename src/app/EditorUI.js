@@ -64,7 +64,6 @@ export class EditorUI {
         this.relightingProModule = new RelightingProModule(this);  // v8 PRO
         this.toneCurveModule = new ToneCurveModule(this);
         this.colorGradingModule = new ColorGradingModule(this);
-        this.colorGradingModule.init();
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;
@@ -125,6 +124,7 @@ export class EditorUI {
         this.textModule.init();
         // RelightingModule removed - using v8 PRO only
         this.toneCurveModule.init();
+        this.colorGradingModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -933,7 +933,7 @@ export class EditorUI {
         this.liquifyModule?.deactivate();
         this.healingModule?.deactivate();
         this.cloneModule?.deactivate();
-        this.backgroundRemovalModule?.deactivate();
+        this.bgRemovalModule?.deactivate();
     }
 
     /**
@@ -1109,6 +1109,16 @@ export class EditorUI {
                     }
                 });
                 this.state.resetAdjustments();
+
+                // H3 FIX: Also reset HSL, Tone Curves, Color Grading, and Presets
+                if (this.hslModule?.reset) this.hslModule.reset();
+                if (this.toneCurveModule?.reset) this.toneCurveModule.reset();
+                if (this.colorGradingModule?.resetToDefaults) this.colorGradingModule.resetToDefaults();
+                if (this.presetsModule) {
+                    this.presetsModule.activePresetId = null;
+                    this.presetsModule._updateActivePresetUI?.();
+                }
+
                 requestAnimationFrame(() => this.renderHistogram());
             });
         }

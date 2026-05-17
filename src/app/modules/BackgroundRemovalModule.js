@@ -333,8 +333,8 @@ export class BackgroundRemovalModule {
         this.isProcessing = true;
 
         try {
-            // Backup original image
-            this.originalImage = this._getCurrentImage();
+            // Backup original image (M5 FIX: await the async method)
+            this.originalImage = await this._getCurrentImage();
 
             // Capture current image as data URL
             // Use the original image from state, NOT the WebGPU canvas (which can't be read directly)
@@ -411,17 +411,21 @@ export class BackgroundRemovalModule {
 
     /**
      * Get current canvas as image
+     * M5 FIX: Returns a Promise to ensure image is fully loaded before use
      */
     _getCurrentImage() {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.gpu.width;
-        tempCanvas.height = this.gpu.height;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.drawImage(this.elements.canvas, 0, 0);
+        return new Promise((resolve) => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.gpu.width;
+            tempCanvas.height = this.gpu.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.drawImage(this.elements.canvas, 0, 0);
 
-        const img = new Image();
-        img.src = tempCanvas.toDataURL('image/png');
-        return img;
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(img); // Fallback: resolve anyway
+            img.src = tempCanvas.toDataURL('image/png');
+        });
     }
 
     /**

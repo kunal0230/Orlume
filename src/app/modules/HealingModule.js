@@ -421,7 +421,16 @@ export class HealingModule {
             }
 
             // Reinitialize healing tool with new image for next use
-            this.healingTool.setImage(this.elements.canvas);
+            // M4 FIX: Can't use WebGPU canvas directly — use toImageData() like activate() does
+            const imageData = this.gpu.toImageData();
+            if (imageData) {
+                const sourceCanvas = document.createElement('canvas');
+                sourceCanvas.width = imageData.width;
+                sourceCanvas.height = imageData.height;
+                const sourceCtx = sourceCanvas.getContext('2d');
+                sourceCtx.putImageData(imageData, 0, 0);
+                this.healingTool.setImage(sourceCanvas);
+            }
             this.healingTool.clearMask();
 
 

@@ -242,7 +242,12 @@ export class PresetsModule {
      */
     _resetParams() {
         for (const key in this.gpu.params) {
-            this.gpu.params[key] = 0;
+            // Curve LUT params must be null (identity), not 0
+            if (key.startsWith('curveLut')) {
+                this.gpu.params[key] = null;
+            } else {
+                this.gpu.params[key] = 0;
+            }
         }
     }
 
@@ -329,6 +334,17 @@ export class PresetsModule {
      */
     _resetAll() {
         this._resetParams();
+
+        // L5 FIX: Sync state so history captures correct 0 values
+        for (const key in this.gpu.params) {
+            this.editorUI.state.setAdjustment(key, this.gpu.params[key]);
+        }
+
+        // Also reset other modules to match global reset
+        if (this.editorUI.hslModule?.reset) this.editorUI.hslModule.reset();
+        if (this.editorUI.toneCurveModule?.reset) this.editorUI.toneCurveModule.reset();
+        if (this.editorUI.colorGradingModule?.resetToDefaults) this.editorUI.colorGradingModule.resetToDefaults();
+
         this._syncSlidersToParams();
         this.gpu.render();
 

@@ -33,15 +33,13 @@ export class ColorGradingModule {
     }
 
     updateGrade(zone, h, s, l) {
-        // Zone: 'shadows', 'midtones', 'highlights'
-        // Params: shadowsHue, shadowsSat, shadowsLum
+        // H5 FIX: Batch param updates — set directly on params, render once
+        this.gpu.params[`${zone}Hue`] = h;
+        this.gpu.params[`${zone}Sat`] = s;
+        this.gpu.params[`${zone}Lum`] = l;
+        this.gpu.render();
 
-        // Update GPU Params
-        this.gpu.setParam(`${zone}Hue`, h);
-        this.gpu.setParam(`${zone}Sat`, s);
-        this.gpu.setParam(`${zone}Lum`, l);
-
-        // Update State
+        // Update State (doesn't trigger render)
         this.state.setAdjustment(`${zone}Hue`, h);
         this.state.setAdjustment(`${zone}Sat`, s);
         this.state.setAdjustment(`${zone}Lum`, l);
@@ -55,21 +53,21 @@ export class ColorGradingModule {
     updateUIFromState() {
         // Read from state or GPU params
         // Shadows
-        this.wheels.shadows.setValue(
+        this.wheels.shadows?.setValue(
             this.state.globalAdjustments.shadowsHue || 0,
             this.state.globalAdjustments.shadowsSat || 0,
             this.state.globalAdjustments.shadowsLum || 0
         );
 
         // Midtones
-        this.wheels.midtones.setValue(
+        this.wheels.midtones?.setValue(
             this.state.globalAdjustments.midtonesHue || 0,
             this.state.globalAdjustments.midtonesSat || 0,
             this.state.globalAdjustments.midtonesLum || 0
         );
 
         // Highlights
-        this.wheels.highlights.setValue(
+        this.wheels.highlights?.setValue(
             this.state.globalAdjustments.highlightsHue || 0,
             this.state.globalAdjustments.highlightsSat || 0,
             this.state.globalAdjustments.highlightsLum || 0
@@ -81,6 +79,73 @@ export class ColorGradingModule {
 
         const blendingSlider = document.getElementById('grading-blending');
         if (blendingSlider) blendingSlider.value = this.state.globalAdjustments.colorBlending ?? 50;
+    }
+
+    /**
+     * H6 FIX: Get current state for history/undo support
+     */
+    getState() {
+        return {
+            shadowsHue: this.state.globalAdjustments.shadowsHue || 0,
+            shadowsSat: this.state.globalAdjustments.shadowsSat || 0,
+            shadowsLum: this.state.globalAdjustments.shadowsLum || 0,
+            midtonesHue: this.state.globalAdjustments.midtonesHue || 0,
+            midtonesSat: this.state.globalAdjustments.midtonesSat || 0,
+            midtonesLum: this.state.globalAdjustments.midtonesLum || 0,
+            highlightsHue: this.state.globalAdjustments.highlightsHue || 0,
+            highlightsSat: this.state.globalAdjustments.highlightsSat || 0,
+            highlightsLum: this.state.globalAdjustments.highlightsLum || 0,
+            colorBalance: this.state.globalAdjustments.colorBalance || 0,
+            colorBlending: this.state.globalAdjustments.colorBlending ?? 50
+        };
+    }
+
+    /**
+     * H6 FIX: Set state from history/undo
+     */
+    setState(savedState) {
+        if (!savedState) return;
+
+        // Restore all color grading params
+        const params = ['shadowsHue', 'shadowsSat', 'shadowsLum',
+                        'midtonesHue', 'midtonesSat', 'midtonesLum',
+                        'highlightsHue', 'highlightsSat', 'highlightsLum',
+                        'colorBalance', 'colorBlending'];
+
+        for (const param of params) {
+            if (param in savedState) {
+                this.gpu.params[param] = savedState[param];
+                this.state.setAdjustment(param, savedState[param]);
+            }
+        }
+
+        // Update UI wheels
+        this.updateUIFromState();
+        this.gpu.render();
+    }
+
+    /**
+     * Reset all color grading to defaults
+     */
+    resetToDefaults() {
+        const zones = ['shadows', 'midtones', 'highlights'];
+        const aspects = ['Hue', 'Sat', 'Lum'];
+
+        for (const zone of zones) {
+            for (const aspect of aspects) {
+                const param = `${zone}${aspect}`;
+                this.gpu.params[param] = 0;
+                this.state.setAdjustment(param, 0);
+            }
+        }
+
+        this.gpu.params.colorBalance = 0;
+        this.gpu.params.colorBlending = 50;
+        this.state.setAdjustment('colorBalance', 0);
+        this.state.setAdjustment('colorBlending', 50);
+
+        this.updateUIFromState();
+        this.gpu.render();
     }
 
     _createGlobalControls(container) {
@@ -123,3 +188,4 @@ export class ColorGradingModule {
         parent.appendChild(wrap);
     }
 }
+

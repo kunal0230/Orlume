@@ -326,8 +326,12 @@ export class CloneModule {
 
         // Draw preview to clone canvas
         const ctx = this.cloneCanvas.getContext('2d');
-        this.cloneCanvas.width = this.cloneTool.imageWidth;
-        this.cloneCanvas.height = this.cloneTool.imageHeight;
+        if (this.cloneCanvas.width !== this.cloneTool.imageWidth || this.cloneCanvas.height !== this.cloneTool.imageHeight) {
+            this.cloneCanvas.width = this.cloneTool.imageWidth;
+            this.cloneCanvas.height = this.cloneTool.imageHeight;
+        } else {
+            ctx.clearRect(0, 0, this.cloneCanvas.width, this.cloneCanvas.height);
+        }
         ctx.drawImage(previewCanvas, 0, 0);
     }
 
@@ -417,7 +421,7 @@ export class CloneModule {
 
             // Re-initialize with new image
             if (this.state.currentTool === 'clone') {
-                setTimeout(() => this.activate(), 100);
+                this.activate();
             }
 
         } catch (error) {

@@ -182,7 +182,6 @@ export class GPUProcessor {
      * Update adjustment parameter
      */
     setParam(name, value) {
-        console.log(`[GPUProcessor] setParam: ${name} = ${value}`);
         if (name in this.params) {
             this.params[name] = value;
             this.render();
@@ -201,7 +200,12 @@ export class GPUProcessor {
      */
     reset() {
         for (const key in this.params) {
-            this.params[key] = 0;
+            // Curve LUT params must be null (identity), not 0
+            if (key.startsWith('curveLut')) {
+                this.params[key] = null;
+            } else {
+                this.params[key] = 0;
+            }
         }
         this.render();
     }

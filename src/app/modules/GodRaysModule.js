@@ -243,28 +243,26 @@ export class GodRaysModule {
     }
 
     /**
-     * Initialize click to place sun
+     * Handle canvas click to place sun
      */
-    _initCanvasClick() {
+    _onCanvasClick(e) {
+        if (!this.isActive) return;
+        
         const canvas = document.getElementById('gpu-canvas');
         if (!canvas) return;
 
-        canvas.addEventListener('click', (e) => {
-            if (!this.isActive) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
 
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width;
-            const y = (e.clientY - rect.top) / rect.height;
+        this.sunPosition = { x, y };
 
-            this.sunPosition = { x, y };
+        if (this.effect) {
+            this.effect.setSunPosition(x, y);
+            this._renderPreview();
+        }
 
-            if (this.effect) {
-                this.effect.setSunPosition(x, y);
-                this._renderPreview();
-            }
-
-            this._updateSunIndicator();
-        });
+        this._updateSunIndicator();
     }
 
     /**
@@ -366,6 +364,11 @@ export class GodRaysModule {
         // Show sun indicator
         this._updateSunIndicator();
 
+        // M6 FIX: Add click listener only when active
+        if (!this._boundOnCanvasClick) {
+            this._boundOnCanvasClick = this._onCanvasClick.bind(this);
+        }
+        document.getElementById('gpu-canvas')?.addEventListener('click', this._boundOnCanvasClick);
     }
 
     /**
@@ -375,6 +378,11 @@ export class GodRaysModule {
         this.isActive = false;
         this._hideSunIndicator();
         this._hidePreviewCanvas();
+
+        // M6 FIX: Remove click listener when inactive
+        if (this._boundOnCanvasClick) {
+            document.getElementById('gpu-canvas')?.removeEventListener('click', this._boundOnCanvasClick);
+        }
 
         // Dispose effect to free WebGL resources
         if (this.effect) {
@@ -636,39 +644,56 @@ export class GodRaysModule {
         const resultCanvas = this.effect.render();
         if (!resultCanvas) return;
 
-        // Get ImageData
-        const imageData = this.effect.getImageData();
+        // H1 FIX: Capture state BEFORE the destructive operation for proper undo
+        clearTimeout(this.ui._historyDebounceTimer);
+        const snapshot = this.ui._captureFullState();
+        this.ui.history.pushState(snapshot);
 
-        // Apply to GPU processor
-        if (this.ui.gpu && imageData) {
-            this.ui.gpu.loadImage(imageData);
-            this.ui.gpu.render();
+        // H2 FIX: Convert result to proper HTMLImageElement (not raw ImageData)
+        // gpu.loadImage() and state.setImage() expect HTMLImageElement
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = resultCanvas.width;
+        tempCanvas.height = resultCanvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(resultCanvas, 0, 0);
+        const dataUrl = tempCanvas.toDataURL('image/png');
 
-            // Update original image reference (and generate new ID)
-            if (this.ui.state) {
-                this.ui.state.setImage(imageData);
+        const img = new Image();
+        img.onload = () => {
+            // Apply to GPU processor
+            if (this.ui.gpu) {
+                this.ui.gpu.loadImage(img);
+                this.ui.gpu.render();
             }
-        }
 
-        // Hide preview canvas and sun indicator immediately
+            // Update original image reference
+            if (this.ui.state) {
+                this.ui.state.setImage(img);
+                this.ui.state.originalImage = img;
+            }
+
+            // Update histogram
+            setTimeout(() => this.ui.renderHistogram?.(), 100);
+
+            // Hide preview canvas and sun indicator immediately
+            this._hidePreviewCanvas();
+            this._hideSunIndicator();
+
+            // Dispose effect
+            if (this.effect) {
+                this.effect.dispose();
+                this.effect = null;
+            }
+            this.isActive = false;
+
+            // Switch back to develop mode
+            this.ui.setMode('develop');
+        };
+        img.src = dataUrl;
+
+        // Hide preview immediately for visual feedback
         this._hidePreviewCanvas();
         this._hideSunIndicator();
-
-        // Dispose effect
-        if (this.effect) {
-            this.effect.dispose();
-            this.effect = null;
-        }
-        this.isActive = false;
-
-        // Push to history
-        if (this.ui._pushHistoryDebounced) {
-            this.ui._pushHistoryDebounced();
-        }
-
-
-        // Switch back to develop mode
-        this.ui.setMode('develop');
     }
 
     /**

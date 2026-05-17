@@ -26,6 +26,11 @@ export class HistoryModule {
         // Image Registry - stores robust image copies by ID
         // This ensures we can always restore the exact image version needed
         this.imageRegistry = new Map();
+
+        // L1 FIX: Clean up image registry on history changes to prevent memory leaks
+        if (this.history && this.history.onChange) {
+            this.history.onChange(() => this._pruneImageRegistry());
+        }
     }
 
     /**
@@ -224,7 +229,8 @@ export class HistoryModule {
 
                         // Reload GPU processor with restored image
                         this.editor.gpu.loadImage(img);
-                        this.editor.resetAdjustments(); // Reset to fresh state before applying params
+                        this.editor.state.resetAdjustments(); // Reset state adjustments to 0
+                        this.editor.gpu.reset(); // Reset GPU params to fresh state before applying restored params
 
                         // Clear masks (they don't align with restored image)
                         this.masks.layers = [];
@@ -344,6 +350,33 @@ export class HistoryModule {
                 this.editor.toneCurveModule.setCurves(snapshot.toneCurves);
             } catch (err) {
                 console.error('Failed to restore legacy tone curves:', err);
+            }
+        }
+    }
+
+    /**
+     * Clean up unreferenced images from registry to prevent unbounded memory growth
+     */
+    _pruneImageRegistry() {
+        if (!this.history || !this.history.history) return;
+        
+        // Collect all image IDs currently referenced in the history stack
+        const referencedIds = new Set();
+        for (const state of this.history.history) {
+            if (state && state.state && state.state.imageId) {
+                referencedIds.add(state.state.imageId);
+            }
+        }
+        
+        // Also keep current active image ID
+        if (this.editor.state && this.editor.state.imageId) {
+            referencedIds.add(this.editor.state.imageId);
+        }
+        
+        // Delete any IDs from registry that are no longer referenced
+        for (const id of this.imageRegistry.keys()) {
+            if (!referencedIds.has(id)) {
+                this.imageRegistry.delete(id);
             }
         }
     }
