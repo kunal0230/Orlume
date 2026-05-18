@@ -64,7 +64,7 @@ export class EditorUI {
         this.relightingProModule = new RelightingProModule(this);  // v8 PRO
         this.toneCurveModule = new ToneCurveModule(this);
         this.colorGradingModule = new ColorGradingModule(this);
-        this.feedbackModule = new FeedbackModule();
+        this.feedbackModule = new FeedbackModule(this);
         this.feedbackModule.init();
 
         // Expose zoom state from module for backward compatibility

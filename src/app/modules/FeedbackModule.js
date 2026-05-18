@@ -1,11 +1,17 @@
 export class FeedbackModule {
-    constructor() {
+    constructor(editor) {
+        this.editor = editor;
         this.modal = null;
         this.closeBtn = null;
         this.form = null;
         this.toolContextInput = null;
         this.submitBtn = null;
         this.statusMsg = null;
+
+        // Bind instance methods
+        this.closeModal = this.closeModal.bind(this);
+        this._handleKeyDown = this._handleKeyDown.bind(this);
+        this._handleSubmit = this._handleSubmit.bind(this);
     }
 
     init() {
@@ -35,7 +41,7 @@ export class FeedbackModule {
                 <div class="feedback-modal-content">
                     <div class="feedback-modal-header">
                         <h3>Report a Bug or Suggestion</h3>
-                        <button id="feedback-close" class="feedback-close-btn">
+                        <button id="feedback-close" class="feedback-close-btn" type="button">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -46,22 +52,23 @@ export class FeedbackModule {
                         <p class="feedback-note">
                             <strong>Note:</strong> As this is a solo project, it's not always possible to test all cases and bugs can pass to production. Please report any bugs you find and give suggestions!
                         </p>
-                        <form id="feedback-form" action="https://formsubmit.co/orlumevisionlabs@gmail.com" method="POST">
+                        <form id="feedback-form" action="https://formsubmit.co/ajax/orlumevisionlabs@gmail.com" method="POST">
                             <!-- FormSubmit Configuration -->
                             <input type="hidden" name="_captcha" value="false">
                             <input type="hidden" name="_subject" value="Orlume Editor Feedback">
+                            <input type="hidden" name="_template" value="table">
                             
                             <div class="feedback-form-group">
                                 <label>Tool Context</label>
-                                <input type="text" id="feedback-tool-context" name="Tool Context" readonly>
+                                <input type="text" id="feedback-tool-context" name="tool_context" readonly style="opacity: 0.8; background: var(--bg-surface);">
                             </div>
                             <div class="feedback-form-group">
                                 <label>Email (Optional, if you want a reply)</label>
-                                <input type="email" name="Email" placeholder="your@email.com">
+                                <input type="email" name="email" placeholder="your@email.com">
                             </div>
                             <div class="feedback-form-group">
                                 <label>Message *</label>
-                                <textarea name="Message" rows="4" required placeholder="Describe the bug or your suggestion..."></textarea>
+                                <textarea name="message" rows="4" required placeholder="Describe the bug or your suggestion..."></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary feedback-submit-btn">Submit Feedback</button>
                             <div id="feedback-status" class="feedback-status" style="display: none;"></div>
@@ -78,17 +85,18 @@ export class FeedbackModule {
         panels.forEach(panel => {
             if (panel.querySelector('.feedback-btn-wrapper')) return;
 
-            const panelId = panel.id.replace('panel-', '');
+            const panelId = panel.id ? panel.id.replace('panel-', '') : 'general';
             // Format ID into readable string
             const toolName = panelId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
             const wrapper = document.createElement('div');
             wrapper.className = 'section feedback-btn-wrapper';
             wrapper.style.marginTop = '16px';
-            wrapper.style.borderTop = '1px solid var(--border-color)';
+            wrapper.style.borderTop = '1px solid var(--border)';
             wrapper.style.paddingTop = '12px';
 
             const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = 'btn feedback-btn';
             btn.dataset.tool = toolName;
             btn.style.width = '100%';
@@ -99,23 +107,21 @@ export class FeedbackModule {
                 Report Bug / Suggestion
             `;
 
+            // Bind click event directly to prevent multiple bindings if init is called twice
+            btn.addEventListener('click', (e) => {
+                const tName = e.currentTarget.dataset.tool || 'General';
+                this.openModal(tName);
+            });
+
             wrapper.appendChild(btn);
             panel.appendChild(wrapper);
         });
     }
 
     _bindEvents() {
-        // Bind to all feedback buttons
-        document.querySelectorAll('.feedback-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const toolName = e.currentTarget.dataset.tool || 'General';
-                this.openModal(toolName);
-            });
-        });
-
         // Close modal handlers
         if (this.closeBtn) {
-            this.closeBtn.addEventListener('click', () => this.closeModal());
+            this.closeBtn.addEventListener('click', this.closeModal);
         }
 
         // Close on background click
@@ -127,7 +133,16 @@ export class FeedbackModule {
 
         // Form submission
         if (this.form) {
-            this.form.addEventListener('submit', (e) => this._handleSubmit(e));
+            this.form.addEventListener('submit', this._handleSubmit);
+        }
+        
+        // Escape key to close
+        document.addEventListener('keydown', this._handleKeyDown);
+    }
+
+    _handleKeyDown(e) {
+        if (e.key === 'Escape' && this.modal && this.modal.classList.contains('active')) {
+            this.closeModal();
         }
     }
 
@@ -150,10 +165,18 @@ export class FeedbackModule {
         }
 
         this.modal.classList.add('active');
+        
+        // Auto-focus message area
+        const msgArea = this.form.querySelector('textarea[name="message"]');
+        if (msgArea) {
+            setTimeout(() => msgArea.focus(), 100);
+        }
     }
 
     closeModal() {
-        this.modal.classList.remove('active');
+        if (this.modal) {
+            this.modal.classList.remove('active');
+        }
     }
 
     async _handleSubmit(e) {
@@ -179,7 +202,17 @@ export class FeedbackModule {
                 this._showStatus('Feedback submitted successfully! Thank you.', 'success');
                 setTimeout(() => this.closeModal(), 2000);
             } else {
-                this._showStatus('Oops! There was a problem submitting your feedback.', 'error');
+                let errorMsg = 'Oops! There was a problem submitting your feedback.';
+                try {
+                    const errorData = await response.json();
+                    if (errorData && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (e) {
+                    // Ignore parse error
+                }
+                this._showStatus(errorMsg, 'error');
+                
                 if (this.submitBtn) {
                     this.submitBtn.disabled = false;
                     this.submitBtn.textContent = 'Submit Feedback';
