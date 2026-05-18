@@ -240,7 +240,28 @@ export class FeedbackModule {
             }
         } catch (error) {
             console.error('Feedback submission error:', error);
-            this._showStatus('Network error. Please try again later.', 'error');
+            
+            // Fallback to mailto: if FormSubmit is down (e.g. 522 error, CORS error due to downtime)
+            this._showStatus('Server unreachable. Redirecting to your email client as fallback...', 'error');
+            
+            try {
+                const toolContext = this.toolContextInput ? this.toolContextInput.value : 'General';
+                const email = this.form.email ? this.form.email.value : '';
+                const message = this.form.message ? this.form.message.value : '';
+                
+                const subject = encodeURIComponent(`Orlume Editor Feedback - ${toolContext}`);
+                let bodyText = `Tool Context: ${toolContext}\n`;
+                if (email) bodyText += `Reply Email: ${email}\n`;
+                bodyText += `\nMessage:\n${message}\n`;
+                
+                const mailtoUrl = `mailto:orlumevisionlabs@gmail.com?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+                window.location.href = mailtoUrl;
+                
+                setTimeout(() => this.closeModal(), 3000);
+            } catch (fallbackError) {
+                console.error('Fallback mailto error:', fallbackError);
+            }
+
             if (this.submitBtn) {
                 this.submitBtn.disabled = false;
                 this.submitBtn.textContent = 'Submit Feedback';
