@@ -39,7 +39,7 @@ export class GodRaysModule {
         this._initSliders();
         this._initButtons();
         this._initColorPickers();
-        this._initCanvasClick();
+        // Canvas click listener is now managed in activate()/deactivate() via _boundOnCanvasClick (M6 fix)
         this._createSunIndicator();
         this._createProgressBar();
     }

@@ -31,6 +31,9 @@
 1. **Comparison Module "Before" image:** After a destructive operation (like Crop), the "Before" view shows the post-crop image (without color adjustments) instead of the absolute original image. This is semi-intended because drawing the absolute original onto a cropped canvas would stretch the image, but it may be unexpected for users.
 2. **Permanent Document Listeners:** `ZoomPanModule` and `ComparisonModule` attach `mousemove` and `mouseup` listeners to the `document` during initialization. These are harmless because they short-circuit when not dragging, but are technically permanent listeners.
 
+## 🩹 Regressions Caught & Fixed
+1. **M6 Regression (GodRays crash on init):** The M6 fix renamed `_initCanvasClick()` → `_onCanvasClick()` but left the old call in `init()`, causing `TypeError: this._initCanvasClick is not a function` on editor startup. Fixed by removing the stale call (listener is now managed in `activate()`/`deactivate()`).
+
 ## Current Architecture Notes
 - The app uses a hybrid `Canvas2D` (for UI overlays like Liquify, Clone, Healing) + `WebGPU` (for color processing) architecture.
 - Destructive edits (Crop, Liquify, Healing) must **always** push history *before* replacing the `state.originalImage`.
