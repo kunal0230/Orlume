@@ -25,6 +25,7 @@
 | KeyboardModule | `keyboardModule` | ❌ | ❌ | ❌ | ❌ | Shortcuts |
 | RelightingProModule | `relightingProModule` | ❌ | ❌ | ✅ | ❌ | 3D relighting |
 | FeedbackModule | `feedbackModule` | ❌ | ❌ | ❌ | ❌ | Global feedback modal |
+| CrashReporterModule | `crashReporterModule` | ❌ | ❌ | ❌ | ❌ | Intercepts global errors |
 
 ## Property Name Conventions
 

@@ -5,6 +5,7 @@
 
 ## ✨ Features Added
 1. **Feedback & Bug Reporting System**: Implemented a per-tool feedback and bug reporting system. A button is injected into all tool panels, opening a global modal that automatically captures the tool context and submits directly to `formsubmit.co` without reloading the page. This supports gathering actionable user bug reports for this solo project.
+2. **Crash Reporting System**: Built a global `CrashReporterModule` that intercepts runtime exceptions and unhandled promise rejections. Rather than silently failing, it automatically opens the Feedback modal pre-filled with the crash details (error, stack, active tool, browser info) to prompt the user to submit an actionable bug report without violating privacy (submission requires user consent).
 
 ## ✅ Bugs Fixed
 

@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, ToneCurveModule, ColorGradingModule, FeedbackModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, ToneCurveModule, ColorGradingModule, FeedbackModule, CrashReporterModule } from './modules/index.js';
 
 // v8 PRO Relighting
 import { RelightingProModule } from '../modules/RelightingProModule.js';
@@ -66,6 +66,9 @@ export class EditorUI {
         this.colorGradingModule = new ColorGradingModule(this);
         this.feedbackModule = new FeedbackModule(this);
         this.feedbackModule.init();
+
+        this.crashReporterModule = new CrashReporterModule(this);
+        this.crashReporterModule.init();
 
         // Expose zoom state from module for backward compatibility
         this.zoom = this.zoomPanModule.zoom;

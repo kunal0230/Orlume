@@ -68,7 +68,7 @@ export class FeedbackModule {
                             </div>
                             <div class="feedback-form-group">
                                 <label>Message *</label>
-                                <textarea name="message" rows="4" required placeholder="Describe the bug or your suggestion..."></textarea>
+                                <textarea name="message" rows="8" required placeholder="Describe the bug or your suggestion..."></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary feedback-submit-btn">Submit Feedback</button>
                             <div id="feedback-status" class="feedback-status" style="display: none;"></div>
@@ -172,6 +172,23 @@ export class FeedbackModule {
             setTimeout(() => msgArea.focus(), 100);
         }
     }
+    
+    openCrashReport(crashData) {
+        this.openModal('Crash Report');
+        
+        // Pre-fill the message textarea with crash details
+        const msgArea = this.form.querySelector('textarea[name="message"]');
+        if (msgArea) {
+            let prefilledMsg = `[CRASH DETECTED]\n`;
+            prefilledMsg += `Error: ${crashData.message}\n`;
+            prefilledMsg += `Active Tool: ${crashData.tool}\n`;
+            prefilledMsg += `User Agent: ${crashData.userAgent}\n`;
+            prefilledMsg += `Stack Trace:\n${crashData.stack || 'No stack trace available'}\n\n`;
+            prefilledMsg += `[Optional] Please describe what you were doing when the editor crashed:\n`;
+            
+            msgArea.value = prefilledMsg;
+        }
+    }
 
     closeModal() {
         if (this.modal) {
@@ -188,12 +205,15 @@ export class FeedbackModule {
         }
 
         const formData = new FormData(this.form);
+        const plainFormData = Object.fromEntries(formData.entries());
+        const formDataJsonString = JSON.stringify(plainFormData);
         
         try {
             const response = await fetch(this.form.action, {
                 method: 'POST',
-                body: formData,
+                body: formDataJsonString,
                 headers: {
+                    'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 }
             });
