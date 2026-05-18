@@ -24,6 +24,7 @@
 | UpscaleModule | `upscaleModule` | ❌ | ❌ | ❌ | ❌ | AI upscaling |
 | KeyboardModule | `keyboardModule` | ❌ | ❌ | ❌ | ❌ | Shortcuts |
 | RelightingProModule | `relightingProModule` | ❌ | ❌ | ✅ | ❌ | 3D relighting |
+| FeedbackModule | `feedbackModule` | ❌ | ❌ | ❌ | ❌ | Global feedback modal |
 
 ## Property Name Conventions
 

@@ -34,7 +34,8 @@ prime-kilonova/
 │   │       ├── ExportModule.js       # File export (JPEG/PNG/WebP)
 │   │       ├── UpscaleModule.js      # AI upscaling
 │   │       ├── KeyboardModule.js     # Keyboard shortcuts
-│   │       └── LayersModule.js       # Mask layer management UI
+│   │       ├── LayersModule.js       # Mask layer management UI
+│   │       └── FeedbackModule.js     # User bug reporting & feedback UI
 │   ├── gpu/
 │   │   ├── GPUProcessor.js       # Unified GPU API (params, render, textures)
 │   │   ├── GPUBackend.js         # Backend factory (WebGPU → WebGL2 fallback)

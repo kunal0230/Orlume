@@ -3,6 +3,9 @@
 > **Last Updated:** May 2026
 > **Context:** A massive system audit was performed to fix bugs in state management, tool cleanup, and GPU parameter syncing.
 
+## ✨ Features Added
+1. **Feedback & Bug Reporting System**: Implemented a per-tool feedback and bug reporting system. A button is injected into all tool panels, opening a global modal that automatically captures the tool context and submits directly to `formsubmit.co` without reloading the page. This supports gathering actionable user bug reports for this solo project.
+
 ## ✅ Bugs Fixed
 
 ### Critical
