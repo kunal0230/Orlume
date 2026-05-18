@@ -205,15 +205,15 @@ export class FeedbackModule {
         }
 
         const formData = new FormData(this.form);
-        const plainFormData = Object.fromEntries(formData.entries());
-        const formDataJsonString = JSON.stringify(plainFormData);
+        const urlEncodedData = new URLSearchParams(formData).toString();
         
         try {
+            // Use application/x-www-form-urlencoded to avoid triggering a CORS preflight (OPTIONS) request
             const response = await fetch(this.form.action, {
                 method: 'POST',
-                body: formDataJsonString,
+                body: urlEncodedData,
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                     'Accept': 'application/json'
                 }
             });
