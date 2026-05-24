@@ -147,11 +147,7 @@ export class FeedbackModule {
     }
 
     openModal(toolName) {
-        if (this.toolContextInput) {
-            this.toolContextInput.value = toolName;
-        }
-        
-        // Reset form and status
+        // Reset form and status FIRST, before setting any values
         if (this.form) this.form.reset();
         if (this.statusMsg) {
             this.statusMsg.style.display = 'none';
@@ -162,6 +158,11 @@ export class FeedbackModule {
         if (this.submitBtn) {
             this.submitBtn.disabled = false;
             this.submitBtn.textContent = 'Submit Feedback';
+        }
+
+        // Set tool context AFTER reset so it doesn't get wiped
+        if (this.toolContextInput) {
+            this.toolContextInput.value = toolName;
         }
 
         this.modal.classList.add('active');

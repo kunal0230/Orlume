@@ -1,7 +1,7 @@
 # Project Status & Audit Report
 
-> **Last Updated:** May 2026
-> **Context:** A massive system audit was performed to fix bugs in state management, tool cleanup, and GPU parameter syncing.
+> **Last Updated:** May 2026 (v2)
+> **Context:** A massive system audit was performed to fix bugs in state management, tool cleanup, GPU parameter syncing, and feedback submission.
 
 ## ✨ Features Added
 1. **Feedback & Bug Reporting System**: Implemented a per-tool feedback and bug reporting system. A button is injected into all tool panels, opening a global modal that automatically captures the tool context and submits directly to `formsubmit.co` without reloading the page. This supports gathering actionable user bug reports for this solo project.
@@ -29,6 +29,10 @@
 13. **[Fixed]** The GodRays click listener is no longer permanently attached to the canvas, preventing event leaks.
 14. **[Fixed]** `HistoryModule._pruneImageRegistry()` was implemented to clean up unused Data URLs from memory when history is overwritten.
 15. **[Fixed]** `PresetsModule._resetAll()` now syncs the zeroed parameters back to `EditorState` so that history snapshots correctly record the reset state.
+
+### Feedback System
+16. **[Fixed]** `FeedbackModule.openModal()` called `form.reset()` *after* setting `toolContextInput.value`, which immediately wiped the tool context. The ordering has been corrected so `reset()` runs first, then the tool context is populated.
+17. **[Fixed]** `pages/feedback.html` was sending `FormData` (multipart/form-data) to the FormSubmit AJAX endpoint without an explicit `Content-Type` header. This could trigger CORS preflight rejection. Changed to use `URLSearchParams` with `Content-Type: application/x-www-form-urlencoded` (matching the editor's FeedbackModule pattern).
 
 ## ⚠️ Known Issues Remaining
 
