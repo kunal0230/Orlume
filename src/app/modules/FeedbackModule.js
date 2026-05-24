@@ -52,11 +52,7 @@ export class FeedbackModule {
                         <p class="feedback-note">
                             <strong>Note:</strong> As this is a solo project, it's not always possible to test all cases and bugs can pass to production. Please report any bugs you find and give suggestions!
                         </p>
-                        <form id="feedback-form" action="https://formsubmit.co/ajax/orlumevisionlabs@gmail.com" method="POST">
-                            <!-- FormSubmit Configuration -->
-                            <input type="hidden" name="_captcha" value="false">
-                            <input type="hidden" name="_subject" value="Orlume Editor Feedback">
-                            <input type="hidden" name="_template" value="table">
+                        <form id="feedback-form" action="/api/feedback" method="POST">
                             
                             <div class="feedback-form-group">
                                 <label>Tool Context</label>
@@ -205,34 +201,29 @@ export class FeedbackModule {
             this.submitBtn.textContent = 'Submitting...';
         }
 
+        // Collect form data as a plain object
         const formData = new FormData(this.form);
-        const urlEncodedData = new URLSearchParams(formData).toString();
+        const payload = {};
+        for (const [key, value] of formData.entries()) {
+            payload[key] = value;
+        }
         
         try {
-            // Use application/x-www-form-urlencoded to avoid triggering a CORS preflight (OPTIONS) request
-            const response = await fetch(this.form.action, {
+            const response = await fetch('/api/feedback', {
                 method: 'POST',
-                body: urlEncodedData,
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json'
-                }
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
 
-            if (response.ok) {
-                this._showStatus('Feedback submitted successfully! Thank you.', 'success');
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                this._showStatus(data.message || 'Feedback submitted successfully! Thank you.', 'success');
                 setTimeout(() => this.closeModal(), 2000);
             } else {
-                let errorMsg = 'Oops! There was a problem submitting your feedback.';
-                try {
-                    const errorData = await response.json();
-                    if (errorData && errorData.message) {
-                        errorMsg = errorData.message;
-                    }
-                } catch (e) {
-                    // Ignore parse error
-                }
-                this._showStatus(errorMsg, 'error');
+                this._showStatus(data.message || 'Oops! There was a problem submitting your feedback.', 'error');
                 
                 if (this.submitBtn) {
                     this.submitBtn.disabled = false;
@@ -242,13 +233,13 @@ export class FeedbackModule {
         } catch (error) {
             console.error('Feedback submission error:', error);
             
-            // Fallback to mailto: if FormSubmit is down (e.g. 522 error, CORS error due to downtime)
+            // Fallback to mailto: if API is unreachable
             this._showStatus('Server unreachable. Redirecting to your email client as fallback...', 'error');
             
             try {
                 const toolContext = this.toolContextInput ? this.toolContextInput.value : 'General';
-                const email = this.form.email ? this.form.email.value : '';
-                const message = this.form.message ? this.form.message.value : '';
+                const email = this.form.querySelector('[name="email"]')?.value || '';
+                const message = this.form.querySelector('[name="message"]')?.value || '';
                 
                 const subject = encodeURIComponent(`Orlume Editor Feedback - ${toolContext}`);
                 let bodyText = `Tool Context: ${toolContext}\n`;

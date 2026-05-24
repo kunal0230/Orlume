@@ -1,10 +1,10 @@
 # Project Status & Audit Report
 
-> **Last Updated:** May 2026 (v2)
-> **Context:** A massive system audit was performed to fix bugs in state management, tool cleanup, GPU parameter syncing, and feedback submission.
+> **Last Updated:** May 2026 (v3)
+> **Context:** A massive system audit was performed to fix bugs in state management, tool cleanup, GPU parameter syncing, and feedback submission. The feedback system was migrated from FormSubmit.co to a Vercel serverless function + Resend email API.
 
 ## ✨ Features Added
-1. **Feedback & Bug Reporting System**: Implemented a per-tool feedback and bug reporting system. A button is injected into all tool panels, opening a global modal that automatically captures the tool context and submits directly to `formsubmit.co` without reloading the page. This supports gathering actionable user bug reports for this solo project.
+1. **Feedback & Bug Reporting System**: Implemented a per-tool feedback and bug reporting system. A button is injected into all tool panels, opening a global modal that automatically captures the tool context and submits via a Vercel serverless function (`/api/feedback`) using the Resend email API. Both the editor modal and the standalone `/feedback` page share this same backend. Requires `RESEND_API_KEY` env var (free tier: 3,000 emails/month).
 2. **Crash Reporting System**: Built a global `CrashReporterModule` that intercepts runtime exceptions and unhandled promise rejections. Rather than silently failing, it automatically opens the Feedback modal pre-filled with the crash details (error, stack, active tool, browser info) to prompt the user to submit an actionable bug report without violating privacy (submission requires user consent).
 
 ## ✅ Bugs Fixed

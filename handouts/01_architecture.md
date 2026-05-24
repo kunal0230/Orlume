@@ -46,6 +46,9 @@ prime-kilonova/
 │   ├── services/                 # External API services (ReplicateService)
 │   ├── modules/                  # PRO modules (RelightingProModule)
 │   └── presets/                  # Preset definitions (PresetLibrary)
+├── api/                          # Vercel Serverless Functions
+│   ├── replicate.js              # Replicate API proxy (keeps token server-side)
+│   └── feedback.js               # Feedback email sender (Resend API, env: RESEND_API_KEY)
 ├── docs/                         # Research documentation
 └── handouts/                     # 👈 YOU ARE HERE — onboarding docs
 ```
