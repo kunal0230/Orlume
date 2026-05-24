@@ -32,12 +32,16 @@
 
 ### Feedback System
 16. **[Fixed]** `FeedbackModule.openModal()` called `form.reset()` *after* setting `toolContextInput.value`, which immediately wiped the tool context. The ordering has been corrected so `reset()` runs first, then the tool context is populated.
-17. **[Fixed]** `pages/feedback.html` was sending `FormData` (multipart/form-data) to the FormSubmit AJAX endpoint without an explicit `Content-Type` header. This could trigger CORS preflight rejection. Changed to use `URLSearchParams` with `Content-Type: application/x-www-form-urlencoded` (matching the editor's FeedbackModule pattern).
+17. **[Migrated]** Replaced FormSubmit.co (which was returning HTTP 521 — server down) with a self-hosted Vercel serverless function (`/api/feedback`) + Resend email API. Both the editor modal and `/feedback` page now POST JSON to `/api/feedback`. This eliminates the third-party dependency entirely.
 
 ## ⚠️ Known Issues Remaining
 
 1. **Comparison Module "Before" image:** After a destructive operation (like Crop), the "Before" view shows the post-crop image (without color adjustments) instead of the absolute original image. This is semi-intended because drawing the absolute original onto a cropped canvas would stretch the image, but it may be unexpected for users.
 2. **Permanent Document Listeners:** `ZoomPanModule` and `ComparisonModule` attach `mousemove` and `mouseup` listeners to the `document` during initialization. These are harmless because they short-circuit when not dragging, but are technically permanent listeners.
+
+## 🔧 Pending Setup
+
+1. **Resend Domain Verification (in progress):** The Resend email API requires domain verification before emails can be sent from a custom `@orlume.io` address. Verification has been initiated — once DNS records propagate, the feedback system will be fully operational. Until then, the `onboarding@resend.dev` sender address is used (works on Resend's free tier without domain verification).
 
 ## 🩹 Regressions Caught & Fixed
 1. **M6 Regression (GodRays crash on init):** The M6 fix renamed `_initCanvasClick()` → `_onCanvasClick()` but left the old call in `init()`, causing `TypeError: this._initCanvasClick is not a function` on editor startup. Fixed by removing the stale call (listener is now managed in `activate()`/`deactivate()`).
@@ -46,3 +50,5 @@
 - The app uses a hybrid `Canvas2D` (for UI overlays like Liquify, Clone, Healing) + `WebGPU` (for color processing) architecture.
 - Destructive edits (Crop, Liquify, Healing) must **always** push history *before* replacing the `state.originalImage`.
 - Curve parameters (`curveLutRgb`, `curveLutRed`, etc.) must be `null` when disabled, never `0`.
+- Feedback submissions are handled by `/api/feedback` (Vercel serverless) → Resend API. Never revert to FormSubmit or external form services.
+- Environment variables for serverless functions: `RESEND_API_KEY`, `REPLICATE_API_TOKEN`. Set in Vercel Dashboard, NOT in `.env.local` (those are client-side only via `VITE_` prefix).

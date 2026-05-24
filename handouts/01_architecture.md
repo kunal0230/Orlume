@@ -35,7 +35,8 @@ prime-kilonova/
 │   │       ├── UpscaleModule.js      # AI upscaling
 │   │       ├── KeyboardModule.js     # Keyboard shortcuts
 │   │       ├── LayersModule.js       # Mask layer management UI
-│   │       └── FeedbackModule.js     # User bug reporting & feedback UI
+│   │       ├── FeedbackModule.js     # User bug reporting & feedback UI
+│   │       └── CrashReporterModule.js # Intercepts global errors → opens feedback modal
 │   ├── gpu/
 │   │   ├── GPUProcessor.js       # Unified GPU API (params, render, textures)
 │   │   ├── GPUBackend.js         # Backend factory (WebGPU → WebGL2 fallback)
@@ -49,8 +50,28 @@ prime-kilonova/
 ├── api/                          # Vercel Serverless Functions
 │   ├── replicate.js              # Replicate API proxy (keeps token server-side)
 │   └── feedback.js               # Feedback email sender (Resend API, env: RESEND_API_KEY)
+├── pages/                        # Static pages (feedback, docs, about, blog, etc.)
+│   └── feedback.html             # Standalone feedback form (also uses /api/feedback)
 ├── docs/                         # Research documentation
 └── handouts/                     # 👈 YOU ARE HERE — onboarding docs
+```
+
+## Serverless Backend (`api/`)
+
+Vercel serverless functions live in `api/`. They run server-side on each request.
+
+| Function | Env Var | Purpose |
+|----------|---------|--------|
+| `replicate.js` | `REPLICATE_API_TOKEN` | Proxies AI model requests (healing, upscale, bg-removal) to Replicate, keeping the API token server-side |
+| `feedback.js` | `RESEND_API_KEY` | Receives feedback JSON from both the editor modal and `/feedback` page, sends formatted HTML emails via the Resend API |
+
+**Feedback flow:**
+```
+User submits form (editor modal or /feedback page)
+    ↓
+POST /api/feedback  (JSON: { tool_context, message, email, ... })
+    ↓
+Vercel function → validates + rate-limits → Resend API → email to orlumevisionlabs@gmail.com
 ```
 
 ## Core Data Flow
@@ -108,3 +129,5 @@ Crop, Liquify Apply, Healing Apply, BG Removal Apply, and GodRays Apply are "des
 3. **`setParam()` triggers render**: Each call = full GPU render. Batch updates when possible.
 4. **Image loading is async**: `new Image(); img.src = url; return img;` — the image isn't loaded yet! Always use `img.onload`.
 5. **History push timing**: ALWAYS capture and push BEFORE modifying state for destructive ops.
+6. **Feedback endpoints**: Both the editor modal (`FeedbackModule`) and `/feedback` page POST JSON to `/api/feedback`. Never use FormSubmit or any external form service — the project owns its own serverless backend.
+7. **Environment variables**: Serverless functions read env vars from Vercel (set in Dashboard → Settings → Environment Variables). They are NOT prefixed with `VITE_` (those are client-side only).

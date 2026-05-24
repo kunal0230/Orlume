@@ -90,3 +90,21 @@ setTimeout(() => this.editor.renderHistogram(), 100);
 
 ### Curve LUT params (default `null`, NOT `0`):
 `curveLutRgb`, `curveLutRed`, `curveLutGreen`, `curveLutBlue`
+
+## Feedback System
+
+The feedback system has two frontends and one shared backend:
+
+| Frontend | File | Context |
+|----------|------|---------|
+| Editor modal | `FeedbackModule.js` | Injected into every tool panel via `_injectFeedbackButtons()`. Captures tool name automatically. |
+| Standalone page | `pages/feedback.html` | Public `/feedback` route. Has category chips, priority levels, subject/description fields. |
+
+**Backend**: Both POST JSON to `/api/feedback` (Vercel serverless function) → Resend email API → `orlumevisionlabs@gmail.com`.
+
+**Key implementation details:**
+- `FeedbackModule.openModal()` must call `form.reset()` **before** setting `toolContextInput.value`, not after (was a bug that wiped the tool context).
+- `CrashReporterModule` calls `feedbackModule.openCrashReport(crashData)` to pre-fill the modal with crash details.
+- The serverless function includes rate limiting (3 submissions/min/IP) and honeypot spam filtering.
+- `RESEND_API_KEY` env var must be set in Vercel Dashboard. Free tier: 3,000 emails/month.
+- Requires verified domain in Resend. Uses `onboarding@resend.dev` as the "from" address on the free plan.
