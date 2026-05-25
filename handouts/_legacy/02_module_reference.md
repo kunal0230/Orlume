@@ -14,7 +14,7 @@
 | BackgroundRemovalModule | `bgRemovalModule` | ❌ | ❌ | ✅ | ✅ | Transform overlay |
 | GodRaysModule | `godRaysModule` | ✅ | ✅ | ✅ | ✅ (preview canvas) | Volumetric light |
 | HSLModule | `hslModule` | ✅ | ✅ | ❌ | ❌ | 24 slider params |
-| PresetsModule | `presetsModule` | ❌ | ❌ | ❌ | ❌ | Applies to GPU params |
+| PresetsModule | `presetsModule` | ❌ | ❌ | ❌ | ❌ | Applies to GPU params. Now syncs state via `setAdjustment()`. Uses `val-` prefix for display IDs. Param is `structure` not `texture`. |
 | ToneCurveModule | `toneCurveModule` | ✅ | ✅ | ❌ | ❌ | LUT-based curves |
 | ColorGradingModule | `colorGradingModule` | ✅* | ✅* | ❌ | ❌ | *Added in bugfix session |
 | TextModule | `textModule` | ✅ | ✅ | ✅ | ❌ | Text overlay manager |
@@ -25,7 +25,7 @@
 | KeyboardModule | `keyboardModule` | ❌ | ❌ | ❌ | ❌ | Shortcuts |
 | RelightingProModule | `relightingProModule` | ❌ | ❌ | ✅ | ❌ | 3D relighting |
 | FeedbackModule | `feedbackModule` | ❌ | ❌ | ❌ | ❌ | Global feedback modal |
-| CrashReporterModule | `crashReporterModule` | ❌ | ❌ | ❌ | ❌ | Intercepts global errors |
+| CrashReporterModule | `crashReporterModule` | ❌ | ❌ | ❌ | ❌ | Intercepts global errors. Reads tool from `editorUI.state.currentTool` (not `editorUI.currentTool`). |
 
 ## Property Name Conventions
 
@@ -108,3 +108,30 @@ The feedback system has two frontends and one shared backend:
 - The serverless function includes rate limiting (3 submissions/min/IP) and honeypot spam filtering.
 - `RESEND_API_KEY` env var must be set in Vercel Dashboard. Free tier: 3,000 emails/month.
 - Requires verified domain in Resend. Uses `onboarding@resend.dev` as the "from" address on the free plan.
+
+## ColorGradingWheel Constructor
+
+```javascript
+new ColorGradingWheel(container, label, onChange, onInteractionEnd)
+```
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `container` | HTMLElement | DOM parent to append the wheel into |
+| `label` | string | Display label (e.g., `'Shadows'`) |
+| `onChange` | `(h, s, l) => void` | Called on every drag/slider move (live preview) |
+| `onInteractionEnd` | `() => void \| null` | Called on mouseup, slider `change`, dblclick reset — use for history push |
+
+> **Note:** If `onInteractionEnd` is omitted or `null`, no history will be pushed for color grading changes.
+
+## ESLint Configuration Notes
+
+`eslint.config.js` uses flat config (ESLint 9+). Browser and WebGPU globals must be listed explicitly since there's no `env: { browser: true }` in flat config.
+
+**Currently declared globals include:**
+- Browser: `window`, `document`, `console`, `fetch`, `URL`, `URLSearchParams`, `alert`, `confirm`, `prompt`, `caches`, `ImageBitmap`, `Image`, `ImageData`, `Blob`, `File`, `FileReader`, `FormData`, `HTMLCanvasElement`, `HTMLImageElement`, `OffscreenCanvas`, `createImageBitmap`, `performance`, `navigator`, `location`, `localStorage`, `indexedDB`, timers, rAF
+- WebGL: `WebGLRenderingContext`, `WebGL2RenderingContext`, `CanvasRenderingContext2D`
+- WebGPU: `GPUTexture`, `GPUDevice`, `GPUShaderStage`, `GPUTextureUsage`, `GPUBufferUsage`, `GPUMapMode`
+- External: `THREE`
+
+When adding new browser/WebGPU APIs, remember to add them here or they'll trigger `no-undef` errors.

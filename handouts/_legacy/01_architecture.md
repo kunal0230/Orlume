@@ -122,6 +122,21 @@ Crop, Liquify Apply, Healing Apply, BG Removal Apply, and GodRays Apply are "des
 
 **Important:** Curve LUT params (`curveLutRgb`, `curveLutRed`, `curveLutGreen`, `curveLutBlue`) must be `null` when unused, NOT `0`. Setting them to `0` corrupts rendering.
 
+## Bug Fixes Applied
+
+The following bugs have been identified and fixed. Each fixed line is marked with a `// FIXED:` comment in-source.
+
+| # | Bug | File(s) | Root Cause | Fix |
+|---|-----|---------|------------|-----|
+| 1 | Color grading changes can't be undone | `ColorGradingWheel.js`, `ColorGradingModule.js` | No `onInteractionEnd` callback → history never pushed | Added `onInteractionEnd` param to wheel; fires on mouseup, slider change, dblclick resets. Module passes `_pushHistoryDebounced()`. Global sliders also get `change` listener. |
+| 2 | Preset apply doesn't sync state | `PresetsModule.js` | `_applyPreset()` wrote GPU params but never called `state.setAdjustment()` | Added sync loop after GPU param writes |
+| 3 | Preset slider text displays stay at 0 | `PresetsModule.js` | `getElementById(param)` instead of `getElementById('val-' + param)` | Fixed ID to `val-${param}` |
+| 4 | Structure slider ignored by presets | `PresetsModule.js` | `globalSliders` array had `'texture'` instead of `'structure'` | Renamed to `'structure'` |
+| 5 | Crash reports show "Unknown" tool | `CrashReporterModule.js` | Read `editorUI.currentTool` (undefined) instead of `editorUI.state.currentTool` | Fixed property path |
+| 6 | ESLint `no-case-declarations` | `CropTool.js`, `BackgroundRemovalModule.js` | `const` in unscoped `case` blocks | Wrapped cases in `{ }` |
+| 7 | ESLint `no-empty` | `WebGL2Backend.js`, `SegmentationEstimator.js` | Empty `else` / `if` blocks | Added explanatory comments |
+| 8 | 93 ESLint `no-undef` errors | `eslint.config.js` | Missing browser globals (`alert`, `confirm`, `prompt`, `URLSearchParams`, `caches`, `ImageBitmap`) and WebGPU globals (`GPUShaderStage`, `GPUTextureUsage`, `GPUBufferUsage`, `GPUMapMode`) | Added all to `globals` |
+
 ## Common Pitfalls
 
 1. **Property naming**: Module properties use camelCase (`bgRemovalModule`, not `backgroundRemovalModule`)
@@ -131,3 +146,7 @@ Crop, Liquify Apply, Healing Apply, BG Removal Apply, and GodRays Apply are "des
 5. **History push timing**: ALWAYS capture and push BEFORE modifying state for destructive ops.
 6. **Feedback endpoints**: Both the editor modal (`FeedbackModule`) and `/feedback` page POST JSON to `/api/feedback`. Never use FormSubmit or any external form service — the project owns its own serverless backend.
 7. **Environment variables**: Serverless functions read env vars from Vercel (set in Dashboard → Settings → Environment Variables). They are NOT prefixed with `VITE_` (those are client-side only).
+8. **Color grading history**: `ColorGradingWheel` accepts an `onInteractionEnd` callback (4th constructor arg). Always pass one or undo won't work for wheel/slider changes.
+9. **Preset state sync**: After writing GPU params in bulk (e.g., preset apply), always sync back to `editorUI.state` via `setAdjustment()` or undo/redo will restore stale values.
+10. **Slider display IDs**: Value display `<span>` elements use the `val-` prefix (e.g., `val-exposure`), not bare param names.
+11. **ESLint globals**: When using new browser/WebGPU APIs, add them to `eslint.config.js` `globals` or they'll trigger `no-undef`.
