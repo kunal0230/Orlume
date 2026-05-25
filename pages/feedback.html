@@ -139,6 +139,11 @@
                         <span>Send Feedback</span>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
+
+                    <div id="fb-error-msg" class="fb-error-banner" style="display:none" role="alert">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span id="fb-error-text"></span>
+                    </div>
                     
                     <p class="fb-secure-note">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -218,8 +223,24 @@
             ct.textContent = desc.value.length.toLocaleString();
         });
 
+        function showError(msg) {
+            const banner = document.getElementById('fb-error-msg');
+            document.getElementById('fb-error-text').textContent = msg;
+            banner.style.display = 'flex';
+            banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function hideError() {
+            document.getElementById('fb-error-msg').style.display = 'none';
+        }
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
         document.getElementById('fb-form').addEventListener('submit', async e => {
             e.preventDefault();
+            hideError();
             
             let ok = true;
             ['fb-subject', 'fb-desc'].forEach(id => {
@@ -229,8 +250,20 @@
             });
             
             if (!ok) { 
+                showError('Please fill in all required fields.');
                 document.querySelector('.error')?.focus();
                 return;
+            }
+
+            // Validate email format if provided
+            const emailField = document.getElementById('fb-email');
+            if (emailField.value.trim() && !isValidEmail(emailField.value.trim())) {
+                emailField.classList.add('error');
+                showError('Please enter a valid email address (e.g. you@example.com).');
+                emailField.focus();
+                return;
+            } else {
+                emailField.classList.remove('error');
             }
             
             const form = e.target;
@@ -259,15 +292,17 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
+                    hideError();
                     document.getElementById('fb-form').style.display = 'none';
                     document.getElementById('fb-success').style.display = 'flex';
                     document.getElementById('fb-success').focus();
                 } else {
-                    throw new Error(data.message || 'Form submission failed');
+                    showError(data.message || 'Failed to send feedback. Please try again.');
                 }
             } catch (error) {
                 console.error('Error submitting form:', error);
-                alert(error.message || 'We encountered an issue sending your feedback. Please try again or email us directly.');
+                showError('Could not reach the server. Please try again or email us directly at orlumevisionlabs@gmail.com.');
+            } finally {
                 btn.innerHTML = originalBtnText;
                 btn.disabled = false;
                 btn.style.opacity = '1';
@@ -275,7 +310,7 @@
         });
 
         document.querySelectorAll('.fb-control').forEach(el =>
-            el.addEventListener('input', () => el.classList.remove('error'))
+            el.addEventListener('input', () => { el.classList.remove('error'); hideError(); })
         );
     </script>
 </body>

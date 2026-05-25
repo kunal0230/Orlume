@@ -82,6 +82,11 @@ export default async function handler(req, res) {
         const userEmail = body.email || body.Email || '';
         const environment = body.Environment || 'N/A';
 
+        // Validate email format if provided
+        if (userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email address (e.g. you@example.com).' });
+        }
+
         // Build a clean HTML email
         const htmlBody = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
