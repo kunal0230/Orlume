@@ -41,7 +41,7 @@
 
 ## 🔧 Pending Setup
 
-1. **Resend Domain Verification (in progress):** The Resend email API requires domain verification before emails can be sent from a custom `@orlume.io` address. Verification has been initiated — once DNS records propagate, the feedback system will be fully operational. Until then, the `onboarding@resend.dev` sender address is used (works on Resend's free tier without domain verification).
+1. **~~Resend Domain Verification~~ ✅ Complete:** The `orlume.io` domain has been verified with Resend. The feedback system now sends from `feedback@orlume.io` (no mailbox needed — Resend handles delivery) to `kunalchaugule36@gmail.com`. The `onboarding@resend.dev` testing address is no longer used.
 
 ## 🩹 Regressions Caught & Fixed
 1. **M6 Regression (GodRays crash on init):** The M6 fix renamed `_initCanvasClick()` → `_onCanvasClick()` but left the old call in `init()`, causing `TypeError: this._initCanvasClick is not a function` on editor startup. Fixed by removing the stale call (listener is now managed in `activate()`/`deactivate()`).

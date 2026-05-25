@@ -127,8 +127,8 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: 'Orlume Feedback <onboarding@resend.dev>',
-                to: ['orlumevisionlabs@gmail.com'],
+                from: 'Orlume Feedback <feedback@orlume.io>',
+                to: ['kunalchaugule36@gmail.com'],
                 subject: `[Orlume ${source}] ${subject}`,
                 html: htmlBody,
                 reply_to: userEmail || undefined
