@@ -33,6 +33,8 @@
 ### Feedback System
 16. **[Fixed]** `FeedbackModule.openModal()` called `form.reset()` *after* setting `toolContextInput.value`, which immediately wiped the tool context. The ordering has been corrected so `reset()` runs first, then the tool context is populated.
 17. **[Migrated]** Replaced FormSubmit.co (which was returning HTTP 521 — server down) with a self-hosted Vercel serverless function (`/api/feedback`) + Resend email API. Both the editor modal and `/feedback` page now POST JSON to `/api/feedback`. This eliminates the third-party dependency entirely.
+18. **[Fixed]** The feedback page (`/feedback`) showed a generic "Form submission failed" `alert()` for invalid email input. Replaced with an inline styled error banner (`fb-error-banner`) and added client-side email format validation before submission. Server-side email validation also added in `/api/feedback` as a safety net.
+19. **[Fixed]** Resend 403 error: switched `from` address from `onboarding@resend.dev` (testing domain, restricted to account owner's email) to `feedback@orlume.io` (verified domain). Recipient changed to `kunalchaugule36@gmail.com`.
 
 ## ⚠️ Known Issues Remaining
 
