@@ -623,19 +623,21 @@ export class CropTool {
      */
     _resizeFromEdge(delta, edge, sr, minSize) {
         switch (edge) {
-            case 'n':
+            case 'n': { // FIXED: no-case-declarations
                 const newY = Math.max(0, Math.min(sr.y + sr.height - minSize, sr.y + delta));
                 this.region.y = newY;
                 this.region.height = sr.y + sr.height - newY;
                 break;
+            }
             case 's':
                 this.region.height = Math.max(minSize, Math.min(1 - sr.y, sr.height + delta));
                 break;
-            case 'w':
+            case 'w': { // FIXED: no-case-declarations
                 const newX = Math.max(0, Math.min(sr.x + sr.width - minSize, sr.x + delta));
                 this.region.x = newX;
                 this.region.width = sr.x + sr.width - newX;
                 break;
+            }
             case 'e':
                 this.region.width = Math.max(minSize, Math.min(1 - sr.x, sr.width + delta));
                 break;

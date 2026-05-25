@@ -220,6 +220,13 @@ export class PresetsModule {
             }
         }
 
+        for (const key in this.gpu.params) {
+            if (!key.startsWith('curveLut')) {
+                this.editorUI.state.setAdjustment(key, this.gpu.params[key]);
+            }
+        }
+        // FIXED: preset-state-sync
+
         // Update UI sliders to reflect new values
         this._syncSlidersToParams();
 
@@ -259,12 +266,12 @@ export class PresetsModule {
         const globalSliders = [
             'exposure', 'contrast', 'highlights', 'shadows',
             'whites', 'blacks', 'temperature', 'tint',
-            'vibrance', 'saturation', 'clarity', 'texture'
+            'vibrance', 'saturation', 'clarity', 'structure' // FIXED: texture-to-structure
         ];
 
         for (const param of globalSliders) {
             const slider = document.getElementById(`slider-${param}`);
-            const valueDisplay = document.getElementById(param);
+            const valueDisplay = document.getElementById(`val-${param}`); // FIXED: preset-display-id
 
             if (slider) {
                 let value = this.gpu.params[param] || 0;

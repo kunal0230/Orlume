@@ -377,7 +377,7 @@ export class WebGL2Backend extends GPUBackend {
 
             blurTexture = this.blurFbo2.texture;
         } else {
-
+            // No blur needed, blurTexture stays as inputTexture // FIXED: no-empty
         }
 
         // === FINAL PASS ===

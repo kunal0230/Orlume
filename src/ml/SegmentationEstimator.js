@@ -174,7 +174,7 @@ export class SegmentationEstimator {
             if (!this.model) {
                 await this.loadModel((progress) => {
                     if (progress.status === 'progress') {
-
+                        // Progress updates handled by caller // FIXED: no-empty
                     }
                 });
             }

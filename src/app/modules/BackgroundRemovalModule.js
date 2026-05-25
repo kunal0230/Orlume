@@ -501,13 +501,14 @@ export class BackgroundRemovalModule {
                 ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
                 break;
 
-            case 'gradient':
+            case 'gradient': { // FIXED: no-case-declarations
                 const gradient = ctx.createLinearGradient(0, 0, previewCanvas.width, previewCanvas.height);
                 gradient.addColorStop(0, this.customGradient.start);
                 gradient.addColorStop(1, this.customGradient.end);
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
                 break;
+            }
 
             case 'upload':
                 if (this.uploadedBackground) {
@@ -765,13 +766,14 @@ export class BackgroundRemovalModule {
                     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
                     break;
 
-                case 'gradient':
+                case 'gradient': { // FIXED: no-case-declarations
                     const gradient = ctx.createLinearGradient(0, 0, finalCanvas.width, finalCanvas.height);
                     gradient.addColorStop(0, this.customGradient.start);
                     gradient.addColorStop(1, this.customGradient.end);
                     ctx.fillStyle = gradient;
                     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
                     break;
+                }
 
                 case 'upload':
                     if (this.uploadedBackground) {

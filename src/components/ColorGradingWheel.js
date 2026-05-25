@@ -1,9 +1,10 @@
 
 export class ColorGradingWheel {
-    constructor(container, label, onChange) {
+    constructor(container, label, onChange, onInteractionEnd) {
         this.container = container;
         this.label = label;
         this.onChange = onChange;
+        this.onInteractionEnd = onInteractionEnd || null; // FIXED: color-grading-history
 
         // State
         this.hue = 0; // 0-1
@@ -64,6 +65,7 @@ export class ColorGradingWheel {
             this.sat = 0;
             this._draw();
             this.onChange(this.hue, this.sat, this.lum);
+            this.onInteractionEnd?.(); // FIXED: color-grading-history
         });
 
         // Luminance Slider
@@ -86,10 +88,14 @@ export class ColorGradingWheel {
             this.lum = parseFloat(e.target.value);
             this.onChange(this.hue, this.sat, this.lum);
         });
+        this.lumSlider.addEventListener('change', () => {
+            this.onInteractionEnd?.(); // FIXED: color-grading-history
+        });
         this.lumSlider.addEventListener('dblclick', () => {
             this.lum = 0;
             this.lumSlider.value = 0;
             this.onChange(this.hue, this.sat, this.lum);
+            this.onInteractionEnd?.(); // FIXED: color-grading-history
         });
 
         lumContainer.appendChild(this.lumSlider);
@@ -124,6 +130,7 @@ export class ColorGradingWheel {
 
     _onMouseUp(e) {
         this.isDragging = false;
+        this.onInteractionEnd?.(); // FIXED: color-grading-history
     }
 
     _updateFromEvent(e) {

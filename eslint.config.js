@@ -30,12 +30,14 @@ export default [
                 cancelAnimationFrame: 'readonly',
                 fetch: 'readonly',
                 URL: 'readonly',
+                URLSearchParams: 'readonly', // FIXED: missing-browser-globals
                 Blob: 'readonly',
                 File: 'readonly',
                 FileReader: 'readonly',
                 FormData: 'readonly',
                 Image: 'readonly',
                 ImageData: 'readonly',
+                ImageBitmap: 'readonly', // FIXED: missing-browser-globals
                 HTMLCanvasElement: 'readonly',
                 HTMLImageElement: 'readonly',
                 CanvasRenderingContext2D: 'readonly',
@@ -48,9 +50,17 @@ export default [
                 location: 'readonly',
                 localStorage: 'readonly',
                 indexedDB: 'readonly',
+                alert: 'readonly', // FIXED: missing-browser-globals
+                confirm: 'readonly', // FIXED: missing-browser-globals
+                prompt: 'readonly', // FIXED: missing-browser-globals
+                caches: 'readonly', // FIXED: missing-browser-globals
                 // WebGPU
                 GPUTexture: 'readonly',
                 GPUDevice: 'readonly',
+                GPUShaderStage: 'readonly', // FIXED: missing-webgpu-globals
+                GPUTextureUsage: 'readonly', // FIXED: missing-webgpu-globals
+                GPUBufferUsage: 'readonly', // FIXED: missing-webgpu-globals
+                GPUMapMode: 'readonly', // FIXED: missing-webgpu-globals
                 // External libraries
                 THREE: 'readonly',
             },

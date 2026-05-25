@@ -51,7 +51,7 @@ export class CrashReporterModule {
             const crashData = {
                 message: errorData.message,
                 stack: errorData.stack,
-                tool: this.editorUI.currentTool || 'Unknown',
+                tool: this.editorUI.state.currentTool || 'Unknown', // FIXED: crash-reporter-tool-path
                 userAgent: navigator.userAgent
             };
 

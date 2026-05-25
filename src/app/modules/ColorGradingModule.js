@@ -21,9 +21,9 @@ export class ColorGradingModule {
         container.innerHTML = '';
 
         // Create 3 wheels
-        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l));
-        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l));
-        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l));
+        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
+        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
+        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
 
         // Global Controls
         this._createGlobalControls(container);
@@ -182,6 +182,7 @@ export class ColorGradingModule {
         input.style.width = '100%';
 
         input.addEventListener('input', (e) => onChange(parseFloat(e.target.value)));
+        input.addEventListener('change', () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
 
         wrap.appendChild(labelEl);
         wrap.appendChild(input);
