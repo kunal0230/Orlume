@@ -177,8 +177,11 @@ body {
 
 .container-hero {
   max-width: 1260px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 24px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==========================================================================
@@ -228,15 +231,15 @@ body {
 }
 
 .brand-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--grad-primary);
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #0B1120 0%, #0F1E38 60%, #142447 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.28), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .brand-name {
@@ -581,6 +584,9 @@ body {
 .hero-section {
   padding: 80px 0 80px 0;
   position: relative;
+  min-height: calc(100vh - 62px);
+  display: flex;
+  align-items: center;
 }
 
 .hero-layout {
@@ -2165,5 +2171,37 @@ body {
   .footer-columns {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+}
+
+/* ==========================================================================
+   LARGE SCREEN OPTIMIZATIONS (≥1440px / 24"+ monitors)
+   Ensures sections don't feel overly spaced on wide displays.
+   ========================================================================== */
+@media (min-width: 1440px) {
+  .section {
+    padding: 80px 0;
+  }
+  .hero-section {
+    padding: 60px 0;
+  }
+  .hero-title {
+    font-size: 3.8rem;
+  }
+}
+
+
+/* ==========================================================================
+   EXTRA LARGE SCREENS (≥1800px / ultrawide / 27"+ 4K monitors)
+   ========================================================================== */
+@media (min-width: 1800px) {
+  .hero-section {
+    padding: 48px 0;
+  }
+  .section {
+    padding: 72px 0;
+  }
+  .container, .container-hero, .container-reading, .container-playground {
+    max-width: 1420px;
   }
 }
