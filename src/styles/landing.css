@@ -981,6 +981,55 @@ body {
 .icon-cyan  { background: rgba(2, 132, 199, 0.1);   color: var(--cyan); }
 .icon-amber { background: rgba(245, 158, 11, 0.12); color: var(--amber); }
 
+.toolkit-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolkit-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.toolkit-status-pill.status-up {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.toolkit-status-pill.status-up .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: pulse-glow 2s infinite;
+}
+
+.toolkit-status-pill.status-down {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.toolkit-status-pill.status-down .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+
 .toolkit-badge {
   font-family: var(--font-mono);
   font-size: 0.68rem;
