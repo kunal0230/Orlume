@@ -1,484 +1,1329 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Orlume | Free AI Photo Editor, 3D Relighting & Background Removal</title>
-    <meta name="description" content="Professional AI photo editor in your browser. Features 3D relighting, background removal, and color grading. Privacy-first, no uploads required.">
-    <meta name="keywords" content="orlume, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor">
-    <meta name="author" content="Orlume">
-    <meta name="robots" content="index, follow">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary SEO -->
+    <title>Orlume | Free AI Photo Editor, 3D Relighting &amp; Background Removal</title>
+    <meta name="description" content="Professional AI photo editor in your browser. Features 3D relighting, background removal, and color grading. Powered by WebGPU &amp; Depth Anything V2. Privacy-first, no uploads required." />
+    <meta name="keywords" content="orlume, ai editing, 3d relighting, image editor, free photo editor, background remover, webgl editor, ai upscaling, privacy focused editor, webgpu photo editor" />
+    <meta name="author" content="Orlume" />
+    <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="ly0IpTZOJMFte338_hSPAAbQfwfD5zF08tLdEffyo0c" />
-    <link rel="canonical" href="https://orlume.io/">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://orlume.io/">
-    <meta property="og:title" content="Orlume | AI Photo Editor | 3D Relighting & Design Tools">
-    <meta property="og:description" content="Transform photos with neural precision. Free browser-based AI editor with 3D relighting, background removal, and smart upscaling.">
-    <meta property="og:image" content="https://orlume.io/og-image.jpg">
-    <meta property="og:site_name" content="Orlume">
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://orlume.io/">
-    <meta property="twitter:title" content="Orlume | AI Photo Editor | 3D Relighting & Design Tools">
-    <meta property="twitter:description" content="Transform photos with neural precision. Free browser-based AI editor.">
-    <meta property="twitter:image" content="https://orlume.io/og-image.jpg">
+    <link rel="canonical" href="https://orlume.io/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://orlume.io/" />
+    <meta property="og:title" content="Orlume | AI Photo Editor | 3D Relighting &amp; Design Tools" />
+    <meta property="og:description" content="Transform photos with neural precision. Free browser-based AI editor with 3D relighting, background removal, and smart upscaling." />
+    <meta property="og:image" content="https://orlume.io/og-image.jpg" />
+    <meta property="og:site_name" content="Orlume" />
+
+    <!-- Twitter / X Card -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://orlume.io/" />
+    <meta property="twitter:title" content="Orlume | AI Photo Editor | 3D Relighting &amp; Design Tools" />
+    <meta property="twitter:description" content="Transform photos with neural precision. Free browser-based AI editor." />
+    <meta property="twitter:image" content="https://orlume.io/og-image.jpg" />
+
+    <!-- Structured Data -->
     <script type="application/ld+json">
     [{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Orlume AI Photo Editor","alternateName":"Orlume","operatingSystem":"Any (Web Browser)","applicationCategory":"DesignApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Professional AI-powered photo editing tool running entirely in the browser.","author":{"@type":"Organization","name":"Orlume","url":"https://orlume.io"},"featureList":["3D Relighting","AI Background Removal","Smart Upscaling","Color Grading","HSL Color Mixer","Professional Presets"],"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.8","ratingCount":"1250"}},{"@context":"https://schema.org","@type":"Organization","name":"Orlume","url":"https://orlume.io","logo":"https://orlume.io/logo.png","sameAs":["https://github.com/kunal0230/Orlume"]}]
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="./src/styles/tailwind.css"/>
-    <style>
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .bg-primary-gradient { background: linear-gradient(135deg, #4648D4 0%, #6063EE 100%); }
-        .text-gradient { background: linear-gradient(135deg, #4648D4 0%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        body { font-family: 'Inter', sans-serif; background-color: #f9f9f9; color: #1a1c1c; }
-        h1, h2, h3 { letter-spacing: -0.03em; font-weight: 800; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.16,1,0.3,1); }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
-    </style>
-    <link rel="preload" as="video" href="/orlume_demo_web.mp4" type="video/mp4">
-    <script type="module" src="./src/utils/analytics.js"></script>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png">
-    <meta name="theme-color" content="#6366f1">
-</head>
-<body class="antialiased">
 
-<!-- Navigation -->
-<nav id="nav" class="fixed top-0 w-full z-50 bg-[#F9F9F9]/80 backdrop-blur-xl transition-all duration-500">
-    <div class="flex justify-between items-center px-6 md:px-12 py-5 max-w-[1440px] mx-auto">
-        <a href="/" class="text-2xl font-extrabold tracking-[-0.03em] text-[#1A1C1C]">Orlume</a>
-        <div class="hidden md:flex gap-10 font-medium text-sm tracking-tight">
-            <a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="#features">Features</a>
-            <a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/docs">Resources</a>
-            <a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/about">Community</a>
-        </div>
-        <div class="flex items-center gap-4">
-            <a href="/editor?tool=3d-pro" class="hidden lg:block px-5 py-2.5 text-xs font-semibold rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-all">
-                3D Relighting <span class="text-[9px] font-bold uppercase">BETA</span>
-            </a>
-            <a href="/editor" class="bg-primary-gradient text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-sm hover:shadow-md active:scale-[0.98] transition-all">Open Editor</a>
-        </div>
-    </div>
-</nav>
+    <!-- Icons & PWA -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0284C7" />
 
-<!-- Hero Section -->
-<header class="pt-44 pb-24 px-6 md:px-12 max-w-[1440px] mx-auto text-center reveal">
-    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-low mb-8">
-        <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-        </span>
-        <span class="text-xs font-medium text-on-surface-variant tracking-tight uppercase">Now with Professional Presets &amp; HSL Color Mixer</span>
-    </div>
-    <h1 class="text-5xl md:text-7xl lg:text-8xl mb-6 max-w-5xl mx-auto leading-[1.05]">
-        The Future of <br/>
-        <span class="text-gradient">AI Photo Editing</span>
-    </h1>
-    <p class="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 font-medium">
-        Professional-grade AI tools that run entirely in your browser. 3D relighting, background removal, and cinematic color grading. All for free.
-    </p>
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-6">
-        <a href="/editor" class="bg-primary-gradient text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center gap-2 hover:shadow-lg active:scale-95 transition-all">
-            Start Editing Free <span class="material-symbols-outlined">arrow_forward</span>
-        </a>
-        <a href="#features" class="px-8 py-4 rounded-xl font-semibold text-lg border border-outline-variant/30 text-on-surface hover:bg-surface-container-low transition-all">See Features</a>
-    </div>
-    <a href="/editor?tool=3d-pro" class="text-primary font-semibold hover:underline decoration-2 underline-offset-8 inline-block mb-16">Try 3D Relighting BETA →</a>
-    <div class="pt-12">
-        <p class="text-xs uppercase tracking-widest font-bold text-outline mb-8">Trusted by creators worldwide</p>
-        <div class="flex flex-wrap justify-center gap-x-16 gap-y-6 grayscale opacity-50">
-            <span class="text-lg font-extrabold tracking-tighter flex items-center gap-2"><span class="material-symbols-outlined text-base">camera</span> Photographers</span>
-            <span class="text-lg font-extrabold tracking-tighter flex items-center gap-2"><span class="material-symbols-outlined text-base">palette</span> Designers</span>
-            <span class="text-lg font-extrabold tracking-tighter flex items-center gap-2"><span class="material-symbols-outlined text-base">campaign</span> Marketers</span>
-            <span class="text-lg font-extrabold tracking-tighter flex items-center gap-2"><span class="material-symbols-outlined text-base">movie</span> Creators</span>
-        </div>
-    </div>
-</header>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
-<!-- Demo Video Section -->
-<section class="py-24 px-6 md:px-12 max-w-[1440px] mx-auto reveal" id="demo">
-    <div class="text-center mb-16">
-        <span class="text-primary font-bold tracking-widest uppercase text-xs">See It In Action</span>
-        <h2 class="text-4xl md:text-5xl mt-4">Real-Time 3D Relighting</h2>
-        <p class="text-on-surface-variant mt-4 max-w-lg mx-auto">Watch our AI transform lighting on a photo, entirely in the browser.</p>
-    </div>
-    <div class="relative rounded-3xl overflow-hidden bg-surface-container-low shadow-2xl shadow-primary/5 group">
-        <video id="demo-video" autoplay muted loop playsinline preload="metadata" poster="/landing_demo.png" class="w-full aspect-video object-cover">
-            <source src="/orlume_demo_web.webm" type="video/webm">
-            <source src="/orlume_demo_web.mp4" type="video/mp4">
-        </video>
-    </div>
-</section>
-
-<!-- How It Works -->
-<section class="py-24 px-6 md:px-12 bg-surface-container-low reveal">
-    <div class="max-w-[1440px] mx-auto">
-        <div class="text-center mb-16">
-            <span class="text-primary font-bold tracking-widest uppercase text-xs">How It Works</span>
-            <h2 class="text-4xl md:text-5xl mt-4">Edit in three simple steps</h2>
-        </div>
-        <div class="grid md:grid-cols-3 gap-8">
-            <div class="bg-white p-12 rounded-3xl">
-                <div class="text-primary text-4xl font-extrabold mb-6 opacity-20">01</div>
-                <h3 class="text-2xl mb-4">Upload Your Image</h3>
-                <p class="text-on-surface-variant leading-relaxed">Drag and drop any image or paste from clipboard. Supports JPG, PNG, WebP up to 50MB.</p>
-            </div>
-            <div class="bg-white p-12 rounded-3xl md:translate-y-8">
-                <div class="text-primary text-4xl font-extrabold mb-6 opacity-20">02</div>
-                <h3 class="text-2xl mb-4">Apply AI Magic</h3>
-                <p class="text-on-surface-variant leading-relaxed">Use 3D relighting, background removal, or any of our 50+ professional tools in real-time.</p>
-            </div>
-            <div class="bg-white p-12 rounded-3xl">
-                <div class="text-primary text-4xl font-extrabold mb-6 opacity-20">03</div>
-                <h3 class="text-2xl mb-4">Export &amp; Share</h3>
-                <p class="text-on-surface-variant leading-relaxed">Download in multiple formats including 4K resolution. Share directly or save to cloud.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Complete Toolkit -->
-<section class="py-32 px-6 md:px-12 max-w-[1440px] mx-auto reveal" id="toolkit">
-    <div class="text-center mb-20">
-        <span class="text-primary font-bold tracking-widest uppercase text-xs">Complete Toolkit</span>
-        <h2 class="text-4xl md:text-5xl mt-4">Everything you need, nothing you don't</h2>
-    </div>
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary/20 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 text-primary"><span class="material-symbols-outlined">psychology</span></div>
-            <h4 class="text-xl font-extrabold mb-3">AI &amp; Machine Learning</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary">check_circle</span> Depth Estimation (Depth Anything V2)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary">check_circle</span> Semantic Segmentation (150 classes)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary">check_circle</span> Background Removal</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary">check_circle</span> AI Upscaling (Real-ESRGAN)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary">check_circle</span> Face Detection &amp; Mesh</li>
-            </ul>
-        </div>
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-secondary/20 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-6 text-secondary"><span class="material-symbols-outlined">lightbulb</span></div>
-            <h4 class="text-xl font-extrabold mb-3">3D &amp; Lighting</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-secondary">check_circle</span> 3D Relighting with Multi-Light</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-secondary">check_circle</span> Normal Map Generation</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-secondary">check_circle</span> Volumetric God Rays</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-secondary">check_circle</span> PBR Material Rendering</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-secondary">check_circle</span> Shadow Mapping &amp; HBAO</li>
-            </ul>
-        </div>
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-tertiary/20 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center mb-6 text-tertiary"><span class="material-symbols-outlined">palette</span></div>
-            <h4 class="text-xl font-extrabold mb-3">Color &amp; Grading</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-tertiary">check_circle</span> HSL Color Mixer (8 Channels)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-tertiary">check_circle</span> Professional Light Controls</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-tertiary">check_circle</span> 40+ Cinematic Presets</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-tertiary">check_circle</span> Real-time Histogram</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-tertiary">check_circle</span> Non-destructive Editing</li>
-            </ul>
-        </div>
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-error/20 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-error/10 flex items-center justify-center mb-6 text-error"><span class="material-symbols-outlined">face_retouching_natural</span></div>
-            <h4 class="text-xl font-extrabold mb-3">Retouching Tools</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-error">check_circle</span> AI Healing Brush</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-error">check_circle</span> Clone Stamp Tool</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-error">check_circle</span> Liquify / Warp Tool</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-error">check_circle</span> Adjustment Layers</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-error">check_circle</span> Brush / Radial / Gradient Masks</li>
-            </ul>
-        </div>
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-primary-container/20 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary-container"><span class="material-symbols-outlined">transform</span></div>
-            <h4 class="text-xl font-extrabold mb-3">Transform &amp; Export</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary-container">check_circle</span> Crop with Aspect Ratios</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary-container">check_circle</span> JPEG / PNG / 4K Export</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary-container">check_circle</span> Before/After Comparison</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary-container">check_circle</span> Undo/Redo History</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-primary-container">check_circle</span> Keyboard Shortcuts</li>
-            </ul>
-        </div>
-        <div class="p-8 rounded-3xl bg-white border border-outline-variant/10 hover:border-on-surface/10 hover:shadow-lg transition-all">
-            <div class="w-12 h-12 rounded-xl bg-on-surface/5 flex items-center justify-center mb-6 text-on-surface"><span class="material-symbols-outlined">settings</span></div>
-            <h4 class="text-xl font-extrabold mb-3">Technical</h4>
-            <ul class="space-y-3 text-sm text-on-surface-variant">
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-on-surface/60">check_circle</span> GPU-Accelerated (WebGL2/WebGPU)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-on-surface/60">check_circle</span> 100% Client-Side Processing</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-on-surface/60">check_circle</span> PWA / Installable App</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-on-surface/60">check_circle</span> Open Source (MIT License)</li>
-                <li class="flex items-center gap-2"><span class="material-symbols-outlined text-xs text-on-surface/60">check_circle</span> Privacy-First Design</li>
-            </ul>
-        </div>
-    </div>
-    <div class="text-center mt-12">
-        <a href="/editor" class="bg-primary-gradient text-white px-10 py-4 rounded-xl font-semibold text-lg inline-flex items-center gap-2 hover:shadow-lg active:scale-95 transition-all">
-            Try All Features Free <span class="material-symbols-outlined">arrow_forward</span>
-        </a>
-    </div>
-</section>
-
-<!-- Features Carousel -->
-<section class="py-24 overflow-hidden bg-surface reveal" id="features">
-    <div class="max-w-[1440px] mx-auto px-6 md:px-12 mb-12">
-        <span class="text-primary font-bold tracking-widest uppercase text-xs">Capabilities</span>
-        <h2 class="text-4xl md:text-5xl mt-4">Everything you need to create</h2>
-    </div>
-    <div class="flex gap-8 overflow-x-auto pb-12 px-6 md:px-12 no-scrollbar scroll-smooth">
-        <div class="min-w-[340px] bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/10 hover:shadow-lg transition-all">
-            <span class="material-symbols-outlined text-primary text-3xl mb-4">lightbulb</span>
-            <h5 class="font-bold text-lg mb-2">3D Relighting</h5>
-            <p class="text-sm text-on-surface-variant mb-6">Add dramatic lighting effects using AI depth estimation. Create rim lights or change light direction.</p>
-            <a class="text-primary text-sm font-semibold flex items-center gap-1" href="/editor?tool=3d">Try Relighting <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-        <div class="min-w-[340px] bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/10 hover:shadow-lg transition-all">
-            <span class="material-symbols-outlined text-primary text-3xl mb-4">layers_clear</span>
-            <h5 class="font-bold text-lg mb-2">Background Removal</h5>
-            <p class="text-sm text-on-surface-variant mb-6">Instantly remove backgrounds with pixel-perfect precision. Perfect for product photos.</p>
-            <a class="text-primary text-sm font-semibold flex items-center gap-1" href="/editor?tool=bg-remove">Remove Background <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-        <div class="min-w-[340px] bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/10 hover:shadow-lg transition-all">
-            <span class="material-symbols-outlined text-primary text-3xl mb-4">filter_hdr</span>
-            <h5 class="font-bold text-lg mb-2">Color Grading</h5>
-            <p class="text-sm text-on-surface-variant mb-6">Professional HSL controls with 8 color channels. Fine-tune hue, saturation, and luminance.</p>
-            <a class="text-primary text-sm font-semibold flex items-center gap-1" href="/editor?tool=hsl">Open Color Panel <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-        <div class="min-w-[340px] bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/10 hover:shadow-lg transition-all">
-            <span class="material-symbols-outlined text-primary text-3xl mb-4">zoom_in</span>
-            <h5 class="font-bold text-lg mb-2">Smart Upscaling</h5>
-            <p class="text-sm text-on-surface-variant mb-6">Increase resolution up to 4x while recovering lost details with AI reconstruction.</p>
-            <a class="text-primary text-sm font-semibold flex items-center gap-1" href="/editor?tool=upscale">Try Upscale <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-        <div class="min-w-[340px] bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/10 hover:shadow-lg transition-all">
-            <span class="material-symbols-outlined text-primary text-3xl mb-4">magic_button</span>
-            <h5 class="font-bold text-lg mb-2">Magic Eraser</h5>
-            <p class="text-sm text-on-surface-variant mb-6">Remove unwanted objects with AI-powered inpainting. Background fills in seamlessly.</p>
-            <a class="text-primary text-sm font-semibold flex items-center gap-1" href="/editor?tool=healing">Try Eraser <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-    </div>
-</section>
-
-<!-- Why Orlume Bento Grid -->
-<section class="py-12 px-6 md:px-12 max-w-[1440px] mx-auto reveal">
-    <div class="text-center mb-8">
-        <span class="text-primary font-bold tracking-widest uppercase text-xs">Why Orlume</span>
-        <h2 class="text-4xl md:text-5xl mt-3">Built for professionals</h2>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 md:h-[480px]">
-        <div class="md:col-span-2 md:row-span-2 bg-white rounded-3xl p-8 flex flex-col justify-between border border-outline-variant/10 hover:shadow-xl transition-shadow">
-            <div>
-                <h3 class="text-3xl mb-4">100% Browser-Based</h3>
-                <p class="text-base text-on-surface-variant max-w-sm">No downloads, no installations. Orlume runs entirely in your browser using WebGL2 GPU acceleration. Your images never leave your device.</p>
-            </div>
-            <a href="/editor" class="text-primary font-semibold flex items-center gap-1 mt-6">Open Editor <span class="material-symbols-outlined text-sm">north_east</span></a>
-        </div>
-        <div class="bg-primary text-white rounded-3xl p-6 flex flex-col justify-between hover:shadow-xl transition-shadow">
-            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">lock</span>
-            <div>
-                <h4 class="text-lg mb-1">Privacy First</h4>
-                <p class="text-white/70 text-sm">Your photos are processed locally. We never see, store, or train on your images.</p>
-            </div>
-        </div>
-        <div class="bg-surface-container-high rounded-3xl p-6 flex flex-col justify-between hover:shadow-xl transition-shadow">
-            <span class="material-symbols-outlined text-3xl text-primary">timer</span>
-            <div>
-                <h4 class="text-lg font-extrabold mb-1">Real-Time Preview</h4>
-                <p class="text-on-surface-variant text-sm">See changes instantly with GPU-accelerated processing. No waiting for renders.</p>
-            </div>
-        </div>
-        <div class="md:col-span-2 bg-on-surface text-white rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6 hover:shadow-xl transition-shadow">
-            <div class="flex-1">
-                <h3 class="text-2xl mb-3 text-white">AI-Powered Intelligence</h3>
-                <p class="text-white/60 text-sm">State-of-the-art neural networks optimized for browser execution, delivering professional results in seconds.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats Section -->
-<section class="py-24 px-6 md:px-12 max-w-[1440px] mx-auto border-t border-outline-variant/10 reveal">
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
-        <div>
-            <div class="text-5xl font-extrabold mb-2 text-primary">50+</div>
-            <div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">AI Features</div>
-        </div>
-        <div>
-            <div class="text-5xl font-extrabold mb-2 text-primary">100%</div>
-            <div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Browser-Based</div>
-        </div>
-        <div>
-            <div class="text-5xl font-extrabold mb-2 text-primary">$0</div>
-            <div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Free Forever</div>
-        </div>
-        <div>
-            <div class="text-5xl font-extrabold mb-2 text-primary">∞</div>
-            <div class="text-sm uppercase tracking-widest font-bold text-on-surface-variant">Unlimited Edits</div>
-        </div>
-    </div>
-</section>
-
-<!-- Final CTA -->
-<section class="py-32 px-6 reveal">
-    <div class="max-w-[1000px] mx-auto bg-white p-16 md:p-24 rounded-[3rem] text-center border border-outline-variant/10 shadow-sm">
-        <h2 class="text-5xl md:text-6xl mb-8 leading-tight">
-            Ready to transform <br/>
-            <span class="text-gradient">your photos?</span>
-        </h2>
-        <p class="text-xl text-on-surface-variant mb-12 max-w-xl mx-auto">Join thousands of creators using Orlume to edit smarter, not harder.</p>
-        <a href="/editor" class="bg-primary-gradient text-white px-10 py-5 rounded-2xl font-bold text-xl inline-block hover:shadow-lg active:scale-95 transition-all">Start Editing Free →</a>
-    </div>
-</section>
-
-<!-- Newsletter -->
-<section id="newsletter" class="py-24 px-6 md:px-12 bg-surface-container-low reveal">
-    <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
-        <div class="max-w-md">
-            <h3 class="text-3xl mb-4">Stay in the loop</h3>
-            <p class="text-on-surface-variant">Get the latest updates, tutorials, and tips delivered to your inbox.</p>
-        </div>
-            <form id="newsletter-form" class="flex gap-4 w-full">
-                <!-- Configuration -->
-                <input type="hidden" name="_subject" value="New Newsletter Subscription">
-                <input type="hidden" name="_captcha" value="false">
-                <input type="text" name="_honey" style="display:none">
-
-                <!-- Input -->
-                <input class="flex-1 px-6 py-4 rounded-xl border-none bg-white text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline" name="Email" placeholder="Enter your email" type="email" required/>
-                <button id="nl-submit-btn" class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:bg-primary-container transition-all" type="submit">Subscribe</button>
-            </form>
-            
-            <div id="newsletter-success" style="display: none;" class="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <div class="font-medium">Thanks for subscribing to Orlume!</div>
-            </div>
-            <script>
-                document.getElementById('newsletter-form').addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const form = e.target;
-                    const btn = document.getElementById('nl-submit-btn');
-                    const originalText = btn.innerHTML;
-                    
-                    btn.innerHTML = 'Subscribing...';
-                    btn.disabled = true;
-                    btn.style.opacity = '0.7';
-                    
-                    try {
-                        const formData = new FormData(form);
-                        const response = await fetch('https://formsubmit.co/ajax/orlumevisionlabs@gmail.com', {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'Accept': 'application/json'
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            document.getElementById('newsletter-form').style.display = 'none';
-                            document.getElementById('newsletter-success').style.display = 'flex';
-                        } else {
-                            throw new Error('Subscription failed');
-                        }
-                    } catch (err) {
-                        console.error('Subscription error:', err);
-                        alert('Something went wrong. Please try again.');
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                        btn.style.opacity = '1';
-                    }
-                });
-            </script>
-        </div>
-    </div>
-</section>
-
-<!-- Footer -->
-<footer class="bg-[#F3F3F3] w-full py-20 px-6 md:px-12">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 max-w-[1440px] mx-auto">
-        <div>
-            <div class="text-xl font-extrabold tracking-[-0.03em] text-[#1A1C1C] mb-6">Orlume</div>
-            <p class="text-[#464554] text-xs leading-relaxed mb-8">AI-powered photo editing that runs entirely in your browser. Professional results, zero compromises on privacy.</p>
-            <div class="flex gap-4">
-                <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" aria-label="GitHub">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                </a>
-                <a href="https://www.linkedin.com/company/orlume-vision-labs" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" aria-label="LinkedIn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                </a>
-            </div>
-        </div>
-        <div class="space-y-4">
-            <h5 class="font-bold text-sm text-[#1A1C1C]">Product</h5>
-            <ul class="text-xs space-y-3">
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="#features">Features</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/editor">Editor</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/editor?tool=3d-pro">3D Relighting</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/docs">API</a></li>
-            </ul>
-        </div>
-        <div class="space-y-4">
-            <h5 class="font-bold text-sm text-[#1A1C1C]">Resources</h5>
-            <ul class="text-xs space-y-3">
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/docs">Documentation</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/tutorials">Tutorials</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/blog">Blog</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/changelog">Changelog</a></li>
-            </ul>
-        </div>
-        <div class="space-y-4">
-            <h5 class="font-bold text-sm text-[#1A1C1C]">Community</h5>
-            <ul class="text-xs space-y-3">
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/about">About</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="https://github.com/kunal0230/Orlume" target="_blank">GitHub</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/contribute">Contribute</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/feedback">Feedback</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/privacy">Privacy</a></li>
-                <li><a class="text-[#464554] hover:text-[#4648D4] transition-colors" href="/terms">Terms</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="max-w-[1440px] mx-auto border-t border-outline-variant/10 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p class="text-xs text-[#464554]">© 2026 Orlume. Open source under MIT License.</p>
-        <p class="text-xs text-[#464554]">Precision in every pixel.</p>
-    </div>
-</footer>
-
-<script>
-    // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
-    }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
-    reveals.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) el.classList.add('visible');
-        revealObserver.observe(el);
-    });
-
-    // Demo video visibility
-    const demoVideo = document.getElementById('demo-video');
-    if (demoVideo) {
-        const videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) demoVideo.play().catch(() => {});
-                else demoVideo.pause();
-            });
-        }, { threshold: 0.15 });
-        videoObserver.observe(demoVideo);
+    <!-- Three.js importmap — resolves bare 'three' ES module specifier -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
     }
+    </script>
 
-    // Nav scroll effect
-    const nav = document.getElementById('nav');
-    window.addEventListener('scroll', () => {
-        nav.style.borderBottom = window.scrollY > 50 ? '1px solid rgba(0,0,0,0.06)' : 'none';
-        nav.style.boxShadow = window.scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.05)' : 'none';
-    });
+    <!-- Preload video for faster hero load -->
+    <link rel="preload" as="video" href="/orlume_demo_web.mp4" type="video/mp4" />
 
+    <!-- Landing page styles -->
+    <link rel="stylesheet" href="./src/styles/landing.css" />
 
-</script>
+    <!-- Analytics -->
+    <script type="module" src="./src/utils/analytics.js"></script>
+</head>
+
+<body>
+
+    <!-- Ambient Generative Light Field Background -->
+    <canvas id="bg-graphics-canvas"></canvas>
+
+    <!-- Radiant Background Color Gradients (Azure, Cyber Teal & Solar Amber) -->
+    <div class="vibrant-background-aura"></div>
+    <div class="mesh-grid-lines"></div>
+
+    <!-- Edge-to-Edge Architectural Studio Header -->
+    <header class="studio-header">
+        <div class="studio-header-inner">
+            <a href="/" class="nav-brand">
+                <div class="brand-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                    </svg>
+                </div>
+                <span class="brand-name">Orlume</span>
+                <span class="brand-badge">v4.3</span>
+                <div class="nav-status-pill">
+                    <span class="status-pulse"></span>
+                    <span>WebGPU Ready</span>
+                </div>
+            </a>
+
+            <!-- Center Segmented Menu -->
+            <nav class="nav-center-menu" aria-label="Primary navigation">
+                <ul class="nav-links">
+                    <li><a href="#showcase" class="nav-link">Showcase</a></li>
+                    <li><a href="#workflows" class="nav-link">Capabilities</a></li>
+                    <li><a href="#toolkit" class="nav-link">Toolkit</a></li>
+                    <li><a href="#playground" class="nav-link">Playground</a></li>
+                    <li><a href="#docs" class="nav-link">Docs</a></li>
+                    <li><a href="/tutorials" class="nav-link">Tutorials</a></li>
+                    <li><a href="/about" class="nav-link">About</a></li>
+                </ul>
+            </nav>
+
+            <!-- Mobile Hamburger Button -->
+            <button class="nav-hamburger" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <!-- Action Group -->
+            <div class="nav-actions">
+                <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-secondary btn-sm nav-star-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                    </svg>
+                    <span>Star</span>
+                    <span class="star-chip">1.4k</span>
+                </a>
+                <a href="/editor" class="btn btn-primary btn-sm btn-header-cta">
+                    <span>Open Editor</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Mobile Nav Dropdown -->
+        <nav class="nav-mobile-menu" aria-label="Mobile navigation">
+            <ul class="nav-mobile-links">
+                <li><a href="#showcase" class="nav-link">Showcase</a></li>
+                <li><a href="#workflows" class="nav-link">Capabilities</a></li>
+                <li><a href="#toolkit" class="nav-link">Toolkit</a></li>
+                <li><a href="#playground" class="nav-link">Playground</a></li>
+                <li><a href="#docs" class="nav-link">Docs</a></li>
+                <li><a href="/tutorials" class="nav-link">Tutorials</a></li>
+                <li><a href="/about" class="nav-link">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section (Balanced 2-Column Pro Studio Layout) -->
+    <section class="hero-section">
+        <div class="container container-hero">
+            <div class="hero-layout">
+
+                <!-- Left Column: Copy & Actions -->
+                <div class="hero-content reveal">
+
+                    <!-- Eyebrow announcement pill -->
+                    <div class="hero-pill-wrap">
+                        <div class="hero-pill">
+                            <span class="pill-status-dot"></span>
+                            <span>v4.3 — WebGPU 3D Relighting is here</span>
+                        </div>
+                    </div>
+
+                    <h1 class="hero-title">
+                        Sculpt Light in 3D. <br />
+                        <span class="gradient-text">Directly in Your Browser.</span>
+                    </h1>
+
+                    <p class="hero-subhead">
+                        An open-source WebGPU photo editor with real-time 3D relighting, neural depth estimation, and
+                        matting. Completely local and private.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="/editor" class="btn btn-primary btn-lg">
+                            <span>Open Editor</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
+                            class="btn btn-secondary btn-lg">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                            <span>GitHub</span>
+                        </a>
+                    </div>
+
+                    <!-- Hero Telemetry Ribbon (stat strip) -->
+                    <div class="hero-telemetry-ribbon">
+                        <div class="telemetry-item">
+                            <span class="telemetry-num blue">50+</span>
+                            <span class="telemetry-label">On-Device Tools</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="telemetry-num teal">60 FPS</span>
+                            <span class="telemetry-label">WebGPU Render</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="telemetry-num">MIT</span>
+                            <span class="telemetry-label">Open Source</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="telemetry-num">100%</span>
+                            <span class="telemetry-label">Private &amp; Local</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: macOS Studio Video Centerpiece -->
+                <div class="hero-visual reveal">
+                    <div class="hero-video-window" id="showcase">
+
+                        <div class="window-chrome">
+                            <div class="chrome-dots">
+                                <span class="chrome-dot dot-red"></span>
+                                <span class="chrome-dot dot-yellow"></span>
+                                <span class="chrome-dot dot-green"></span>
+                            </div>
+
+                            <div class="chrome-address-pill">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                                <span>orlume.io/editor</span>
+                            </div>
+
+                            <div class="chrome-actions-placeholder"></div>
+                        </div>
+
+                        <div class="video-container">
+                            <video id="hero-demo-video" class="studio-video" autoplay muted loop playsinline
+                                poster="/landing_demo.png">
+                                <source src="/orlume_demo_web.webm" type="video/webm" />
+                                <source src="/orlume_demo_web.mp4" type="video/mp4" />
+                            </video>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+       THREE.JS 3D CARDS: DIRECT 3D LIGHT & DEPTH
+       ========================================================================== -->
+    <section class="section section-glass" id="workflows">
+        <div class="container">
+
+            <div class="section-header-split reveal">
+                <div class="section-header-title-box">
+                    <span class="section-eyebrow">Capabilities</span>
+                    <h2 class="section-title">Direct 3D Light &amp; Depth</h2>
+                </div>
+                <div class="section-header-desc-box">
+                    Hover over each card to orbit the virtual light source across geometry in real time.
+                </div>
+            </div>
+
+            <div class="pillar-grid">
+
+                <!-- Pillar 1: 3D Relighting -->
+                <div class="pillar-card pillar-card--amber reveal" id="card-pillar-1">
+                    <div class="card-3d-stage">
+                        <canvas id="canvas-card-1" class="card-3d-canvas"></canvas>
+                        <div class="card-light-telemetry">
+                            <span>SOLAR KEY LIGHT</span>
+                            <span class="telemetry-amber" id="telemetry-card-1">Light: [+0.60, +0.50]</span>
+                        </div>
+                    </div>
+
+                    <span class="pillar-num">01 / RELIGHTING</span>
+                    <h3 class="pillar-title">Dynamic 3D Relighting</h3>
+                    <p class="pillar-text">
+                        Cast virtual point lights in 3D coordinates with continuous specular reflections, surface
+                        normals, and immediate feedback.
+                    </p>
+                </div>
+
+                <!-- Pillar 2: Metric Depth -->
+                <div class="pillar-card pillar-card--cyan reveal" id="card-pillar-2">
+                    <div class="card-3d-stage">
+                        <canvas id="canvas-card-2" class="card-3d-canvas"></canvas>
+                        <div class="card-light-telemetry">
+                            <span>CYAN DEPTH BEAM</span>
+                            <span class="telemetry-cyan" id="telemetry-card-2">Light: [+0.60, +0.50]</span>
+                        </div>
+                    </div>
+
+                    <span class="pillar-num">02 / GEOMETRY</span>
+                    <h3 class="pillar-title">Monocular Metric Depth</h3>
+                    <p class="pillar-text">
+                        Extract high-resolution 3D depth topology from standard 2D photos using Depth Anything V2 with
+                        sub-millimeter precision.
+                    </p>
+                </div>
+
+                <!-- Pillar 3: Color & Matting -->
+                <div class="pillar-card pillar-card--teal reveal" id="card-pillar-3">
+                    <div class="card-3d-stage">
+                        <canvas id="canvas-card-3" class="card-3d-canvas"></canvas>
+                        <div class="card-light-telemetry">
+                            <span>METALLIC SPECULAR</span>
+                            <span class="telemetry-teal" id="telemetry-card-3">Light: [+0.60, +0.50]</span>
+                        </div>
+                    </div>
+
+                    <span class="pillar-num">03 / COLOR &amp; MATTING</span>
+                    <h3 class="pillar-title">Color Science &amp; Matting</h3>
+                    <p class="pillar-text">
+                        Selective 8-channel spectral grading, cinematic LUT presets, and instant neural background
+                        isolation with sub-pixel hair matting.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+       COMPLETE STUDIO TOOLKIT: 50+ ON-DEVICE FEATURES
+       ========================================================================== -->
+    <section class="section section-toolkit" id="toolkit">
+        <div class="container">
+
+            <div class="section-header-split reveal">
+                <div class="section-header-title-box">
+                    <span class="section-eyebrow">Studio Capabilities</span>
+                    <h2 class="section-title">The Complete Local Studio Toolkit</h2>
+                </div>
+                <div class="section-header-desc-box">
+                    Over 50 specialized computer vision and graphics tools executing entirely client-side. Zero cloud
+                    uploads, zero latency.
+                </div>
+            </div>
+
+            <div class="toolkit-grid">
+                <!-- Card 1: 3D Relighting & Spatial Lighting -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-blue">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Spatial Engine</span>
+                    </div>
+                    <h3 class="toolkit-title">3D Relighting &amp; PBR</h3>
+                    <p class="toolkit-desc">
+                        Position interactive lights in 3D coordinate space with physically-based Cook-Torrance specular
+                        highlights, normal falloff, and shadow maps.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">Cook-Torrance BRDF</span>
+                        <span class="toolkit-tag">Multi-Light Rigs</span>
+                        <span class="toolkit-tag">HBAO Occlusion</span>
+                        <span class="toolkit-tag">Volumetric Rays</span>
+                    </div>
+                    <a href="/editor?tool=3d-pro" class="toolkit-action">
+                        <span>Launch in 3D Editor</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Card 2: Neural Depth & Geometry -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-teal">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Neural Geometry</span>
+                    </div>
+                    <h3 class="toolkit-title">Depth Estimation &amp; Mesh</h3>
+                    <p class="toolkit-desc">
+                        Monocular metric depth estimation and 3D surface normal reconstruction from 2D photos via
+                        on-device Depth Anything V2.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">Depth Anything V2</span>
+                        <span class="toolkit-tag">Normal Map Generator</span>
+                        <span class="toolkit-tag">Face Landmarks</span>
+                        <span class="toolkit-tag">Displacement Mesh</span>
+                    </div>
+                    <a href="/editor?tool=depth" class="toolkit-action">
+                        <span>Inspect Depth Pipeline</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Card 3: Neural Matting & Background Removal -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-cyan">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="9" y1="3" x2="9" y2="21"></line>
+                                <line x1="15" y1="3" x2="15" y2="21"></line>
+                                <line x1="3" y1="9" x2="21" y2="9"></line>
+                                <line x1="3" y1="15" x2="21" y2="15"></line>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Neural Matting</span>
+                    </div>
+                    <h3 class="toolkit-title">Background Removal</h3>
+                    <p class="toolkit-desc">
+                        Extract alpha mattes with sub-pixel boundary refinement. Perfect edge feathering for hair,
+                        glass, and complex silhouettes.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">BiRefNet Matting</span>
+                        <span class="toolkit-tag">150-Class Semantic Seg</span>
+                        <span class="toolkit-tag">Alpha Channel Export</span>
+                        <span class="toolkit-tag">Feather Smoothing</span>
+                    </div>
+                    <a href="/editor?tool=bg-remove" class="toolkit-action">
+                        <span>Extract Background</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Card 4: Color Science & 8-Channel HSL -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-amber">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 2a14.5 14.5 0 0 0 0 20 10 10 0 0 0 0-20"></path>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Color Science</span>
+                    </div>
+                    <h3 class="toolkit-title">8-Channel HSL Mixer</h3>
+                    <p class="toolkit-desc">
+                        Independent Hue, Saturation, and Luminance channels with 32-bit floating point precision and
+                        real-time GPU RGB histogram analysis.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">8-Channel HSL</span>
+                        <span class="toolkit-tag">Display P3 Wide Gamut</span>
+                        <span class="toolkit-tag">40+ Cinematic Presets</span>
+                        <span class="toolkit-tag">Tone Curve Splines</span>
+                    </div>
+                    <a href="/editor?tool=hsl" class="toolkit-action">
+                        <span>Open Color Grading</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Card 5: Neural Inpainting & Retouching -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-blue">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M15 4V2"></path>
+                                <path d="M15 16v-2"></path>
+                                <path d="M8 9h2"></path>
+                                <path d="M20 9h2"></path>
+                                <path d="M17.8 11.8L19 13"></path>
+                                <path d="M15 9h0"></path>
+                                <path d="M17.8 6.2L19 5"></path>
+                                <path d="M3 21l9-9"></path>
+                                <path d="M12.2 6.2L11 5"></path>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Neural Retouching</span>
+                    </div>
+                    <h3 class="toolkit-title">AI Healing &amp; Retouching</h3>
+                    <p class="toolkit-desc">
+                        Non-destructive object removal and blemish synthesis with neural inpainting, seam carving, clone
+                        stamps, and interactive liquify mesh.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">Fast Poisson Blending</span>
+                        <span class="toolkit-tag">Clone Stamp Buffer</span>
+                        <span class="toolkit-tag">Interactive Liquify</span>
+                        <span class="toolkit-tag">Adjustment Layers</span>
+                    </div>
+                    <a href="/editor?tool=healing" class="toolkit-action">
+                        <span>Launch Healing Brush</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Card 6: Super-Resolution & Lossless Export -->
+                <div class="toolkit-card reveal">
+                    <div class="toolkit-card-header">
+                        <div class="toolkit-icon icon-teal">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <line x1="11" y1="8" x2="11" y2="14"></line>
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+                            </svg>
+                        </div>
+                        <span class="toolkit-badge">Super Resolution</span>
+                    </div>
+                    <h3 class="toolkit-title">Neural Upscaling &amp; Export</h3>
+                    <p class="toolkit-desc">
+                        Reconstruct micro-textures with 2× and 4× super-resolution upscalers. Export uncompressed 16-bit
+                        PNG, WebP, and production 4K prints.
+                    </p>
+                    <div class="toolkit-tags">
+                        <span class="toolkit-tag">Real-ESRGAN Tensor</span>
+                        <span class="toolkit-tag">4× Detail Reconstruction</span>
+                        <span class="toolkit-tag">Lossless WebP / PNG</span>
+                        <span class="toolkit-tag">Aspect Ratio Cropping</span>
+                    </div>
+                    <a href="/editor?tool=upscale" class="toolkit-action">
+                        <span>Upscale Image 4×</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+       INTERACTIVE RELIGHTING PLAYGROUND
+       ========================================================================== -->
+    <section class="section playground-section" id="playground">
+        <div class="container container-playground">
+
+            <div class="section-header reveal">
+                <span class="section-eyebrow">Playground</span>
+                <h2 class="section-title">Test Real-Time 3D Lighting</h2>
+                <p class="section-desc">
+                    Move your cursor across the stage to test real-time key light dynamics, color temperature, and
+                    specular shine.
+                </p>
+            </div>
+
+            <div class="playground-card reveal">
+
+                <!-- Studio Chrome Topbar -->
+                <div class="playground-topbar">
+                    <div class="playground-title-group">
+                        <div class="playground-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="playground-heading">Virtual Studio Stage</div>
+                            <div class="playground-subtext">Move cursor to steer key light • 60 FPS WebGPU</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="playground-body">
+
+                    <!-- 3D Interactive Viewport -->
+                    <div class="playground-viewport" id="playground-viewport">
+                        <canvas id="playground-canvas"></canvas>
+
+                        <div class="playground-hud">
+                            <div class="hud-telemetry">
+                                <span>COORDS:</span>
+                                <span class="hud-pos" id="pg-hud-coords">[+0.60, +0.50, +1.60]</span>
+                            </div>
+                            <div class="hud-telemetry">
+                                <span>TEMP:</span>
+                                <span class="hud-temp" id="pg-hud-kelvin">5600K</span>
+                                <span style="color:var(--text-subtle);">•</span>
+                                <span style="color:#34D399; font-weight:600;">60 FPS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Controls Sidebar -->
+                    <div class="playground-controls">
+
+                        <!-- Quick Preset Moods -->
+                        <div>
+                            <div class="control-block-label">
+                                <span>Lighting Moods</span>
+                            </div>
+                            <div class="presets-grid">
+                                <button class="preset-btn active" id="preset-golden" data-x="0.9" data-y="0.7"
+                                    data-temp="3200" data-color="0xF59E0B">
+                                    <span class="preset-dot dot-amber"></span>
+                                    <span>Golden Hour</span>
+                                </button>
+                                <button class="preset-btn" id="preset-cyan" data-x="-0.8" data-y="0.6" data-temp="7500"
+                                    data-color="0x0284C7">
+                                    <span class="preset-dot dot-cyan"></span>
+                                    <span>Cyber Cyan</span>
+                                </button>
+                                <button class="preset-btn" id="preset-softbox" data-x="0.0" data-y="1.1"
+                                    data-temp="5600" data-color="0xF8FAFC">
+                                    <span class="preset-dot dot-white"></span>
+                                    <span>Studio Softbox</span>
+                                </button>
+                                <button class="preset-btn" id="preset-rim" data-x="-1.3" data-y="-0.4" data-temp="4500"
+                                    data-color="0x0D9488">
+                                    <span class="preset-dot dot-teal"></span>
+                                    <span>Dramatic Rim</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Precision Tactile Sliders -->
+                        <div class="slider-stack">
+
+                            <div class="slider-unit">
+                                <div class="slider-header">
+                                    <span>Color Temperature</span>
+                                    <span class="slider-val-badge" id="val-pg-kelvin">5600K</span>
+                                </div>
+                                <input type="range" class="range-input range-kelvin" id="pg-slider-kelvin" min="2400"
+                                    max="8500" value="5600" />
+                            </div>
+
+                            <div class="slider-unit">
+                                <div class="slider-header">
+                                    <span>Light Intensity</span>
+                                    <span class="slider-val-badge" id="val-pg-intensity">100%</span>
+                                </div>
+                                <input type="range" class="range-input" id="pg-slider-intensity" min="10" max="200"
+                                    value="100" />
+                            </div>
+
+                            <div class="slider-unit">
+                                <div class="slider-header">
+                                    <span>Specular Glossiness</span>
+                                    <span class="slider-val-badge" id="val-pg-gloss">75%</span>
+                                </div>
+                                <input type="range" class="range-input" id="pg-slider-gloss" min="10" max="100"
+                                    value="75" />
+                            </div>
+
+                        </div>
+
+                        <!-- Call to Action -->
+                        <div class="playground-cta-bar">
+                            <a href="/editor" class="btn btn-primary" style="width:100%; border-radius:var(--radius-md); padding:11px 18px;">
+                                <span>Open Full Editor</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </a>
+                            <div style="font-size:0.75rem; color:var(--text-muted); text-align:center;">
+                                Upload your own photo • 100% on-device
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+       DOCUMENTATION & ARCHITECTURE HUB: OPEN SPECS & GUIDES
+       ========================================================================== -->
+    <section class="section" id="docs">
+        <div class="container">
+
+            <div class="section-header-split reveal">
+                <div class="section-header-title-box">
+                    <span class="section-eyebrow">Documentation &amp; Guides</span>
+                    <h2 class="section-title">Engineered with Open Mathematical Standards</h2>
+                </div>
+                <div class="section-header-desc-box">
+                    Explore complete architectural whitepapers, WebGPU shader specifications, mathematical derivations,
+                    and hands-on tutorials.
+                </div>
+            </div>
+
+            <div class="docs-hub-grid">
+
+                <!-- Left: Documentation Guides -->
+                <div class="docs-guides-stack reveal">
+
+                    <a href="/docs#relighting" class="doc-guide-card">
+                        <div class="doc-guide-icon icon-blue">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                            </svg>
+                        </div>
+                        <div class="doc-guide-info">
+                            <div class="doc-guide-meta">
+                                <span class="doc-category">3D Graphics Spec</span>
+                                <span class="doc-read-time">8 min read</span>
+                            </div>
+                            <h4 class="doc-guide-title">Cook-Torrance PBR Shader Mathematics</h4>
+                            <p class="doc-guide-desc">
+                                Mathematical derivation of normal maps from scalar depth gradients, GGX microfacet
+                                distribution, and WebGPU WGSL lighting passes.
+                            </p>
+                        </div>
+                        <div class="doc-guide-arrow">→</div>
+                    </a>
+
+                    <a href="/docs#neural-engine" class="doc-guide-card">
+                        <div class="doc-guide-icon icon-teal">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                                <rect x="9" y="9" width="6" height="6"></rect>
+                            </svg>
+                        </div>
+                        <div class="doc-guide-info">
+                            <div class="doc-guide-meta">
+                                <span class="doc-category">Machine Learning</span>
+                                <span class="doc-read-time">11 min read</span>
+                            </div>
+                            <h4 class="doc-guide-title">Depth Anything V2 &amp; WASM SIMD Runtime</h4>
+                            <p class="doc-guide-desc">
+                                Execution benchmarks of ONNX Runtime Web, 128-bit SIMD vectorization, web worker
+                                threading, and zero-copy texture transfers.
+                            </p>
+                        </div>
+                        <div class="doc-guide-arrow">→</div>
+                    </a>
+
+                    <a href="/docs#color-science" class="doc-guide-card">
+                        <div class="doc-guide-icon icon-amber">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 2a14.5 14.5 0 0 0 0 20 10 10 0 0 0 0-20"></path>
+                            </svg>
+                        </div>
+                        <div class="doc-guide-info">
+                            <div class="doc-guide-meta">
+                                <span class="doc-category">Color Pipeline</span>
+                                <span class="doc-read-time">6 min read</span>
+                            </div>
+                            <h4 class="doc-guide-title">8-Channel HSL &amp; Display P3 Color Spaces</h4>
+                            <p class="doc-guide-desc">
+                                Non-destructive 32-bit floating point matrix calculations, linear gamma curve
+                                adjustments, and wide-gamut chromaticity preservation.
+                            </p>
+                        </div>
+                        <div class="doc-guide-arrow">→</div>
+                    </a>
+
+                    <!-- Quick Navigation Hub -->
+                    <div class="docs-hub-actions">
+                        <a href="/docs" class="btn btn-primary">
+                            <span>Read Full Documentation</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                        <a href="/tutorials" class="btn btn-secondary">
+                            <span>Tutorials</span>
+                        </a>
+                        <a href="/blog" class="btn btn-secondary">
+                            <span>Blog</span>
+                        </a>
+                        <a href="/changelog" class="btn btn-secondary">
+                            <span>Changelog</span>
+                        </a>
+                    </div>
+
+                </div>
+
+                <!-- Right: Code & Pipeline Inspector -->
+                <div class="code-inspector-card reveal">
+                    <div class="code-inspector-header">
+                        <div class="code-tabs">
+                            <button class="code-tab active" data-tab="shader">CookTorrance.wgsl</button>
+                            <button class="code-tab" data-tab="onnx">NeuralEngine.ts</button>
+                            <button class="code-tab" data-tab="pipeline">WebGPUContext.ts</button>
+                        </div>
+                        <span class="code-badge">WebGPU Shader</span>
+                    </div>
+
+                    <div class="code-inspector-body">
+                        <!-- Shader Tab Content -->
+                        <pre class="code-block" id="tab-shader"><code><span class="c-comment">// WebGPU WGSL Fragment Shader: Physical Cook-Torrance BRDF</span>
+<span class="c-keyword">fn</span> <span class="c-func">cookTorranceSpecular</span>(N: <span class="c-type">vec3&lt;f32&gt;</span>, V: <span class="c-type">vec3&lt;f32&gt;</span>, L: <span class="c-type">vec3&lt;f32&gt;</span>, roughness: <span class="c-type">f32</span>) -&gt; <span class="c-type">f32</span> {
+  <span class="c-keyword">let</span> H = <span class="c-func">normalize</span>(V + L);
+  <span class="c-keyword">let</span> NdotH = <span class="c-func">max</span>(<span class="c-func">dot</span>(N, H), <span class="c-literal">0.001</span>);
+  <span class="c-keyword">let</span> NdotV = <span class="c-func">max</span>(<span class="c-func">dot</span>(N, V), <span class="c-literal">0.001</span>);
+  <span class="c-keyword">let</span> NdotL = <span class="c-func">max</span>(<span class="c-func">dot</span>(N, L), <span class="c-literal">0.001</span>);
+  <span class="c-keyword">let</span> alpha = roughness * roughness;
+  <span class="c-keyword">let</span> alpha2 = alpha * alpha;
+  <span class="c-comment">// GGX / Trowbridge-Reitz NDF</span>
+  <span class="c-keyword">let</span> denom = NdotH * NdotH * (alpha2 - <span class="c-literal">1.0</span>) + <span class="c-literal">1.0</span>;
+  <span class="c-keyword">let</span> D = alpha2 / (<span class="c-literal">3.14159</span> * denom * denom);
+  <span class="c-comment">// Schlick-Smith Geometric Attenuation</span>
+  <span class="c-keyword">let</span> k = (roughness + <span class="c-literal">1.0</span>) * (roughness + <span class="c-literal">1.0</span>) / <span class="c-literal">8.0</span>;
+  <span class="c-keyword">let</span> G = (NdotV / (NdotV * (<span class="c-literal">1.0</span> - k) + k)) *
+          (NdotL / (NdotL * (<span class="c-literal">1.0</span> - k) + k));
+  <span class="c-keyword">return</span> D * G / (<span class="c-literal">4.0</span> * NdotV * NdotL);
+}</code></pre>
+
+                        <!-- ONNX Tab Content -->
+                        <pre class="code-block" id="tab-onnx" style="display:none"><code><span class="c-comment">// NeuralEngine.ts — ONNX Runtime Web Depth Inference</span>
+<span class="c-keyword">import</span> * <span class="c-keyword">as</span> ort <span class="c-keyword">from</span> <span class="c-string">'onnxruntime-web'</span>;
+
+<span class="c-keyword">export async function</span> <span class="c-func">initDepthEngine</span>(): <span class="c-type">Promise&lt;ort.InferenceSession&gt;</span> {
+  ort.env.wasm.numThreads = <span class="c-func">Math.min</span>(navigator.hardwareConcurrency, <span class="c-literal">4</span>);
+  ort.env.wasm.simd = <span class="c-literal">true</span>;
+  ort.env.wasm.proxy = <span class="c-literal">true</span>;
+
+  <span class="c-keyword">const</span> session = <span class="c-keyword">await</span> ort.InferenceSession.<span class="c-func">create</span>(
+    <span class="c-string">'/assets/depth_anything_v2_small.onnx'</span>,
+    {
+      executionProviders: [<span class="c-string">'webgpu'</span>, <span class="c-string">'wasm'</span>],
+      graphOptimizationLevel: <span class="c-string">'all'</span>,
+      executionMode: <span class="c-string">'parallel'</span>
+    }
+  );
+  <span class="c-keyword">return</span> session;
+}
+
+<span class="c-keyword">export async function</span> <span class="c-func">runDepthInference</span>(
+  session: <span class="c-type">ort.InferenceSession</span>,
+  pixels: <span class="c-type">Float32Array</span>,
+  w: <span class="c-type">number</span>, h: <span class="c-type">number</span>
+): <span class="c-type">Promise&lt;Float32Array&gt;</span> {
+  <span class="c-keyword">const</span> tensor = <span class="c-keyword">new</span> ort.<span class="c-func">Tensor</span>(<span class="c-string">'float32'</span>, pixels, [<span class="c-literal">1</span>, <span class="c-literal">3</span>, h, w]);
+  <span class="c-keyword">const</span> results = <span class="c-keyword">await</span> session.<span class="c-func">run</span>({ input: tensor });
+  <span class="c-keyword">return</span> results.output.data <span class="c-keyword">as</span> <span class="c-type">Float32Array</span>;
+}</code></pre>
+
+                        <!-- Pipeline Tab Content -->
+                        <pre class="code-block" id="tab-pipeline" style="display:none"><code><span class="c-comment">// WebGPUContext.ts — Device &amp; Render Pipeline Bootstrap</span>
+<span class="c-keyword">export interface</span> <span class="c-type">GPUContext</span> {
+  device: <span class="c-type">GPUDevice</span>;
+  context: <span class="c-type">GPUCanvasContext</span>;
+  format: <span class="c-type">GPUTextureFormat</span>;
+}
+
+<span class="c-keyword">export async function</span> <span class="c-func">initWebGPU</span>(
+  canvas: <span class="c-type">HTMLCanvasElement</span>
+): <span class="c-type">Promise&lt;GPUContext&gt;</span> {
+  <span class="c-keyword">if</span> (!navigator.gpu) <span class="c-keyword">throw new</span> <span class="c-func">Error</span>(<span class="c-string">'WebGPU not supported'</span>);
+
+  <span class="c-keyword">const</span> adapter = <span class="c-keyword">await</span> navigator.gpu.<span class="c-func">requestAdapter</span>({
+    powerPreference: <span class="c-string">'high-performance'</span>
+  });
+  <span class="c-keyword">const</span> device = <span class="c-keyword">await</span> adapter?.<span class="c-func">requestDevice</span>();
+  <span class="c-keyword">const</span> context = canvas.<span class="c-func">getContext</span>(<span class="c-string">'webgpu'</span>);
+  <span class="c-keyword">const</span> format = navigator.gpu.<span class="c-func">getPreferredCanvasFormat</span>();
+
+  context.<span class="c-func">configure</span>({ device, format, alphaMode: <span class="c-string">'premultiplied'</span> });
+  <span class="c-keyword">return</span> { device, context, format };
+}</code></pre>
+                    </div>
+
+                    <div class="code-inspector-footer">
+                        <span class="code-footer-pill">
+                            <span class="pulse-dot"></span>
+                            <span>WebGPU Hardware Accelerated</span>
+                        </span>
+                        <span class="code-footer-note">Client execution • Zero cloud latency</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Architecture & System Principles Section -->
+    <section class="section" id="architecture">
+        <div class="container">
+
+            <div class="section-header-split reveal">
+                <div class="section-header-title-box">
+                    <span class="section-eyebrow">Architecture &amp; Principles</span>
+                    <h2 class="section-title">Engineered for Local Performance</h2>
+                </div>
+                <div class="section-header-desc-box">
+                    Orlume runs machine learning models and 3D graphics entirely inside your browser. No cloud servers,
+                    no queues.
+                </div>
+            </div>
+
+            <!-- 4-Stage Execution Pipeline -->
+            <div class="arch-card-box reveal">
+                <div class="pipeline-steps">
+
+                    <div class="pipeline-step">
+                        <span class="step-label">STAGE 01</span>
+                        <h4 class="step-heading">Local Ingestion</h4>
+                        <p class="step-body">
+                            Images decode directly into browser GPU texture memory with zero network requests.
+                        </p>
+                    </div>
+
+                    <div class="pipeline-step">
+                        <span class="step-label">STAGE 02</span>
+                        <h4 class="step-heading">Neural Inference</h4>
+                        <p class="step-body">
+                            Depth Anything V2 executes via ONNX Runtime Web with 128-bit WebAssembly SIMD
+                            multi-threading.
+                        </p>
+                    </div>
+
+                    <div class="pipeline-step">
+                        <span class="step-label">STAGE 03</span>
+                        <h4 class="step-heading">Shader Lighting</h4>
+                        <p class="step-body">
+                            WebGPU/WebGL2 fragment shaders compute normal vectors and physical specular highlights at 60
+                            FPS.
+                        </p>
+                    </div>
+
+                    <div class="pipeline-step">
+                        <span class="step-label">STAGE 04</span>
+                        <h4 class="step-heading">Lossless Export</h4>
+                        <p class="step-body">
+                            Full-resolution PNG, WebP, or JPEG files are generated directly on your machine without
+                            cloud compression.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Open Source Principles Grid -->
+            <div class="principles-grid">
+                <div class="principle-card reveal">
+                    <div class="principle-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="principle-title">Private by Design</h4>
+                    <p class="principle-desc">
+                        Your photos never leave your machine. No telemetry, no background analytics, and no training on
+                        user images.
+                    </p>
+                </div>
+
+                <div class="principle-card reveal">
+                    <div class="principle-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+                    <h4 class="principle-title">Sub-16ms Latency</h4>
+                    <p class="principle-desc">
+                        Direct GPU computation eliminates network round-trips, giving you instant, reversible visual
+                        feedback as you adjust lights.
+                    </p>
+                </div>
+
+                <div class="principle-card reveal">
+                    <div class="principle-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2">
+                            <path d="M16 18l6-6-6-6"></path>
+                            <path d="M8 6l-6 6 6 6"></path>
+                        </svg>
+                    </div>
+                    <h4 class="principle-title">Permissive MIT License</h4>
+                    <p class="principle-desc">
+                        100% free and open source. Inspect the code, fork the repository, or build custom shaders for
+                        your own creative workflow.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FAQ Section (Balanced 2-Column Resource Layout) -->
+    <section class="section" id="faq">
+        <div class="container container-reading">
+
+            <div class="faq-layout">
+
+                <!-- Left Column: Context & Support Card -->
+                <div class="faq-info-card reveal">
+                    <span class="section-eyebrow">Knowledge Base</span>
+                    <h2 class="faq-info-title">Frequently Asked Questions</h2>
+                    <p class="faq-info-desc">
+                        Details on browser compatibility, model execution, and offline support.
+                    </p>
+
+                    <div class="faq-badge-list">
+                        <div class="faq-badge-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <span>100% private — no uploads ever</span>
+                        </div>
+                        <div class="faq-badge-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span>Works offline after first load</span>
+                        </div>
+                        <div class="faq-badge-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span>MIT licensed — free forever</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:auto; padding-top:20px; border-top:1px solid var(--border-subtle);">
+                        <a href="https://github.com/kunal0230/Orlume/discussions" target="_blank"
+                            rel="noopener noreferrer" class="btn btn-secondary"
+                            style="width:100%; border-radius:var(--radius-md);">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                            <span>GitHub Discussions</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Accordion -->
+                <div class="faq-stack reveal" style="margin:0; max-width:none;">
+
+                    <div class="faq-panel active">
+                        <button class="faq-trigger">
+                            <span>Are my photos ever uploaded to a server?</span>
+                            <span class="faq-plus">+</span>
+                        </button>
+                        <div class="faq-content">
+                            No, never. Orlume executes all neural network models and image processing pipelines locally
+                            inside your web browser using WebGPU and WebAssembly SIMD. No image data is ever transmitted
+                            across the network, stored on remote databases, or used for AI training.
+                        </div>
+                    </div>
+
+                    <div class="faq-panel">
+                        <button class="faq-trigger">
+                            <span>What hardware do I need to run 3D Relighting?</span>
+                            <span class="faq-plus">+</span>
+                        </button>
+                        <div class="faq-content">
+                            Any modern computer or laptop with a WebGPU or WebGL2-compatible browser (Google Chrome,
+                            Microsoft Edge, Safari, or Brave). Apple Silicon (M1/M2/M3/M4), Intel integrated graphics,
+                            and dedicated NVIDIA/AMD GPUs all run Orlume in real time at 60 FPS.
+                        </div>
+                    </div>
+
+                    <div class="faq-panel">
+                        <button class="faq-trigger">
+                            <span>Is Orlume really free and open source?</span>
+                            <span class="faq-plus">+</span>
+                        </button>
+                        <div class="faq-content">
+                            Yes. Orlume is licensed under the permissive MIT Open Source License. You are free to
+                            inspect the source code, fork the repository, contribute new neural modules, and use it for
+                            commercial and personal projects without cost.
+                        </div>
+                    </div>
+
+                    <div class="faq-panel">
+                        <button class="faq-trigger">
+                            <span>What image formats and resolutions are supported?</span>
+                            <span class="faq-plus">+</span>
+                        </button>
+                        <div class="faq-content">
+                            Orlume natively supports JPEG, PNG, WebP, AVIF, and high-resolution camera exports up to 50
+                            megapixels. You can export clean alpha PNGs, WebP with custom quality, or full-resolution 4K
+                            prints.
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+       COMMUNITY NEWSLETTER & LAB DISPATCH
+       ========================================================================== -->
+    <section class="section" id="newsletter">
+        <div class="container container-reading">
+            <div class="newsletter-card reveal">
+                <div class="newsletter-content">
+                    <span class="section-eyebrow">Vision Labs Dispatch</span>
+                    <h3 class="newsletter-heading">Stay in the loop with Orlume releases</h3>
+                    <p class="newsletter-desc">
+                        Get technical updates, new neural models, and WebGPU shader tutorials delivered to your inbox.
+                        No spam, ever.
+                    </p>
+
+                    <form id="newsletter-form" class="newsletter-form">
+                        <input type="hidden" name="_subject" value="New Orlume Newsletter Subscriber" />
+                        <input type="hidden" name="_captcha" value="false" />
+                        <input type="text" name="_honey" style="display:none" />
+
+                        <div class="newsletter-input-group">
+                            <input type="email" name="Email" class="newsletter-input"
+                                placeholder="Enter your email (e.g. dev@domain.com)" required />
+                            <button type="submit" id="nl-submit-btn" class="btn btn-primary newsletter-btn">
+                                <span>Subscribe</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="newsletter-success" class="newsletter-success" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span>You're subscribed! We'll send major release notes and tutorials.</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final Call to Action -->
+    <section class="section">
+        <div class="container container-reading">
+            <div class="cta-box reveal">
+                <h2 class="cta-heading">Start sculpting light in 3D</h2>
+                <p class="cta-subtext">
+                    Open source, private, and runs entirely in your browser.
+                </p>
+                <div class="cta-actions">
+                    <a href="/editor" class="btn btn-white btn-lg">
+                        <span>Open Editor</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                    <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
+                        class="btn btn-translucent btn-lg">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                        </svg>
+                        <span>GitHub Repository</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Professional Multi-Column Studio Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="nav-brand">
+                        <div class="brand-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            </svg>
+                        </div>
+                        <span class="brand-name">Orlume</span>
+                        <span class="brand-badge">v4.3</span>
+                    </div>
+                    <p class="footer-desc">
+                        High-performance browser-native photo editor engineered with WebGPU shaders, Depth Anything V2,
+                        and 100% on-device neural privacy.
+                    </p>
+                    <div class="footer-social-links">
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
+                            class="social-icon-btn" aria-label="GitHub">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                        </a>
+                        <a href="https://www.linkedin.com/company/orlume-vision-labs" target="_blank"
+                            rel="noopener noreferrer" class="social-icon-btn" aria-label="LinkedIn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="footer-columns">
+                    <div>
+                        <h5 class="col-heading">Studio Applications</h5>
+                        <ul class="col-links">
+                            <li><a href="/editor?tool=3d-pro" class="footer-link">3D Relighting Pipeline</a></li>
+                            <li><a href="/editor?tool=bg-remove" class="footer-link">Background Removal</a></li>
+                            <li><a href="/editor?tool=hsl" class="footer-link">8-Channel HSL Mixer</a></li>
+                            <li><a href="/editor?tool=upscale" class="footer-link">AI 4K Upscaler</a></li>
+                            <li><a href="/editor?tool=healing" class="footer-link">AI Inpainting Brush</a></li>
+                            <li><a href="/editor" class="footer-link">Full Studio Editor</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h5 class="col-heading">Documentation</h5>
+                        <ul class="col-links">
+                            <li><a href="/docs" class="footer-link">Architecture Whitepaper</a></li>
+                            <li><a href="/docs#relighting" class="footer-link">3D Relighting Shaders</a></li>
+                            <li><a href="/docs#neural-engine" class="footer-link">Neural Model Specs</a></li>
+                            <li><a href="/tutorials" class="footer-link">Step-by-Step Tutorials</a></li>
+                            <li><a href="/blog" class="footer-link">Engineering Blog</a></li>
+                            <li><a href="/changelog" class="footer-link">Release Changelog</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h5 class="col-heading">Community &amp; Lab</h5>
+                        <ul class="col-links">
+                            <li><a href="/about" class="footer-link">About Orlume Labs</a></li>
+                            <li><a href="/contribute" class="footer-link">Contributing Guide</a></li>
+                            <li><a href="/careers" class="footer-link">Careers &amp; Research</a></li>
+                            <li><a href="/feedback" class="footer-link">Feature Feedback</a></li>
+                            <li><a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
+                                    class="footer-link">GitHub Organization</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h5 class="col-heading">Legal &amp; Privacy</h5>
+                        <ul class="col-links">
+                            <li><a href="/privacy" class="footer-link">Privacy Manifesto</a></li>
+                            <li><a href="/terms" class="footer-link">Terms of Service</a></li>
+                            <li><a href="https://github.com/kunal0230/Orlume/blob/main/LICENSE" target="_blank"
+                                    rel="noopener noreferrer" class="footer-link">MIT Open Source</a></li>
+                            <li><span class="footer-link" style="color:var(--emerald); font-weight:500;">✓ 100%
+                                    Client-Side</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div>
+                    &copy; 2026 Orlume Vision Labs. Built with WebGPU, WebAssembly SIMD, and Three.js.
+                </div>
+                <div class="desktop-only">
+                    Press <kbd
+                        style="background:var(--bg-sunken); border:1px solid var(--border-default); padding:2px 6px; border-radius:4px; font-family:var(--font-mono); font-size:0.75rem;">E</kbd>
+                    to launch editor anytime
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="./src/landing.js"></script>
 </body>
+
 </html>

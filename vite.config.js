@@ -46,6 +46,7 @@ const pageRoutesPlugin = () => ({
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const pageRoutes = {
+        '/test': '/test/index.html',
         '/docs': '/pages/docs.html',
         '/tutorials': '/pages/tutorials.html',
         '/blog': '/pages/blog.html',
@@ -97,6 +98,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         editor: resolve(__dirname, 'editor.html'),
+        test: resolve(__dirname, 'test/index.html'),
         // Pages
         docs: resolve(__dirname, 'pages/docs.html'),
         tutorials: resolve(__dirname, 'pages/tutorials.html'),
