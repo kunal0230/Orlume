@@ -197,7 +197,19 @@ export class BackgroundModelLoader extends EventEmitter {
         });
 
         // Import transformers.js dynamically
-        const { pipeline } = await import('@huggingface/transformers');
+        const { pipeline, env } = await import('@huggingface/transformers');
+
+        // Point ONNX Runtime to locally-hosted WASM binaries to prevent
+        // fetch failures on mobile browsers (Android Chrome, iOS Safari).
+        env.allowLocalModels = false;
+        env.useBrowserCache = true;
+        if (env.backends?.onnx?.wasm) {
+            env.backends.onnx.wasm.wasmPaths = '/assets/';
+            const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+            if (isMobile) {
+                env.backends.onnx.wasm.numThreads = 1;
+            }
+        }
 
         let downloadStarted = false;
 

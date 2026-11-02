@@ -23,6 +23,18 @@ export class DepthEstimator {
             env.allowLocalModels = false;
             env.useBrowserCache = true;
 
+            // Point ONNX Runtime to locally-hosted WASM binaries to prevent
+            // fetch failures on mobile browsers (Android Chrome, iOS Safari).
+            // Files are copied to /assets/ by the vite build plugin (copyWasmPlugin).
+            if (env.backends?.onnx?.wasm) {
+                env.backends.onnx.wasm.wasmPaths = '/assets/';
+                // Disable SIMD threads on mobile to avoid SharedArrayBuffer/COOP restrictions
+                const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+                if (isMobile) {
+                    env.backends.onnx.wasm.numThreads = 1;
+                }
+            }
+
             // Note: Don't override wasmPaths - let Transformers.js handle ONNX internally
 
             // Robust fallback chain: WebGPU → WASM

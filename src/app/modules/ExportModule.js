@@ -87,8 +87,10 @@ export class ExportModule {
 
             // Make sure we have the latest render with all adjustments
             let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
+            if (resultTexture) {
+                resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                this.gpu.blitToCanvas(resultTexture);
+            }
         } else {
             // Need to render at full resolution
             // For now, use current canvas (full resolution rendering is complex)
@@ -97,8 +99,10 @@ export class ExportModule {
 
             // Render with current adjustments
             let resultTexture = this.gpu.renderToTexture();
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-            this.gpu.blitToCanvas(resultTexture);
+            if (resultTexture) {
+                resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                this.gpu.blitToCanvas(resultTexture);
+            }
         }
 
         // Export to blob
@@ -161,6 +165,10 @@ export class ExportModule {
 
         // Ensure we have the latest render
         let resultTexture = this.gpu.renderToTexture();
+        if (!resultTexture) {
+            this._updateFileSizeDisplay('--');
+            return;
+        }
         resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
         this.gpu.blitToCanvas(resultTexture);
 

@@ -238,17 +238,17 @@ export class EditorUI {
         document.getElementById(`tool-${mode}`)?.classList.add('active');
 
         // Hide all mode headers
-        document.getElementById('develop-mode-tabs').style.display = 'none';
-        document.getElementById('export-mode-header').style.display = 'none';
-        document.getElementById('crop-mode-header').style.display = 'none';
-        document.getElementById('upscale-mode-header').style.display = 'none';
-        document.getElementById('liquify-mode-header').style.display = 'none';
-        document.getElementById('healing-mode-header').style.display = 'none';
-        document.getElementById('clone-mode-header').style.display = 'none';
-        document.getElementById('hsl-mode-header').style.display = 'none';
-        document.getElementById('presets-mode-header').style.display = 'none';
-        document.getElementById('bg-remove-mode-header').style.display = 'none';
-        document.getElementById('godrays-mode-header').style.display = 'none';
+        document.getElementById('develop-mode-tabs')?.style.setProperty('display', 'none');
+        document.getElementById('export-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('crop-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('upscale-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('liquify-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('healing-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('clone-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('hsl-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('presets-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('bg-remove-mode-header')?.style.setProperty('display', 'none');
+        document.getElementById('godrays-mode-header')?.style.setProperty('display', 'none');
         document.getElementById('relight-pro-mode-header')?.style.setProperty('display', 'none');
         document.getElementById('text-mode-header')?.style.setProperty('display', 'none');
 
@@ -256,90 +256,90 @@ export class EditorUI {
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
 
         // Hide brush cursor by default
-        this.elements.brushCursor.style.display = 'none';
+        if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
 
         switch (mode) {
             case 'develop':
-                document.getElementById('develop-mode-tabs').style.display = 'flex';
-                document.getElementById('panel-develop').classList.add('active');
+                document.getElementById('develop-mode-tabs')?.style.setProperty('display', 'flex');
+                document.getElementById('panel-develop')?.classList.add('active');
                 break;
 
 
 
             case '3d-pro':
-                document.getElementById('relight-pro-mode-header').style.display = 'block';
-                document.getElementById('panel-3d-pro').classList.add('active');
+                document.getElementById('relight-pro-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-3d-pro')?.classList.add('active');
                 this.relightingProModule.activate();
                 break;
 
             case 'export':
-                document.getElementById('export-mode-header').style.display = 'block';
-                document.getElementById('panel-export').classList.add('active');
+                document.getElementById('export-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-export')?.classList.add('active');
                 // Estimate file size when entering export mode
                 setTimeout(() => this.estimateFileSize(), 100);
                 break;
 
             case 'crop':
-                document.getElementById('crop-mode-header').style.display = 'block';
-                document.getElementById('panel-crop').classList.add('active');
+                document.getElementById('crop-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-crop')?.classList.add('active');
                 // Initialize and activate crop tool
                 this._activateCropTool();
                 break;
 
             case 'upscale':
-                document.getElementById('upscale-mode-header').style.display = 'block';
-                document.getElementById('panel-upscale').classList.add('active');
+                document.getElementById('upscale-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-upscale')?.classList.add('active');
                 // Update dimensions display
                 this._updateUpscaleDimensions();
                 break;
 
             case 'liquify':
-                document.getElementById('liquify-mode-header').style.display = 'block';
-                document.getElementById('panel-liquify').classList.add('active');
+                document.getElementById('liquify-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-liquify')?.classList.add('active');
                 // Activate liquify tool
                 this._activateLiquifyTool();
                 break;
 
             case 'healing':
-                document.getElementById('healing-mode-header').style.display = 'block';
-                document.getElementById('panel-healing').classList.add('active');
+                document.getElementById('healing-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-healing')?.classList.add('active');
                 // Activate healing tool
                 this._activateHealingTool();
                 break;
 
             case 'clone':
-                document.getElementById('clone-mode-header').style.display = 'block';
-                document.getElementById('panel-clone').classList.add('active');
+                document.getElementById('clone-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-clone')?.classList.add('active');
                 // Activate clone tool
                 this.cloneModule.activate();
                 break;
 
             case 'hsl':
-                document.getElementById('hsl-mode-header').style.display = 'block';
-                document.getElementById('panel-hsl').classList.add('active');
+                document.getElementById('hsl-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-hsl')?.classList.add('active');
                 break;
 
             case 'presets':
-                document.getElementById('presets-mode-header').style.display = 'block';
-                document.getElementById('panel-presets').classList.add('active');
+                document.getElementById('presets-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-presets')?.classList.add('active');
                 break;
 
             case 'bg-remove':
-                document.getElementById('bg-remove-mode-header').style.display = 'block';
-                document.getElementById('panel-bg-remove').classList.add('active');
+                document.getElementById('bg-remove-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-bg-remove')?.classList.add('active');
                 break;
 
             case 'godrays':
-                document.getElementById('godrays-mode-header').style.display = 'block';
-                document.getElementById('panel-godrays').classList.add('active');
+                document.getElementById('godrays-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-godrays')?.classList.add('active');
                 // Activate god rays tool
                 this._activateGodRaysTool();
                 break;
 
 
             case 'text':
-                document.getElementById('text-mode-header').style.display = 'block';
-                document.getElementById('panel-text').classList.add('active');
+                document.getElementById('text-mode-header')?.style.setProperty('display', 'block');
+                document.getElementById('panel-text')?.classList.add('active');
                 // Activate text tool
                 this.textModule.activate();
                 break;
@@ -360,24 +360,24 @@ export class EditorUI {
 
         if (tool === 'brush') {
             this.state.setTool('brush');
-            brushSettings.style.display = 'block';
-            maskAdjustments.style.display = 'block';
-            this.elements.brushCursor.style.display = 'block';
+            if (brushSettings) brushSettings.style.display = 'block';
+            if (maskAdjustments) maskAdjustments.style.display = 'block';
+            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'block';
         } else if (tool === 'radial') {
             this.state.setTool('radial');
-            brushSettings.style.display = 'none';
-            maskAdjustments.style.display = 'block';
-            this.elements.brushCursor.style.display = 'none';
+            if (brushSettings) brushSettings.style.display = 'none';
+            if (maskAdjustments) maskAdjustments.style.display = 'block';
+            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
         } else if (tool === 'gradient') {
             this.state.setTool('gradient');
-            brushSettings.style.display = 'none';
-            maskAdjustments.style.display = 'block';
-            this.elements.brushCursor.style.display = 'none';
+            if (brushSettings) brushSettings.style.display = 'none';
+            if (maskAdjustments) maskAdjustments.style.display = 'block';
+            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
         }
 
         // Create a new layer if none exists
         if (this.masks.layers.length === 0) {
-            this.masks.createBrushLayer(`${tool.charAt(0).toUpperCase() + tool.slice(1)} Mask 1`);
+            this.masks.createLayer(tool);
             this._updateLayerList();
         }
     }
@@ -1239,6 +1239,9 @@ export class EditorUI {
     renderWithMask(showOverlay = false) {
         // Step 1: Render base image with global adjustments to texture
         let resultTexture = this.gpu.renderToTexture();
+
+        // Guard: renderToTexture() returns null when no image is loaded yet
+        if (!resultTexture) return;
 
         // Step 2: Apply masked adjustments (if any layers with adjustments)
         resultTexture = this.masks.applyMaskedAdjustments(resultTexture);

@@ -751,7 +751,12 @@ export class MaskSystem {
             gl.bindTexture(gl.TEXTURE_2D, readTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_base'), 0);
 
-            // Bind mask texture
+            // Bind mask texture — guard against stale/invalid texture handle
+            // (can occur after a WebGL context loss or canvas resize)
+            if (!layer.maskTexture || !gl.isTexture(layer.maskTexture)) {
+                console.warn('[MaskSystem] Skipping layer with invalid maskTexture:', layer.name);
+                continue;
+            }
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
