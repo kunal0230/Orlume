@@ -158,115 +158,384 @@
     <div class="page-wrapper">
         <div class="page-content">
             <header class="page-header">
-                <div class="page-eyebrow">Tutorials</div>
-                <h1 class="page-title">Learn by Doing</h1>
-                <p class="page-subtitle">Step-by-step guides to help you master professional photo editing techniques.
+                <div class="page-eyebrow">Studio Tutorials &amp; Masterclasses</div>
+                <h1 class="page-title">Master Studio-Grade AI Editing</h1>
+                <p class="page-subtitle">Step-by-step masterclasses, practical workflows, and neural rendering techniques — from your first depth map to cinematic multi-light portraits.
                 </p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+                    <span style="font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 100px; background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span> 100% In-Browser WebGPU
+                    </span>
+                    <span style="font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 100px; background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-muted);">Zero Cloud Uploads</span>
+                    <span style="font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 100px; background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-muted);">Step-by-Step Interactive</span>
+                    <span style="font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 100px; background: var(--bg-card); border: 1px solid var(--border-default); color: var(--text-muted);">Free &amp; Open Source</span>
+                </div>
             </header>
 
-            <div class="cards-grid">
-                <!-- Tutorial 1: 3D Relighting -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/relight_after.png" alt="3D Relighting Tutorial">
-                    </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">AI</span>
-                            <span class="content-card-date">10 min read</span>
-                        </div>
-                        <h2 class="content-card-title">Master 3D Relighting: Add Dramatic Lighting to Any Photo</h2>
-                        <p class="content-card-excerpt">Learn how to use AI-powered depth estimation to add
-                            studio-quality lighting effects to your photos, including rim lights, fill lights, and
-                            dramatic shadows.</p>
-                        <a href="/docs#relighting" class="content-card-link">Read Tutorial →</a>
-                    </div>
-                </article>
+            <div class="tutorials-container">
+                <!-- Category Filter Bar -->
+                <nav class="tutorial-filters" aria-label="Tutorial categories">
+                    <button type="button" class="tutorial-filter-btn active" data-category="all">
+                        All Masterclasses <span class="tutorial-count-badge">8</span>
+                    </button>
+                    <button type="button" class="tutorial-filter-btn" data-category="relighting">
+                        3D Relighting <span class="tutorial-count-badge">2</span>
+                    </button>
+                    <button type="button" class="tutorial-filter-btn" data-category="ai">
+                        AI &amp; Cutouts <span class="tutorial-count-badge">2</span>
+                    </button>
+                    <button type="button" class="tutorial-filter-btn" data-category="color">
+                        Color &amp; Tone <span class="tutorial-count-badge">2</span>
+                    </button>
+                    <button type="button" class="tutorial-filter-btn" data-category="retouching">
+                        Retouching <span class="tutorial-count-badge">1</span>
+                    </button>
+                    <button type="button" class="tutorial-filter-btn" data-category="workflow">
+                        Workflow &amp; GPU <span class="tutorial-count-badge">1</span>
+                    </button>
+                </nav>
 
-                <!-- Tutorial 2: Background Removal -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/bg_remove_after.png" alt="Background Removal Tutorial">
-                    </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">AI</span>
-                            <span class="content-card-date">5 min read</span>
+                <!-- Featured Masterclass Hero Card -->
+                <section class="tutorial-featured reveal-page" aria-label="Featured Masterclass">
+                    <div class="tutorial-featured-content">
+                        <div class="featured-pill-row">
+                            <span class="badge-featured">Featured Masterclass</span>
+                            <span class="tutorial-difficulty intermediate">Intermediate</span>
+                            <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">12 min read • Practical Guide</span>
                         </div>
-                        <h2 class="content-card-title">Perfect Background Removal for Product Photography</h2>
-                        <p class="content-card-excerpt">Create clean, professional product shots with pixel-perfect
-                            background removal. Learn tips for tricky edges and hair extraction.</p>
-                        <a href="/docs#background-removal" class="content-card-link">Read Tutorial →</a>
+                        <h2 class="tutorial-featured-title">Complete Guide to 3D Relighting: Sculpting Cinematic Light from Depth</h2>
+                        <p class="tutorial-featured-desc">
+                            Learn how Orlume decomposes flat 2D photographs into 16-bit neural surface depth maps, allowing you to position virtual studio key lights, rim accents, and soft fills with realistic surface curvature.
+                        </p>
+                        <ul class="tutorial-takeaways">
+                            <li class="tutorial-takeaway-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span><strong>Depth Anything V2 Estimation:</strong> Extract continuous millimeter-accurate depth maps directly on your GPU.</span>
+                            </li>
+                            <li class="tutorial-takeaway-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span><strong>3-Point Studio Placement:</strong> Calibrate azimuth, elevation, and light distance to sculpt cheekbones and jawlines.</span>
+                            </li>
+                            <li class="tutorial-takeaway-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span><strong>Surface Normal Smoothing:</strong> Eliminate harsh digital lighting halos while preserving organic skin pores.</span>
+                            </li>
+                        </ul>
+                        <div class="featured-actions-row">
+                            <a href="/pages/blog/3d-relighting-guide.html" class="btn-primary-action">
+                                Launch Masterclass →
+                            </a>
+                            <a href="/editor" class="btn-secondary-action">
+                                Try in WebGPU Studio ↗
+                            </a>
+                        </div>
                     </div>
-                </article>
+                    <div class="tutorial-featured-visual">
+                        <img src="/relight_after.png" alt="Orlume 3D Relighting Before and After Masterclass Example">
+                        <div class="featured-visual-badge">
+                            <div class="visual-badge-tech">
+                                <span class="pulse-dot"></span>
+                                <span>Depth Anything V2 + PBR Shader</span>
+                            </div>
+                            <span style="color: rgba(255, 255, 255, 0.7); font-family: var(--font-mono);">60 FPS GPU</span>
+                        </div>
+                    </div>
+                </section>
 
-                <!-- Tutorial 3: Color Grading -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/grading_after.png" alt="Color Grading Tutorial">
-                    </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">Color</span>
-                            <span class="content-card-date">15 min read</span>
-                        </div>
-                        <h2 class="content-card-title">Cinematic Color Grading with HSL Color Mixer</h2>
-                        <p class="content-card-excerpt">Create stunning color grades using the 8-channel HSL mixer.
-                            Learn to match popular film looks and develop your own signature style.</p>
-                        <a href="/docs#color-grading" class="content-card-link">Read Tutorial →</a>
-                    </div>
-                </article>
+                <!-- 3-Minute Quickstart Track -->
+                <div class="tutorial-section-header reveal-page">
+                    <h2 class="tutorial-section-title">The 3-Minute Studio Quickstart</h2>
+                    <p class="tutorial-section-desc">A rapid architectural breakdown of the core Orlume editing workflow. Master these three foundational steps first.</p>
+                </div>
 
-                <!-- Tutorial 4: Presets -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/grading_after.png" alt="Presets Tutorial">
+                <div class="quickstart-track reveal-page">
+                    <div class="quickstart-card">
+                        <span class="quickstart-step-num">STEP 01</span>
+                        <h3 class="quickstart-title">Client-Side Texture Ingestion</h3>
+                        <p class="quickstart-desc">Drop your RAW, JPEG, PNG, or WebP photo into the canvas. Orlume loads pixels directly into GPU texture memory using WebGL2/WebGPU with 32-bit float color precision. Zero cloud latency.</p>
                     </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">Workflow</span>
-                            <span class="content-card-date">8 min read</span>
-                        </div>
-                        <h2 class="content-card-title">Speed Up Your Workflow with Professional Presets</h2>
-                        <p class="content-card-excerpt">Explore 40+ professional presets across 6 categories. Learn to
-                            apply, blend, and customize presets for consistent results.</p>
-                        <a href="/docs#presets" class="content-card-link">Read Tutorial →</a>
+                    <div class="quickstart-card">
+                        <span class="quickstart-step-num">STEP 02</span>
+                        <h3 class="quickstart-title">Neural Depth &amp; Mask Generation</h3>
+                        <p class="quickstart-desc">Switch to the Develop or 3D Relighting tab. Click once to generate dense metric depth maps and semantic segmentations running purely inside your browser via ONNX WebAssembly SIMD.</p>
                     </div>
-                </article>
+                    <div class="quickstart-card">
+                        <span class="quickstart-step-num">STEP 03</span>
+                        <h3 class="quickstart-title">Multi-Light Compositing &amp; Export</h3>
+                        <p class="quickstart-desc">Add virtual lights, tune the 8-channel HSL mixer, dial in tone curves, and export uncompressed full-resolution images with ICC profile preservation.</p>
+                    </div>
+                </div>
 
-                <!-- Tutorial 5: Portrait Retouching -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/relight_after.png" alt="Portrait Retouching Tutorial">
-                    </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">Portrait</span>
-                            <span class="content-card-date">12 min read</span>
-                        </div>
-                        <h2 class="content-card-title">Professional Portrait Retouching Techniques</h2>
-                        <p class="content-card-excerpt">Learn non-destructive retouching techniques for skin smoothing,
-                            blemish removal, and color correction that keep portraits looking natural.</p>
-                        <a href="/docs#basic-adjustments" class="content-card-link">Read Tutorial →</a>
-                    </div>
-                </article>
+                <!-- Comprehensive Tutorial Grid -->
+                <div class="tutorial-section-header reveal-page">
+                    <h2 class="tutorial-section-title">In-Depth Guides &amp; Technique Walkthroughs</h2>
+                    <p class="tutorial-section-desc">Master individual creative tools with comprehensive step-by-step documentation, parameter explanations, and pro tips.</p>
+                </div>
 
-                <!-- Tutorial 6: Export Optimization -->
-                <article class="content-card reveal-page">
-                    <div class="content-card-image">
-                        <img src="/bg_remove_before.png" alt="Export Tutorial">
-                    </div>
-                    <div class="content-card-body">
-                        <div class="content-card-meta">
-                            <span class="content-card-tag">Export</span>
-                            <span class="content-card-date">6 min read</span>
+                <div class="cards-grid" id="tutorials-grid">
+                    <!-- Tutorial 1: 3D Relighting -->
+                    <article class="content-card reveal-page" data-category="relighting">
+                        <div class="content-card-image">
+                            <img src="/relight_after.png" alt="3D Relighting Tutorial">
                         </div>
-                        <h2 class="content-card-title">Export Like a Pro: Formats, Resolution, and Quality</h2>
-                        <p class="content-card-excerpt">Understand the best export settings for web, print, and social
-                            media. Learn when to use JPEG, PNG, or WebP for optimal results.</p>
-                        <a href="/docs#export" class="content-card-link">Read Tutorial →</a>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">3D Relighting</span>
+                                <span class="tutorial-difficulty intermediate">Intermediate</span>
+                                <span class="content-card-date">10 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Virtual Studio Lighting: Adding Rim Lights &amp; Soft Fills</h3>
+                            <p class="content-card-excerpt">Learn how to position directional and point lights in 3D screen-space to give flat portrait photography three-dimensional depth.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Configuring light distance, intensity, and color temperature</li>
+                                <li>Dialing in rim light angles to separate subjects from dark backdrops</li>
+                                <li>Controlling shadow falloff with depth normal calibration</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/pages/blog/3d-relighting-guide.html" class="btn-card-action">Read Guide →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 2: Background Removal -->
+                    <article class="content-card reveal-page" data-category="ai">
+                        <div class="content-card-image">
+                            <img src="/bg_remove_after.png" alt="AI Background Removal Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">AI &amp; Cutouts</span>
+                                <span class="tutorial-difficulty beginner">Beginner</span>
+                                <span class="content-card-date">6 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Pixel-Perfect Background Cutouts for E-Commerce &amp; Portraits</h3>
+                            <p class="content-card-excerpt">Extract clean, sharp cutouts with semantic boundary detection. Master hair feathering and halo removal for commercial catalogs.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Single-click background isolation using SegFormer neural models</li>
+                                <li>Refining boundary feathering to preserve individual hair strands</li>
+                                <li>Exporting transparent PNGs and WebP files ready for design layouts</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/pages/blog/ai-background-removal-tutorial.html" class="btn-card-action">Read Guide →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 3: Color Grading & HSL -->
+                    <article class="content-card reveal-page" data-category="color">
+                        <div class="content-card-image">
+                            <img src="/grading_after.png" alt="Cinematic Color Grading Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">Color &amp; Tone</span>
+                                <span class="tutorial-difficulty intermediate">Intermediate</span>
+                                <span class="content-card-date">12 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Cinematic Color Grading with the 8-Channel HSL Mixer</h3>
+                            <p class="content-card-excerpt">Control Hue, Saturation, and Luminance across Red, Orange, Yellow, Green, Aqua, Blue, Purple, and Magenta channels with precision.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Preserving natural skin tones while grading background hues</li>
+                                <li>Creating popular cinematic teal-and-orange color palettes</li>
+                                <li>Selective luminance boost for subject pop and depth separation</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/pages/blog/color-grading-hsl-tutorial.html" class="btn-card-action">Read Guide →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 4: GPU Architecture Deep Dive -->
+                    <article class="content-card reveal-page" data-category="workflow">
+                        <div class="content-card-image">
+                            <img src="/landing_demo.png" alt="Browser-Based GPU Photo Editing Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">Workflow &amp; GPU</span>
+                                <span class="tutorial-difficulty advanced">Advanced</span>
+                                <span class="content-card-date">8 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Under the Hood: WebGPU Shaders &amp; Non-Destructive Editing</h3>
+                            <p class="content-card-excerpt">An architectural deep-dive into how Orlume achieves real-time 60 FPS performance on 24-megapixel images directly in a browser tab.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Ping-pong framebuffer pipelines for multi-pass image shaders</li>
+                                <li>Memory management and zero-copy canvas texture blitting</li>
+                                <li>Client-side ONNX model caching with the Cache API and IndexedDB</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/pages/blog/browser-based-photo-editing.html" class="btn-card-action">Read Guide →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 5: Adjustment Masks -->
+                    <article class="content-card reveal-page" data-category="retouching">
+                        <div class="content-card-image">
+                            <img src="/relight_after.png" alt="Local Adjustment Masks Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">Retouching</span>
+                                <span class="tutorial-difficulty intermediate">Intermediate</span>
+                                <span class="content-card-date">7 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Local Adjustment Masks: Brush, Radial &amp; Linear Gradients</h3>
+                            <p class="content-card-excerpt">Apply targeted exposure, contrast, temperature, and sharpness changes to specific regions without affecting the rest of the image.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Drawing soft radial masks for dramatic vignetting and eye highlights</li>
+                                <li>Using linear gradient masks for sky enhancements and horizon balancing</li>
+                                <li>Combining multiple mask layers with custom opacity blending</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/docs#masks" class="btn-card-action">Read Documentation →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 6: Tone Curve Mastery -->
+                    <article class="content-card reveal-page" data-category="color">
+                        <div class="content-card-image">
+                            <img src="/grading_after.png" alt="Tone Curve Mastery Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">Color &amp; Tone</span>
+                                <span class="tutorial-difficulty intermediate">Intermediate</span>
+                                <span class="content-card-date">9 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Tone Curve Mastery: S-Curves, Color Separation &amp; Matte Blacks</h3>
+                            <p class="content-card-excerpt">Master the parametric curve editor across RGB combined and individual Red, Green, and Blue channels for analog film looks.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Lifting black points for timeless matte film aesthetics</li>
+                                <li>Adding gentle midtone S-curves for punchy editorial contrast</li>
+                                <li>Color cross-processing with individual RGB channel curves</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/docs#tone-curve" class="btn-card-action">Read Documentation →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 7: AI Spot Healing -->
+                    <article class="content-card reveal-page" data-category="ai">
+                        <div class="content-card-image">
+                            <img src="/bg_remove_before.png" alt="AI Spot Healing Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">AI &amp; Cutouts</span>
+                                <span class="tutorial-difficulty beginner">Beginner</span>
+                                <span class="content-card-date">5 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Non-Destructive Spot Healing &amp; Object Inpainting</h3>
+                            <p class="content-card-excerpt">Remove unwanted distractions, blemishes, and background photobombers with smart neural texture inpainting.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Brushing over distractions with adaptive feather radius</li>
+                                <li>Texture matching algorithms that blend seamlessly with surrounding grains</li>
+                                <li>Combining clone stamps with healing for complex pattern restoration</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/docs#healing" class="btn-card-action">Read Documentation →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Tutorial 8: Export Masterclass -->
+                    <article class="content-card reveal-page" data-category="workflow">
+                        <div class="content-card-image">
+                            <img src="/landing_demo.png" alt="Image Export Masterclass Tutorial">
+                        </div>
+                        <div class="content-card-body">
+                            <div class="content-card-meta">
+                                <span class="content-card-tag">Workflow &amp; GPU</span>
+                                <span class="tutorial-difficulty beginner">Beginner</span>
+                                <span class="content-card-date">5 min read</span>
+                            </div>
+                            <h3 class="content-card-title">Export Masterclass: Color Spaces, Bit Depths &amp; WebP</h3>
+                            <p class="content-card-excerpt">Maximize image clarity and minimize file size. A practical guide to export profiles for Instagram, web portfolios, and fine-art printing.</p>
+                            <ul class="tutorial-card-steps">
+                                <li>Comparing PNG vs WebP vs high-quality JPEG compression ratios</li>
+                                <li>Real-time file size estimation before initiating download</li>
+                                <li>Preserving native camera sensor resolution on final export</li>
+                            </ul>
+                            <div class="tutorial-card-footer">
+                                <a href="/docs#export" class="btn-card-action">Read Documentation →</a>
+                                <a href="/editor" class="btn-try-editor">Try in Editor ↗</a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- Pro Tips Section -->
+                <div class="tutorial-section-header reveal-page" style="margin-top: 80px;">
+                    <div class="page-eyebrow" style="margin-bottom: 8px;">Studio Secrets</div>
+                    <h2 class="tutorial-section-title">Techniques From Professional Retouchers</h2>
+                    <p class="tutorial-section-desc">Four practical golden rules to keep your edits looking natural, sharp, and artifact-free.</p>
+                </div>
+
+                <div class="protips-grid reveal-page">
+                    <div class="protip-card">
+                        <div class="protip-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        </div>
+                        <div class="protip-content">
+                            <h4>Preventing Halos in 3D Relighting</h4>
+                            <p>Avoid positioning virtual lights too close to extreme depth boundaries (e.g. hair against background). Keep the light distance parameter above 1.5 units and use subtle intensity (15–35%) to create believable studio fill rather than an artificial cutout look.</p>
+                        </div>
                     </div>
-                </article>
+
+                    <div class="protip-card">
+                        <div class="protip-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                        </div>
+                        <div class="protip-content">
+                            <h4>Skin Tone Protection in HSL Mixer</h4>
+                            <p>Human skin tones predominantly occupy the Orange channel (with slight touches of Red and Yellow). When color grading, keep Orange hue within &plusmn;8&deg; and saturation within &plusmn;12%. Push greens and blues aggressively to achieve cinematic mood without jaundiced faces.</p>
+                        </div>
+                    </div>
+
+                    <div class="protip-card">
+                        <div class="protip-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <div class="protip-content">
+                            <h4>Retaining Fine Detail on Transparent Cutouts</h4>
+                            <p>When cutting out subjects against complex backgrounds, do not over-feather the mask. Set feather between 1px and 3px to keep edge contrast crisp, then use a low-opacity eraser brush on the hair boundary to remove residual background spill.</p>
+                        </div>
+                    </div>
+
+                    <div class="protip-card">
+                        <div class="protip-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </div>
+                        <div class="protip-content">
+                            <h4>Unlocking Maximum WebGPU Inference Speed</h4>
+                            <p>For instant Depth Anything V2 estimation on desktop Chrome, ensure hardware acceleration is toggled on in your browser settings. WebGPU delivers up to 4&times; faster model execution than WASM fallback, completing full depth estimation in under 350ms.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Practice CTA Banner -->
+                <section class="tutorial-cta-banner reveal-page" aria-label="Practice in Editor">
+                    <h2 class="tutorial-cta-title">Ready to Put These Skills to Work?</h2>
+                    <p class="tutorial-cta-desc">Launch the studio editor now. No login, no cloud queues, and zero image uploads — test these techniques right away with your own photos or sample images.</p>
+                    <div class="tutorial-cta-buttons">
+                        <a href="/editor" class="btn-primary-action" style="padding: 14px 32px; font-size: 15px;">
+                            Open WebGPU Studio Editor →
+                        </a>
+                        <a href="/docs" class="btn-secondary-action" style="padding: 14px 24px; font-size: 15px;">
+                            Browse Technical Architecture
+                        </a>
+                    </div>
+                </section>
             </div>
         </div>
 
@@ -280,7 +549,6 @@
                     <h4>Product</h4>
                     <ul>
                         <li><a href="/#features">Features</a></li>
-                        <li><a href="/#pricing">Pricing</a></li>
                         <li><a href="/editor">Editor</a></li>
                     </ul>
                 </div>
@@ -297,6 +565,7 @@
                     <h4>Community</h4>
                     <ul>
                         <li><a href="/about">About</a></li>
+                        <li><a href="https://github.com/kunal0230/Orlume" target="_blank">GitHub</a></li>
                         <li><a href="/contribute">Contribute</a></li>
                         <li><a href="/feedback">Feedback</a></li>
                         <li><a href="/privacy">Privacy</a></li>
@@ -304,7 +573,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>© 2026 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
         </footer>
     </div>
 
@@ -330,6 +599,38 @@
                 btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
             });
         }
+
+        // Interactive Category Filter
+        const filterBtns = document.querySelectorAll('.tutorial-filter-btn');
+        const cards = document.querySelectorAll('#tutorials-grid .content-card');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const selectedCat = btn.getAttribute('data-category');
+
+                cards.forEach(card => {
+                    const cardCat = card.getAttribute('data-category');
+                    if (selectedCat === 'all' || cardCat === selectedCat) {
+                        card.style.display = 'block';
+                        requestAnimationFrame(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        });
+                    } else {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(15px)';
+                        setTimeout(() => {
+                            if (btn.getAttribute('data-category') !== 'all' && card.getAttribute('data-category') !== btn.getAttribute('data-category')) {
+                                card.style.display = 'none';
+                            }
+                        }, 250);
+                    }
+                });
+            });
+        });
     </script>
 </body>
 
