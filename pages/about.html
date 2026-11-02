@@ -40,12 +40,12 @@
             font-weight: 700;
             letter-spacing: -0.5px;
             margin-bottom: 16px;
-            color: var(--text-primary);
+            color: var(--text-headline);
         }
 
         .about-hero p {
             font-size: 17px;
-            color: var(--text-secondary);
+            color: var(--text-body);
             line-height: 1.8;
         }
 
@@ -55,17 +55,17 @@
             gap: 8px;
             margin-top: 28px;
             padding: 14px 28px;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             border-radius: 12px;
             font-size: 15px;
             font-weight: 600;
             color: white;
-            transition: all 0.3s var(--ease-out-expo);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .about-hero .hero-cta:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(70, 72, 212, 0.3);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
         }
 
         /* Stats row */
@@ -81,10 +81,10 @@
         .stat-item {
             text-align: center;
             padding: 28px 16px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 16px;
-            transition: transform 0.3s var(--ease-out-expo);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .stat-item:hover {
@@ -95,7 +95,7 @@
             font-size: 32px;
             font-weight: 800;
             letter-spacing: -1px;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -134,21 +134,21 @@
 
         .principle-card {
             padding: 32px 28px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 20px;
-            transition: all 0.3s var(--ease-out-expo);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .principle-card:hover {
             transform: translateY(-4px);
-            border-color: rgba(70, 72, 212, 0.3);
+            border-color: rgba(37, 99, 235, 0.3);
         }
 
         .principle-icon {
             width: 48px;
             height: 48px;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -166,18 +166,18 @@
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 10px;
-            color: var(--text-primary);
+            color: var(--text-headline);
         }
 
         .principle-card p {
             font-size: 14px;
-            color: var(--text-secondary);
+            color: var(--text-body);
             line-height: 1.7;
         }
 
         /* Tech stack section */
         .tech-section {
-            background: var(--bg-secondary);
+            background: var(--bg-subtle);
             margin: 0 -24px;
             padding: 72px 24px;
         }
@@ -200,7 +200,7 @@
 
         .tech-header p {
             font-size: 15px;
-            color: var(--text-secondary);
+            color: var(--text-body);
             margin-top: 8px;
         }
 
@@ -211,8 +211,8 @@
         }
 
         .tech-card {
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 16px;
             padding: 28px 20px;
             text-align: center;
@@ -221,13 +221,13 @@
 
         .tech-card:hover {
             transform: translateY(-4px);
-            border-color: rgba(70, 72, 212, 0.3);
+            border-color: rgba(37, 99, 235, 0.3);
         }
 
         .tech-card-icon {
             width: 44px;
             height: 44px;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -240,7 +240,7 @@
             font-size: 15px;
             font-weight: 700;
             margin-bottom: 4px;
-            color: var(--text-primary);
+            color: var(--text-headline);
         }
 
         .tech-card-desc {
@@ -265,7 +265,7 @@
         }
 
         .join-section p {
-            color: var(--text-secondary);
+            color: var(--text-body);
             line-height: 1.7;
             margin-bottom: 28px;
         }
@@ -282,17 +282,17 @@
             align-items: center;
             gap: 8px;
             padding: 14px 28px;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             border-radius: 12px;
             font-weight: 600;
             font-size: 15px;
             color: white;
-            transition: all 0.3s var(--ease-out-expo);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .join-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(70, 72, 212, 0.3);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
         }
 
         .join-btn-secondary {
@@ -300,17 +300,17 @@
             align-items: center;
             gap: 8px;
             padding: 14px 28px;
-            border: 1px solid var(--border-glass);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
             font-weight: 600;
             font-size: 15px;
-            color: var(--text-primary);
-            transition: all 0.3s var(--ease-out-expo);
+            color: var(--text-headline);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .join-btn-secondary:hover {
-            border-color: rgba(70, 72, 212, 0.4);
-            background: rgba(70, 72, 212, 0.04);
+            border-color: rgba(37, 99, 235, 0.4);
+            background: rgba(37, 99, 235, 0.04);
         }
 
         /* Founder section */
@@ -336,10 +336,10 @@
             gap: 32px;
             align-items: center;
             padding: 36px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 20px;
-            transition: transform 0.3s var(--ease-out-expo);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .founder-card:hover {
@@ -350,7 +350,7 @@
             width: 96px;
             height: 96px;
             border-radius: 50%;
-            background: var(--gradient-primary);
+            background: var(--grad-primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -364,7 +364,7 @@
         .founder-info h3 {
             font-size: 20px;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--text-headline);
             margin-bottom: 4px;
         }
 
@@ -372,8 +372,8 @@
             display: inline-block;
             font-size: 12px;
             font-weight: 600;
-            color: var(--accent-purple);
-            background: rgba(70, 72, 212, 0.08);
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.08);
             padding: 4px 12px;
             border-radius: 100px;
             margin-bottom: 12px;
@@ -381,7 +381,7 @@
 
         .founder-info p {
             font-size: 14px;
-            color: var(--text-secondary);
+            color: var(--text-body);
             line-height: 1.7;
             margin-bottom: 12px;
         }
@@ -392,7 +392,7 @@
             gap: 6px;
             font-size: 13px;
             font-weight: 600;
-            color: var(--accent-purple);
+            color: var(--primary);
             transition: gap 0.3s;
         }
 

@@ -46,14 +46,14 @@
         .docs-content h2 {
             font-size: 1.5rem;
             margin-top: 2.5rem;
-            border-bottom: 1px solid var(--border-glass);
+            border-bottom: 1px solid var(--border-default);
             padding-bottom: 0.5rem;
         }
 
         .docs-content h3 {
             font-size: 1.15rem;
             margin-top: 1.5rem;
-            color: var(--accent-purple);
+            color: var(--primary);
         }
 
         .docs-content h4 {
@@ -72,54 +72,54 @@
         .docs-content td {
             padding: 0.75rem 1rem;
             text-align: left;
-            border: 1px solid var(--border-glass);
-            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+            color: var(--text-headline);
         }
 
         .docs-content th {
-            background: #f3f3f3;
+            background: var(--bg-subtle);
             font-weight: 600;
         }
 
         .docs-content tr:hover {
-            background: rgba(70, 72, 212, 0.04);
+            background: rgba(37, 99, 235, 0.04);
         }
 
         .docs-content pre {
-            background: #f5f5f7;
-            border: 1px solid var(--border-glass);
+            background: var(--bg-sunken);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
             padding: 1.25rem;
             overflow-x: auto;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
             line-height: 1.6;
-            color: #1a1a2e;
+            color: var(--text-headline);
         }
 
         .docs-content code {
             font-family: 'JetBrains Mono', monospace;
-            background: #f0f0f5;
+            background: var(--bg-sunken);
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-size: 0.85em;
-            color: #4648D4;
+            color: var(--primary);
             font-weight: 500;
         }
 
         .docs-content pre code {
             background: transparent;
             padding: 0;
-            color: #1a1a2e;
+            color: var(--text-headline);
         }
 
         /* Syntax highlighting classes */
-        .docs-content pre .keyword { color: #7c3aed; }
+        .docs-content pre .keyword { color: #0284c7; }
         .docs-content pre .type { color: #2563eb; }
-        .docs-content pre .function { color: #4648D4; }
+        .docs-content pre .function { color: #1d4ed8; }
         .docs-content pre .number { color: #d97706; }
-        .docs-content pre .string { color: #16a34a; }
-        .docs-content pre .comment { color: #9ca3af; font-style: italic; }
+        .docs-content pre .string { color: #059669; }
+        .docs-content pre .comment { color: var(--text-muted); font-style: italic; }
 
         .tech-badge {
             display: inline-block;
@@ -131,23 +131,23 @@
         }
 
         .tech-badge.ml {
-            background: linear-gradient(135deg, #4648D4, #6063EE);
+            background: linear-gradient(135deg, #0284c7, #2563eb);
             color: white;
         }
 
         .tech-badge.gpu {
-            background: linear-gradient(135deg, #10b981, #06b6d4);
+            background: linear-gradient(135deg, #0d9488, #0284c7);
             color: white;
         }
 
         .tech-badge.shader {
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
             color: white;
         }
 
         .architecture-diagram {
-            background: #f5f5f7;
-            border: 1px solid var(--border-glass);
+            background: var(--bg-sunken);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
             padding: 1.5rem;
             margin: 1.5rem 0;
@@ -160,34 +160,34 @@
             border: none !important;
             margin: 0;
             text-align: left;
-            color: #1a1a2e;
+            color: var(--text-headline);
             font-size: 0.8rem;
             line-height: 1.4;
         }
 
         .equation-block {
-            background: #f5f5f7;
-            border-left: 3px solid var(--accent-purple);
+            background: var(--bg-sunken);
+            border-left: 3px solid var(--primary);
             padding: 1rem 1.5rem;
             margin: 1rem 0;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
-            color: #1a1a2e;
+            color: var(--text-headline);
             border-radius: 0 8px 8px 0;
         }
 
         .paper-reference {
-            background: rgba(70, 72, 212, 0.06);
-            border: 1px solid rgba(70, 72, 212, 0.15);
+            background: rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(37, 99, 235, 0.15);
             border-radius: 8px;
             padding: 1rem;
             margin: 1rem 0;
             font-size: 0.9rem;
-            color: #1a1a2e;
+            color: var(--text-headline);
         }
 
         .paper-reference strong {
-            color: var(--accent-purple);
+            color: var(--primary);
         }
 
         .feature-highlight {
@@ -198,8 +198,8 @@
         }
 
         .feature-highlight-item {
-            background: #f3f3f3;
-            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
             padding: 1rem;
             text-align: center;
@@ -208,29 +208,29 @@
         .feature-highlight-item strong {
             display: block;
             font-size: 1.5rem;
-            color: var(--accent-purple);
+            color: var(--primary);
             margin-bottom: 0.25rem;
         }
 
         /* High-contrast overrides for readability */
         .docs-content td,
         .docs-content th {
-            color: #1a1a2e;
+            color: var(--text-headline);
         }
 
         .docs-content td code {
-            background: #f0f0f5;
-            color: #4648D4;
+            background: var(--bg-sunken);
+            color: var(--primary);
             font-weight: 500;
         }
 
         .docs-content p,
         .docs-content li {
-            color: var(--text-secondary);
+            color: var(--text-body);
         }
 
         .docs-content strong {
-            color: var(--text-primary);
+            color: var(--text-headline);
         }
     </style>
 </head>
