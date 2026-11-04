@@ -159,7 +159,8 @@
             <header class="page-header">
                 <div class="page-eyebrow">Blog</div>
                 <h1 class="page-title">Engineering &amp; Insights</h1>
-                <p class="page-subtitle">Deep dives into computer vision research, product updates, and the engineering decisions behind Orlume's local-first AI editor.</p>
+                <p class="page-subtitle">Deep dives into computer vision research, product updates, and the engineering
+                    decisions behind Orlume's local-first AI editor.</p>
             </header>
 
             <div class="cards-grid">
@@ -174,8 +175,13 @@
                             <span class="content-card-date">Jan 2, 2026 · 12 min read</span>
                         </div>
                         <h2 class="content-card-title">How We Built a Real-Time 3D Relighting Engine in the Browser</h2>
-                        <p class="content-card-excerpt">A technical deep-dive into Orlume's flagship feature: real-time 3D relighting powered by monocular depth estimation, surface normal computation, and physically-based rendering. We explain how we achieve 60fps PBR shading using WebGPU compute shaders and the Depth Anything V2 model running locally via ONNX Runtime Web, without sending a single pixel to any server.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full Article →</a>
+                        <p class="content-card-excerpt">A technical deep-dive into Orlume's flagship feature: real-time
+                            3D relighting powered by monocular depth estimation, surface normal computation, and
+                            physically-based rendering. We explain how we achieve 60fps PBR shading using WebGPU compute
+                            shaders and the Depth Anything V2 model running locally via ONNX Runtime Web, without
+                            sending a single pixel to any server.</p>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full
+                            Article →</a>
                     </div>
                 </article>
 
@@ -189,9 +195,14 @@
                             <span class="content-card-tag">Color Science</span>
                             <span class="content-card-date">Dec 28, 2025 · 8 min read</span>
                         </div>
-                        <h2 class="content-card-title">Perceptual Color Grading: Building a Professional 8-Channel HSL Mixer</h2>
-                        <p class="content-card-excerpt">How we implemented an 8-channel HSL color mixer that gives you Lightroom-level control entirely in WebGL2 fragment shaders. This article covers our approach to perceptually linear color spaces, smooth channel crossfade, and real-time histogram computation on the GPU.</p>
-                        <a href="/pages/blog/color-grading-hsl-tutorial" class="content-card-link">Read Full Article →</a>
+                        <h2 class="content-card-title">Perceptual Color Grading: Building a Professional 8-Channel HSL
+                            Mixer</h2>
+                        <p class="content-card-excerpt">How we implemented an 8-channel HSL color mixer that gives you
+                            Lightroom-level control entirely in WebGL2 fragment shaders. This article covers our
+                            approach to perceptually linear color spaces, smooth channel crossfade, and real-time
+                            histogram computation on the GPU.</p>
+                        <a href="/pages/blog/color-grading-hsl-tutorial" class="content-card-link">Read Full Article
+                            →</a>
                     </div>
                 </article>
 
@@ -205,9 +216,15 @@
                             <span class="content-card-tag">Architecture</span>
                             <span class="content-card-date">Dec 20, 2025 · 10 min read</span>
                         </div>
-                        <h2 class="content-card-title">Client-Side AI at Scale: Our WebGPU + ONNX Runtime Architecture</h2>
-                        <p class="content-card-excerpt">An architectural overview of how Orlume runs multiple deep learning models (depth estimation, semantic segmentation, background removal) entirely in the browser. We discuss model quantization strategies, IndexedDB caching, Web Worker threading, and how we achieve sub-second inference on consumer hardware without any cloud API dependency.</p>
-                        <a href="/pages/blog/browser-based-photo-editing" class="content-card-link">Read Full Article →</a>
+                        <h2 class="content-card-title">Client-Side AI at Scale: Our WebGPU + ONNX Runtime Architecture
+                        </h2>
+                        <p class="content-card-excerpt">An architectural overview of how Orlume runs multiple deep
+                            learning models (depth estimation, semantic segmentation, background removal) entirely in
+                            the browser. We discuss model quantization strategies, IndexedDB caching, Web Worker
+                            threading, and how we achieve sub-second inference on consumer hardware without any cloud
+                            API dependency.</p>
+                        <a href="/pages/blog/browser-based-photo-editing" class="content-card-link">Read Full Article
+                            →</a>
                     </div>
                 </article>
 
@@ -221,8 +238,13 @@
                             <span class="content-card-tag">Research</span>
                             <span class="content-card-date">Dec 15, 2025 · 9 min read</span>
                         </div>
-                        <h2 class="content-card-title">From Monocular Depth to Surface Normals: The Relighting Pipeline Explained</h2>
-                        <p class="content-card-excerpt">A step-by-step breakdown of our relighting pipeline: we start with a single 2D photograph, estimate a dense depth map using a Vision Transformer model, compute surface normals via screen-space derivatives, and apply real-time Blinn-Phong and Cook-Torrance shading with user-controllable light sources. All of it runs at 60fps on your GPU.</p>
+                        <h2 class="content-card-title">From Monocular Depth to Surface Normals: The Relighting Pipeline
+                            Explained</h2>
+                        <p class="content-card-excerpt">A step-by-step breakdown of our relighting pipeline: we start
+                            with a single 2D photograph, estimate a dense depth map using a Vision Transformer model,
+                            compute surface normals via screen-space derivatives, and apply real-time Blinn-Phong and
+                            Cook-Torrance shading with user-controllable light sources. All of it runs at 60fps on your
+                            GPU.</p>
                         <a href="/pages/blog/3d-relighting-guide" class="content-card-link">Read Full Article →</a>
                     </div>
                 </article>
@@ -237,9 +259,15 @@
                             <span class="content-card-tag">Tutorial</span>
                             <span class="content-card-date">Dec 10, 2025 · 6 min read</span>
                         </div>
-                        <h2 class="content-card-title">Zero-Upload Background Removal: How Our Segmentation Model Works</h2>
-                        <p class="content-card-excerpt">Most "free" background removers upload your photos to a cloud server. Orlume doesn't. This article explains our local semantic segmentation pipeline using a SegFormer model running in TensorFlow.js, how we handle edge refinement with guided filtering, and why privacy-first design decisions lead to a fundamentally better product.</p>
-                        <a href="/pages/blog/ai-background-removal-tutorial" class="content-card-link">Read Full Article →</a>
+                        <h2 class="content-card-title">Zero-Upload Background Removal: How Our Segmentation Model Works
+                        </h2>
+                        <p class="content-card-excerpt">Most "free" background removers upload your photos to a cloud
+                            server. Orlume doesn't. This article explains our local semantic segmentation pipeline using
+                            a SegFormer model running in TensorFlow.js, how we handle edge refinement with guided
+                            filtering, and why privacy-first design decisions lead to a fundamentally better product.
+                        </p>
+                        <a href="/pages/blog/ai-background-removal-tutorial" class="content-card-link">Read Full Article
+                            →</a>
                     </div>
                 </article>
 
@@ -253,9 +281,14 @@
                             <span class="content-card-tag">Announcement</span>
                             <span class="content-card-date">Dec 1, 2025 · 5 min read</span>
                         </div>
-                        <h2 class="content-card-title">Introducing Orlume: Professional AI Photo Editing, Free and Open Source</h2>
-                        <p class="content-card-excerpt">Today we are launching Orlume, a free, open-source AI photo editor that runs entirely in your browser. We built it because we believe professional-grade creative tools should be accessible to everyone, not locked behind $10/month subscriptions. This post explains our mission, our architecture, and our roadmap.</p>
-                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full Article →</a>
+                        <h2 class="content-card-title">Introducing Orlume: Professional AI Photo Editing, Free and Open
+                            Source</h2>
+                        <p class="content-card-excerpt">Today we are launching Orlume, a free, open-source AI photo
+                            editor that runs entirely in your browser. We built it because we believe professional-grade
+                            creative tools should be accessible to everyone, not locked behind $10/month subscriptions.
+                            This post explains our mission, our architecture, and our roadmap.</p>
+                        <a href="/pages/blog/orlume-ai-photo-editor-introduction" class="content-card-link">Read Full
+                            Article →</a>
                     </div>
                 </article>
             </div>
@@ -275,7 +308,8 @@
                             <span class="brand-badge">v4.3</span>
                         </div>
                         <p class="footer-desc">
-                            High-performance browser-native photo editor engineered with WebGPU shaders, Depth Anything V2,
+                            High-performance browser-native photo editor engineered with WebGPU shaders, Depth Anything
+                            V2,
                             and 100% on-device neural privacy.
                         </p>
                         <div class="footer-social-links">
@@ -328,8 +362,8 @@
                                 <li><a href="/contribute" class="footer-link">Contributing Guide</a></li>
                                 <li><a href="/careers" class="footer-link">Careers &amp; Research</a></li>
                                 <li><a href="/feedback" class="footer-link">Feature Feedback</a></li>
-                                <li><a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
-                                        class="footer-link">GitHub Organization</a></li>
+                                <li><a href="https://github.com/kunal0230/Orlume" target="_blank"
+                                        rel="noopener noreferrer" class="footer-link">GitHub Organization</a></li>
                             </ul>
                         </div>
 
@@ -340,7 +374,8 @@
                                 <li><a href="/terms" class="footer-link">Terms of Service</a></li>
                                 <li><a href="https://github.com/kunal0230/Orlume/blob/main/LICENSE" target="_blank"
                                         rel="noopener noreferrer" class="footer-link">MIT Open Source</a></li>
-                            <li><span class="footer-link" style="color:var(--emerald); font-weight:500;">✓ 100% Client-Side</span></li>
+                                <li><span class="footer-link" style="color:var(--emerald); font-weight:500;">✓ 100%
+                                        Client-Side</span></li>
                             </ul>
                         </div>
                     </div>
@@ -348,7 +383,8 @@
 
                 <div class="footer-bottom">
                     <div>
-                        &copy; 2026 Orlume. An open-source hobby project by Kunal Chaugule. Built with WebGPU, WebAssembly SIMD, and Three.js.
+                        &copy; 2026 Orlume. An open-source hobby project by Kunal Chaugule. Built with WebGPU,
+                        WebAssembly SIMD, and Three.js.
                     </div>
                     <div class="desktop-only">
                         Press <kbd
