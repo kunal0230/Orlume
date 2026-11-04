@@ -8,12 +8,12 @@
     <meta name="description"
         content="The story behind Orlume — a free, open-source browser photo editor built by Kunal Chaugule as a student hobby project exploring WebGPU and computer vision.">
     <meta name="keywords"
-        content="orlume, student project, hobby project, open source photo editor, webgpu photo editor, kunal chaugule, browser photo editor">
+        content="orlume, student project, hobby project, open source photo editor, webgpu photo editor, kunal chaugule">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/about">
 
     <meta property="og:title" content="About | Orlume - Student Open Source Project">
-    <meta property="og:description" content="The story behind Orlume — a free, open-source browser photo editor built as a student hobby project.">
+    <meta property="og:description" content="A student hobby project exploring in-browser graphics, WebGPU shaders, and on-device AI.">
     <meta property="og:url" content="https://orlume.io/about">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,427 +27,356 @@
     <script type="module" src="/src/utils/analytics.js"></script>
 
     <style>
-        /* About page refinements */
-        .about-hero {
-            text-align: center;
-            padding: 40px 24px 80px;
-            max-width: 720px;
-            margin: 0 auto;
+        /* Compact Single-Page Bento Layout */
+        html, body {
+            min-height: 100%;
         }
 
-        .about-hero h2 {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 16px;
-            color: var(--text-headline);
+        .about-single-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 72px 20px 24px;
+            box-sizing: border-box;
         }
 
-        .about-hero p {
-            font-size: 17px;
-            color: var(--text-body);
-            line-height: 1.8;
-        }
-
-        /* Stats row */
-        .about-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
+        .about-bento-wrapper {
+            width: 100%;
             max-width: 900px;
-            margin: 0 auto 56px;
-            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .stat-item {
-            text-align: center;
-            padding: 24px 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 16px;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .stat-item:hover {
-            transform: translateY(-4px);
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: var(--grad-primary);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 6px;
-            font-weight: 500;
-        }
-
-        /* Story section */
-        .story-section {
-            max-width: 800px;
-            margin: 0 auto 64px;
-            padding: 0 24px;
-        }
-
-        .story-card {
+        /* Hero / Profile Card */
+        .bento-hero-card {
             background: var(--bg-card);
             border: 1px solid var(--border-default);
             border-radius: 20px;
-            padding: 36px 32px;
-            line-height: 1.8;
-            color: var(--text-body);
-            font-size: 15px;
+            padding: 24px 28px;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.2s ease;
         }
 
-        .story-card h2 {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-headline);
-            margin-bottom: 16px;
-            letter-spacing: -0.3px;
-        }
-
-        .story-card p {
-            margin-bottom: 16px;
-        }
-
-        .story-card p:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Principles grid */
-        .principles-section {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 24px 80px;
-        }
-
-        .principles-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .principles-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .principles-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
-        .principle-card {
-            padding: 32px 28px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 20px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .principle-card:hover {
-            transform: translateY(-4px);
+        .bento-hero-card:hover {
             border-color: rgba(37, 99, 235, 0.3);
         }
 
-        .principle-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--grad-primary);
-            border-radius: 12px;
+        .hero-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .hero-identity {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
+            gap: 16px;
         }
 
-        .principle-icon svg {
-            width: 24px;
-            height: 24px;
-            color: white;
-        }
-
-        .principle-card h3 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--text-headline);
-        }
-
-        .principle-card p {
-            font-size: 14px;
-            color: var(--text-body);
-            line-height: 1.7;
-        }
-
-        /* Tech stack section */
-        .tech-section {
-            background: var(--bg-subtle);
-            margin: 0 -24px;
-            padding: 72px 24px;
-        }
-
-        .tech-inner {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .tech-header {
-            text-align: center;
-            margin-bottom: 48px;
-        }
-
-        .tech-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .tech-header p {
-            font-size: 15px;
-            color: var(--text-body);
-            margin-top: 8px;
-        }
-
-        .tech-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-
-        .tech-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 16px;
-            padding: 28px 20px;
-            text-align: center;
-            transition: transform 0.3s, border-color 0.3s;
-        }
-
-        .tech-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(37, 99, 235, 0.3);
-        }
-
-        .tech-card-icon {
-            width: 44px;
-            height: 44px;
-            background: var(--grad-primary);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 14px;
-            color: white;
-        }
-
-        .tech-card-name {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: var(--text-headline);
-        }
-
-        .tech-card-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* Founder section */
-        .founder-section {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 24px 80px;
-        }
-
-        .founder-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .founder-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .founder-card {
-            display: flex;
-            gap: 32px;
-            align-items: flex-start;
-            padding: 36px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 20px;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .founder-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .founder-avatar {
-            width: 88px;
-            height: 88px;
+        .hero-avatar {
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: var(--grad-primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            font-size: 32px;
+            font-size: 18px;
             font-weight: 800;
             color: white;
-            letter-spacing: -1px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        .founder-info h3 {
+        .hero-titles {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .hero-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hero-name {
             font-size: 20px;
             font-weight: 700;
             color: var(--text-headline);
-            margin-bottom: 4px;
+            margin: 0;
+            line-height: 1.2;
         }
 
-        .founder-role {
-            display: inline-block;
-            font-size: 12px;
+        .badge-student {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
             font-weight: 600;
             color: var(--primary);
             background: rgba(37, 99, 235, 0.08);
-            padding: 4px 12px;
-            border-radius: 100px;
-            margin-bottom: 14px;
+            border: 1px solid rgba(37, 99, 235, 0.18);
+            padding: 2px 8px;
+            border-radius: 9999px;
+            line-height: 1.4;
         }
 
-        .founder-info p {
-            font-size: 14px;
-            color: var(--text-body);
-            line-height: 1.7;
-            margin-bottom: 12px;
+        .badge-hobby {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #059669;
+            background: rgba(5, 150, 105, 0.08);
+            border: 1px solid rgba(5, 150, 105, 0.18);
+            padding: 2px 8px;
+            border-radius: 9999px;
+            line-height: 1.4;
         }
 
-        .founder-links {
+        .hero-tagline {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .hero-actions {
             display: flex;
-            gap: 16px;
-            margin-top: 14px;
-            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            flex-shrink: 0;
         }
 
-        .founder-link {
+        .btn-primary-action {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            padding: 8px 16px;
+            background: var(--grad-primary);
+            border-radius: 10px;
             font-size: 13px;
             font-weight: 600;
-            color: var(--primary);
-            transition: gap 0.3s;
+            color: white;
+            transition: all 0.2s ease;
             text-decoration: none;
         }
 
-        .founder-link:hover {
-            gap: 10px;
+        .btn-primary-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
         }
 
-        /* Join CTA */
-        .join-section {
-            text-align: center;
-            max-width: 650px;
-            margin: 0 auto;
-            padding: 80px 24px;
+        .btn-secondary-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-sunken);
+            border: 1px solid var(--border-default);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-headline);
+            transition: all 0.2s ease;
+            text-decoration: none;
         }
 
-        .join-section h2 {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 12px;
+        .btn-secondary-action:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
         }
 
-        .join-section p {
+        .hero-bio {
+            font-size: 14px;
             color: var(--text-body);
-            line-height: 1.7;
-            margin-bottom: 28px;
+            line-height: 1.65;
+            margin: 0;
         }
 
-        .join-buttons {
+        /* 3-Column Bento Grid */
+        .bento-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
+        .bento-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 16px;
+            padding: 20px 20px 18px;
+            box-shadow: var(--shadow-xs);
             display: flex;
-            gap: 16px;
+            flex-direction: column;
+            transition: all 0.2s ease;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .bento-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .bento-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .bento-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .icon-blue {
+            background: rgba(37, 99, 235, 0.1);
+            color: #2563EB;
+        }
+
+        .icon-emerald {
+            background: rgba(5, 150, 105, 0.1);
+            color: #059669;
+        }
+
+        .icon-amber {
+            background: rgba(217, 119, 6, 0.1);
+            color: #D97706;
+        }
+
+        .bento-card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-headline);
+            margin: 0;
+        }
+
+        .bento-card p {
+            font-size: 12.5px;
+            color: var(--text-body);
+            line-height: 1.55;
+            margin: 0;
+        }
+
+        .tech-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .tech-pill {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: var(--bg-sunken);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 3px 8px;
+        }
+
+        /* Bottom Stats & Links Bar */
+        .bento-footer-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 14px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .stats-pills {
+            display: flex;
+            gap: 14px;
+            align-items: center;
             flex-wrap: wrap;
         }
 
-        .join-btn-primary {
+        .stat-badge {
+            color: var(--text-muted);
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            background: var(--grad-primary);
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 15px;
-            color: white;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            text-decoration: none;
+            gap: 4px;
         }
 
-        .join-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
-        }
-
-        .join-btn-secondary {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border: 1px solid var(--border-default);
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 15px;
+        .stat-badge strong {
             color: var(--text-headline);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            text-decoration: none;
+            font-weight: 600;
         }
 
-        .join-btn-secondary:hover {
-            border-color: rgba(37, 99, 235, 0.4);
-            background: rgba(37, 99, 235, 0.04);
+        .footer-links-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            color: var(--text-muted);
+        }
+
+        .link-item {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.15s ease;
+        }
+
+        .link-item:hover {
+            color: var(--cyan);
+            text-decoration: underline;
+        }
+
+        .dot-separator {
+            color: var(--text-subtle);
         }
 
         @media (max-width: 768px) {
-            .founder-card {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
+            .about-single-page {
+                padding: 70px 14px 20px;
+                justify-content: flex-start;
             }
-            .founder-links {
+
+            .hero-top-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .hero-actions {
+                width: 100%;
+            }
+
+            .btn-primary-action, .btn-secondary-action {
+                flex: 1;
                 justify-content: center;
             }
-            .about-stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
-            }
-            .principles-grid {
+
+            .bento-grid-3 {
                 grid-template-columns: 1fr;
             }
-            .tech-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .stat-value {
-                font-size: 24px;
-            }
-            .story-card {
-                padding: 24px 20px;
+
+            .bento-footer-bar {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -532,7 +461,7 @@
                                 <div class="nav-dropdown-desc">The project story</div>
                             </div>
                         </a>
-                        <a href="https://github.com/kunal0230/Orlume" target="_blank">
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer">
                             <div class="nav-dropdown-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2">
                                     <path
@@ -594,250 +523,125 @@
         </div>
     </nav>
 
-    <div class="page-wrapper">
-        <div class="page-content">
-            <header class="page-header">
-                <div class="page-eyebrow">About the Project</div>
-                <h1 class="page-title">A student hobby project exploring in-browser graphics &amp; AI.</h1>
-                <p class="page-subtitle">Hey, I'm Kunal. Orlume is a personal open-source project I started to experiment with WebGPU shaders, machine learning models, and photo editing directly inside the browser. No servers, no sign-ups, and no paywalls.</p>
-            </header>
+    <main class="about-single-page">
+        <div class="about-bento-wrapper">
 
-            <!-- Stats -->
-            <div class="about-stats reveal-page">
-                <div class="stat-item">
-                    <div class="stat-value">100%</div>
-                    <div class="stat-label">Free &amp; Open Source</div>
+            <!-- Profile & Introduction Card -->
+            <section class="bento-hero-card">
+                <div class="hero-top-row">
+                    <div class="hero-identity">
+                        <div class="hero-avatar">KC</div>
+                        <div class="hero-titles">
+                            <div class="hero-name-row">
+                                <h1 class="hero-name">Kunal Chaugule</h1>
+                                <span class="badge-student">Student &amp; Developer</span>
+                                <span class="badge-hobby">Hobby Project</span>
+                            </div>
+                            <p class="hero-tagline">Creator of Orlume — in-browser WebGPU photo studio</p>
+                        </div>
+                    </div>
+                    <div class="hero-actions">
+                        <a href="/editor" class="btn-primary-action">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                            Open Editor
+                        </a>
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer" class="btn-secondary-action">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                            </svg>
+                            GitHub
+                        </a>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value">0</div>
-                    <div class="stat-label">Server Uploads</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">60fps</div>
-                    <div class="stat-label">Hardware Shaders</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">MIT</div>
-                    <div class="stat-label">License</div>
-                </div>
-            </div>
-
-            <!-- Why I Built This (Story) -->
-            <section class="story-section reveal-page">
-                <div class="story-card">
-                    <h2>Why I built this</h2>
-                    <p>Most modern photo editing tools have either become bloated, locked behind recurring monthly subscriptions, or designed to upload your personal photos to some cloud server where your data gets processed on someone else's machine.</p>
-                    <p>As a student fascinated by computer graphics, shaders, and machine learning, I asked a simple question: <em>What if the browser itself could do all the heavy lifting?</em></p>
-                    <p>Modern browser APIs like <strong>WebGPU</strong>, <strong>WebGL2</strong>, and <strong>WebAssembly</strong> have evolved dramatically. What started as a small weekend experiment with fragment shaders quickly became a deep dive into GPU rendering pipelines, 3D relighting, neural depth estimation via ONNX Runtime Web, and color grading mathematics. Orlume is the result of that curiosity — a full-featured photo studio that lives entirely on your device.</p>
-                </div>
+                <p class="hero-bio">
+                    Hey! I'm an engineering student passionate about computer graphics, shaders, and vision models. I built Orlume out of curiosity to see if a browser can deliver real, 60fps photo editing and AI depth relighting without paid subscriptions, accounts, or uploading private photos to cloud servers. It's completely free, client-side, and open source under the MIT license.
+                </p>
             </section>
 
-            <!-- Principles -->
-            <section class="principles-section reveal-page">
-                <div class="principles-header">
-                    <h2>What drives the project</h2>
+            <!-- 3-Column Bento Grid -->
+            <div class="bento-grid-3">
+
+                <!-- Why I Built This -->
+                <div class="bento-card">
+                    <div class="bento-card-header">
+                        <div class="bento-icon icon-blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="16" x2="12" y2="12" />
+                                <line x1="12" y1="8" x2="12.01" y2="8" />
+                            </svg>
+                        </div>
+                        <h3>Why I Built This</h3>
+                    </div>
+                    <p>Most photo tools are locked behind pricey subscriptions or cloud uploads. I wanted a lightweight studio that opens in any tab with zero paywalls, zero accounts, and zero commercial fluff.</p>
                 </div>
-                <div class="principles-grid">
-                    <div class="principle-card">
-                        <div class="principle-icon">
+
+                <!-- 100% Client-Side Privacy -->
+                <div class="bento-card">
+                    <div class="bento-card-header">
+                        <div class="bento-icon icon-emerald">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                             </svg>
                         </div>
-                        <h3>Privacy by Architecture</h3>
-                        <p>Your photos never leave your device because there is literally no backend server collecting or processing them. Everything runs client-side in your browser's local memory.</p>
+                        <h3>Zero Cloud Uploads</h3>
                     </div>
-                    <div class="principle-card">
-                        <div class="principle-icon">
+                    <p>There is literally no backend server. Every shader pass, tone curve, and neural model executes directly inside your browser on your device's own GPU and local memory.</p>
+                </div>
+
+                <!-- Under The Hood -->
+                <div class="bento-card">
+                    <div class="bento-card-header">
+                        <div class="bento-icon icon-amber">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-                                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                                <line x1="6" y1="1" x2="6" y2="4" />
-                                <line x1="10" y1="1" x2="10" y2="4" />
-                                <line x1="14" y1="1" x2="14" y2="4" />
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                             </svg>
                         </div>
-                        <h3>No Commercial Agenda</h3>
-                        <p>No subscriptions, no "pro" paywalls, no tracking cookies, and no ads. This is a passion project built for learning, experimenting, and sharing with anyone who loves editing photos.</p>
+                        <h3>What's Under The Hood</h3>
                     </div>
-                    <div class="principle-card">
-                        <div class="principle-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                            </svg>
-                        </div>
-                        <h3>Open for Exploration</h3>
-                        <p>The entire project is public on GitHub under the MIT license. Whether you want to see how the shaders work, report a glitch, suggest a feature, or fork it, it's open to everyone.</p>
+                    <div class="tech-pills">
+                        <span class="tech-pill">WebGPU</span>
+                        <span class="tech-pill">WebGL2</span>
+                        <span class="tech-pill">WGSL / GLSL</span>
+                        <span class="tech-pill">ONNX Web</span>
+                        <span class="tech-pill">Web Workers</span>
+                        <span class="tech-pill">Three.js</span>
                     </div>
                 </div>
-            </section>
 
-            <!-- Founder / Creator -->
-            <section class="founder-section reveal-page">
-                <div class="founder-header">
-                    <h2>About the developer</h2>
-                </div>
-                <div class="founder-card">
-                    <div class="founder-avatar">KC</div>
-                    <div class="founder-info">
-                        <h3>Kunal Chaugule</h3>
-                        <span class="founder-role">Student &amp; Developer</span>
-                        <p>I'm a student studying computer science and engineering with a keen interest in computer vision, real-time graphics, and web standards. Building Orlume gave me hands-on experience designing WebGPU compute and render pipelines, converting neural networks for client-side ONNX inference, and crafting responsive creative tools from scratch.</p>
-                        <p>When I'm not studying or coding, I'm usually taking photos or learning more about color grading science. If you have questions, feedback, or just want to chat about graphics programming, don't hesitate to reach out!</p>
-                        <div class="founder-links">
-                            <a href="https://kunalchaugule.com" target="_blank" class="founder-link">
-                                kunalchaugule.com
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                    <polyline points="12 5 19 12 12 19" />
-                                </svg>
-                            </a>
-                            <a href="https://github.com/kunal0230" target="_blank" class="founder-link">
-                                GitHub (@kunal0230)
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                    <polyline points="12 5 19 12 12 19" />
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Technology -->
-            <section class="tech-section reveal-page">
-                <div class="tech-inner">
-                    <div class="tech-header">
-                        <h2>The tech I got to learn &amp; build with</h2>
-                        <p>Pushing modern web standards to deliver desktop-grade performance.</p>
-                    </div>
-                    <div class="tech-grid">
-                        <div class="tech-card">
-                            <div class="tech-card-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                </svg>
-                            </div>
-                            <div class="tech-card-name">WebGL2 &amp; WebGPU</div>
-                            <div class="tech-card-desc">Custom GLSL &amp; WGSL shaders for 60fps real-time image processing</div>
-                        </div>
-                        <div class="tech-card">
-                            <div class="tech-card-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                </svg>
-                            </div>
-                            <div class="tech-card-name">ONNX Runtime Web</div>
-                            <div class="tech-card-desc">In-browser neural model execution for depth estimation and relighting</div>
-                        </div>
-                        <div class="tech-card">
-                            <div class="tech-card-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <path d="M12 2a4 4 0 0 1 4 4v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a4 4 0 0 1 4-4z" />
-                                    <path d="M8 7v1a4 4 0 1 0 8 0V7" />
-                                    <path d="M5 13a7 7 0 0 0 14 0" />
-                                    <line x1="12" y1="20" x2="12" y2="22" />
-                                    <line x1="8" y1="22" x2="16" y2="22" />
-                                </svg>
-                            </div>
-                            <div class="tech-card-name">Transformers.js</div>
-                            <div class="tech-card-desc">Client-side background removal and segmentation running locally</div>
-                        </div>
-                        <div class="tech-card">
-                            <div class="tech-card-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                </svg>
-                            </div>
-                            <div class="tech-card-name">Web Workers</div>
-                            <div class="tech-card-desc">Heavy computation offloaded to background threads for zero UI lag</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Join Community -->
-            <section class="join-section reveal-page">
-                <h2>Explore the project</h2>
-                <p>Because this is an independent student project, every bit of feedback, bug report, or idea means a lot. If you find Orlume helpful or interesting, check out the code on GitHub!</p>
-                <div class="join-buttons">
-                    <a href="https://github.com/kunal0230/Orlume" target="_blank" class="join-btn-primary">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path
-                                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                        </svg>
-                        Star on GitHub
-                    </a>
-                    <a href="/contribute" class="join-btn-secondary">
-                        Contributing Guide
-                    </a>
-                </div>
-            </section>
-        </div>
-
-        <footer class="footer">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="footer-logo">Orlume</div>
-                    <p class="footer-desc">An open-source, client-side photo editor built by Kunal Chaugule.</p>
-                </div>
-                <div class="footer-column">
-                    <h4>Product</h4>
-                    <ul>
-                        <li><a href="/#features">Features</a></li>
-                        <li><a href="/editor">Editor</a></li>
-                    </ul>
-                </div>
-                <div class="footer-column">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="/docs">Documentation</a></li>
-                        <li><a href="/tutorials">Tutorials</a></li>
-                        <li><a href="/blog">Blog</a></li>
-                        <li><a href="/changelog">Changelog</a></li>
-                    </ul>
-                </div>
-                <div class="footer-column">
-                    <h4>Community</h4>
-                    <ul>
-                        <li><a href="/about">About</a></li>
-                        <li><a href="https://github.com/kunal0230/Orlume" target="_blank">GitHub</a></li>
-                        <li><a href="/contribute">Contribute</a></li>
-                        <li><a href="/feedback">Feedback</a></li>
-                        <li><a href="/privacy">Privacy</a></li>
-                        <li><a href="/terms">Terms</a></li>
-                    </ul>
-                </div>
             </div>
-            <div class="footer-bottom"><span>&copy; 2026 Orlume. An open-source hobby project by Kunal Chaugule. MIT License.</span></div>
-        </footer>
-    </div>
+
+            <!-- Footer Bar (Stats & Links) -->
+            <footer class="bento-footer-bar">
+                <div class="stats-pills">
+                    <span class="stat-badge"><strong>100%</strong> Free &amp; Open Source</span>
+                    <span class="stat-badge"><strong>0</strong> Server Costs</span>
+                    <span class="stat-badge"><strong>60 FPS</strong> Shaders</span>
+                    <span class="stat-badge"><strong>MIT</strong> License</span>
+                </div>
+                <div class="footer-links-row">
+                    <a href="https://kunalchaugule.com" target="_blank" rel="noopener noreferrer" class="link-item">
+                        kunalchaugule.com
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="7" y1="17" x2="17" y2="7" />
+                            <polyline points="7 7 17 7 17 17" />
+                        </svg>
+                    </a>
+                    <span class="dot-separator">•</span>
+                    <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer" class="link-item">GitHub Repository</a>
+                    <span class="dot-separator">•</span>
+                    <a href="/feedback" class="link-item">Feedback &amp; Ideas</a>
+                </div>
+            </footer>
+
+        </div>
+    </main>
 
     <script>
-        // Scroll reveal for sub-pages
-        document.querySelectorAll('.reveal-page').forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                el.classList.add('visible');
-            }
-        });
-        const revealObs = new IntersectionObserver((entries) => {
-            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-        }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
-        document.querySelectorAll('.reveal-page').forEach(el => revealObs.observe(el));
-
-        // Mobile nav toggle
-        const toggle = document.querySelector('.nav-mobile-toggle');
+        // Mobile nav dropdown toggle
+        const toggle = document.querySelector('.nav-hamburger') || document.querySelector('.nav-mobile-toggle');
         const menu = document.querySelector('.nav-menu');
         if (toggle && menu) {
             toggle.addEventListener('click', () => menu.classList.toggle('open'));
