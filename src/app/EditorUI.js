@@ -362,23 +362,24 @@ export class EditorUI {
             this.state.setTool('brush');
             if (brushSettings) brushSettings.style.display = 'block';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
-            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'block';
+            if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'block';
         } else if (tool === 'radial') {
             this.state.setTool('radial');
             if (brushSettings) brushSettings.style.display = 'none';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
-            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
+            if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
         } else if (tool === 'gradient') {
             this.state.setTool('gradient');
             if (brushSettings) brushSettings.style.display = 'none';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
-            if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
+            if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
         }
 
         // Create a new layer if none exists
-        if (this.masks.layers.length === 0) {
+        if (this.masks && (!this.masks.layers || this.masks.layers.length === 0)) {
             this.masks.createLayer(tool);
-            this._updateLayerList();
+            this.updateLayersList();
+            this.syncLayerUI();
         }
     }
 
@@ -1337,7 +1338,18 @@ export class EditorUI {
      * Update layers list in UI
      */
     updateLayersList() {
-        this.layersModule.updateList();
+        this.layersModule?.updateList();
+    }
+
+    /**
+     * Aliases for layer list updating to prevent any runtime TypeErrors
+     */
+    _updateLayerList() {
+        this.updateLayersList();
+    }
+
+    updateLayerList() {
+        this.updateLayersList();
     }
 
     /**
