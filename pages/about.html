@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About | Orlume Open Source Project</title>
+    <title>About | Orlume - Student Open Source Project</title>
     <meta name="description"
-        content="Orlume is a free, open-source AI photo editor built by the community. Our mission is to make professional photo editing accessible to everyone.">
+        content="The story behind Orlume — a free, open-source browser photo editor built by Kunal Chaugule as a student hobby project exploring WebGPU and computer vision.">
     <meta name="keywords"
-        content="orlume open source, about orlume, free photo editor, open source photo editor, ai photo editing, community project">
+        content="orlume, student project, hobby project, open source photo editor, webgpu photo editor, kunal chaugule, browser photo editor">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/about">
 
-    <meta property="og:title" content="About | Orlume Open Source Project">
-    <meta property="og:description" content="The story behind Orlume's community-driven AI photo editor.">
+    <meta property="og:title" content="About | Orlume - Student Open Source Project">
+    <meta property="og:description" content="The story behind Orlume — a free, open-source browser photo editor built as a student hobby project.">
     <meta property="og:url" content="https://orlume.io/about">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,38 +49,19 @@
             line-height: 1.8;
         }
 
-        .about-hero .hero-cta {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 28px;
-            padding: 14px 28px;
-            background: var(--grad-primary);
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            color: white;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .about-hero .hero-cta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
-        }
-
         /* Stats row */
         .about-stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 24px;
             max-width: 900px;
-            margin: 0 auto 64px;
+            margin: 0 auto 56px;
             padding: 0 24px;
         }
 
         .stat-item {
             text-align: center;
-            padding: 28px 16px;
+            padding: 24px 16px;
             background: var(--bg-card);
             border: 1px solid var(--border-default);
             border-radius: 16px;
@@ -92,9 +73,9 @@
         }
 
         .stat-value {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 800;
-            letter-spacing: -1px;
+            letter-spacing: -0.5px;
             background: var(--grad-primary);
             -webkit-background-clip: text;
             background-clip: text;
@@ -106,6 +87,39 @@
             color: var(--text-muted);
             margin-top: 6px;
             font-weight: 500;
+        }
+
+        /* Story section */
+        .story-section {
+            max-width: 800px;
+            margin: 0 auto 64px;
+            padding: 0 24px;
+        }
+
+        .story-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 20px;
+            padding: 36px 32px;
+            line-height: 1.8;
+            color: var(--text-body);
+            font-size: 15px;
+        }
+
+        .story-card h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-headline);
+            margin-bottom: 16px;
+            letter-spacing: -0.3px;
+        }
+
+        .story-card p {
+            margin-bottom: 16px;
+        }
+
+        .story-card p:last-child {
+            margin-bottom: 0;
         }
 
         /* Principles grid */
@@ -249,10 +263,105 @@
             line-height: 1.5;
         }
 
+        /* Founder section */
+        .founder-section {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .founder-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .founder-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .founder-card {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+            padding: 36px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 20px;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .founder-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .founder-avatar {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: var(--grad-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -1px;
+        }
+
+        .founder-info h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-headline);
+            margin-bottom: 4px;
+        }
+
+        .founder-role {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.08);
+            padding: 4px 12px;
+            border-radius: 100px;
+            margin-bottom: 14px;
+        }
+
+        .founder-info p {
+            font-size: 14px;
+            color: var(--text-body);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .founder-links {
+            display: flex;
+            gap: 16px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .founder-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            transition: gap 0.3s;
+            text-decoration: none;
+        }
+
+        .founder-link:hover {
+            gap: 10px;
+        }
+
         /* Join CTA */
         .join-section {
             text-align: center;
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             padding: 80px 24px;
         }
@@ -288,6 +397,7 @@
             font-size: 15px;
             color: white;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
         }
 
         .join-btn-primary:hover {
@@ -306,6 +416,7 @@
             font-size: 15px;
             color: var(--text-headline);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
         }
 
         .join-btn-secondary:hover {
@@ -313,113 +424,30 @@
             background: rgba(37, 99, 235, 0.04);
         }
 
-        /* Founder section */
-        .founder-section {
-            max-width: 760px;
-            margin: 0 auto;
-            padding: 0 24px 80px;
-        }
-
-        .founder-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .founder-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .founder-card {
-            display: flex;
-            gap: 32px;
-            align-items: center;
-            padding: 36px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 20px;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .founder-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .founder-avatar {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            background: var(--grad-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 36px;
-            font-weight: 800;
-            color: white;
-            letter-spacing: -1px;
-        }
-
-        .founder-info h3 {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-headline);
-            margin-bottom: 4px;
-        }
-
-        .founder-role {
-            display: inline-block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--primary);
-            background: rgba(37, 99, 235, 0.08);
-            padding: 4px 12px;
-            border-radius: 100px;
-            margin-bottom: 12px;
-        }
-
-        .founder-info p {
-            font-size: 14px;
-            color: var(--text-body);
-            line-height: 1.7;
-            margin-bottom: 12px;
-        }
-
-        .founder-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--primary);
-            transition: gap 0.3s;
-        }
-
-        .founder-link:hover {
-            gap: 10px;
-        }
-
         @media (max-width: 768px) {
             .founder-card {
                 flex-direction: column;
+                align-items: center;
                 text-align: center;
+            }
+            .founder-links {
+                justify-content: center;
             }
             .about-stats {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 16px;
             }
-
             .principles-grid {
                 grid-template-columns: 1fr;
             }
-
             .tech-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
             .stat-value {
                 font-size: 24px;
+            }
+            .story-card {
+                padding: 24px 20px;
             }
         }
     </style>
@@ -501,7 +529,7 @@
                                 </svg></div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">About</div>
-                                <div class="nav-dropdown-desc">Our story</div>
+                                <div class="nav-dropdown-desc">The project story</div>
                             </div>
                         </a>
                         <a href="https://github.com/kunal0230/Orlume" target="_blank">
@@ -569,16 +597,16 @@
     <div class="page-wrapper">
         <div class="page-content">
             <header class="page-header">
-                <div class="page-eyebrow">About</div>
-                <h1 class="page-title">Built for creators, by creators.</h1>
-                <p class="page-subtitle">Orlume is a free, open-source AI photo editor that runs entirely in your browser. No subscriptions. No uploads. No compromises.</p>
+                <div class="page-eyebrow">About the Project</div>
+                <h1 class="page-title">A student hobby project exploring in-browser graphics &amp; AI.</h1>
+                <p class="page-subtitle">Hey, I'm Kunal. Orlume is a personal open-source project I started to experiment with WebGPU shaders, machine learning models, and photo editing directly inside the browser. No servers, no sign-ups, and no paywalls.</p>
             </header>
 
             <!-- Stats -->
             <div class="about-stats reveal-page">
                 <div class="stat-item">
                     <div class="stat-value">100%</div>
-                    <div class="stat-label">Free & Open Source</div>
+                    <div class="stat-label">Free &amp; Open Source</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-value">0</div>
@@ -586,7 +614,7 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-value">60fps</div>
-                    <div class="stat-label">GPU Rendering</div>
+                    <div class="stat-label">Hardware Shaders</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-value">MIT</div>
@@ -594,10 +622,20 @@
                 </div>
             </div>
 
+            <!-- Why I Built This (Story) -->
+            <section class="story-section reveal-page">
+                <div class="story-card">
+                    <h2>Why I built this</h2>
+                    <p>Most modern photo editing tools have either become bloated, locked behind recurring monthly subscriptions, or designed to upload your personal photos to some cloud server where your data gets processed on someone else's machine.</p>
+                    <p>As a student fascinated by computer graphics, shaders, and machine learning, I asked a simple question: <em>What if the browser itself could do all the heavy lifting?</em></p>
+                    <p>Modern browser APIs like <strong>WebGPU</strong>, <strong>WebGL2</strong>, and <strong>WebAssembly</strong> have evolved dramatically. What started as a small weekend experiment with fragment shaders quickly became a deep dive into GPU rendering pipelines, 3D relighting, neural depth estimation via ONNX Runtime Web, and color grading mathematics. Orlume is the result of that curiosity — a full-featured photo studio that lives entirely on your device.</p>
+                </div>
+            </section>
+
             <!-- Principles -->
             <section class="principles-section reveal-page">
                 <div class="principles-header">
-                    <h2>What we stand for</h2>
+                    <h2>What drives the project</h2>
                 </div>
                 <div class="principles-grid">
                     <div class="principle-card">
@@ -606,8 +644,8 @@
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                             </svg>
                         </div>
-                        <h3>Privacy First</h3>
-                        <p>Your photos never leave your device. All AI processing happens locally in the browser. We never see, upload, or store your images.</p>
+                        <h3>Privacy by Architecture</h3>
+                        <p>Your photos never leave your device because there is literally no backend server collecting or processing them. Everything runs client-side in your browser's local memory.</p>
                     </div>
                     <div class="principle-card">
                         <div class="principle-icon">
@@ -619,8 +657,8 @@
                                 <line x1="14" y1="1" x2="14" y2="4" />
                             </svg>
                         </div>
-                        <h3>Free Forever</h3>
-                        <p>No subscriptions, no paywalls, no hidden costs. Orlume is and will always be free. Open source under the MIT license.</p>
+                        <h3>No Commercial Agenda</h3>
+                        <p>No subscriptions, no "pro" paywalls, no tracking cookies, and no ads. This is a passion project built for learning, experimenting, and sharing with anyone who loves editing photos.</p>
                     </div>
                     <div class="principle-card">
                         <div class="principle-icon">
@@ -631,30 +669,40 @@
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                             </svg>
                         </div>
-                        <h3>Community Driven</h3>
-                        <p>Built by contributors worldwide. Anyone can suggest features, report bugs, or contribute code. Every contribution matters.</p>
+                        <h3>Open for Exploration</h3>
+                        <p>The entire project is public on GitHub under the MIT license. Whether you want to see how the shaders work, report a glitch, suggest a feature, or fork it, it's open to everyone.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Founder -->
+            <!-- Founder / Creator -->
             <section class="founder-section reveal-page">
                 <div class="founder-header">
-                    <h2>Meet the founder</h2>
+                    <h2>About the developer</h2>
                 </div>
                 <div class="founder-card">
                     <div class="founder-avatar">KC</div>
                     <div class="founder-info">
                         <h3>Kunal Chaugule</h3>
-                        <span class="founder-role">Co-Founder & Lead Engineer</span>
-                        <p>Computer Vision and Image Processing Engineer working at the intersection of applied machine learning and visual perception. Kunal architected Orlume's core rendering pipeline, including the WebGPU-powered 3D relighting system, depth estimation, and physically-based rendering engine.</p>
-                        <a href="https://kunalchaugule.com" target="_blank" class="founder-link">
-                            kunalchaugule.com
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                                <polyline points="12 5 19 12 12 19" />
-                            </svg>
-                        </a>
+                        <span class="founder-role">Student &amp; Developer</span>
+                        <p>I'm a student studying computer science and engineering with a keen interest in computer vision, real-time graphics, and web standards. Building Orlume gave me hands-on experience designing WebGPU compute and render pipelines, converting neural networks for client-side ONNX inference, and crafting responsive creative tools from scratch.</p>
+                        <p>When I'm not studying or coding, I'm usually taking photos or learning more about color grading science. If you have questions, feedback, or just want to chat about graphics programming, don't hesitate to reach out!</p>
+                        <div class="founder-links">
+                            <a href="https://kunalchaugule.com" target="_blank" class="founder-link">
+                                kunalchaugule.com
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                    <polyline points="12 5 19 12 12 19" />
+                                </svg>
+                            </a>
+                            <a href="https://github.com/kunal0230" target="_blank" class="founder-link">
+                                GitHub (@kunal0230)
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                    <polyline points="12 5 19 12 12 19" />
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -663,8 +711,8 @@
             <section class="tech-section reveal-page">
                 <div class="tech-inner">
                     <div class="tech-header">
-                        <h2>Built on modern technology</h2>
-                        <p>Desktop-class performance delivered through the browser.</p>
+                        <h2>The tech I got to learn &amp; build with</h2>
+                        <p>Pushing modern web standards to deliver desktop-grade performance.</p>
                     </div>
                     <div class="tech-grid">
                         <div class="tech-card">
@@ -674,8 +722,20 @@
                                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                                 </svg>
                             </div>
-                            <div class="tech-card-name">WebGL2 & WebGPU</div>
-                            <div class="tech-card-desc">GPU-accelerated real-time rendering</div>
+                            <div class="tech-card-name">WebGL2 &amp; WebGPU</div>
+                            <div class="tech-card-desc">Custom GLSL &amp; WGSL shaders for 60fps real-time image processing</div>
+                        </div>
+                        <div class="tech-card">
+                            <div class="tech-card-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                            </div>
+                            <div class="tech-card-name">ONNX Runtime Web</div>
+                            <div class="tech-card-desc">In-browser neural model execution for depth estimation and relighting</div>
                         </div>
                         <div class="tech-card">
                             <div class="tech-card-icon">
@@ -688,20 +748,8 @@
                                     <line x1="8" y1="22" x2="16" y2="22" />
                                 </svg>
                             </div>
-                            <div class="tech-card-name">TensorFlow.js</div>
-                            <div class="tech-card-desc">Neural networks running locally</div>
-                        </div>
-                        <div class="tech-card">
-                            <div class="tech-card-icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="1.5">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                </svg>
-                            </div>
-                            <div class="tech-card-name">ONNX Runtime</div>
-                            <div class="tech-card-desc">Optimized AI model inference</div>
+                            <div class="tech-card-name">Transformers.js</div>
+                            <div class="tech-card-desc">Client-side background removal and segmentation running locally</div>
                         </div>
                         <div class="tech-card">
                             <div class="tech-card-icon">
@@ -711,7 +759,7 @@
                                 </svg>
                             </div>
                             <div class="tech-card-name">Web Workers</div>
-                            <div class="tech-card-desc">Background processing, zero UI blocking</div>
+                            <div class="tech-card-desc">Heavy computation offloaded to background threads for zero UI lag</div>
                         </div>
                     </div>
                 </div>
@@ -719,8 +767,8 @@
 
             <!-- Join Community -->
             <section class="join-section reveal-page">
-                <h2>Join the community</h2>
-                <p>Whether you're a developer, designer, or just passionate about photo editing, we'd love your help building the future of creative tools.</p>
+                <h2>Explore the project</h2>
+                <p>Because this is an independent student project, every bit of feedback, bug report, or idea means a lot. If you find Orlume helpful or interesting, check out the code on GitHub!</p>
                 <div class="join-buttons">
                     <a href="https://github.com/kunal0230/Orlume" target="_blank" class="join-btn-primary">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -731,7 +779,7 @@
                         Star on GitHub
                     </a>
                     <a href="/contribute" class="join-btn-secondary">
-                        How to Contribute
+                        Contributing Guide
                     </a>
                 </div>
             </section>
@@ -741,7 +789,7 @@
             <div class="footer-grid">
                 <div class="footer-brand">
                     <div class="footer-logo">Orlume</div>
-                    <p class="footer-desc">AI-powered photo editing that runs entirely in your browser.</p>
+                    <p class="footer-desc">An open-source, client-side photo editor built by Kunal Chaugule.</p>
                 </div>
                 <div class="footer-column">
                     <h4>Product</h4>
@@ -771,7 +819,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="footer-bottom"><span>&copy; 2026 Orlume. Open source under MIT License.</span></div>
+            <div class="footer-bottom"><span>&copy; 2026 Orlume. An open-source hobby project by Kunal Chaugule. MIT License.</span></div>
         </footer>
     </div>
 
