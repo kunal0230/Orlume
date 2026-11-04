@@ -129,6 +129,14 @@ new ToneCurveEditor(container, onCurveChange)
 - Reads tool from `editorUI.state.currentTool` (System Contract LAW 6).
 - Calls `feedbackModule.openCrashReport(crashData)` to pre-fill the feedback modal.
 
+### MaskSystem & LayersModule
+- Operates under both WebGL2 (`MaskSystem.js`) and WebGPU (`MaskSystemWebGPU.js`).
+- `GPUProcessor.render()` natively composites active mask adjustments on top of develop adjustments via `applyMaskedAdjustments()`.
+- Supports Brush (isotropic stamps with hardness/flow/erase), Radial Gradient (inside-out isotropic falloff with invert), and Linear Gradient (half-plane linear ramp with invert).
+- Red rubylith overlay visualization can be toggled via button or 'O' key, and is automatically hidden when navigating away from Masks panel (`isMaskMode = false`).
+- Full undo/redo integration in `HistoryModule` captures layer IDs, names, types, visibility, adjustments, and replayed strokes/shapes.
+- Automatically handles dimension updates via `onImageDimensionsChanged()` when cropping or upscaling.
+
 ### FeedbackModule
 - `openModal()` calls `form.reset()` BEFORE setting `toolContextInput.value` (System Contract LAW 11).
 - `_injectFeedbackButtons()` injects buttons into all tool panels. Captures tool name automatically.

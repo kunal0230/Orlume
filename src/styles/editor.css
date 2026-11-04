@@ -507,6 +507,24 @@ input[type="range"].slider-contrast {
     background: var(--accent);
 }
 
+.mask-layer.is-hidden {
+    opacity: 0.55;
+}
+
+.mask-layer-visibility {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.15s, transform 0.15s;
+}
+
+.mask-layer-visibility:hover {
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
 .mask-layer-icon {
     width: 24px;
     height: 24px;
@@ -515,21 +533,64 @@ input[type="range"].slider-contrast {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary);
+}
+
+.mask-layer.active .mask-layer-icon {
+    color: var(--text-primary);
 }
 
 .mask-layer-name {
     flex: 1;
     font-size: 12px;
+    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mask-layer-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mask-layer-invert-btn {
+    opacity: 0;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    transition: opacity 0.15s, color 0.15s;
+}
+
+.mask-layer:hover .mask-layer-invert-btn {
+    opacity: 0.8;
+}
+
+.mask-layer-invert-btn:hover {
+    opacity: 1;
+    color: var(--text-primary);
 }
 
 .mask-layer-delete {
     opacity: 0;
     color: var(--red);
     cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    transition: opacity 0.15s, color 0.15s;
 }
 
 .mask-layer:hover .mask-layer-delete {
     opacity: 1;
+}
+
+#btn-toggle-mask-overlay.active {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
 }
 
 /* ========================================
@@ -1712,4 +1773,99 @@ kbd {
     background: rgba(239, 68, 68, 0.1);
     color: var(--red);
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ========================================
+   Tool Down / Maintenance States
+   ======================================== */
+.tool-btn.tool-down {
+    position: relative;
+    opacity: 0.7;
+}
+
+.tool-btn.tool-down::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.75);
+}
+
+.tool-btn.tool-down:hover {
+    opacity: 0.9;
+}
+
+.tool-offline-banner {
+    padding: 10px 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.tool-offline-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.tool-offline-dot {
+    color: #ef4444;
+    font-size: 11px;
+}
+
+.tool-offline-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f87171;
+}
+
+.tool-offline-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ========================================
+   Beta Tool Indicator States
+   ======================================== */
+.badge-beta {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.tool-beta-banner {
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+.tool-beta-dot {
+    color: #60a5fa;
+    font-size: 12px;
 }

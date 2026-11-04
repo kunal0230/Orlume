@@ -81,9 +81,15 @@ export class KeyboardModule {
         if (e.code === 'KeyS' && !e.metaKey && !e.ctrlKey) this.editor.setTool('clone');
         if (e.code === 'KeyP' && !e.metaKey && !e.ctrlKey) this.editor.setTool('3d-pro');
 
+        // Mask overlay toggle (O)
+        if (e.code === 'KeyO' && !e.metaKey && !e.ctrlKey) {
+            this.editor.toggleMaskOverlay?.();
+        }
+
         // Brush mode toggle
         if (e.code === 'KeyX' && this.state.currentTool === 'brush') {
-            this.editor.setBrushMode(!this.masks.brushSettings.erase);
+            const currentErase = Boolean(this.masks?.brushSettings?.erase);
+            this.editor.setBrushMode(!currentErase);
         }
 
         // Brush size adjustment

@@ -60,12 +60,15 @@ export class HistoryModule {
         // Global develop adjustments
         const globalAdjustments = { ...this.state.globalAdjustments };
 
-        // Mask layer adjustments (don't store texture data, just adjustments)
-        const maskLayerAdjustments = (this.masks?.layers || []).map(layer => ({
+        // Mask layers complete state
+        const maskLayers = (this.masks?.layers || []).map(layer => ({
             id: layer.id,
             name: layer.name,
+            type: layer.type || 'brush',
+            visible: layer.visible !== false,
             adjustments: { ...layer.adjustments },
-            strokes: layer.strokes ? [...layer.strokes] : [] // Capture brush strokes
+            shape: layer.shape ? { ...layer.shape } : null,
+            strokes: layer.strokes ? JSON.parse(JSON.stringify(layer.strokes)) : []
         }));
 
         // Capture current image state
@@ -104,8 +107,9 @@ export class HistoryModule {
         const state = {
             currentTool: this.state.currentTool, // Capture active tool
             globalAdjustments,
-            maskLayerAdjustments,
-            activeLayerIndex: this.masks.activeLayerIndex,
+            maskLayers,
+            maskLayerAdjustments: maskLayers,
+            activeLayerIndex: this.masks ? this.masks.activeLayerIndex : -1,
             imageId: imageId, // Track by ID instead of raw data URL check by logic
             // We still store dataUrl in snapshot for potential serialization/export, 
             // but runtime mostly uses registry
@@ -189,7 +193,7 @@ export class HistoryModule {
                 }
 
                 // Restore active layer
-                if (snapshot.activeLayerIndex !== undefined) {
+                if (snapshot.activeLayerIndex !== undefined && this.masks) {
                     this.masks.activeLayerIndex = snapshot.activeLayerIndex;
                     this.editor.updateLayersList();
                 }
@@ -232,10 +236,16 @@ export class HistoryModule {
                         this.editor.state.resetAdjustments(); // Reset state adjustments to 0
                         this.editor.gpu.reset(); // Reset GPU params to fresh state before applying restored params
 
-                        // Clear masks (they don't align with restored image)
-                        this.masks.layers = [];
-                        this.masks.activeLayerIndex = -1;
-                        this.editor.updateLayersList();
+                        // Reset current masks before restoring snapshot masks
+                        if (this.masks) {
+                            if (typeof this.masks.reset === 'function') {
+                                this.masks.reset();
+                            } else {
+                                this.masks.layers = [];
+                                this.masks.activeLayerIndex = -1;
+                            }
+                        }
+                        this.editor.updateLayersList?.();
 
                         // Update UI
                         if (this.elements.perfIndicator) {
@@ -288,35 +298,50 @@ export class HistoryModule {
             this.gpu.render();
         }
 
-        // Restore mask layer adjustments
-        if (snapshot.maskLayerAdjustments && this.masks?.layers) {
-            for (const savedLayer of snapshot.maskLayerAdjustments) {
-                const layer = this.masks.layers.find(l => l.id === savedLayer.id);
+        // Restore mask layers and adjustments
+        const savedLayers = snapshot.maskLayers || snapshot.maskLayerAdjustments;
+        if (savedLayers && this.masks) {
+            const savedIds = new Set(savedLayers.map(l => l.id));
+
+            // 1. Remove layers that do not exist in snapshot
+            for (let i = this.masks.layers.length - 1; i >= 0; i--) {
+                const current = this.masks.layers[i];
+                if (!savedIds.has(current.id)) {
+                    this.masks.deleteLayer(i);
+                }
+            }
+
+            // 2. Recreate missing layers and restore properties
+            for (const saved of savedLayers) {
+                let layer = this.masks.layers.find(l => l.id === saved.id);
+                if (!layer) {
+                    layer = this.masks.createLayer(saved.type || 'brush', saved.name);
+                    if (layer) layer.id = saved.id;
+                }
                 if (layer) {
-                    Object.assign(layer.adjustments, savedLayer.adjustments);
-
-                    // Update mask slider UI if this layer is active
-                    if (this.masks.layers.indexOf(layer) === this.masks.activeLayerIndex) {
-                        for (const [name, value] of Object.entries(savedLayer.adjustments)) {
-                            const slider = document.getElementById(`slider-mask-${name}`);
-                            const valueDisplay = document.getElementById(`val-mask-${name}`);
-                            if (slider && valueDisplay) {
-                                slider.value = value;
-                                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
-                            }
-                        }
-                    }
-
-                    // Restore strokes
-                    if (savedLayer.strokes) {
-                        layer.strokes = [...savedLayer.strokes];
-                        // Replay strokes on GPU
-                        if (typeof this.masks.replayLayer === 'function') {
-                            this.masks.replayLayer(layer.id);
-                        }
+                    layer.name = saved.name || layer.name;
+                    layer.type = saved.type || layer.type;
+                    layer.visible = saved.visible !== false;
+                    layer.adjustments = { ...saved.adjustments };
+                    layer.shape = saved.shape ? { ...saved.shape } : null;
+                    layer.strokes = saved.strokes ? JSON.parse(JSON.stringify(saved.strokes)) : [];
+                    if (typeof this.masks.replayLayer === 'function') {
+                        this.masks.replayLayer(layer.id);
                     }
                 }
             }
+
+            // 3. Restore active layer index
+            if (typeof snapshot.activeLayerIndex === 'number') {
+                this.masks.activeLayerIndex = snapshot.activeLayerIndex;
+            }
+            if (this.masks.activeLayerIndex >= this.masks.layers.length) {
+                this.masks.activeLayerIndex = this.masks.layers.length - 1;
+            }
+
+            // 4. Update UI
+            this.editor.updateLayersList?.();
+            this.editor.syncLayerUI?.();
         }
 
         // Dynamic Module State Restoration

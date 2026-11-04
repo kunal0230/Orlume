@@ -6,6 +6,7 @@
  * - Radial/linear gradients
  * - Mask overlay
  * - Masked adjustments
+ * - Mask inversion
  */
 
 // Shared vertex shader for all mask operations
@@ -36,7 +37,9 @@ export const brushStampShader = /* wgsl */`
         radius: f32,
         hardness: f32,
         opacity: f32,
-        _pad: f32,
+        aspect: f32,
+        _pad1: f32,
+        _pad2: f32,
     }
 
     @vertex
@@ -51,7 +54,9 @@ export const brushStampShader = /* wgsl */`
 
     @fragment
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
-        let dist = distance(texCoord, u.center);
+        var diff = texCoord - u.center;
+        diff.x *= u.aspect;
+        let dist = length(diff);
         
         // Calculate falloff based on hardness
         let inner = u.radius * u.hardness;
@@ -74,8 +79,10 @@ export const radialGradientShader = /* wgsl */`
         center: vec2f,
         innerRadius: f32,
         outerRadius: f32,
-        feather: f32,
+        aspect: f32,
         invert: f32,
+        _pad1: f32,
+        _pad2: f32,
     }
 
     @vertex
@@ -90,8 +97,12 @@ export const radialGradientShader = /* wgsl */`
 
     @fragment
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
-        let dist = distance(texCoord, u.center);
-        var alpha = smoothstep(u.innerRadius, u.outerRadius, dist);
+        var diff = texCoord - u.center;
+        diff.x *= u.aspect;
+        let dist = length(diff);
+        
+        let maxR = max(u.outerRadius, u.innerRadius + 0.0001);
+        var alpha = 1.0 - smoothstep(u.innerRadius, maxR, dist);
         
         if (u.invert > 0.5) {
             alpha = 1.0 - alpha;
@@ -111,8 +122,10 @@ export const linearGradientShader = /* wgsl */`
     struct LinearUniforms {
         start: vec2f,
         end: vec2f,
-        feather: f32,
+        aspect: f32,
         invert: f32,
+        _pad1: f32,
+        _pad2: f32,
     }
 
     @vertex
@@ -127,15 +140,21 @@ export const linearGradientShader = /* wgsl */`
 
     @fragment
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
-        let dir = u.end - u.start;
-        let len = length(dir);
-        let norm = dir / len;
+        var p = texCoord;
+        p.x *= u.aspect;
+        var s = u.start;
+        s.x *= u.aspect;
+        var e = u.end;
+        e.x *= u.aspect;
         
-        let proj = dot(texCoord - u.start, norm);
-        let t = proj / len;
+        let dir = e - s;
+        let lenSq = dot(dir, dir);
         
-        var alpha = smoothstep(0.0, u.feather / len, t) * 
-                    (1.0 - smoothstep(1.0 - u.feather / len, 1.0, t));
+        var alpha = 1.0;
+        if (lenSq > 0.000001) {
+            let t = clamp(dot(p - s, dir) / lenSq, 0.0, 1.0);
+            alpha = 1.0 - smoothstep(0.0, 1.0, t);
+        }
         
         if (u.invert > 0.5) {
             alpha = 1.0 - alpha;
@@ -168,6 +187,31 @@ export const maskOverlayShader = /* wgsl */`
         let maskValue = textureSample(maskTex, texSampler, texCoord).a;
         // Red overlay with mask alpha
         return vec4f(1.0, 0.3, 0.3, maskValue * 0.5);
+    }
+`;
+
+// Invert mask shader - inverts mask alpha channel
+export const maskInvertShader = /* wgsl */`
+    struct VertexOutput {
+        @builtin(position) position: vec4f,
+        @location(0) texCoord: vec2f,
+    }
+
+    @vertex
+    fn vertexMain(@location(0) pos: vec2f, @location(1) texCoord: vec2f) -> VertexOutput {
+        var output: VertexOutput;
+        output.position = vec4f(pos, 0.0, 1.0);
+        output.texCoord = texCoord;
+        return output;
+    }
+
+    @group(0) @binding(0) var texSampler: sampler;
+    @group(0) @binding(1) var maskTex: texture_2d<f32>;
+
+    @fragment
+    fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
+        let maskValue = textureSample(maskTex, texSampler, texCoord).a;
+        return vec4f(1.0, 1.0, 1.0, 1.0 - maskValue);
     }
 `;
 

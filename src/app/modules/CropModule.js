@@ -436,10 +436,12 @@ export class CropModule {
             // Reload GPU processor with cropped image
             this.gpu.loadImage(croppedImage);
 
-            // Clear any masks (they no longer align)
-            this.masks.layers = [];
-            this.masks.activeLayerIndex = -1;
-            this.editor.updateLayersList();
+            // Adapt masks to new cropped dimensions
+            if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
+                this.masks.onImageDimensionsChanged();
+            }
+            this.editor.updateLayersList?.();
+            this.editor.syncLayerUI?.();
 
             // Update UI
             this.elements.perfIndicator.textContent = `${croppedImage.width}×${croppedImage.height}`;

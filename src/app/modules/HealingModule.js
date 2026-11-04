@@ -301,6 +301,11 @@ export class HealingModule {
      */
     async performHealing() {
         const btn = document.getElementById('btn-heal');
+        if (btn?.disabled) {
+            alert('AI Spot Healing is currently down for scheduled maintenance.');
+            return;
+        }
+
         if (!this.healingTool.hasMaskDrawn()) {
             alert('Please paint over the area you want to heal first.');
             return;

@@ -128,12 +128,17 @@ export class UpscaleModule {
      * Apply upscale to image
      */
     async apply() {
+        const btnApply = document.getElementById('btn-upscale-apply');
+        if (btnApply?.disabled) {
+            alert('AI Image Upscaling is currently offline for server maintenance.');
+            return;
+        }
+
         if (!this.state.hasImage) {
             console.warn('No image loaded for upscaling');
             return;
         }
 
-        const btnApply = document.getElementById('btn-upscale-apply');
         const progressSection = document.getElementById('upscale-progress-section');
         const progressBar = document.getElementById('upscale-progress-bar');
         const progressText = document.getElementById('upscale-progress-text');
@@ -188,10 +193,12 @@ export class UpscaleModule {
                 // Reload GPU processor with upscaled image
                 this.gpu.loadImage(img);
 
-                // Clear masks (they no longer align)
-                this.masks.layers = [];
-                this.masks.activeLayerIndex = -1;
-                this.editor.updateLayersList();
+                // Adapt masks to new upscaled dimensions
+                if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
+                    this.masks.onImageDimensionsChanged();
+                }
+                this.editor.updateLayersList?.();
+                this.editor.syncLayerUI?.();
 
                 // Update UI
                 this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;

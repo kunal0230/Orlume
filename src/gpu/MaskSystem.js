@@ -1,7 +1,7 @@
 /**
- * MaskSystem - Local Adjustment Masks for GPU Editor
+ * MaskSystem - Local Adjustment Masks for GPU Editor (WebGL2)
  * 
- * Provides brush, radial, and gradient masks for localized adjustments.
+ * Provides brush, radial, and linear gradient masks for localized adjustments.
  * Masks are rendered to a separate texture and composited during processing.
  */
 
@@ -25,6 +25,13 @@ export class MaskSystem {
             erase: false   // true = eraser mode
         };
 
+        // UI state
+        this.showOverlay = false;
+        this.isMaskMode = true;
+        this._isPaintingOverlay = false;
+        this._layerCounter = 0;
+        this._pendingLayers = [];
+
         // Compiled mask programs
         this.programs = new Map();
 
@@ -37,6 +44,7 @@ export class MaskSystem {
 
     _compilePrograms() {
         const gl = this.gl;
+        if (!gl) return;
 
         // Vertex shader (shared)
         const vertexShader = `#version 300 es
@@ -50,19 +58,22 @@ export class MaskSystem {
             }
         `;
 
-        // Brush stamp shader - renders a single brush dab to mask texture
+        // Brush stamp shader - isotropic aspect ratio correction
         const brushStampFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
             uniform vec2 u_center;      // Brush center in UV coords
-            uniform float u_radius;     // Brush radius in UV coords
+            uniform float u_radius;     // Brush radius in height-normalized coords
             uniform float u_hardness;   // 0-1 (soft to hard)
             uniform float u_opacity;    // 0-1
+            uniform float u_aspect;     // width / height
             
             void main() {
-                float dist = distance(v_texCoord, u_center);
+                vec2 diff = v_texCoord - u_center;
+                diff.x *= u_aspect;
+                float dist = length(diff);
                 
                 // Calculate falloff based on hardness
                 float inner = u_radius * u_hardness;
@@ -74,20 +85,24 @@ export class MaskSystem {
             }
         `;
 
-        // Radial gradient shader
+        // Radial gradient shader - isotropic, default inside out
         const radialGradientFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
             uniform vec2 u_center;      // Center in UV coords
-            uniform vec2 u_radii;       // Inner and outer radii
-            uniform float u_feather;    // Feather amount
+            uniform vec2 u_radii;       // Inner and outer radii (height-normalized)
+            uniform float u_aspect;     // width / height
             uniform float u_invert;     // 0 or 1
             
             void main() {
-                float dist = distance(v_texCoord, u_center);
-                float alpha = smoothstep(u_radii.x, u_radii.y, dist);
+                vec2 diff = v_texCoord - u_center;
+                diff.x *= u_aspect;
+                float dist = length(diff);
+                
+                float maxR = max(u_radii.y, u_radii.x + 0.0001);
+                float alpha = 1.0 - smoothstep(u_radii.x, maxR, dist);
                 
                 if (u_invert > 0.5) {
                     alpha = 1.0 - alpha;
@@ -97,7 +112,7 @@ export class MaskSystem {
             }
         `;
 
-        // Linear gradient shader
+        // Linear gradient shader - isotropic half-plane ramp
         const linearGradientFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
@@ -105,25 +120,45 @@ export class MaskSystem {
             
             uniform vec2 u_start;       // Start point in UV
             uniform vec2 u_end;         // End point in UV
-            uniform float u_feather;
+            uniform float u_aspect;     // width / height
             uniform float u_invert;
             
             void main() {
-                vec2 dir = u_end - u_start;
-                float len = length(dir);
-                vec2 norm = dir / len;
+                vec2 p = v_texCoord;
+                p.x *= u_aspect;
+                vec2 s = u_start;
+                s.x *= u_aspect;
+                vec2 e = u_end;
+                e.x *= u_aspect;
                 
-                float proj = dot(v_texCoord - u_start, norm);
-                float t = proj / len;
+                vec2 dir = e - s;
+                float lenSq = dot(dir, dir);
                 
-                float alpha = smoothstep(0.0, u_feather / len, t) * 
-                              (1.0 - smoothstep(1.0 - u_feather / len, 1.0, t));
+                float alpha = 1.0;
+                if (lenSq > 0.000001) {
+                    float t = clamp(dot(p - s, dir) / lenSq, 0.0, 1.0);
+                    alpha = 1.0 - smoothstep(0.0, 1.0, t);
+                }
                 
                 if (u_invert > 0.5) {
                     alpha = 1.0 - alpha;
                 }
                 
                 fragColor = vec4(1.0, 1.0, 1.0, alpha);
+            }
+        `;
+
+        // Mask invert shader
+        const maskInvertFragment = `#version 300 es
+            precision highp float;
+            in vec2 v_texCoord;
+            out vec4 fragColor;
+            
+            uniform sampler2D u_mask;
+            
+            void main() {
+                float maskValue = texture(u_mask, v_texCoord).a;
+                fragColor = vec4(1.0, 1.0, 1.0, 1.0 - maskValue);
             }
         `;
 
@@ -221,14 +256,15 @@ export class MaskSystem {
         this.programs.set('brushStamp', this._createProgram(vertexShader, brushStampFragment));
         this.programs.set('radialGradient', this._createProgram(vertexShader, radialGradientFragment));
         this.programs.set('linearGradient', this._createProgram(vertexShader, linearGradientFragment));
+        this.programs.set('maskInvert', this._createProgram(vertexShader, maskInvertFragment));
         this.programs.set('maskComposite', this._createProgram(vertexShader, maskCompositeFragment));
         this.programs.set('maskOverlay', this._createProgram(vertexShader, maskOverlayFragment));
         this.programs.set('maskedAdjustment', this._createProgram(vertexShader, maskedAdjustmentFragment));
-
     }
 
     _createProgram(vertexSource, fragmentSource) {
         const gl = this.gl;
+        if (!gl) return null;
 
         const vertexShader = this._compileShader(gl.VERTEX_SHADER, vertexSource);
         const fragmentShader = this._compileShader(gl.FRAGMENT_SHADER, fragmentSource);
@@ -254,6 +290,7 @@ export class MaskSystem {
 
     _compileShader(type, source) {
         const gl = this.gl;
+        if (!gl) return null;
         const shader = gl.createShader(type);
         gl.shaderSource(shader, source);
         gl.compileShader(shader);
@@ -269,13 +306,21 @@ export class MaskSystem {
 
     /**
      * Create a new adjustment layer with mask
+     * @param {string} type - 'brush' | 'radial' | 'gradient'
+     * @param {string} [name] - Optional custom name
      */
-    createLayer(type = 'brush') {
+    createLayer(type = 'brush', name = null) {
         const gl = this.gl;
-        const width = this.gpu.width;
-        const height = this.gpu.height;
+        const width = this.gpu?.width || 0;
+        const height = this.gpu?.height || 0;
 
-        // Create mask texture (single channel would be ideal, using RGBA for compatibility)
+        // If dimensions not yet set (no image loaded), queue layer for creation on load
+        if (width <= 0 || height <= 0 || !gl) {
+            this._pendingLayers.push({ type, name });
+            return null;
+        }
+
+        // Create mask texture
         const maskTexture = gl.createTexture();
         if (!maskTexture) return null;
         gl.bindTexture(gl.TEXTURE_2D, maskTexture);
@@ -297,14 +342,16 @@ export class MaskSystem {
 
         // Generate sequential layer name
         this._layerCounter = (this._layerCounter || 0) + 1;
-        const defaultName = `${type}_${this._layerCounter}`;
+        const defaultName = name || `${type}_${this._layerCounter}`;
 
         const layer = {
-            id: Date.now(),
+            id: Date.now() + Math.random(),
             type: type,  // 'brush', 'radial', 'gradient'
-            name: defaultName,  // Editable layer name
+            name: defaultName,
             maskTexture: maskTexture,
             maskFramebuffer: maskFramebuffer,
+            width: width,
+            height: height,
             adjustments: {
                 exposure: 0,
                 contrast: 0,
@@ -315,7 +362,6 @@ export class MaskSystem {
                 saturation: 0,
                 clarity: 0
             },
-            // For radial/gradient types
             shape: null,
             visible: true,
             strokes: [] // History of brush strokes for this layer
@@ -328,45 +374,177 @@ export class MaskSystem {
     }
 
     /**
-     * Create a brush mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
+     * Create a brush mask layer (alias)
      */
     createBrushLayer(name) {
-        const layer = this.createLayer('brush');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('brush', name);
     }
 
     /**
-     * Create a radial mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
+     * Create a radial mask layer (alias)
      */
     createRadialLayer(name) {
-        const layer = this.createLayer('radial');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('radial', name);
     }
 
     /**
-     * Create a gradient/linear mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
+     * Create a gradient/linear mask layer (alias)
      */
     createGradientLayer(name) {
-        const layer = this.createLayer('gradient');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('gradient', name);
+    }
+
+    createLinearLayer(name) {
+        return this.createGradientLayer(name);
     }
 
     /**
-     * Create a linear mask layer (alias for createGradientLayer)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
+     * Duplicate a layer
      */
-    createLinearLayer(name) {
-        return this.createGradientLayer(name);
+    duplicateLayer(index) {
+        if (index < 0 || index >= this.layers.length) return null;
+        const src = this.layers[index];
+        const newLayer = this.createLayer(src.type, `${src.name} Copy`);
+        if (!newLayer) return null;
+
+        newLayer.adjustments = { ...src.adjustments };
+        newLayer.shape = src.shape ? { ...src.shape } : null;
+        newLayer.strokes = src.strokes ? JSON.parse(JSON.stringify(src.strokes)) : [];
+        newLayer.visible = src.visible !== false;
+
+        this.replayLayer(newLayer.id);
+        return newLayer;
+    }
+
+    /**
+     * Delete a layer
+     */
+    deleteLayer(index) {
+        if (index < 0 || index >= this.layers.length) return;
+
+        const layer = this.layers[index];
+        const gl = this.gl;
+
+        if (layer.maskTexture) gl.deleteTexture(layer.maskTexture);
+        if (layer.maskFramebuffer) gl.deleteFramebuffer(layer.maskFramebuffer);
+
+        this.layers.splice(index, 1);
+
+        if (this.activeLayerIndex === index) {
+            this.activeLayerIndex = Math.min(index, this.layers.length - 1);
+        } else if (this.activeLayerIndex > index) {
+            this.activeLayerIndex--;
+        }
+    }
+
+    /**
+     * Toggle layer visibility
+     */
+    toggleLayerVisibility(index) {
+        if (index >= 0 && index < this.layers.length) {
+            this.layers[index].visible = !this.layers[index].visible;
+            return this.layers[index].visible;
+        }
+        return false;
+    }
+
+    /**
+     * Clear the active layer's mask
+     */
+    clearActiveMask() {
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+
+        const layer = this.layers[this.activeLayerIndex];
+        const gl = this.gl;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        layer.strokes = [];
+        layer.shape = null;
+    }
+
+    /**
+     * Invert the active layer's mask
+     */
+    invertActiveMask() {
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+        const layer = this.layers[this.activeLayerIndex];
+        if (!layer) return;
+
+        if (layer.shape && (layer.type === 'radial' || layer.type === 'gradient')) {
+            layer.shape.invert = !layer.shape.invert;
+            if (layer.type === 'radial') {
+                this.createRadialMask(
+                    layer.shape.centerX,
+                    layer.shape.centerY,
+                    layer.shape.innerRadius,
+                    layer.shape.outerRadius,
+                    layer.shape.invert
+                );
+            } else {
+                this.createLinearMask(
+                    layer.shape.startX,
+                    layer.shape.startY,
+                    layer.shape.endX,
+                    layer.shape.endY,
+                    layer.shape.feather,
+                    layer.shape.invert
+                );
+            }
+            return;
+        }
+
+        const gl = this.gl;
+        const program = this.programs.get('maskInvert');
+        if (!program || !layer.maskTexture) return;
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+
+        // Render inverted mask to a temp texture, then swap
+        const tempTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tempTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        const tempFBO = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, tempFBO);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tempTex, 0);
+
+        gl.viewport(0, 0, width, height);
+        gl.useProgram(program);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
+        gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // Swap textures
+        gl.deleteTexture(layer.maskTexture);
+        layer.maskTexture = tempTex;
+
+        // Re-bind to layer framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, layer.maskTexture, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.deleteFramebuffer(tempFBO);
     }
 
     /**
@@ -376,11 +554,13 @@ export class MaskSystem {
      * @param {boolean} record - Whether to record this stroke in history
      */
     paintBrush(x, y, record = true) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+        const layer = this.layers[this.activeLayerIndex];
+        if (!layer) return;
 
         // Record stroke
         if (record) {
-            const layer = this.layers[this.activeLayerIndex];
+            if (!layer.strokes) layer.strokes = [];
             layer.strokes.push({
                 type: 'brush',
                 x, y,
@@ -388,7 +568,6 @@ export class MaskSystem {
             });
         }
 
-        const layer = this.layers[this.activeLayerIndex];
         if (layer.type !== 'brush') return;
 
         const gl = this.gl;
@@ -397,48 +576,38 @@ export class MaskSystem {
 
         const width = this.gpu.width;
         const height = this.gpu.height;
+        if (width <= 0 || height <= 0) return;
 
-        // Convert to UV coordinates for FBO rendering
-        // Screen coords: y=0 at top, y=height at bottom
-        // FBO coords (texCoordBufferFBO): y=0 at bottom, y=1 at top
-        // So we flip Y: when user clicks at top (y≈0), centerY should be ≈1
+        // FBO coords: y=0 at bottom, y=1 at top -> Flip Y
         const centerX = x / width;
-        const centerY = 1.0 - (y / height);  // Flip Y for FBO coordinate system
-        const radiusX = this.brushSettings.size / width;
-        const radiusY = this.brushSettings.size / height;
-        const radius = Math.max(radiusX, radiusY);
+        const centerY = 1.0 - (y / height);
+        const aspect = width / height;
+        const radius = this.brushSettings.size / height;
 
-        // Render to mask framebuffer
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
 
-        // Set up blending based on add/erase mode
         gl.enable(gl.BLEND);
         if (this.brushSettings.erase) {
-            // Erase mode: subtract source alpha from destination
             gl.blendEquation(gl.FUNC_REVERSE_SUBTRACT);
             gl.blendFunc(gl.ONE, gl.ONE);
         } else {
-            // Add mode: blend source onto destination
             gl.blendEquation(gl.FUNC_ADD);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         }
 
         gl.useProgram(program);
 
-        // Set uniforms (no u_erase - blending handles it)
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), centerX, centerY);
         gl.uniform1f(gl.getUniformLocation(program, 'u_radius'), radius);
         gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
-        gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
         gl.uniform1f(gl.getUniformLocation(program, 'u_opacity'), (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100));
+        gl.uniform1f(gl.getUniformLocation(program, 'u_aspect'), aspect);
 
-        // Draw full-screen quad
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        // Use FBO texture coords - consistent with WebGL FBO orientation
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
@@ -452,34 +621,15 @@ export class MaskSystem {
     }
 
     /**
-     * Record a brush dab (internal use or for atomic undo)
-     */
-    _recordBrush(x, y) {
-        if (this.activeLayerIndex < 0) return;
-        const layer = this.layers[this.activeLayerIndex];
-
-        layer.strokes.push({
-            type: 'brush',
-            x, y,
-            settings: { ...this.brushSettings }
-        });
-    }
-
-    /**
      * Paint a stroke from one point to another with interpolation
-     * This creates smooth, natural strokes by placing dabs at regular intervals
-     * @param {number} x1 - Start X in image pixels
-     * @param {number} y1 - Start Y in image pixels
-     * @param {number} x2 - End X in image pixels
-     * @param {number} y2 - End Y in image pixels
-     * @param {boolean} record - Whether to record this stroke in history
      */
     paintStroke(x1, y1, x2, y2, record = true) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+        const layer = this.layers[this.activeLayerIndex];
+        if (!layer) return;
 
-        // Record stroke
         if (record) {
-            const layer = this.layers[this.activeLayerIndex];
+            if (!layer.strokes) layer.strokes = [];
             layer.strokes.push({
                 type: 'stroke',
                 x1, y1, x2, y2,
@@ -487,22 +637,12 @@ export class MaskSystem {
             });
         }
 
-        // Spacing as percentage of brush size (15-25% gives natural results)
         const spacing = Math.max(2, this.brushSettings.size * 0.18);
         const dx = x2 - x1;
         const dy = y2 - y1;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // If distance is small, just paint a single dot (but don't record if we already recorded a stroke)
-        // Actually, for simplicity in the 'brush' tool handler, 'mousedown' calls paintBrush (single dot),
-        // and 'mousemove' calls paintStroke.
-        // To avoid double recording for the initial dot if paintStroke is called with small dist,
-        // we rely on the caller structure. 
-        // Logic: paintBrush is for single clicks. paintStroke is for drag.
-
         if (dist < 1) {
-            // Points are essentially the same, just paint one dab
-            // We pass false for record because we already recorded the stroke wrapper above
             this.paintBrush(x2, y2, false);
             return;
         }
@@ -510,43 +650,53 @@ export class MaskSystem {
         const steps = Math.ceil(dist / spacing);
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
-            const x = x1 + dx * t;
-            const y = y1 + dy * t;
-            this.paintBrush(x, y, false); // Don't record individual interpolated dabs
+            this.paintBrush(x1 + dx * t, y1 + dy * t, false);
         }
     }
 
     /**
-     * Replay all strokes on a layer to restore its state
+     * Replay all strokes or redraw shape on a layer
      */
     replayLayer(layerId) {
         const layer = this.layers.find(l => l.id === layerId);
         if (!layer) return;
 
-        // Save current context
         const prevActiveIndex = this.activeLayerIndex;
         const prevSettings = { ...this.brushSettings };
-
-        // Set active layer for painting
         this.activeLayerIndex = this.layers.indexOf(layer);
 
-        // Clear the mask
-        const gl = this.gl;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (layer.type === 'radial' && layer.shape) {
+            this.createRadialMask(
+                layer.shape.centerX,
+                layer.shape.centerY,
+                layer.shape.innerRadius,
+                layer.shape.outerRadius,
+                layer.shape.invert
+            );
+        } else if (layer.type === 'gradient' && layer.shape) {
+            this.createLinearMask(
+                layer.shape.startX,
+                layer.shape.startY,
+                layer.shape.endX,
+                layer.shape.endY,
+                layer.shape.feather,
+                layer.shape.invert
+            );
+        } else {
+            // Clear the mask
+            const gl = this.gl;
+            if (layer.maskFramebuffer) {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            }
+        }
 
-        // Replay strokes
-        // We need to optimize widespread replays. 
-        // For now, simple iteration.
+        // Replay brush strokes if present
         if (layer.strokes && layer.strokes.length > 0) {
-            console.log(`Replaying ${layer.strokes.length} strokes for layer ${layer.name}`);
-
             for (const op of layer.strokes) {
-                // Restore settings for this stroke
-                this.brushSettings = op.settings;
-
+                this.brushSettings = { ...op.settings };
                 if (op.type === 'brush') {
                     this.paintBrush(op.x, op.y, false);
                 } else if (op.type === 'stroke') {
@@ -555,7 +705,6 @@ export class MaskSystem {
             }
         }
 
-        // Restore context
         this.brushSettings = prevSettings;
         this.activeLayerIndex = prevActiveIndex;
     }
@@ -564,25 +713,24 @@ export class MaskSystem {
      * Create a radial gradient mask
      */
     createRadialMask(centerX, centerY, innerRadius, outerRadius, invert = false) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         const gl = this.gl;
         const program = this.programs.get('radialGradient');
-        if (!program) return;
+        if (!program || !layer) return;
 
         const width = this.gpu.width;
         const height = this.gpu.height;
+        if (width <= 0 || height <= 0) return;
 
-        // Store shape for editing
         layer.shape = { centerX, centerY, innerRadius, outerRadius, invert };
 
-        // Convert to UV with Y-flip for FBO coordinate system
-        // Screen coords: y=0 at top; FBO coords: y=0 at bottom
         const cx = centerX / width;
-        const cy = 1.0 - (centerY / height);  // Flip Y for FBO coords
-        const ir = innerRadius / Math.max(width, height);
-        const or = outerRadius / Math.max(width, height);
+        const cy = 1.0 - (centerY / height);
+        const aspect = width / height;
+        const ir = innerRadius / height;
+        const or = outerRadius / height;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
@@ -593,14 +741,13 @@ export class MaskSystem {
 
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), cx, cy);
         gl.uniform2f(gl.getUniformLocation(program, 'u_radii'), ir, or);
-        gl.uniform1f(gl.getUniformLocation(program, 'u_feather'), 0.0);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_aspect'), aspect);
         gl.uniform1f(gl.getUniformLocation(program, 'u_invert'), invert ? 1.0 : 0.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        // Use FBO texture coords for consistency
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
@@ -614,15 +761,16 @@ export class MaskSystem {
      * Create a linear gradient mask
      */
     createLinearMask(startX, startY, endX, endY, feather = 0.5, invert = false) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         const gl = this.gl;
         const program = this.programs.get('linearGradient');
-        if (!program) return;
+        if (!program || !layer) return;
 
         const width = this.gpu.width;
         const height = this.gpu.height;
+        if (width <= 0 || height <= 0) return;
 
         layer.shape = { startX, startY, endX, endY, feather, invert };
 
@@ -630,6 +778,7 @@ export class MaskSystem {
         const sy = 1.0 - (startY / height);
         const ex = endX / width;
         const ey = 1.0 - (endY / height);
+        const aspect = width / height;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
@@ -640,7 +789,7 @@ export class MaskSystem {
 
         gl.uniform2f(gl.getUniformLocation(program, 'u_start'), sx, sy);
         gl.uniform2f(gl.getUniformLocation(program, 'u_end'), ex, ey);
-        gl.uniform1f(gl.getUniformLocation(program, 'u_feather'), feather);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_aspect'), aspect);
         gl.uniform1f(gl.getUniformLocation(program, 'u_invert'), invert ? 1.0 : 0.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
@@ -657,10 +806,88 @@ export class MaskSystem {
     }
 
     /**
-     * Get the active layer's adjustments
+     * Called when image dimensions change
+     */
+    onImageDimensionsChanged() {
+        const gl = this.gl;
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+        if (width <= 0 || height <= 0 || !gl) return;
+
+        // Process any queued layers
+        if (this._pendingLayers && this._pendingLayers.length > 0) {
+            const pending = [...this._pendingLayers];
+            this._pendingLayers = [];
+            for (const item of pending) {
+                this.createLayer(item.type, item.name);
+            }
+        }
+
+        // Recreate textures and framebuffers for existing layers
+        for (const layer of this.layers) {
+            if (layer.width !== width || layer.height !== height) {
+                if (layer.maskTexture) gl.deleteTexture(layer.maskTexture);
+                if (layer.maskFramebuffer) gl.deleteFramebuffer(layer.maskFramebuffer);
+
+                layer.maskTexture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+                layer.maskFramebuffer = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, layer.maskTexture, 0);
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+                layer.width = width;
+                layer.height = height;
+
+                this.replayLayer(layer.id);
+            }
+        }
+
+        // Clean up ping-pong buffers so they resize
+        if (this._pingPongA) {
+            gl.deleteTexture(this._pingPongA);
+            gl.deleteTexture(this._pingPongB);
+            gl.deleteFramebuffer(this._pingPongFboA);
+            gl.deleteFramebuffer(this._pingPongFboB);
+            this._pingPongA = null;
+            this._pingPongB = null;
+            this._pingPongFboA = null;
+            this._pingPongFboB = null;
+        }
+    }
+
+    /**
+     * Check if active masks exist with non-zero adjustments
+     */
+    hasActiveMasks() {
+        return this.layers.length > 0 && this.layers.some(l => l.visible && Object.values(l.adjustments).some(v => v !== 0));
+    }
+
+    /**
+     * Toggle mask overlay
+     */
+    toggleOverlay() {
+        this.showOverlay = !this.showOverlay;
+        return this.showOverlay;
+    }
+
+    shouldShowOverlay() {
+        return Boolean(this.isMaskMode !== false && (this.showOverlay || this._isPaintingOverlay) && this.activeLayerIndex >= 0 && this.layers.length > 0);
+    }
+
+    /**
+     * Get active layer adjustments
      */
     getActiveAdjustments() {
-        if (this.activeLayerIndex < 0) return null;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return null;
         return this.layers[this.activeLayerIndex].adjustments;
     }
 
@@ -668,7 +895,7 @@ export class MaskSystem {
      * Get the active layer object
      */
     getActiveLayer() {
-        if (this.activeLayerIndex < 0) return null;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return null;
         return this.layers[this.activeLayerIndex];
     }
 
@@ -676,56 +903,14 @@ export class MaskSystem {
      * Set adjustment on active layer
      */
     setAdjustment(name, value) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
         this.layers[this.activeLayerIndex].adjustments[name] = value;
     }
 
-    /**
-     * Set adjustment on active layer (alias for UI compatibility)
-     */
     setActiveAdjustment(name, value) {
         this.setAdjustment(name, value);
     }
 
-    /**
-     * Delete a layer
-     */
-    deleteLayer(index) {
-        if (index < 0 || index >= this.layers.length) return;
-
-        const layer = this.layers[index];
-        const gl = this.gl;
-
-        gl.deleteTexture(layer.maskTexture);
-        gl.deleteFramebuffer(layer.maskFramebuffer);
-
-        this.layers.splice(index, 1);
-
-        if (this.activeLayerIndex >= this.layers.length) {
-            this.activeLayerIndex = this.layers.length - 1;
-        }
-    }
-
-    /**
-     * Clear the active layer's mask
-     */
-    clearActiveMask() {
-        if (this.activeLayerIndex < 0) return;
-
-        const layer = this.layers[this.activeLayerIndex];
-        const gl = this.gl;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-
-    /**
-     * Extract raw WebGLTexture from either a raw WebGLTexture or a backend texture wrapper
-     * @param {WebGLTexture|Object} tex
-     * @returns {WebGLTexture|null}
-     */
     _getRawTexture(tex) {
         if (!tex) return null;
         if (typeof WebGLTexture !== 'undefined' && tex instanceof WebGLTexture) {
@@ -737,11 +922,6 @@ export class MaskSystem {
         return null;
     }
 
-    /**
-     * Safely check if a value is a valid WebGLTexture without throwing WebIDL TypeErrors
-     * @param {any} tex
-     * @returns {boolean}
-     */
     _isValidTexture(tex) {
         if (!tex || typeof WebGLTexture === 'undefined') return false;
         const raw = (tex instanceof WebGLTexture) ? tex : tex?._internal;
@@ -754,7 +934,7 @@ export class MaskSystem {
     }
 
     /**
-     * Render the active mask as a red overlay for visual feedback during painting
+     * Render the active mask as a red overlay
      */
     renderMaskOverlay() {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
@@ -768,23 +948,19 @@ export class MaskSystem {
         const width = this.gpu.width;
         const height = this.gpu.height;
 
-        // Enable blending to overlay on existing canvas content
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.useProgram(program);
 
-        // Bind mask texture
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
         gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 0);
 
-        // Draw full-screen quad
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
 
-        // Use FBO texture coords to match mask coordinate system
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
@@ -795,11 +971,7 @@ export class MaskSystem {
     }
 
     /**
-     * Apply all layer adjustments composited with masks.
-     * Uses ping-pong buffers to properly chain multiple layer effects.
-     * Accepts either a raw WebGLTexture or a backend texture wrapper ({ width, height, _internal: WebGLTexture })
-     * @param {WebGLTexture|Object} baseTexture - The base processed image texture
-     * @returns {WebGLTexture|Object} Output texture in same wrapper structure as input
+     * Apply all layer adjustments composited with masks
      */
     applyMaskedAdjustments(baseTexture) {
         if (this.layers.length === 0 || !baseTexture) return baseTexture;
@@ -807,7 +979,6 @@ export class MaskSystem {
         const rawBase = this._getRawTexture(baseTexture);
         if (!rawBase || !this._isValidTexture(rawBase)) return baseTexture;
 
-        // Check if any layer actually has non-zero adjustments
         const hasAdjustments = this.layers.some(layer =>
             layer.visible && layer.adjustments && Object.values(layer.adjustments).some(v => v !== 0)
         );
@@ -820,9 +991,8 @@ export class MaskSystem {
         const width = this.gpu.width;
         const height = this.gpu.height;
 
-        // Initialize ping-pong buffers if needed
+        // Initialize ping-pong buffers
         if (!this._pingPongA || this._pingPongWidth !== width || this._pingPongHeight !== height) {
-            // Clean up old resources
             if (this._pingPongA) gl.deleteTexture(this._pingPongA);
             if (this._pingPongB) gl.deleteTexture(this._pingPongB);
             if (this._pingPongFboA) gl.deleteFramebuffer(this._pingPongFboA);
@@ -831,7 +1001,6 @@ export class MaskSystem {
             this._pingPongWidth = width;
             this._pingPongHeight = height;
 
-            // Create texture A
             this._pingPongA = gl.createTexture();
             if (!this._pingPongA) return baseTexture;
             gl.bindTexture(gl.TEXTURE_2D, this._pingPongA);
@@ -845,7 +1014,6 @@ export class MaskSystem {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._pingPongFboA);
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._pingPongA, 0);
 
-            // Create texture B
             this._pingPongB = gl.createTexture();
             if (!this._pingPongB) {
                 gl.deleteTexture(this._pingPongA);
@@ -871,20 +1039,16 @@ export class MaskSystem {
         let writeFbo = this._pingPongFboA;
         let useA = true;
 
-        // For each layer with adjustments, apply them
         for (const layer of this.layers) {
             if (!layer.visible) continue;
 
-            // Check if any adjustments are non-zero
             const adj = layer.adjustments;
             if (!adj || Object.values(adj).every(v => v === 0)) {
                 continue;
             }
 
-            // Apply masked adjustments
             gl.useProgram(program);
 
-            // Bind base texture (current state)
             if (!this._isValidTexture(readTexture)) {
                 return baseTexture;
             }
@@ -892,24 +1056,19 @@ export class MaskSystem {
             gl.bindTexture(gl.TEXTURE_2D, readTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_base'), 0);
 
-            // Bind mask texture — guard against stale/invalid texture handle
-            // (can occur after a WebGL context loss or canvas resize)
             if (!this._isValidTexture(layer.maskTexture)) {
-                console.warn('[MaskSystem] Skipping layer with invalid maskTexture:', layer.name);
                 continue;
             }
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 1);
 
-            // Set adjustment uniforms
             gl.uniform1f(gl.getUniformLocation(program, 'u_exposure'), adj.exposure || 0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), (adj.contrast || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_shadows'), (adj.shadows || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_temperature'), (adj.temperature || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), (adj.saturation || 0) / 100);
 
-            // Draw full-screen quad
             gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
             gl.enableVertexAttribArray(program.a_position);
             gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
@@ -918,12 +1077,10 @@ export class MaskSystem {
             gl.enableVertexAttribArray(program.a_texCoord);
             gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
-            // Render to output framebuffer
             gl.bindFramebuffer(gl.FRAMEBUFFER, writeFbo);
             gl.viewport(0, 0, width, height);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-            // Swap ping-pong buffers
             readTexture = writeTexture;
             if (useA) {
                 writeTexture = this._pingPongB;
@@ -942,7 +1099,6 @@ export class MaskSystem {
             return baseTexture;
         }
 
-        // If caller passed a wrapped texture, return a wrapped texture
         if (baseTexture && typeof baseTexture === 'object' && ('_internal' in baseTexture)) {
             return {
                 width: baseTexture.width || width,
@@ -952,5 +1108,30 @@ export class MaskSystem {
         }
 
         return readTexture;
+    }
+
+    /**
+     * Reset and dispose of all layers and resources
+     */
+    reset() {
+        const gl = this.gl;
+        for (const layer of this.layers) {
+            if (layer.maskTexture) gl.deleteTexture(layer.maskTexture);
+            if (layer.maskFramebuffer) gl.deleteFramebuffer(layer.maskFramebuffer);
+        }
+        this.layers = [];
+        this.activeLayerIndex = -1;
+        this.showOverlay = false;
+
+        if (this._pingPongA) {
+            gl.deleteTexture(this._pingPongA);
+            gl.deleteTexture(this._pingPongB);
+            gl.deleteFramebuffer(this._pingPongFboA);
+            gl.deleteFramebuffer(this._pingPongFboB);
+            this._pingPongA = null;
+            this._pingPongB = null;
+            this._pingPongFboA = null;
+            this._pingPongFboB = null;
+        }
     }
 }

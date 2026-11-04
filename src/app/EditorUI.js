@@ -176,6 +176,21 @@ export class EditorUI {
                 const panelId = tab.dataset.panel;
                 document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
                 document.getElementById(`panel-${panelId}`)?.classList.add('active');
+
+                if (panelId === 'masks') {
+                    if (this.masks) this.masks.isMaskMode = true;
+                    const activeBtn = document.querySelector('.mask-tool-btn.active');
+                    const tool = activeBtn ? activeBtn.id.replace('mask-tool-', '') : 'brush';
+                    this.setMaskTool(tool, false);
+                    this.updateLayersList();
+                    this.syncLayerUI();
+                    this.gpu.render();
+                } else if (panelId === 'develop') {
+                    if (this.masks) this.masks.isMaskMode = false;
+                    this.state.setTool('develop');
+                    if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
+                    this.gpu.render();
+                }
             });
         });
 
@@ -183,7 +198,7 @@ export class EditorUI {
         document.querySelectorAll('.mask-tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const toolId = btn.id.replace('mask-tool-', '');
-                this.setMaskTool(toolId);
+                this.setMaskTool(toolId, true);
             });
         });
     }
@@ -231,6 +246,16 @@ export class EditorUI {
             this.relightingProModule.deactivate();
         }
 
+        // Reset any in-progress mask drawing when switching modes
+        if (['brush', 'radial', 'gradient'].includes(previousMode)) {
+            this.state.setPainting(false, null);
+            this._maskDragStart = null;
+        }
+
+        if (this.masks) {
+            this.masks.isMaskMode = (mode === 'develop' && document.querySelector('#develop-mode-tabs [data-panel="masks"]')?.classList.contains('active'));
+        }
+
         this.state.setTool(mode);
 
         // Update toolbar button UI
@@ -259,10 +284,22 @@ export class EditorUI {
         if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
 
         switch (mode) {
-            case 'develop':
+            case 'develop': {
                 document.getElementById('develop-mode-tabs')?.style.setProperty('display', 'flex');
-                document.getElementById('panel-develop')?.classList.add('active');
+                const masksTabActive = document.querySelector('#develop-mode-tabs [data-panel="masks"]')?.classList.contains('active');
+                if (masksTabActive) {
+                    document.getElementById('panel-masks')?.classList.add('active');
+                    const activeBtn = document.querySelector('.mask-tool-btn.active');
+                    const tool = activeBtn ? activeBtn.id.replace('mask-tool-', '') : 'brush';
+                    this.setMaskTool(tool, false);
+                    this.updateLayersList();
+                    this.syncLayerUI();
+                } else {
+                    document.getElementById('panel-develop')?.classList.add('active');
+                    this.state.setTool('develop');
+                }
                 break;
+            }
 
 
 
@@ -349,8 +386,14 @@ export class EditorUI {
 
     /**
      * Set active mask tool (brush, radial, gradient)
+     * @param {string} tool - 'brush' | 'radial' | 'gradient'
+     * @param {boolean} [autoCreate=true] - Whether to auto-create a layer if none matches
      */
-    setMaskTool(tool) {
+    setMaskTool(tool, autoCreate = true) {
+        if (this.masks) {
+            this.masks.isMaskMode = true;
+        }
+
         // Update mask tool button UI
         document.querySelectorAll('.mask-tool-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`mask-tool-${tool}`)?.classList.add('active');
@@ -376,19 +419,26 @@ export class EditorUI {
             if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
         }
 
-        // Create a new layer if none exists or active layer is different type
         if (this.masks) {
             const currentLayer = this.masks.getActiveLayer?.();
-            if (!currentLayer || currentLayer.type !== tool) {
-                if (typeof this.masks.createLayer === 'function') {
-                    this.masks.createLayer(tool);
-                } else if (typeof this.masks.createBrushLayer === 'function' && tool === 'brush') {
-                    this.masks.createBrushLayer();
-                } else if (typeof this.masks.createRadialLayer === 'function' && tool === 'radial') {
-                    this.masks.createRadialLayer();
-                } else if (typeof this.masks.createGradientLayer === 'function' && tool === 'gradient') {
-                    this.masks.createGradientLayer();
-                }
+            if (currentLayer && currentLayer.type === tool) {
+                this.updateLayersList();
+                this.syncLayerUI();
+                return;
+            }
+
+            // Look for existing layer with matching type
+            const existingIndex = this.masks.layers.findIndex(l => l.type === tool);
+            if (existingIndex >= 0) {
+                this.masks.activeLayerIndex = existingIndex;
+                this.updateLayersList();
+                this.syncLayerUI();
+                return;
+            }
+
+            // Create new layer if autoCreate is true or no layers exist
+            if (autoCreate || this.masks.layers.length === 0) {
+                const layer = this.masks.createLayer(tool);
                 this.updateLayersList();
                 this.syncLayerUI();
 
@@ -399,6 +449,11 @@ export class EditorUI {
                     this.masks.createRadialMask(w / 2, h / 2, Math.min(w, h) * 0.1, Math.min(w, h) * 0.35, false);
                 } else if (tool === 'gradient' && this.masks.createLinearMask) {
                     this.masks.createLinearMask(w / 2, h * 0.2, w / 2, h * 0.8, 0.5, false);
+                }
+
+                if (layer) {
+                    this.gpu.render();
+                    this._pushHistoryDebounced();
                 }
             }
         }
@@ -557,10 +612,47 @@ export class EditorUI {
         const btnNewLayer = document.getElementById('btn-new-layer');
         if (btnNewLayer) {
             btnNewLayer.addEventListener('click', () => {
-                this.masks.createLayer('brush');
+                const currentTool = ['brush', 'radial', 'gradient'].includes(this.state.currentTool)
+                    ? this.state.currentTool
+                    : 'brush';
+                this.masks.createLayer(currentTool);
                 this.updateLayersList();
                 this.syncLayerUI();
-                this.setTool('brush');
+                this.setTool(currentTool);
+                this.gpu.render();
+                this._pushHistoryDebounced();
+            });
+        }
+
+        // Duplicate layer button
+        const btnDuplicate = document.getElementById('btn-duplicate-layer');
+        if (btnDuplicate) {
+            btnDuplicate.addEventListener('click', () => {
+                this.layersModule.duplicateActiveLayer();
+            });
+        }
+
+        // Invert mask button
+        const btnInvert = document.getElementById('btn-invert-mask');
+        if (btnInvert) {
+            btnInvert.addEventListener('click', () => {
+                this.layersModule.invertActiveMask();
+            });
+        }
+
+        // Clear mask button
+        const btnClearMask = document.getElementById('btn-clear-mask-layer');
+        if (btnClearMask) {
+            btnClearMask.addEventListener('click', () => {
+                this.layersModule.clearActiveMask();
+            });
+        }
+
+        // Toggle overlay button
+        const btnToggleOverlay = document.getElementById('btn-toggle-mask-overlay');
+        if (btnToggleOverlay) {
+            btnToggleOverlay.addEventListener('click', () => {
+                this.layersModule.toggleOverlay();
             });
         }
     }
@@ -637,7 +729,9 @@ export class EditorUI {
      * Set brush mode (add/erase)
      */
     setBrushMode(erase) {
-        this.masks.brushSettings.erase = erase;
+        if (this.masks?.brushSettings) {
+            this.masks.brushSettings.erase = erase;
+        }
         this.state.setBrushSetting('erase', erase);
 
         const btnAdd = document.getElementById('btn-brush-add');
@@ -692,11 +786,14 @@ export class EditorUI {
 
         if (canvas) {
             canvas.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // Only primary mouse button
+                if (this.zoomPanModule?.zoom?.isPanning) return; // Ignore during Space-panning
+
                 const tool = this.state.currentTool;
                 if (!['brush', 'radial', 'gradient'].includes(tool)) return;
 
-                if (this.masks.activeLayerIndex < 0) {
-                    this.masks.createLayer(tool);
+                if (!this.masks || this.masks.activeLayerIndex < 0) {
+                    this.masks?.createLayer?.(tool);
                     this.updateLayersList();
                     this.syncLayerUI();
                 }
@@ -711,10 +808,16 @@ export class EditorUI {
                 if (tool === 'brush') {
                     this.masks.paintBrush(x, y);
                     this.renderWithMask(true);
+                } else if (tool === 'radial') {
+                    this.masks.createRadialMask(x, y, 0, 10, false);
+                    this.renderWithMask(true);
+                } else if (tool === 'gradient') {
+                    this.masks.createLinearMask(x, y, x, y, 0.5, false);
+                    this.renderWithMask(true);
                 }
             });
 
-            canvas.addEventListener('mouseup', () => {
+            const endMaskPainting = () => {
                 if (this.state.isPainting) {
                     this.state.setPainting(false, null);
                     this._maskDragStart = null;
@@ -723,18 +826,10 @@ export class EditorUI {
                         this._pushHistoryDebounced();
                     }
                 }
-            });
+            };
 
-            canvas.addEventListener('mouseleave', () => {
-                if (this.state.isPainting) {
-                    this.state.setPainting(false, null);
-                    this._maskDragStart = null;
-                    if (this.state.hasImage) {
-                        this.renderWithMask(false);
-                        this._pushHistoryDebounced();
-                    }
-                }
-            });
+            canvas.addEventListener('mouseup', endMaskPainting);
+            window.addEventListener('mouseup', endMaskPainting);
         }
     }
 
@@ -1239,6 +1334,18 @@ export class EditorUI {
                 this.state.setImage(img);
                 this.gpu.loadImage(img);
 
+                // Reset masks on new file load to prevent dimensions/state mismatch
+                if (this.masks) {
+                    if (typeof this.masks.reset === 'function') {
+                        this.masks.reset();
+                    } else {
+                        this.masks.layers = [];
+                        this.masks.activeLayerIndex = -1;
+                    }
+                }
+                this.updateLayersList();
+                this.syncLayerUI();
+
                 // Notify mask system of dimension change so it can update textures
                 if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
                     this.masks.onImageDimensionsChanged();
@@ -1299,24 +1406,15 @@ export class EditorUI {
      * @param {boolean} showOverlay - Whether to show red mask overlay during painting
      */
     renderWithMask(showOverlay = false) {
-        // Step 1: Render base image with global adjustments to texture
-        let resultTexture = this.gpu.renderToTexture();
+        if (!this.gpu?.backend?.isReady) return;
+        this.gpu.render(null, showOverlay);
+    }
 
-        // Guard: renderToTexture() returns null when no image is loaded yet
-        if (!resultTexture) return;
-
-        // Step 2: Apply masked adjustments (if any layers with adjustments)
-        if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
-        }
-
-        // Step 3: Blit result to canvas
-        this.gpu.blitToCanvas(resultTexture);
-
-        // Step 4: If painting, show red mask overlay for visual feedback
-        if (showOverlay && this.masks?.getActiveLayer?.()) {
-            this.masks.renderMaskOverlay?.();
-        }
+    /**
+     * Toggle mask overlay visualization on/off
+     */
+    toggleMaskOverlay() {
+        this.layersModule?.toggleOverlay();
     }
 
     /**

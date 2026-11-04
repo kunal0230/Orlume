@@ -93,6 +93,16 @@ export class GPUProcessor {
 
         // Processing framebuffer
         this._processedFBO = null;
+
+        // Mask system reference
+        this.maskSystem = null;
+    }
+
+    /**
+     * Attach mask system for compositing during renders
+     */
+    setMaskSystem(maskSystem) {
+        this.maskSystem = maskSystem;
     }
 
     /**
@@ -251,18 +261,46 @@ export class GPUProcessor {
     }
 
     /**
-     * Render with current adjustments
+     * Render with current adjustments and composite any active masks
+     * @param {Object|null} targetFBO - Optional target framebuffer
+     * @param {boolean} showOverlay - Whether to force mask overlay visualization
      */
-    render() {
+    render(targetFBO = null, showOverlay = false) {
         if (!this.inputTexture || !this.backend?.isReady) return;
-        console.log('[GPUProcessor] Rendering with backend:', this.backend.constructor.name);
-        this.backend.renderDevelop(this.inputTexture, this.params);
+
+        const wantsOverlay = showOverlay || (this.maskSystem?.shouldShowOverlay ? this.maskSystem.shouldShowOverlay() : this.maskSystem?.showOverlay);
+        const hasMasks = this.maskSystem && typeof this.maskSystem.hasActiveMasks === 'function' && this.maskSystem.hasActiveMasks();
+
+        if (hasMasks || (wantsOverlay && this.maskSystem?.getActiveLayer?.())) {
+            const baseTexture = this.renderToTexture();
+            if (baseTexture) {
+                const compositedTexture = hasMasks
+                    ? this.maskSystem.applyMaskedAdjustments(baseTexture)
+                    : baseTexture;
+
+                if (targetFBO) {
+                    this.backend.renderPassthrough(compositedTexture, targetFBO, true);
+                } else {
+                    this.blitToCanvas(compositedTexture);
+                }
+
+                if (wantsOverlay && typeof this.maskSystem?.renderMaskOverlay === 'function') {
+                    this.maskSystem.renderMaskOverlay();
+                }
+                return;
+            }
+        }
+
+        this.backend.renderDevelop(this.inputTexture, this.params, targetFBO);
     }
 
     /**
      * Export as ImageData
      */
     toImageData() {
+        if (this.maskSystem && typeof this.maskSystem.hasActiveMasks === 'function' && this.maskSystem.hasActiveMasks()) {
+            this.render();
+        }
         return this.backend?.toImageData?.() || null;
     }
 

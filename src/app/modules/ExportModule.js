@@ -88,8 +88,9 @@ export class ExportModule {
             // Make sure we have the latest render with all adjustments
             let resultTexture = this.gpu.renderToTexture();
             if (resultTexture) {
-                if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
-                    resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                const masks = this.masks || this.editor.masks || this.gpu.maskSystem;
+                if (masks && typeof masks.applyMaskedAdjustments === 'function') {
+                    resultTexture = masks.applyMaskedAdjustments(resultTexture);
                 }
                 this.gpu.blitToCanvas(resultTexture);
             }
@@ -102,8 +103,9 @@ export class ExportModule {
             // Render with current adjustments
             let resultTexture = this.gpu.renderToTexture();
             if (resultTexture) {
-                if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
-                    resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                const masks = this.masks || this.editor.masks || this.gpu.maskSystem;
+                if (masks && typeof masks.applyMaskedAdjustments === 'function') {
+                    resultTexture = masks.applyMaskedAdjustments(resultTexture);
                 }
                 this.gpu.blitToCanvas(resultTexture);
             }
@@ -189,8 +191,9 @@ export class ExportModule {
             this._updateFileSizeDisplay('--');
             return;
         }
-        if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
-            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        const masks = this.masks || this.editor.masks || this.gpu.maskSystem;
+        if (masks && typeof masks.applyMaskedAdjustments === 'function') {
+            resultTexture = masks.applyMaskedAdjustments(resultTexture);
         }
         this.gpu.blitToCanvas(resultTexture);
 

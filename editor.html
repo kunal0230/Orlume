@@ -142,7 +142,7 @@
                     <path d="M18 22L18 18M18 18L22 18M18 18L18 8a2 2 0 0 0-2-2H6" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-upscale" title="Upscale (U)">
+            <button class="tool-btn tool-down" id="tool-upscale" title="Upscale (U) - Service Temporarily Down">
                 <!-- Maximize/scale icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 3 21 3 21 9" />
@@ -157,7 +157,7 @@
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                 </svg>
             </button>
-            <button class="tool-btn" id="tool-healing" title="AI Spot Healing (H)">
+            <button class="tool-btn tool-down" id="tool-healing" title="AI Spot Healing (H) - Service Temporarily Down">
                 <!-- Bandaid icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 2l4 4-12 12-4-4z" />
@@ -181,7 +181,7 @@
             <div class="tool-divider"></div>
 
             <!-- AI Tools Group -->
-            <button class="tool-btn" id="tool-bg-remove" title="Remove Background">
+            <button class="tool-btn tool-down" id="tool-bg-remove" title="Remove Background - Service Temporarily Down">
                 <!-- Scissors icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="6" cy="6" r="3" />
@@ -270,7 +270,7 @@
             <!-- Develop Mode Tabs (shown when in develop mode) -->
             <div class="panel-tabs" id="develop-mode-tabs">
                 <button class="panel-tab active" data-panel="develop">Develop</button>
-                <button class="panel-tab" data-panel="masks">Masks</button>
+                <button class="panel-tab" data-panel="masks">Masks <span class="badge-beta">Beta</span></button>
             </div>
 
             <!-- 3D Mode Header (shown when in 3D mode) -->
@@ -507,9 +507,17 @@
 
                 <!-- Masks Panel -->
                 <div class="panel-section" id="panel-masks">
+                    <!-- Mask Beta Notice -->
+                    <div class="section" style="padding-bottom: 0;">
+                        <div class="tool-beta-banner">
+                            <span class="tool-beta-dot">✦</span>
+                            <span><strong>Masks (Beta)</strong>: Local adjustments and gradient masking are newly implemented and in active beta testing.</span>
+                        </div>
+                    </div>
+
                     <!-- Mask Tool Selector -->
                     <div class="section">
-                        <div class="section-header">Mask Tools</div>
+                        <div class="section-header">Mask Tools <span class="badge-beta">Beta</span></div>
                         <div class="mask-tool-selector">
                             <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -538,7 +546,16 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Layers</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div class="section-header" style="margin-bottom: 0;">Layers</div>
+                            <button class="btn btn-sm" id="btn-toggle-mask-overlay" title="Toggle red mask overlay (O)" style="font-size: 11px; padding: 4px 8px; display: flex; align-items: center; gap: 4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                </svg>
+                                <span>Overlay [O]</span>
+                            </button>
+                        </div>
                         <div class="mask-layers" id="mask-layers">
                             <div
                                 style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 20px;">
@@ -546,7 +563,10 @@
                                 Select a tool to create one.
                             </div>
                         </div>
-                        <button class="btn" id="btn-new-layer" style="width: 100%;">+ New Adjustment Layer</button>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn" id="btn-new-layer" style="flex: 2;">+ New Layer</button>
+                            <button class="btn" id="btn-duplicate-layer" title="Duplicate Layer" style="flex: 1;" disabled>Duplicate</button>
+                        </div>
                     </div>
 
                     <div class="section" id="brush-settings" style="display: none;">
@@ -654,6 +674,24 @@
                                 <span id="val-mask-saturation">0</span>
                             </div>
                             <input type="range" id="slider-mask-saturation" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div style="display: flex; gap: 8px; margin-top: 14px;">
+                            <button class="btn" id="btn-invert-mask" style="flex: 1; font-size: 11px; padding: 7px 0; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"></path>
+                                </svg>
+                                Invert Mask
+                            </button>
+                            <button class="btn" id="btn-clear-mask-layer" style="flex: 1; font-size: 11px; padding: 7px 0; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                                Clear Mask
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -861,6 +899,18 @@
                 <!-- Upscale Panel -->
                 <div class="panel-section" id="panel-upscale">
                     <div class="section">
+                        <div class="tool-offline-banner">
+                            <div class="tool-offline-header">
+                                <span class="tool-offline-dot">●</span>
+                                <span class="tool-offline-title">AI Upscaling Offline</span>
+                            </div>
+                            <p class="tool-offline-desc">
+                                AI Image Upscaling is currently offline while our neural processing server is undergoing maintenance.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="section">
                         <div class="section-header">Scale Factor</div>
                         <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
                             Choose how much to enlarge your image.
@@ -961,13 +1011,13 @@
                             <button class="btn" id="btn-upscale-cancel" style="flex: 1;">
                                 Cancel
                             </button>
-                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1;">
+                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1; opacity: 0.6; cursor: not-allowed;" disabled>
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                     stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                                     <polyline points="15 3 21 3 21 9" />
                                     <line x1="21" y1="3" x2="14" y2="10" />
                                 </svg>
-                                Apply Upscale
+                                Service Down
                             </button>
                         </div>
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
@@ -1083,6 +1133,19 @@
 
                 <!-- Healing Panel (AI Spot Healing) -->
                 <div class="panel-section" id="panel-healing">
+                    <!-- Status Indicator -->
+                    <div class="section">
+                        <div class="tool-offline-banner">
+                            <div class="tool-offline-header">
+                                <span class="tool-offline-dot">●</span>
+                                <span class="tool-offline-title">AI Spot Healing Offline</span>
+                            </div>
+                            <p class="tool-offline-desc">
+                                AI Inpainting (LaMa) cloud backend is currently undergoing maintenance. This tool is temporarily down.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Brush Settings -->
                     <div class="section">
                         <div class="section-header">Brush</div>
@@ -1112,8 +1175,8 @@
 
                     <!-- Actions -->
                     <div class="section">
-                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px;">
-                            Heal Selection
+                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px; opacity: 0.6; cursor: not-allowed;" disabled>
+                            Service Down (Maintenance)
                         </button>
                         <div class="btn-row" style="gap: 8px;">
                             <button class="btn" id="btn-clear-mask" style="flex: 1;">Clear Mask</button>
@@ -1445,7 +1508,16 @@
                 <div class="panel-section" id="panel-bg-remove">
                     <div class="section">
                         <div class="section-header">AI Background Removal</div>
-                        <button class="btn btn-primary" id="btn-remove-background" style="width: 100%;">
+                        <div class="tool-offline-banner">
+                            <div class="tool-offline-header">
+                                <span class="tool-offline-dot">●</span>
+                                <span class="tool-offline-title">AI Background Removal Offline</span>
+                            </div>
+                            <p class="tool-offline-desc">
+                                Background segmentation cloud service is currently offline for server maintenance.
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-remove-background" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                 stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                                 <circle cx="6" cy="6" r="3" />
@@ -1454,7 +1526,7 @@
                                 <line x1="14.47" y1="14.48" x2="20" y2="20" />
                                 <line x1="8.12" y1="8.12" x2="12" y2="12" />
                             </svg>
-                            Remove Background
+                            Service Temporarily Down
                         </button>
                     </div>
 

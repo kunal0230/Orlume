@@ -30,6 +30,7 @@ export class EditorApp {
 
             // Initialize mask system (uses factory to select WebGPU or WebGL2)
             this.masks = await createMaskSystem(this.gpu);
+            this.gpu.setMaskSystem(this.masks);
 
             // Initialize state management
             this.state = new EditorState();

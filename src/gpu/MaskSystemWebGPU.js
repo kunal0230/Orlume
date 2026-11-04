@@ -2,10 +2,11 @@
  * MaskSystemWebGPU - WebGPU implementation of mask rendering
  * 
  * Provides mask operations using WebGPU for:
- * - Brush painting
- * - Radial/linear gradients
+ * - Brush painting (isotropic aspect-ratio corrected)
+ * - Radial/linear gradients (isotropic half-plane/circular falloff)
  * - Mask overlay visualization
  * - Masked adjustments
+ * - Mask inversion
  */
 
 import {
@@ -13,6 +14,7 @@ import {
     radialGradientShader,
     linearGradientShader,
     maskOverlayShader,
+    maskInvertShader,
     maskedAdjustmentShader,
     passthroughShader
 } from './shaders/MaskShaders.js';
@@ -39,7 +41,12 @@ export class MaskSystemWebGPU {
             erase: false
         };
 
+        // UI state
+        this.showOverlay = false;
+        this.isMaskMode = true;
+        this._isPaintingOverlay = false;
         this._layerCounter = 0;
+        this._pendingLayers = [];
     }
 
     /**
@@ -85,7 +92,7 @@ export class MaskSystemWebGPU {
                 },
                 alpha: {
                     srcFactor: 'zero',
-                    dstFactor: 'one-minus-src-alpha',  // dst = dst * (1 - srcAlpha), effectively subtracting
+                    dstFactor: 'one-minus-src-alpha',
                     operation: 'add'
                 }
             }
@@ -125,6 +132,14 @@ export class MaskSystemWebGPU {
             }
         });
 
+        // Mask invert pipeline
+        this._createPipeline('maskInvert', maskInvertShader, {
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} }
+            ]
+        });
+
         // Masked adjustment pipeline
         this._createPipeline('maskedAdjustment', maskedAdjustmentShader, {
             entries: [
@@ -142,12 +157,8 @@ export class MaskSystemWebGPU {
                 { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} }
             ]
         });
-
     }
 
-    /**
-     * Create a render pipeline
-     */
     _createPipeline(name, code, options) {
         const shaderModule = this.device.createShaderModule({ code });
 
@@ -196,16 +207,12 @@ export class MaskSystemWebGPU {
     /**
      * Create a new layer with mask texture
      */
-    createLayer(type = 'brush') {
+    createLayer(type = 'brush', name = null) {
         const width = this.backend.width;
         const height = this.backend.height;
 
-        // Validate dimensions - prevent zero-sized texture errors
         if (width <= 0 || height <= 0) {
-            console.warn('⚠️ Cannot create layer: image dimensions not set yet (width/height is 0)');
-            // Store pending layer creation for when image loads
-            if (!this._pendingLayers) this._pendingLayers = [];
-            this._pendingLayers.push(type);
+            this._pendingLayers.push({ type, name });
             return null;
         }
 
@@ -231,11 +238,11 @@ export class MaskSystemWebGPU {
         passEncoder.end();
         this.device.queue.submit([commandEncoder.finish()]);
 
-        this._layerCounter++;
-        const defaultName = `${type}_${this._layerCounter}`;
+        this._layerCounter = (this._layerCounter || 0) + 1;
+        const defaultName = name || `${type}_${this._layerCounter}`;
 
         const layer = {
-            id: Date.now(),
+            id: Date.now() + Math.random(),
             type,
             name: defaultName,
             maskTexture,
@@ -253,7 +260,7 @@ export class MaskSystemWebGPU {
             },
             shape: null,
             visible: true,
-            strokes: [] // History of brush strokes for this layer
+            strokes: []
         };
 
         this.layers.push(layer);
@@ -262,50 +269,171 @@ export class MaskSystemWebGPU {
         return layer;
     }
 
-    /**
-     * Create a brush mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
-     */
     createBrushLayer(name) {
-        const layer = this.createLayer('brush');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('brush', name);
     }
 
-    /**
-     * Create a radial mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
-     */
     createRadialLayer(name) {
-        const layer = this.createLayer('radial');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('radial', name);
     }
 
-    /**
-     * Create a gradient/linear mask layer (backwards compatibility alias)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
-     */
     createGradientLayer(name) {
-        const layer = this.createLayer('gradient');
-        if (layer && name) layer.name = name;
-        return layer;
+        return this.createLayer('gradient', name);
     }
 
-    /**
-     * Create a linear mask layer (alias for createGradientLayer)
-     * @param {string} [name] - Optional layer name
-     * @returns {Object|null} Created layer
-     */
     createLinearLayer(name) {
         return this.createGradientLayer(name);
     }
 
     /**
-     * Called when image dimensions change - recreates layer textures
+     * Duplicate layer
+     */
+    duplicateLayer(index) {
+        if (index < 0 || index >= this.layers.length) return null;
+        const src = this.layers[index];
+        const newLayer = this.createLayer(src.type, `${src.name} Copy`);
+        if (!newLayer) return null;
+
+        newLayer.adjustments = { ...src.adjustments };
+        newLayer.shape = src.shape ? { ...src.shape } : null;
+        newLayer.strokes = src.strokes ? JSON.parse(JSON.stringify(src.strokes)) : [];
+        newLayer.visible = src.visible !== false;
+
+        this.replayLayer(newLayer.id);
+        return newLayer;
+    }
+
+    /**
+     * Delete layer
+     */
+    deleteLayer(index) {
+        if (index < 0 || index >= this.layers.length) return;
+
+        const layer = this.layers[index];
+        if (layer.maskTexture) {
+            layer.maskTexture.destroy();
+        }
+
+        this.layers.splice(index, 1);
+        if (this.activeLayerIndex === index) {
+            this.activeLayerIndex = Math.min(index, this.layers.length - 1);
+        } else if (this.activeLayerIndex > index) {
+            this.activeLayerIndex--;
+        }
+    }
+
+    /**
+     * Toggle layer visibility
+     */
+    toggleLayerVisibility(index) {
+        if (index >= 0 && index < this.layers.length) {
+            this.layers[index].visible = !this.layers[index].visible;
+            return this.layers[index].visible;
+        }
+        return false;
+    }
+
+    /**
+     * Clear active mask
+     */
+    clearActiveMask() {
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+
+        const layer = this.layers[this.activeLayerIndex];
+        if (!layer || !layer.maskTexture) return;
+
+        const commandEncoder = this.device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: layer.maskTexture.createView(),
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }]
+        });
+        passEncoder.end();
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        layer.strokes = [];
+        layer.shape = null;
+    }
+
+    /**
+     * Invert active mask
+     */
+    invertActiveMask() {
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
+        const layer = this.layers[this.activeLayerIndex];
+        if (!layer || !layer.maskTexture) return;
+
+        if (layer.shape && (layer.type === 'radial' || layer.type === 'gradient')) {
+            layer.shape.invert = !layer.shape.invert;
+            if (layer.type === 'radial') {
+                this.createRadialMask(
+                    layer.shape.centerX,
+                    layer.shape.centerY,
+                    layer.shape.innerRadius,
+                    layer.shape.outerRadius,
+                    layer.shape.invert
+                );
+            } else {
+                this.createLinearMask(
+                    layer.shape.startX,
+                    layer.shape.startY,
+                    layer.shape.endX,
+                    layer.shape.endY,
+                    layer.shape.feather,
+                    layer.shape.invert
+                );
+            }
+            return;
+        }
+
+        const pipeline = this.pipelines.get('maskInvert');
+        const bindGroupLayout = this.bindGroupLayouts.get('maskInvert');
+        if (!pipeline || !bindGroupLayout) return;
+
+        const width = this.backend.width;
+        const height = this.backend.height;
+
+        const tempTex = this.device.createTexture({
+            size: [width, height],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST
+        });
+
+        const bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [
+                { binding: 0, resource: this.backend.sampler },
+                { binding: 1, resource: layer.maskTexture.createView() }
+            ]
+        });
+
+        const commandEncoder = this.device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: tempTex.createView(),
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }]
+        });
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.setVertexBuffer(0, this.backend.vertexBuffer);
+        passEncoder.setVertexBuffer(1, this.backend.texCoordBuffer);
+        passEncoder.draw(4);
+        passEncoder.end();
+
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        layer.maskTexture.destroy();
+        layer.maskTexture = tempTex;
+    }
+
+    /**
+     * Called when image dimensions change
      */
     onImageDimensionsChanged() {
         const width = this.backend.width;
@@ -313,24 +441,22 @@ export class MaskSystemWebGPU {
 
         if (width <= 0 || height <= 0) return;
 
-        // Create any pending layers
+        // Process pending layers
         if (this._pendingLayers && this._pendingLayers.length > 0) {
             const pending = [...this._pendingLayers];
             this._pendingLayers = [];
-            for (const type of pending) {
-                this.createLayer(type);
+            for (const item of pending) {
+                this.createLayer(item.type, item.name);
             }
         }
 
-        // Resize existing layers if needed
+        // Recreate existing layer textures at new size and replay
         for (const layer of this.layers) {
             if (layer.width !== width || layer.height !== height) {
-                // Destroy old texture
                 if (layer.maskTexture) {
                     layer.maskTexture.destroy();
                 }
 
-                // Create new texture at correct size
                 layer.maskTexture = this.device.createTexture({
                     size: [width, height],
                     format: 'rgba8unorm',
@@ -339,38 +465,31 @@ export class MaskSystemWebGPU {
                         GPUTextureUsage.COPY_DST
                 });
 
-                // Clear to transparent
-                const commandEncoder = this.device.createCommandEncoder();
-                const passEncoder = commandEncoder.beginRenderPass({
-                    colorAttachments: [{
-                        view: layer.maskTexture.createView(),
-                        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                        loadOp: 'clear',
-                        storeOp: 'store'
-                    }]
-                });
-                passEncoder.end();
-                this.device.queue.submit([commandEncoder.finish()]);
-
                 layer.width = width;
                 layer.height = height;
+
+                this.replayLayer(layer.id);
             }
+        }
+
+        // Reset ping-pong framebuffers
+        if (this._pingFBO) {
+            this.backend.deleteFramebuffer?.(this._pingFBO);
+            this.backend.deleteFramebuffer?.(this._pongFBO);
+            this._pingFBO = null;
+            this._pongFBO = null;
         }
     }
 
     /**
      * Paint brush at coordinates
-     * @param {number} x - X coordinate in image pixels
-     * @param {number} y - Y coordinate in image pixels
-     * @param {boolean} record - Whether to record this stroke in history
      */
     paintBrush(x, y, record = true) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         if (!layer) return;
 
-        // Record stroke for undo/redo
         if (record) {
             if (!layer.strokes) layer.strokes = [];
             layer.strokes.push({
@@ -382,31 +501,28 @@ export class MaskSystemWebGPU {
 
         if (layer.type !== 'brush') return;
 
-        // Select pipeline based on erase mode
         const pipelineName = this.brushSettings.erase ? 'brushErase' : 'brushStamp';
         const pipeline = this.pipelines.get(pipelineName);
         const bindGroupLayout = this.bindGroupLayouts.get(pipelineName);
 
         const width = this.backend.width;
         const height = this.backend.height;
+        if (width <= 0 || height <= 0) return;
 
-        // Convert to UV coords (no Y-flip needed - texCoords already account for orientation)
+        // WebGPU texCoords have y=0 at top -> NO Y-FLIP
         const centerX = x / width;
         const centerY = y / height;
-        const radiusX = this.brushSettings.size / width;
-        const radiusY = this.brushSettings.size / height;
-        const radius = Math.max(radiusX, radiusY);
-
-        // Always use positive opacity - blending handles add vs erase
+        const aspect = width / height;
+        const radius = this.brushSettings.size / height;
         const opacity = (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100);
 
-        // Create uniform buffer
         const uniformData = new Float32Array([
             centerX, centerY,
             radius,
             this.brushSettings.hardness / 100,
-            opacity,  // Always positive
-            0 // padding
+            opacity,
+            aspect,
+            0, 0
         ]);
 
         const uniformBuffer = this.device.createBuffer({
@@ -415,7 +531,6 @@ export class MaskSystemWebGPU {
         });
         this.device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
-        // Create bind group
         const bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
             entries: [
@@ -423,7 +538,6 @@ export class MaskSystemWebGPU {
             ]
         });
 
-        // Render to mask texture
         const commandEncoder = this.device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
             colorAttachments: [{
@@ -441,20 +555,14 @@ export class MaskSystemWebGPU {
         passEncoder.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
-
         uniformBuffer.destroy();
     }
 
     /**
      * Paint stroke with interpolation
-     * @param {number} x1 - Start X in image pixels
-     * @param {number} y1 - Start Y in image pixels
-     * @param {number} x2 - End X in image pixels
-     * @param {number} y2 - End Y in image pixels
-     * @param {boolean} record - Whether to record this stroke in history
      */
     paintStroke(x1, y1, x2, y2, record = true) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         if (!layer) return;
@@ -486,35 +594,51 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Replay all strokes on a layer to restore its state
+     * Replay all strokes or redraw shape on a layer
      */
     replayLayer(layerId) {
         const layer = this.layers.find(l => l.id === layerId);
         if (!layer) return;
 
-        // Save current context
         const prevActiveIndex = this.activeLayerIndex;
         const prevSettings = { ...this.brushSettings };
-
-        // Set active layer for painting
         this.activeLayerIndex = this.layers.indexOf(layer);
 
-        // Clear the mask texture to transparent
-        if (layer.maskTexture) {
-            const commandEncoder = this.device.createCommandEncoder();
-            const passEncoder = commandEncoder.beginRenderPass({
-                colorAttachments: [{
-                    view: layer.maskTexture.createView(),
-                    clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                    loadOp: 'clear',
-                    storeOp: 'store'
-                }]
-            });
-            passEncoder.end();
-            this.device.queue.submit([commandEncoder.finish()]);
+        if (layer.type === 'radial' && layer.shape) {
+            this.createRadialMask(
+                layer.shape.centerX,
+                layer.shape.centerY,
+                layer.shape.innerRadius,
+                layer.shape.outerRadius,
+                layer.shape.invert
+            );
+        } else if (layer.type === 'gradient' && layer.shape) {
+            this.createLinearMask(
+                layer.shape.startX,
+                layer.shape.startY,
+                layer.shape.endX,
+                layer.shape.endY,
+                layer.shape.feather,
+                layer.shape.invert
+            );
+        } else {
+            // Clear texture to transparent
+            if (layer.maskTexture) {
+                const commandEncoder = this.device.createCommandEncoder();
+                const passEncoder = commandEncoder.beginRenderPass({
+                    colorAttachments: [{
+                        view: layer.maskTexture.createView(),
+                        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                        loadOp: 'clear',
+                        storeOp: 'store'
+                    }]
+                });
+                passEncoder.end();
+                this.device.queue.submit([commandEncoder.finish()]);
+            }
         }
 
-        // Replay strokes
+        // Replay brush strokes
         if (layer.strokes && layer.strokes.length > 0) {
             for (const op of layer.strokes) {
                 this.brushSettings = { ...op.settings };
@@ -526,32 +650,35 @@ export class MaskSystemWebGPU {
             }
         }
 
-        // Restore context
         this.activeLayerIndex = prevActiveIndex;
         this.brushSettings = prevSettings;
     }
 
     /**
-     * Create radial mask
+     * Create radial mask (isotropic, no inverted Y)
      */
     createRadialMask(centerX, centerY, innerRadius, outerRadius, invert = false) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
+        if (!layer) return;
+
         const pipeline = this.pipelines.get('radialGradient');
         const bindGroupLayout = this.bindGroupLayouts.get('radialGradient');
 
         const width = this.backend.width;
         const height = this.backend.height;
+        if (width <= 0 || height <= 0) return;
 
         layer.shape = { centerX, centerY, innerRadius, outerRadius, invert };
 
         const cx = centerX / width;
-        const cy = 1.0 - (centerY / height);
-        const ir = innerRadius / Math.max(width, height);
-        const or = outerRadius / Math.max(width, height);
+        const cy = centerY / height;
+        const aspect = width / height;
+        const ir = innerRadius / height;
+        const or = outerRadius / height;
 
-        const uniformData = new Float32Array([cx, cy, ir, or, 0, invert ? 1 : 0]);
+        const uniformData = new Float32Array([cx, cy, ir, or, aspect, invert ? 1 : 0, 0, 0]);
         const uniformBuffer = this.device.createBuffer({
             size: uniformData.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
@@ -585,26 +712,30 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Create linear gradient mask
+     * Create linear gradient mask (isotropic half-plane ramp, no inverted Y)
      */
     createLinearMask(startX, startY, endX, endY, feather = 0.5, invert = false) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
+        if (!layer) return;
+
         const pipeline = this.pipelines.get('linearGradient');
         const bindGroupLayout = this.bindGroupLayouts.get('linearGradient');
 
         const width = this.backend.width;
         const height = this.backend.height;
+        if (width <= 0 || height <= 0) return;
 
         layer.shape = { startX, startY, endX, endY, feather, invert };
 
         const sx = startX / width;
-        const sy = 1.0 - (startY / height);
+        const sy = startY / height;
         const ex = endX / width;
-        const ey = 1.0 - (endY / height);
+        const ey = endY / height;
+        const aspect = width / height;
 
-        const uniformData = new Float32Array([sx, sy, ex, ey, feather, invert ? 1 : 0]);
+        const uniformData = new Float32Array([sx, sy, ex, ey, aspect, invert ? 1 : 0, 0, 0]);
         const uniformBuffer = this.device.createBuffer({
             size: uniformData.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
@@ -638,81 +769,49 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Get active layer adjustments
+     * Check if active masks exist
      */
+    hasActiveMasks() {
+        return this.layers.length > 0 && this.layers.some(l => l.visible && Object.values(l.adjustments).some(v => v !== 0));
+    }
+
+    toggleOverlay() {
+        this.showOverlay = !this.showOverlay;
+        return this.showOverlay;
+    }
+
+    shouldShowOverlay() {
+        return Boolean(this.isMaskMode !== false && (this.showOverlay || this._isPaintingOverlay) && this.activeLayerIndex >= 0 && this.layers.length > 0);
+    }
+
     getActiveAdjustments() {
-        if (this.activeLayerIndex < 0) return null;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return null;
         return this.layers[this.activeLayerIndex].adjustments;
     }
 
-    /**
-     * Get active layer
-     */
     getActiveLayer() {
-        if (this.activeLayerIndex < 0) return null;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return null;
         return this.layers[this.activeLayerIndex];
     }
 
-    /**
-     * Set adjustment
-     */
     setAdjustment(name, value) {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
         this.layers[this.activeLayerIndex].adjustments[name] = value;
     }
 
-    /**
-     * Set active adjustment (alias)
-     */
     setActiveAdjustment(name, value) {
         this.setAdjustment(name, value);
     }
 
     /**
-     * Delete layer
-     */
-    deleteLayer(index) {
-        if (index < 0 || index >= this.layers.length) return;
-
-        const layer = this.layers[index];
-        layer.maskTexture.destroy();
-
-        this.layers.splice(index, 1);
-        if (this.activeLayerIndex >= this.layers.length) {
-            this.activeLayerIndex = this.layers.length - 1;
-        }
-    }
-
-    /**
-     * Clear active mask
-     */
-    clearActiveMask() {
-        if (this.activeLayerIndex < 0) return;
-
-        const layer = this.layers[this.activeLayerIndex];
-        const commandEncoder = this.device.createCommandEncoder();
-        const passEncoder = commandEncoder.beginRenderPass({
-            colorAttachments: [{
-                view: layer.maskTexture.createView(),
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                loadOp: 'clear',
-                storeOp: 'store'
-            }]
-        });
-        passEncoder.end();
-        this.device.queue.submit([commandEncoder.finish()]);
-    }
-
-    /**
-     * Render mask overlay - shows red semi-transparent overlay on painted areas
+     * Render mask overlay
      */
     renderMaskOverlay() {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         if (!layer || !layer.maskTexture) return;
 
-        // Get or create canvas-compatible overlay pipeline
         if (!this._overlayCanvasPipeline) {
             this._createCanvasOverlayPipeline();
         }
@@ -728,12 +827,11 @@ export class MaskSystemWebGPU {
             ]
         });
 
-        // Render overlay on top of current canvas content
         const commandEncoder = this.device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: this.backend.context.getCurrentTexture().createView(),
-                loadOp: 'load',  // Keep existing content
+                loadOp: 'load',
                 storeOp: 'store'
             }]
         });
@@ -748,9 +846,6 @@ export class MaskSystemWebGPU {
         this.device.queue.submit([commandEncoder.finish()]);
     }
 
-    /**
-     * Create canvas-compatible overlay pipeline (uses canvas format)
-     */
     _createCanvasOverlayPipeline() {
         const code = maskOverlayShader;
         const shaderModule = this.device.createShaderModule({ code });
@@ -787,7 +882,7 @@ export class MaskSystemWebGPU {
                 module: shaderModule,
                 entryPoint: 'fragmentMain',
                 targets: [{
-                    format: this.backend.format,  // Use canvas format for compatibility
+                    format: this.backend.format,
                     blend: {
                         color: {
                             srcFactor: 'src-alpha',
@@ -808,9 +903,6 @@ export class MaskSystemWebGPU {
         });
     }
 
-    /**
-     * Create canvas-compatible masked adjustment pipeline (uses canvas format)
-     */
     _createCanvasMaskedAdjustmentPipeline() {
         const code = maskedAdjustmentShader;
         const shaderModule = this.device.createShaderModule({ code });
@@ -849,7 +941,7 @@ export class MaskSystemWebGPU {
                 module: shaderModule,
                 entryPoint: 'fragmentMain',
                 targets: [{
-                    format: this.backend.format  // Use canvas format for compatibility
+                    format: this.backend.format
                 }]
             },
             primitive: {
@@ -859,18 +951,16 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Apply masked adjustments - applies per-layer adjustments based on mask
+     * Apply masked adjustments
      */
     applyMaskedAdjustments(baseTexture) {
         if (this.layers.length === 0 || !baseTexture) return baseTexture;
 
-        // Check if any layer has non-zero adjustments
         const hasAdjustments = this.layers.some(layer =>
             layer.visible && Object.values(layer.adjustments).some(v => v !== 0)
         );
         if (!hasAdjustments) return baseTexture;
 
-        // Get or create canvas-compatible masked adjustment pipeline
         if (!this._maskedAdjustmentCanvasPipeline) {
             this._createCanvasMaskedAdjustmentPipeline();
         }
@@ -878,11 +968,9 @@ export class MaskSystemWebGPU {
         const pipeline = this._maskedAdjustmentCanvasPipeline;
         const bindGroupLayout = this._maskedAdjustmentCanvasBindGroupLayout;
 
-        // Use ping-pong buffers for multi-layer compositing
         let currentTexture = baseTexture;
 
-        // Reusable framebuffers for ping-pong (using canvas format)
-        if (!this._pingFBO || this._pingFBO.width !== this.backend.width) {
+        if (!this._pingFBO || this._pingFBO.width !== this.backend.width || this._pingFBO.height !== this.backend.height) {
             if (this._pingFBO) this.backend.deleteFramebuffer?.(this._pingFBO);
             if (this._pongFBO) this.backend.deleteFramebuffer?.(this._pongFBO);
             this._pingFBO = this.backend.createFramebuffer(this.backend.width, this.backend.height);
@@ -894,21 +982,18 @@ export class MaskSystemWebGPU {
         for (const layer of this.layers) {
             if (!layer.visible) continue;
 
-            // Skip if no adjustments
             const adj = layer.adjustments;
             if (Object.values(adj).every(v => v === 0)) continue;
 
-            // Select output buffer
             const outputFBO = usePing ? this._pingFBO : this._pongFBO;
 
-            // Create uniform buffer with adjustments
             const uniformData = new Float32Array([
                 adj.exposure || 0,
                 (adj.contrast || 0) / 100,
                 (adj.shadows || 0) / 100,
                 (adj.temperature || 0) / 100,
                 (adj.saturation || 0) / 100,
-                0, 0, 0  // padding
+                0, 0, 0
             ]);
 
             const uniformBuffer = this.device.createBuffer({
@@ -936,7 +1021,6 @@ export class MaskSystemWebGPU {
                 ]
             });
 
-            // Render to output
             const commandEncoder = this.device.createCommandEncoder();
             const passEncoder = commandEncoder.beginRenderPass({
                 colorAttachments: [{
@@ -957,7 +1041,6 @@ export class MaskSystemWebGPU {
             this.device.queue.submit([commandEncoder.finish()]);
             uniformBuffer.destroy();
 
-            // Swap buffers for next layer
             currentTexture = outputFBO.texture;
             usePing = !usePing;
         }
@@ -974,8 +1057,28 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Get GPU reference (for compatibility)
+     * Reset and dispose of all resources
      */
+    reset() {
+        for (const layer of this.layers) {
+            if (layer.maskTexture) {
+                layer.maskTexture.destroy();
+            }
+        }
+        this.layers = [];
+        this.activeLayerIndex = -1;
+        this.showOverlay = false;
+
+        if (this._pingFBO) {
+            this.backend.deleteFramebuffer?.(this._pingFBO);
+            this._pingFBO = null;
+        }
+        if (this._pongFBO) {
+            this.backend.deleteFramebuffer?.(this._pongFBO);
+            this._pongFBO = null;
+        }
+    }
+
     get gpu() {
         return {
             width: this.backend.width,
