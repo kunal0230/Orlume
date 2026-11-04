@@ -147,14 +147,18 @@ export class LiquifyModule {
         this.liquifyCanvas.style.width = rect.width + 'px';
         this.liquifyCanvas.style.height = rect.height + 'px';
 
-        // Set the image to liquify - need to copy from GPU to a 2D canvas
-        // WebGPU canvas cannot be directly used as a WebGL2 texture source
-        const imageData = this.gpu.toImageData();
+        // Set the image to liquify - prefer clean originalImage so develop adjustments are not doubled
         const sourceCanvas = document.createElement('canvas');
         sourceCanvas.width = this.gpu.width;
         sourceCanvas.height = this.gpu.height;
         const sourceCtx = sourceCanvas.getContext('2d');
-        sourceCtx.putImageData(imageData, 0, 0);
+
+        if (this.state.originalImage) {
+            sourceCtx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+        } else {
+            const imageData = this.gpu.toImageData();
+            if (imageData) sourceCtx.putImageData(imageData, 0, 0);
+        }
         this.liquifyTool.setImage(sourceCanvas);
 
         // Create liquify brush cursor if it doesn't exist

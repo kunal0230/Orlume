@@ -344,8 +344,18 @@ export class GodRaysModule {
             return;
         }
 
-        // Upload current image (always fresh)
-        const imageData = this.ui.gpu.toImageData();
+        // Upload current base image (prefer clean originalImage so adjustments are not doubled)
+        let imageData = null;
+        if (this.ui.state.originalImage) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.ui.gpu.width;
+            tempCanvas.height = this.ui.gpu.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(this.ui.state.originalImage, 0, 0, this.ui.gpu.width, this.ui.gpu.height);
+            imageData = tempCtx.getImageData(0, 0, this.ui.gpu.width, this.ui.gpu.height);
+        } else {
+            imageData = this.ui.gpu.toImageData();
+        }
         if (imageData) {
             this.effect.uploadImage(imageData);
         }
@@ -460,8 +470,18 @@ export class GodRaysModule {
                 this.depthEstimator = new DepthEstimator(appAdapter);
             }
 
-            // Get current canvas state as ImageData
-            const imageData = this.ui.gpu.toImageData();
+            // Get current base image as ImageData
+            let imageData = null;
+            if (this.ui.state.originalImage) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.ui.gpu.width;
+                tempCanvas.height = this.ui.gpu.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.ui.state.originalImage, 0, 0, this.ui.gpu.width, this.ui.gpu.height);
+                imageData = tempCtx.getImageData(0, 0, this.ui.gpu.width, this.ui.gpu.height);
+            } else {
+                imageData = this.ui.gpu.toImageData();
+            }
             if (!imageData) {
                 throw new Error('Could not get image data');
             }

@@ -671,7 +671,7 @@ export class WebGPUBackend extends GPUBackend {
             });
 
             // Bindings for curve textures (3, 4, 5, 6)
-            for (var i = 0; i < 4; i++) {
+            for (let i = 0; i < 4; i++) {
                 bindGroupLayoutEntries.push({
                     binding: 3 + i,
                     visibility: GPUShaderStage.FRAGMENT,

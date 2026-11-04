@@ -133,10 +133,13 @@ export class TextModule {
 
         document.removeEventListener('keydown', this._boundHandleKeyDown);
 
-        // Hide overlay and deselect
+        // Deselect and re-render without selection UI
         if (this.textManager) {
-            this.textManager.hideOverlay();
             this.textManager.deselectAll();
+            this.textManager.render();
+            if (!this.textManager.layers || this.textManager.layers.length === 0) {
+                this.textManager.hideOverlay();
+            }
         }
 
         // Hide panel sections

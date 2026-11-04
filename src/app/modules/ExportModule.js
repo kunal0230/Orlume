@@ -105,8 +105,19 @@ export class ExportModule {
             }
         }
 
+        let finalExportCanvas = exportCanvas;
+        if (this.editor.app?.textLayers?.layers?.length > 0) {
+            const compositeCanvas = document.createElement('canvas');
+            compositeCanvas.width = exportCanvas.width;
+            compositeCanvas.height = exportCanvas.height;
+            const compCtx = compositeCanvas.getContext('2d');
+            compCtx.drawImage(exportCanvas, 0, 0);
+            this.editor.app.textLayers.renderToCanvas(compositeCanvas);
+            finalExportCanvas = compositeCanvas;
+        }
+
         // Export to blob
-        exportCanvas.toBlob((blob) => {
+        finalExportCanvas.toBlob((blob) => {
             if (!blob) {
                 console.error('Failed to create blob');
                 return;

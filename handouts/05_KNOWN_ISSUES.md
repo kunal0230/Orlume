@@ -10,8 +10,6 @@
 |---|-------|-------------------|----------|------------|--------|
 | K1 | Comparison "Before" shows post-crop image after destructive ops (not original pre-crop) | `ComparisonModule` | Low | Semi-intended — drawing original onto cropped canvas would stretch. Users may find this confusing. | Open — by design |
 | K2 | `ZoomPanModule` and `ComparisonModule` attach permanent `mousemove`/`mouseup` listeners to `document` | `ZoomPanModule`, `ComparisonModule` | Low | Harmless — they short-circuit when not dragging. But technically permanent listeners. | Open — cosmetic |
-| K3 | `EditorState.resetAdjustments()` sets `colorBlending` to `0` instead of its default `50` | `EditorState` | Medium | After calling `resetAdjustments()`, manually set `colorBlending` back to `50` if needed. `GPUProcessor.reset()` has the same issue. | Open |
-| K4 | `_pruneImageRegistry()` checks `state.state.imageId` path which may not match actual snapshot structure | `HistoryModule` | Low | Registry still functions — pruning may miss some entries, causing slightly higher memory usage. | [VERIFY: check if snapshot.imageId or snapshot.state.imageId is the correct path] |
 
 ---
 
@@ -73,6 +71,13 @@
 |---|------|-----|---------|------------|-----|-----------|
 | R1 | May 2026 | God rays crash on init after M6 fix | `GodRaysModule.js` | M6 renamed `_initCanvasClick()` → `_onCanvasClick()` but left old call in `init()` | Removed stale call | — |
 | B26 | May 2026 | Color grading undo not working | `ColorGradingWheel.js`, `ColorGradingModule.js` | No `onInteractionEnd` callback passed to wheel constructor | Added 4th arg | LAW 12 |
+| B27 | Nov 2026 | Apply buttons disabled / tools blocked by artificial maintenance states | `editor.html`, `UpscaleModule.js`, `HealingModule.js`, `BackgroundRemovalModule.js` | Forced disabled attributes and alert blocks added to buttons | Restored active buttons and native execution | — |
+| B28 | Nov 2026 | Image changed / double adjustments when clicking Apply (Crop, Liquify, Clone, Healing, GodRays) | `CropModule.js`, `LiquifyModule.js`, `CloneModule.js`, `HealingModule.js`, `GodRaysModule.js` | Tools read post-shader pixels (`gpu.toImageData()`) and `gpu.loadImage()` re-applied non-zero develop adjustments | Sourced tools from clean `state.originalImage`, cleanly preserving existing adjustments without multiplying | — |
+| B29 | Nov 2026 | Upscale crashed on WebGPU backend | `UpscaleModule.js` | Called `upscaleFromWebGL(gpu.gl)` where `gpu.gl` is null on WebGPU | Passed clean canvas source directly to `upscale()` | LAW 7 |
+| B30 | Nov 2026 | Relighting Pro Apply button did nothing | `RelightingProModule.js` | No history snapshot, no `state.setImage()`, no UI feedback, no mode transition | Implemented complete apply workflow with LAW 1 history push | LAW 1 |
+| B31 | Nov 2026 | Text layers missing on export and hidden prematurely on tool switch | `ExportModule.js`, `TextModule.js` | Export bypassed `TextLayerManager.renderToCanvas()`; deactivation hid overlay when layers existed | Composited text onto export canvas; preserve text visibility across tools | — |
+| B32 | Nov 2026 | Radial and linear gradient masks not interactive on canvas | `EditorUI.js`, `MaskSystem.js`, `MaskSystemWebGPU.js` | Canvas event listeners returned early for non-brush tools and linear gradient mask shader dispatch was missing | Added `createLinearMask()` to WebGL2 and WebGPU backends and canvas drag handlers | — |
+| B33 | Nov 2026 | Undo destroyed for destructive operations | `HistoryModule.js` | `_pruneImageRegistry()` checked `state.state.imageId` instead of `state.imageId`, deleting all historical images | Checked `state?.imageId || state?.state?.imageId` | — |
 
 ---
 

@@ -142,7 +142,7 @@
                     <path d="M18 22L18 18M18 18L22 18M18 18L18 8a2 2 0 0 0-2-2H6" />
                 </svg>
             </button>
-            <button class="tool-btn tool-down" id="tool-upscale" title="Upscale (U) - Service Temporarily Down">
+            <button class="tool-btn" id="tool-upscale" title="Upscale (U)">
                 <!-- Maximize/scale icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 3 21 3 21 9" />
@@ -157,7 +157,7 @@
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                 </svg>
             </button>
-            <button class="tool-btn tool-down" id="tool-healing" title="AI Spot Healing (H) - Service Temporarily Down">
+            <button class="tool-btn" id="tool-healing" title="AI Spot Healing (H)">
                 <!-- Bandaid icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 2l4 4-12 12-4-4z" />
@@ -181,7 +181,7 @@
             <div class="tool-divider"></div>
 
             <!-- AI Tools Group -->
-            <button class="tool-btn tool-down" id="tool-bg-remove" title="Remove Background - Service Temporarily Down">
+            <button class="tool-btn" id="tool-bg-remove" title="Remove Background">
                 <!-- Scissors icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="6" cy="6" r="3" />
@@ -511,7 +511,7 @@
                     <div class="section">
                         <div class="section-header">Mask Tools</div>
                         <div class="mask-tool-selector">
-                            <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B) - Working">
+                            <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
                                     <path
@@ -519,8 +519,7 @@
                                 </svg>
                                 <span>Brush</span>
                             </button>
-                            <button class="mask-tool-btn mask-tool-down" id="mask-tool-radial" title="Radial Mask (Under Maintenance)">
-                                <span class="mask-down-badge">Down</span>
+                            <button class="mask-tool-btn" id="mask-tool-radial" title="Radial (R)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <circle cx="12" cy="12" r="6" />
@@ -528,8 +527,7 @@
                                 </svg>
                                 <span>Radial</span>
                             </button>
-                            <button class="mask-tool-btn mask-tool-down" id="mask-tool-gradient" title="Linear Gradient Mask (Under Maintenance)">
-                                <span class="mask-down-badge">Down</span>
+                            <button class="mask-tool-btn" id="mask-tool-gradient" title="Linear (G)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="18" height="18" rx="2" />
                                     <line x1="3" y1="12" x2="21" y2="12" />
@@ -863,18 +861,6 @@
                 <!-- Upscale Panel -->
                 <div class="panel-section" id="panel-upscale">
                     <div class="section">
-                        <div class="tool-offline-banner">
-                            <div class="tool-offline-header">
-                                <span class="tool-offline-dot">●</span>
-                                <span class="tool-offline-title">AI Upscaling Offline</span>
-                            </div>
-                            <p class="tool-offline-desc">
-                                AI Image Upscaling is currently offline while our neural processing server is undergoing maintenance.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="section">
                         <div class="section-header">Scale Factor</div>
                         <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
                             Choose how much to enlarge your image.
@@ -975,13 +961,13 @@
                             <button class="btn" id="btn-upscale-cancel" style="flex: 1;">
                                 Cancel
                             </button>
-                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1; opacity: 0.6; cursor: not-allowed;" disabled>
+                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1;">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                     stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                                     <polyline points="15 3 21 3 21 9" />
                                     <line x1="21" y1="3" x2="14" y2="10" />
                                 </svg>
-                                Service Down
+                                Apply Upscale
                             </button>
                         </div>
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
@@ -1097,19 +1083,6 @@
 
                 <!-- Healing Panel (AI Spot Healing) -->
                 <div class="panel-section" id="panel-healing">
-                    <!-- Status Indicator -->
-                    <div class="section">
-                        <div class="tool-offline-banner">
-                            <div class="tool-offline-header">
-                                <span class="tool-offline-dot">●</span>
-                                <span class="tool-offline-title">AI Spot Healing Offline</span>
-                            </div>
-                            <p class="tool-offline-desc">
-                                AI Inpainting (LaMa) cloud backend is currently undergoing maintenance. This tool is temporarily down.
-                            </p>
-                        </div>
-                    </div>
-
                     <!-- Brush Settings -->
                     <div class="section">
                         <div class="section-header">Brush</div>
@@ -1139,8 +1112,8 @@
 
                     <!-- Actions -->
                     <div class="section">
-                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px; opacity: 0.6; cursor: not-allowed;" disabled>
-                            Service Down (Maintenance)
+                        <button class="btn btn-primary" id="btn-heal" style="width: 100%; margin-bottom: 8px;">
+                            Heal Selection
                         </button>
                         <div class="btn-row" style="gap: 8px;">
                             <button class="btn" id="btn-clear-mask" style="flex: 1;">Clear Mask</button>
@@ -1469,16 +1442,7 @@
                 <div class="panel-section" id="panel-bg-remove">
                     <div class="section">
                         <div class="section-header">AI Background Removal</div>
-                        <div class="tool-offline-banner">
-                            <div class="tool-offline-header">
-                                <span class="tool-offline-dot">●</span>
-                                <span class="tool-offline-title">AI Background Removal Offline</span>
-                            </div>
-                            <p class="tool-offline-desc">
-                                Background segmentation cloud service is currently offline for server maintenance.
-                            </p>
-                        </div>
-                        <button class="btn btn-primary" id="btn-remove-background" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
+                        <button class="btn btn-primary" id="btn-remove-background" style="width: 100%;">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                 stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                                 <circle cx="6" cy="6" r="3" />
@@ -1487,7 +1451,7 @@
                                 <line x1="14.47" y1="14.48" x2="20" y2="20" />
                                 <line x1="8.12" y1="8.12" x2="12" y2="12" />
                             </svg>
-                            Service Temporarily Down
+                            Remove Background
                         </button>
                     </div>
 

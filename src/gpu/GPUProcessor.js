@@ -203,6 +203,8 @@ export class GPUProcessor {
             // Curve LUT params must be null (identity), not 0
             if (key.startsWith('curveLut')) {
                 this.params[key] = null;
+            } else if (key === 'colorBlending') {
+                this.params[key] = 50;
             } else {
                 this.params[key] = 0;
             }

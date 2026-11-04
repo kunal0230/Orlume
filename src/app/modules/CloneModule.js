@@ -137,13 +137,18 @@ export class CloneModule {
         this.cloneCanvas.style.width = rect.width + 'px';
         this.cloneCanvas.style.height = rect.height + 'px';
 
-        // Set the image to clone - need to copy from GPU to a 2D canvas
-        const imageData = this.gpu.toImageData();
+        // Set the image to clone - prefer clean originalImage so develop adjustments are not doubled
         const sourceCanvas = document.createElement('canvas');
         sourceCanvas.width = this.gpu.width;
         sourceCanvas.height = this.gpu.height;
         const sourceCtx = sourceCanvas.getContext('2d');
-        sourceCtx.putImageData(imageData, 0, 0);
+
+        if (this.state.originalImage) {
+            sourceCtx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+        } else {
+            const imageData = this.gpu.toImageData();
+            if (imageData) sourceCtx.putImageData(imageData, 0, 0);
+        }
         this.cloneTool.setImage(sourceCanvas);
 
         // Create clone brush cursor if it doesn't exist
@@ -382,7 +387,8 @@ export class CloneModule {
      */
     async apply() {
         try {
-            // Save state BEFORE clone for undo support
+            // Save state BEFORE clone for undo support (LAW 1)
+            clearTimeout(this.editor._historyDebounceTimer);
             const snapshot = this.editor._captureFullState();
             this.history.pushState(snapshot);
 

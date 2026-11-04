@@ -464,6 +464,59 @@ export class MaskSystemWebGPU {
     }
 
     /**
+     * Create linear gradient mask
+     */
+    createLinearMask(startX, startY, endX, endY, feather = 0.5, invert = false) {
+        if (this.activeLayerIndex < 0) return;
+
+        const layer = this.layers[this.activeLayerIndex];
+        const pipeline = this.pipelines.get('linearGradient');
+        const bindGroupLayout = this.bindGroupLayouts.get('linearGradient');
+
+        const width = this.backend.width;
+        const height = this.backend.height;
+
+        layer.shape = { startX, startY, endX, endY, feather, invert };
+
+        const sx = startX / width;
+        const sy = 1.0 - (startY / height);
+        const ex = endX / width;
+        const ey = 1.0 - (endY / height);
+
+        const uniformData = new Float32Array([sx, sy, ex, ey, feather, invert ? 1 : 0]);
+        const uniformBuffer = this.device.createBuffer({
+            size: uniformData.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+        this.device.queue.writeBuffer(uniformBuffer, 0, uniformData);
+
+        const bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [{ binding: 0, resource: { buffer: uniformBuffer } }]
+        });
+
+        const commandEncoder = this.device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: layer.maskTexture.createView(),
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }]
+        });
+
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.setVertexBuffer(0, this.backend.vertexBuffer);
+        passEncoder.setVertexBuffer(1, this.backend.texCoordBuffer);
+        passEncoder.draw(4);
+        passEncoder.end();
+
+        this.device.queue.submit([commandEncoder.finish()]);
+        uniformBuffer.destroy();
+    }
+
+    /**
      * Get active layer adjustments
      */
     getActiveAdjustments() {

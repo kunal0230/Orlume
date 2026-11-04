@@ -962,19 +962,62 @@ export class RelightingProModule {
         this._render();
     }
 
-    _onApplyClick() {
-        if (!this.hasAnalyzed) return;
+    async _onApplyClick() {
+        if (!this.hasAnalyzed) {
+            alert('Please run 3D Scene Analysis before applying relighting.');
+            return;
+        }
 
         // Get rendered result
         const canvas = this.pipeline.render();
-        if (!canvas) return;
-
-        // Apply to GPU backend
-        if (this.ui?.gpu) {
-            this.ui.gpu.loadImage(canvas);
+        if (!canvas) {
+            alert('No relit image available to apply.');
+            return;
         }
 
-        console.log('✓ v8 Relighting applied');
+        try {
+            // LAW 1: Push history BEFORE modifying state
+            clearTimeout(this.ui._historyDebounceTimer);
+            const snapshot = this.ui._captureFullState();
+            this.ui.history.pushState(snapshot);
+
+            // Convert canvas to image
+            const dataUrl = canvas.toDataURL('image/png');
+            const img = new Image();
+            img.onload = () => {
+                // Update state
+                if (this.ui?.state) {
+                    this.ui.state.setImage(img);
+                    this.ui.state.originalImage = img;
+                }
+
+                // Apply to GPU backend
+                if (this.ui?.gpu) {
+                    this.ui.gpu.loadImage(img);
+                }
+
+                if (this.ui?.elements?.perfIndicator) {
+                    this.ui.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+                }
+                setTimeout(() => this.ui.renderHistogram?.(), 100);
+
+                if (this.elements.applyBtn) {
+                    const originalText = this.elements.applyBtn.innerHTML;
+                    this.elements.applyBtn.innerHTML = '✅ Applied!';
+                    setTimeout(() => {
+                        if (this.elements.applyBtn) this.elements.applyBtn.innerHTML = originalText;
+                    }, 2000);
+                }
+
+                // Switch back to develop mode
+                this.ui.setMode('develop');
+            };
+            img.src = dataUrl;
+            console.log('✓ v8 Relighting applied');
+        } catch (error) {
+            console.error('Failed to apply relighting:', error);
+            alert(`Failed to apply relighting: ${error.message}`);
+        }
     }
 
     // === Rendering ===

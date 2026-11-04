@@ -54,6 +54,9 @@ export default [
                 confirm: 'readonly', // FIXED: missing-browser-globals
                 prompt: 'readonly', // FIXED: missing-browser-globals
                 caches: 'readonly', // FIXED: missing-browser-globals
+                IntersectionObserver: 'readonly',
+                ResizeObserver: 'readonly',
+                AbortSignal: 'readonly',
                 // WebGPU
                 GPUTexture: 'readonly',
                 GPUDevice: 'readonly',

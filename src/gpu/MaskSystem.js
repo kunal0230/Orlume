@@ -569,6 +569,52 @@ export class MaskSystem {
     }
 
     /**
+     * Create a linear gradient mask
+     */
+    createLinearMask(startX, startY, endX, endY, feather = 0.5, invert = false) {
+        if (this.activeLayerIndex < 0) return;
+
+        const layer = this.layers[this.activeLayerIndex];
+        const gl = this.gl;
+        const program = this.programs.get('linearGradient');
+        if (!program) return;
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+
+        layer.shape = { startX, startY, endX, endY, feather, invert };
+
+        const sx = startX / width;
+        const sy = 1.0 - (startY / height);
+        const ex = endX / width;
+        const ey = 1.0 - (endY / height);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
+        gl.viewport(0, 0, width, height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(program);
+
+        gl.uniform2f(gl.getUniformLocation(program, 'u_start'), sx, sy);
+        gl.uniform2f(gl.getUniformLocation(program, 'u_end'), ex, ey);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_feather'), feather);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_invert'), invert ? 1.0 : 0.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
+        gl.enableVertexAttribArray(program.a_position);
+        gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.texCoordBufferFBO);
+        gl.enableVertexAttribArray(program.a_texCoord);
+        gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    /**
      * Get the active layer's adjustments
      */
     getActiveAdjustments() {

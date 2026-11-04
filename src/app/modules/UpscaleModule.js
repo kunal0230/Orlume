@@ -128,17 +128,12 @@ export class UpscaleModule {
      * Apply upscale to image
      */
     async apply() {
-        const btnApply = document.getElementById('btn-upscale-apply');
-        if (btnApply?.disabled) {
-            alert('AI Image Upscaling is currently offline for server maintenance.');
-            return;
-        }
-
         if (!this.state.hasImage) {
             console.warn('No image loaded for upscaling');
             return;
         }
 
+        const btnApply = document.getElementById('btn-upscale-apply');
         const progressSection = document.getElementById('upscale-progress-section');
         const progressBar = document.getElementById('upscale-progress-bar');
         const progressText = document.getElementById('upscale-progress-text');
@@ -149,15 +144,33 @@ export class UpscaleModule {
         if (btnApply) btnApply.disabled = true;
 
         try {
-            // Save state for undo
+            // Save state for undo (LAW 1)
+            clearTimeout(this.editor._historyDebounceTimer);
             const snapshot = this.editor._captureFullState();
             this.history.pushState(snapshot);
 
-            // Upscale the image
-            const upscaledCanvas = await this.upscaler.upscaleFromWebGL(
-                this.gpu.gl,
-                this.gpu.width,
-                this.gpu.height,
+            // Prepare source canvas (prefer clean originalImage so adjustments are not doubled)
+            let sourceToUpscale;
+            if (this.state.originalImage) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.state.originalImage.naturalWidth || this.state.originalImage.width;
+                tempCanvas.height = this.state.originalImage.naturalHeight || this.state.originalImage.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.state.originalImage, 0, 0);
+                sourceToUpscale = tempCanvas;
+            } else {
+                const imageData = this.gpu.toImageData();
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.gpu.width;
+                tempCanvas.height = this.gpu.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                if (imageData) tempCtx.putImageData(imageData, 0, 0);
+                sourceToUpscale = tempCanvas;
+            }
+
+            // Upscale the image using backend-agnostic canvas source (works on WebGPU and WebGL2)
+            const upscaledCanvas = await this.upscaler.upscale(
+                sourceToUpscale,
                 (percent, message) => {
                     if (progressBar) progressBar.style.width = `${percent}%`;
                     if (progressText) progressText.textContent = message;
@@ -170,6 +183,7 @@ export class UpscaleModule {
             img.onload = () => {
                 // Update state
                 this.state.setImage(img);
+                this.state.originalImage = img;
 
                 // Reload GPU processor with upscaled image
                 this.gpu.loadImage(img);

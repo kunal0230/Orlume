@@ -182,11 +182,6 @@ export class EditorUI {
         // Mask tool buttons within Masks panel
         document.querySelectorAll('.mask-tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (btn.classList.contains('mask-tool-down')) {
-                    const toolName = btn.id.includes('radial') ? 'Radial Mask' : 'Linear Mask';
-                    alert(`${toolName} is currently down for maintenance. Please use Brush Mask for localized adjustments.`);
-                    return;
-                }
                 const toolId = btn.id.replace('mask-tool-', '');
                 this.setMaskTool(toolId);
             });
@@ -380,11 +375,23 @@ export class EditorUI {
             if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
         }
 
-        // Create a new layer if none exists
-        if (this.masks && (!this.masks.layers || this.masks.layers.length === 0)) {
-            this.masks.createLayer(tool);
-            this.updateLayersList();
-            this.syncLayerUI();
+        // Create a new layer if none exists or active layer is different type
+        if (this.masks) {
+            const currentLayer = this.masks.getActiveLayer?.();
+            if (!currentLayer || currentLayer.type !== tool) {
+                this.masks.createLayer(tool);
+                this.updateLayersList();
+                this.syncLayerUI();
+
+                // If radial or gradient, create default mask on creation
+                const w = this.gpu.width || 1000;
+                const h = this.gpu.height || 1000;
+                if (tool === 'radial' && this.masks.createRadialMask) {
+                    this.masks.createRadialMask(w / 2, h / 2, Math.min(w, h) * 0.1, Math.min(w, h) * 0.35, false);
+                } else if (tool === 'gradient' && this.masks.createLinearMask) {
+                    this.masks.createLinearMask(w / 2, h * 0.2, w / 2, h * 0.8, 0.5, false);
+                }
+            }
         }
     }
 
@@ -647,22 +654,35 @@ export class EditorUI {
                     const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
                     const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
 
-                    if (this.state.lastPaintPos) {
-                        this.masks.paintStroke(this.state.lastPaintPos.x, this.state.lastPaintPos.y, x, y);
-                    } else {
-                        this.masks.paintBrush(x, y);
+                    if (this.state.currentTool === 'brush') {
+                        if (this.state.lastPaintPos) {
+                            this.masks.paintStroke(this.state.lastPaintPos.x, this.state.lastPaintPos.y, x, y);
+                        } else {
+                            this.masks.paintBrush(x, y);
+                        }
+                        this.state.updatePaintPos({ x, y });
+                        this.renderWithMask(true);
+                    } else if (this.state.currentTool === 'radial') {
+                        const start = this._maskDragStart || { x, y };
+                        const radius = Math.hypot(x - start.x, y - start.y);
+                        this.masks.createRadialMask(start.x, start.y, radius * 0.25, Math.max(10, radius), false);
+                        this.renderWithMask(true);
+                    } else if (this.state.currentTool === 'gradient') {
+                        const start = this._maskDragStart || { x, y };
+                        this.masks.createLinearMask(start.x, start.y, x, y, 0.5, false);
+                        this.renderWithMask(true);
                     }
-                    this.state.updatePaintPos({ x, y });
-                    this.renderWithMask(true);
                 }
             });
         }
 
         if (canvas) {
             canvas.addEventListener('mousedown', (e) => {
-                if (this.state.currentTool !== 'brush') return;
+                const tool = this.state.currentTool;
+                if (!['brush', 'radial', 'gradient'].includes(tool)) return;
+
                 if (this.masks.activeLayerIndex < 0) {
-                    this.masks.createLayer('brush');
+                    this.masks.createLayer(tool);
                     this.updateLayersList();
                     this.syncLayerUI();
                 }
@@ -671,21 +691,30 @@ export class EditorUI {
                 const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
                 const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
 
+                this._maskDragStart = { x, y };
                 this.state.setPainting(true, { x, y });
-                this.masks.paintBrush(x, y);
-                this.renderWithMask(true);
+
+                if (tool === 'brush') {
+                    this.masks.paintBrush(x, y);
+                    this.renderWithMask(true);
+                }
             });
 
             canvas.addEventListener('mouseup', () => {
-                this.state.setPainting(false, null);
-                if (this.state.hasImage) {
-                    this.renderWithMask(false);
+                if (this.state.isPainting) {
+                    this.state.setPainting(false, null);
+                    this._maskDragStart = null;
+                    if (this.state.hasImage) {
+                        this.renderWithMask(false);
+                        this._pushHistoryDebounced();
+                    }
                 }
             });
 
             canvas.addEventListener('mouseleave', () => {
                 if (this.state.isPainting) {
                     this.state.setPainting(false, null);
+                    this._maskDragStart = null;
                     this.renderWithMask(false);
                 }
             });

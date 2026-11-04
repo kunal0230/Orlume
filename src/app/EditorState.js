@@ -114,7 +114,11 @@ export class EditorState {
      */
     resetAdjustments() {
         for (const key of Object.keys(this.globalAdjustments)) {
-            this.globalAdjustments[key] = 0;
+            if (key === 'colorBlending') {
+                this.globalAdjustments[key] = 50;
+            } else {
+                this.globalAdjustments[key] = 0;
+            }
         }
         this._emit('reset');
     }

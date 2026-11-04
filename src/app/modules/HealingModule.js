@@ -157,13 +157,18 @@ export class HealingModule {
         this.healingCanvas.width = this.gpu.width;
         this.healingCanvas.height = this.gpu.height;
 
-        // Create 2D canvas copy from GPU (WebGPU canvas cannot be read directly)
-        const imageData = this.gpu.toImageData();
+        // Create 2D canvas copy (prefer clean originalImage so adjustments are not doubled)
         const sourceCanvas = document.createElement('canvas');
         sourceCanvas.width = this.gpu.width;
         sourceCanvas.height = this.gpu.height;
         const sourceCtx = sourceCanvas.getContext('2d');
-        sourceCtx.putImageData(imageData, 0, 0);
+
+        if (this.state.originalImage) {
+            sourceCtx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+        } else {
+            const imageData = this.gpu.toImageData();
+            if (imageData) sourceCtx.putImageData(imageData, 0, 0);
+        }
 
         // Set the image to heal
         this.healingTool.setImage(sourceCanvas);
@@ -296,11 +301,6 @@ export class HealingModule {
      */
     async performHealing() {
         const btn = document.getElementById('btn-heal');
-        if (btn?.disabled) {
-            alert('AI Spot Healing is currently down for scheduled maintenance.');
-            return;
-        }
-
         if (!this.healingTool.hasMaskDrawn()) {
             alert('Please paint over the area you want to heal first.');
             return;
@@ -400,8 +400,12 @@ export class HealingModule {
      * Apply healed result to main canvas
      */
     async applyHealing() {
+        if (!this.healedImage && this.healingTool.hasMaskDrawn()) {
+            await this.performHealing();
+        }
+
         if (!this.healedImage) {
-            alert('No healed image to apply. Run healing first.');
+            alert('No healed image to apply. Please paint over the area to heal.');
             return;
         }
 

@@ -365,8 +365,9 @@ export class HistoryModule {
         // Collect all image IDs currently referenced in the history stack
         const referencedIds = new Set();
         for (const state of this.history.history) {
-            if (state && state.state && state.state.imageId) {
-                referencedIds.add(state.state.imageId);
+            const id = state?.imageId || state?.state?.imageId;
+            if (id) {
+                referencedIds.add(id);
             }
         }
         

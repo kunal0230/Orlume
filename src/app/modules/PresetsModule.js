@@ -252,6 +252,8 @@ export class PresetsModule {
             // Curve LUT params must be null (identity), not 0
             if (key.startsWith('curveLut')) {
                 this.gpu.params[key] = null;
+            } else if (key === 'colorBlending') {
+                this.gpu.params[key] = 50;
             } else {
                 this.gpu.params[key] = 0;
             }

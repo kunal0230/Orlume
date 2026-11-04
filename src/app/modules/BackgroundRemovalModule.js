@@ -317,11 +317,6 @@ export class BackgroundRemovalModule {
      */
     async removeBackground() {
         const btn = document.getElementById('btn-remove-background');
-        if (btn?.disabled) {
-            alert('AI Background Removal is currently offline for server maintenance.');
-            return;
-        }
-
         if (!this.state.hasImage) {
             alert('Please load an image first.');
             return;
@@ -422,16 +417,25 @@ export class BackgroundRemovalModule {
      */
     _getCurrentImage() {
         return new Promise((resolve) => {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.gpu.width;
-            tempCanvas.height = this.gpu.height;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
+            if (this.state.originalImage) {
+                resolve(this.state.originalImage);
+                return;
+            }
+            const imageData = this.gpu.toImageData();
+            if (imageData) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.gpu.width;
+                tempCanvas.height = this.gpu.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.putImageData(imageData, 0, 0);
 
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(img); // Fallback: resolve anyway
-            img.src = tempCanvas.toDataURL('image/png');
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(img);
+                img.src = tempCanvas.toDataURL('image/png');
+            } else {
+                resolve(this.elements.canvas);
+            }
         });
     }
 
