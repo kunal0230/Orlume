@@ -4,22 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About | Orlume - Student Open Source Project</title>
+    <title>About | Orlume - Free In-Browser Photo Editor</title>
     <meta name="description"
-        content="The story behind Orlume — a free, open-source browser photo editor built by Kunal Chaugule as a student hobby project exploring WebGPU and computer vision.">
+        content="The story behind Orlume — a free, open-source browser photo editor built by Kunal as a hobby project exploring WebGPU and on-device graphics.">
     <meta name="keywords"
-        content="orlume, student project, hobby project, open source photo editor, webgpu photo editor, kunal chaugule">
+        content="orlume, open source photo editor, webgpu photo editor, kunal chaugule, browser photo editor">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://orlume.io/about">
 
-    <meta property="og:title" content="About | Orlume - Student Open Source Project">
+    <meta property="og:title" content="About | Orlume">
     <meta property="og:description"
-        content="A student hobby project exploring in-browser graphics, WebGPU shaders, and on-device AI.">
+        content="A free, open-source browser photo editor exploring in-browser graphics, WebGPU shaders, and on-device AI.">
     <meta property="og:url" content="https://orlume.io/about">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="/src/styles/landing.css">
     <link rel="stylesheet" href="/src/styles/pages.css">
@@ -29,20 +29,19 @@
 
     <style>
         /* ============================================================
-           SINGLE-PAGE VIEWPORT ABOUT EXPERIENCE
-           Engineered for 100% viewport fit with zero scroll on desktop
+           SIMPLE, HUMBLE, SINGLE-PAGE ABOUT VIEWPORT
+           No bold flexes, no sales pitches, 1st person, calm design
            ============================================================ */
 
         :root {
-            --about-primary: #2563eb;
-            --about-primary-hover: #1d4ed8;
-            --about-cyan: #0284c7;
-            --about-teal: #0d9488;
-            --about-emerald: #059669;
-            --about-amber: #d97706;
-            --about-card-bg: rgba(255, 255, 255, 0.94);
-            --about-border: #e2e8f0;
-            --about-border-subtle: #f1f5f9;
+            --ab-blue: #2563eb;
+            --ab-blue-hover: #1d4ed8;
+            --ab-text-dark: #0f172a;
+            --ab-text-body: #334155;
+            --ab-text-muted: #64748b;
+            --ab-border: #e2e8f0;
+            --ab-border-subtle: #f1f5f9;
+            --ab-card-bg: #ffffff;
         }
 
         *, *::before, *::after {
@@ -54,46 +53,23 @@
             padding: 0;
             width: 100%;
             background: #f8fafc;
-            color: #0f172a;
+            color: var(--ab-text-dark);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Ambient subtle backdrop */
         .mesh-gradient {
             position: fixed;
             inset: 0;
             z-index: -1;
             overflow: hidden;
             pointer-events: none;
-            background: radial-gradient(circle at 15% 20%, rgba(2, 132, 199, 0.08) 0%, transparent 45%),
-                        radial-gradient(circle at 85% 80%, rgba(37, 99, 235, 0.07) 0%, transparent 45%),
+            background: radial-gradient(circle at 20% 20%, rgba(2, 132, 199, 0.05) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.04) 0%, transparent 40%),
                         #f8fafc;
         }
 
-        .mesh-orb {
-            position: absolute;
-            width: 480px;
-            height: 480px;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.12;
-            background: radial-gradient(circle, rgba(13, 148, 136, 0.25) 0%, transparent 70%);
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            pointer-events: none;
-        }
-
-        /* Viewport App Structure */
-        .about-viewport-page {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            min-height: 100vh;
-        }
-
-        /* Top Nav Styling override for precision fit */
+        /* Top Nav */
         .nav.scrolled {
             height: 60px;
             position: fixed;
@@ -108,410 +84,212 @@
 
         .nav-inner {
             width: 100%;
-            max-width: 1320px;
+            max-width: 1200px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
-        /* Main Single-Screen Viewport Stage */
+        /* Main Viewport Container */
+        .about-viewport-page {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 100vh;
+        }
+
         .about-stage {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 72px 24px 8px; /* 60px nav + 12px breathing */
+            padding: 72px 24px 12px;
             width: 100%;
-            max-width: 1340px;
+            max-width: 1160px;
             margin: 0 auto;
             min-height: 0;
         }
 
+        .about-panel {
+            background: var(--ab-card-bg);
+            border: 1px solid var(--ab-border);
+            border-radius: 18px;
+            padding: clamp(24px, 3.2vh, 36px) clamp(24px, 3vw, 40px);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            width: 100%;
+        }
+
         .about-grid {
             display: grid;
-            grid-template-columns: 1.05fr 1.15fr;
-            gap: clamp(20px, 2.5vw, 36px);
-            align-items: center;
-            width: 100%;
-            height: 100%;
+            grid-template-columns: 1.15fr 0.95fr;
+            gap: clamp(24px, 3vw, 44px);
+            align-items: start;
         }
 
-        /* ================= Left Column: Project Story & Creator ================= */
-        .story-col {
+        /* Left Side: Humble First-Person Letter */
+        .about-text-col {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            gap: clamp(10px, 1.4vh, 18px);
+            gap: clamp(12px, 1.6vh, 18px);
         }
 
-        .eyebrow-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 13px;
-            border-radius: 9999px;
-            font-size: 11.5px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #0284c7;
-            background: rgba(2, 132, 199, 0.07);
-            border: 1px solid rgba(2, 132, 199, 0.2);
-            width: fit-content;
-        }
-
-        .pulse-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #0284c7;
-            box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7);
-            animation: pulseGlow 2s infinite;
-        }
-
-        @keyframes pulseGlow {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.6);
-            }
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 6px rgba(2, 132, 199, 0);
-            }
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(2, 132, 199, 0);
-            }
-        }
-
-        .story-title {
-            font-size: clamp(26px, 2.7vw, 38px);
-            font-weight: 800;
-            line-height: 1.15;
-            letter-spacing: -0.03em;
-            color: #0f172a;
-            margin: 0;
-        }
-
-        .story-title .gradient-text {
-            background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #1d4ed8 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .story-desc {
-            font-size: clamp(13.5px, 1.15vw, 15px);
-            line-height: 1.6;
-            color: #334155;
-            margin: 0;
-        }
-
-        .story-desc strong {
-            color: #0f172a;
+        .about-tag {
+            font-size: 11px;
             font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--ab-blue);
         }
 
-        /* Creator Capsule Card */
-        .creator-card {
-            background: #ffffff;
-            border: 1px solid var(--about-border);
-            border-radius: 14px;
-            padding: clamp(10px, 1.3vh, 14px) 16px;
+        .about-title {
+            font-size: clamp(22px, 2.2vw, 27px);
+            font-weight: 600;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+            color: var(--ab-text-dark);
+            margin: 0;
+        }
+
+        .about-body {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
-            transition: all 0.2s ease;
+            flex-direction: column;
+            gap: 12px;
+            font-size: clamp(13.5px, 1.05vw, 14.5px);
+            line-height: 1.65;
+            color: var(--ab-text-body);
         }
 
-        .creator-card:hover {
-            border-color: rgba(37, 99, 235, 0.3);
-            box-shadow: 0 6px 18px -4px rgba(37, 99, 235, 0.08);
-            transform: translateY(-1px);
+        .about-body p {
+            margin: 0;
         }
 
-        .creator-info {
+        /* Action & Link Bar */
+        .about-actions {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: wrap;
+            padding-top: 4px;
         }
 
-        .creator-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            font-weight: 800;
-            font-size: 15px;
-            flex-shrink: 0;
-            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
-        }
-
-        .creator-meta h2 {
-            font-size: 14.5px;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 2px 0;
-        }
-
-        .creator-role {
-            font-size: 12px;
-            color: #64748b;
-            font-weight: 500;
-            margin: 0;
-        }
-
-        .creator-links {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .creator-link-pill {
+        .btn-open-editor {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
+            gap: 8px;
+            padding: 9px 18px;
+            background: var(--ab-blue);
+            color: #ffffff;
             border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #334155;
+            font-size: 13.5px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s ease;
+        }
+
+        .btn-open-editor:hover {
+            background: var(--ab-blue-hover);
+            color: #ffffff;
+        }
+
+        .btn-open-editor kbd {
+            background: rgba(255, 255, 255, 0.22);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn-link-clean {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--ab-border-subtle);
+            border: 1px solid var(--ab-border);
+            color: var(--ab-text-body);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
             text-decoration: none;
             transition: all 0.15s ease;
         }
 
-        .creator-link-pill:hover {
+        .btn-link-clean:hover {
             background: #ffffff;
-            color: #2563eb;
+            color: var(--ab-blue);
             border-color: rgba(37, 99, 235, 0.35);
         }
 
-        /* Action Buttons */
-        .story-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 2px;
-        }
-
-        .btn-primary-studio {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: clamp(9px, 1.2vh, 12px) 20px;
-            background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #1d4ed8 100%);
-            color: #ffffff;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.35);
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary-studio:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px -2px rgba(37, 99, 235, 0.45);
-            color: #ffffff;
-        }
-
-        .btn-primary-studio kbd {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            padding: 1px 5px;
-            font-weight: 600;
-        }
-
-        .btn-secondary-gh {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: clamp(9px, 1.2vh, 12px) 16px;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            color: #0f172a;
-            border-radius: 10px;
-            font-size: 13.5px;
-            font-weight: 600;
-            text-decoration: none;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-            transition: all 0.2s ease;
-        }
-
-        .btn-secondary-gh:hover {
-            border-color: #2563eb;
-            color: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .btn-tertiary-docs {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: clamp(9px, 1.2vh, 12px) 14px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            text-decoration: none;
-            transition: color 0.15s ease;
-        }
-
-        .btn-tertiary-docs:hover {
-            color: #2563eb;
-        }
-
-        /* ================= Right Column: Architectural Bento Grid ================= */
-        .bento-col {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: clamp(10px, 1.4vh, 14px);
-            width: 100%;
-        }
-
-        .bento-card {
-            background: #ffffff;
-            border: 1px solid var(--about-border);
-            border-radius: 16px;
-            padding: clamp(14px, 1.8vh, 18px);
+        /* Right Side: What It Is (Simple 4-block list) */
+        .about-features-col {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            gap: clamp(8px, 1vh, 12px);
-            box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
+            gap: clamp(10px, 1.4vh, 14px);
         }
 
-        .bento-card:hover {
-            border-color: rgba(37, 99, 235, 0.35);
-            box-shadow: 0 8px 22px -4px rgba(37, 99, 235, 0.08);
-            transform: translateY(-2px);
-        }
-
-        .bento-card-top {
+        .feature-card {
+            background: #f8fafc;
+            border: 1px solid var(--ab-border);
+            border-radius: 12px;
+            padding: clamp(12px, 1.6vh, 16px) 16px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
+            gap: 14px;
+            align-items: flex-start;
+            transition: border-color 0.15s ease;
         }
 
-        .bento-icon-box {
-            width: 36px;
-            height: 36px;
-            border-radius: 9px;
+        .feature-card:hover {
+            border-color: #cbd5e1;
+        }
+
+        .feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            color: var(--ab-blue);
+            background: rgba(37, 99, 235, 0.08);
+            margin-top: 1px;
         }
 
-        .bento-icon-box.emerald {
-            background: rgba(5, 150, 105, 0.1);
-            color: #059669;
-        }
-
-        .bento-icon-box.blue {
-            background: rgba(37, 99, 235, 0.1);
-            color: #2563eb;
-        }
-
-        .bento-icon-box.amber {
-            background: rgba(217, 119, 6, 0.1);
-            color: #d97706;
-        }
-
-        .bento-icon-box.cyan {
-            background: rgba(2, 132, 199, 0.1);
-            color: #0284c7;
-        }
-
-        .bento-tag {
-            font-size: 10.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            padding: 3px 8px;
-            border-radius: 9999px;
-            line-height: 1.2;
-        }
-
-        .bento-tag.emerald {
+        .feature-icon.emerald {
             color: #059669;
             background: rgba(5, 150, 105, 0.08);
-            border: 1px solid rgba(5, 150, 105, 0.2);
         }
 
-        .bento-tag.blue {
-            color: #2563eb;
-            background: rgba(37, 99, 235, 0.08);
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-
-        .bento-tag.amber {
+        .feature-icon.amber {
             color: #d97706;
             background: rgba(217, 119, 6, 0.08);
-            border: 1px solid rgba(217, 119, 6, 0.2);
         }
 
-        .bento-tag.cyan {
-            color: #0284c7;
-            background: rgba(2, 132, 199, 0.08);
-            border: 1px solid rgba(2, 132, 199, 0.2);
-        }
-
-        .bento-content h3 {
-            font-size: clamp(14px, 1.15vw, 15.5px);
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 4px 0;
-        }
-
-        .bento-content p {
-            font-size: clamp(12px, 0.95vw, 13px);
-            line-height: 1.5;
+        .feature-icon.slate {
             color: #475569;
+            background: rgba(71, 85, 105, 0.08);
+        }
+
+        .feature-content h3 {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--ab-text-dark);
+            margin: 0 0 3px 0;
+        }
+
+        .feature-content p {
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--ab-text-muted);
             margin: 0;
         }
 
-        .bento-metric-row {
-            padding-top: clamp(6px, 0.8vh, 8px);
-            border-top: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 11.5px;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .bento-metric-highlight {
-            font-weight: 700;
-            color: #0f172a;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-        }
-
-        /* ================= Streamlined Micro-Footer ================= */
+        /* Micro-Footer */
         .micro-footer {
             height: 40px;
-            border-top: 1px solid var(--about-border);
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--ab-border);
+            background: rgba(255, 255, 255, 0.85);
             display: flex;
             align-items: center;
             padding: 0 24px;
@@ -521,36 +299,13 @@
 
         .micro-footer-inner {
             width: 100%;
-            max-width: 1320px;
+            max-width: 1200px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 12px;
-            color: #64748b;
-        }
-
-        .footer-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #059669;
-            font-weight: 600;
-            font-size: 11.5px;
-        }
-
-        .status-dot-green {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #059669;
-            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+            color: var(--ab-text-muted);
         }
 
         .footer-links {
@@ -560,34 +315,17 @@
         }
 
         .footer-links a {
-            color: #64748b;
+            color: var(--ab-text-muted);
             text-decoration: none;
             transition: color 0.15s ease;
         }
 
         .footer-links a:hover {
-            color: #2563eb;
+            color: var(--ab-blue);
         }
 
-        .footer-shortcut-hint {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: #94a3b8;
-        }
-
-        .footer-shortcut-hint kbd {
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: #334155;
-        }
-
-        /* ================= Desktop Single-Page Locking ================= */
-        @media (min-width: 1024px) and (min-height: 620px) {
+        /* Desktop Single-Page Viewport Lock */
+        @media (min-width: 960px) and (min-height: 580px) {
             html, body {
                 height: 100vh;
                 max-height: 100vh;
@@ -602,13 +340,13 @@
             }
 
             .about-stage {
-                height: calc(100vh - 100px); /* 60px nav + 40px footer */
+                height: calc(100vh - 100px);
                 overflow: hidden;
             }
         }
 
-        /* Responsive Breakpoints for smaller viewports or mobile */
-        @media (max-width: 1023px) {
+        /* Responsive Breakpoints for smaller viewports */
+        @media (max-width: 959px) {
             .about-stage {
                 padding: 80px 20px 32px;
                 height: auto;
@@ -616,61 +354,27 @@
 
             .about-grid {
                 grid-template-columns: 1fr;
-                gap: 28px;
-            }
-
-            .creator-card {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .creator-links {
-                width: 100%;
-                justify-content: flex-start;
+                gap: 24px;
             }
 
             .micro-footer {
                 height: auto;
-                padding: 16px 20px;
+                padding: 14px 20px;
             }
 
             .micro-footer-inner {
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
                 text-align: center;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .bento-col {
-                grid-template-columns: 1fr;
-            }
-
-            .story-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .btn-primary-studio, .btn-secondary-gh {
-                justify-content: center;
-            }
-
-            .footer-links {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 12px;
             }
         }
     </style>
 </head>
 
 <body class="about-viewport-page">
-    <!-- Ambient mesh background -->
-    <div class="mesh-gradient">
-        <div class="mesh-orb"></div>
-    </div>
+    <div class="mesh-gradient"></div>
 
-    <!-- Top Navigation Bar -->
+    <!-- Navigation Bar -->
     <nav class="nav scrolled" id="nav">
         <div class="nav-inner">
             <a href="/" class="nav-logo">
@@ -765,7 +469,7 @@
                             </div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">GitHub</div>
-                                <div class="nav-dropdown-desc">Inspect source code</div>
+                                <div class="nav-dropdown-desc">Source code</div>
                             </div>
                         </a>
                         <a href="/contribute">
@@ -790,7 +494,7 @@
                             </div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">Feedback</div>
-                                <div class="nav-dropdown-desc">Report bugs &amp; ideas</div>
+                                <div class="nav-dropdown-desc">Send ideas &amp; bugs</div>
                             </div>
                         </a>
                         <a href="/privacy">
@@ -801,7 +505,7 @@
                             </div>
                             <div class="nav-dropdown-content">
                                 <div class="nav-dropdown-title">Privacy</div>
-                                <div class="nav-dropdown-desc">Zero-cloud manifesto</div>
+                                <div class="nav-dropdown-desc">Privacy policy</div>
                             </div>
                         </a>
                     </div>
@@ -823,211 +527,130 @@
 
     <!-- Main Viewport Content Stage -->
     <main class="about-stage" role="main">
-        <div class="about-grid">
+        <div class="about-panel">
+            <div class="about-grid">
 
-            <!-- LEFT COLUMN: The Story, Vision & Creator -->
-            <section class="story-col">
-                <div class="eyebrow-pill">
-                    <span class="pulse-dot"></span>
-                    Student Project • MIT Licensed • Free Forever
-                </div>
+                <!-- LEFT SIDE: Personal First-Person Story -->
+                <section class="about-text-col">
+                    <span class="about-tag">About the project</span>
+                    
+                    <h1 class="about-title">Why I built Orlume</h1>
 
-                <h1 class="story-title">
-                    Sculpting light in 3D directly inside <span class="gradient-text">your browser</span>.
-                </h1>
-
-                <p class="story-desc">
-                    Orlume is a personal hobby project built by <strong>Kunal Chaugule</strong> exploring the intersection of real-time <strong>WebGPU compute pipelines</strong>, interactive 3D normal lighting, and on-device neural vision.
-                </p>
-
-                <p class="story-desc">
-                    High-end creative tools shouldn't require monthly subscription fees or upload your personal memories to remote cloud servers. Orlume proves that modern web standards can execute desktop-grade relighting, segmentation, and 8-channel color grading locally on your GPU at 60 FPS.
-                </p>
-
-                <!-- Creator Spotlight Capsule -->
-                <div class="creator-card">
-                    <div class="creator-info">
-                        <div class="creator-avatar">KC</div>
-                        <div class="creator-meta">
-                            <h2>Kunal Chaugule</h2>
-                            <p class="creator-role">Engineering Student &amp; Open-Source Creator</p>
-                        </div>
+                    <div class="about-body">
+                        <p>
+                            Hey, I'm Kunal. I'm a student who enjoys experimenting with computer graphics, WebGPU shaders, and browser tech.
+                        </p>
+                        <p>
+                            I started Orlume as a hobby project because I wanted to see if a normal web browser could handle real photo editing and 3D relighting without asking you to upload personal photos to a remote server or pay monthly subscription fees.
+                        </p>
+                        <p>
+                            Everything runs on your device's own GPU using WebGPU, WebGL2, and WebAssembly. There are no accounts, no server compute costs, and the entire code is open source under the MIT license.
+                        </p>
                     </div>
 
-                    <div class="creator-links">
-                        <a href="https://kunalchaugule.com" target="_blank" rel="noopener noreferrer"
-                            class="creator-link-pill" title="Personal Website">
+                    <!-- Clean, Simple Links -->
+                    <div class="about-actions">
+                        <a href="/editor" class="btn-open-editor">
+                            <span>Open Editor</span>
+                            <kbd>E</kbd>
+                        </a>
+                        <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer" class="btn-link-clean">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            <span>GitHub</span>
+                        </a>
+                        <a href="https://kunalchaugule.com" target="_blank" rel="noopener noreferrer" class="btn-link-clean">
                             <span>kunalchaugule.com</span>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="7" y1="17" x2="17" y2="7"></line>
                                 <polyline points="7 7 17 7 17 17"></polyline>
                             </svg>
                         </a>
-                        <a href="https://github.com/kunal0230" target="_blank" rel="noopener noreferrer"
-                            class="creator-link-pill" title="GitHub Profile">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                <path
-                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                            </svg>
-                            <span>@kunal0230</span>
+                        <a href="/feedback" class="btn-link-clean">
+                            <span>Feedback</span>
                         </a>
                     </div>
-                </div>
+                </section>
 
-                <!-- Action Links -->
-                <div class="story-actions">
-                    <a href="/editor" class="btn-primary-studio">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                        <span>Launch Studio</span>
-                        <kbd>E</kbd>
-                    </a>
+                <!-- RIGHT SIDE: Practical Overview -->
+                <section class="about-features-col" aria-label="Key Highlights">
 
-                    <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer"
-                        class="btn-secondary-gh">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                        </svg>
-                        <span>Star on GitHub</span>
-                    </a>
-
-                    <a href="/docs" class="btn-tertiary-docs">
-                        <span>Architecture Docs</span>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </a>
-                </div>
-            </section>
-
-            <!-- RIGHT COLUMN: 4-Card Architectural Bento Grid -->
-            <section class="bento-col" aria-label="Core Architectural Pillars">
-
-                <!-- Bento 1: Privacy -->
-                <div class="bento-card">
-                    <div class="bento-card-top">
-                        <div class="bento-icon-box emerald">
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2">
+                    <div class="feature-card">
+                        <div class="feature-icon emerald">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                             </svg>
                         </div>
-                        <span class="bento-tag emerald">Zero Uploads</span>
+                        <div class="feature-content">
+                            <h3>100% Private</h3>
+                            <p>Your photos stay in your browser RAM and GPU. There are no backend storage servers and zero photos are ever uploaded.</p>
+                        </div>
                     </div>
-                    <div class="bento-content">
-                        <h3>100% Private by Design</h3>
-                        <p>Zero bytes uploaded to remote servers. Raw pixels, depth maps, and adjustments remain strictly inside your local browser RAM and GPU.</p>
-                    </div>
-                    <div class="bento-metric-row">
-                        <span>Server Footprint</span>
-                        <span class="bento-metric-highlight">0 Bytes Sent</span>
-                    </div>
-                </div>
 
-                <!-- Bento 2: WebGPU Acceleration -->
-                <div class="bento-card">
-                    <div class="bento-card-top">
-                        <div class="bento-icon-box blue">
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                             </svg>
                         </div>
-                        <span class="bento-tag blue">60 FPS Shaders</span>
+                        <div class="feature-content">
+                            <h3>Hardware Shaders</h3>
+                            <p>Real-time color grading, tone adjustments, and 3D relighting written in custom WGSL and GLSL fragment shaders.</p>
+                        </div>
                     </div>
-                    <div class="bento-content">
-                        <h3>Hardware Acceleration</h3>
-                        <p>Custom WGSL and GLSL compute pipelines deliver instant tone curves, 8-channel HSL color mixing, and normal-mapped 3D point-light specular bounce.</p>
-                    </div>
-                    <div class="bento-metric-row">
-                        <span>Graphics Pipeline</span>
-                        <span class="bento-metric-highlight">WebGPU + GLSL</span>
-                    </div>
-                </div>
 
-                <!-- Bento 3: Neural Depth AI -->
-                <div class="bento-card">
-                    <div class="bento-card-top">
-                        <div class="bento-icon-box amber">
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2">
+                    <div class="feature-card">
+                        <div class="feature-icon amber">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                                 <polyline points="2 17 12 22 22 17"></polyline>
                                 <polyline points="2 12 12 17 22 12"></polyline>
                             </svg>
                         </div>
-                        <span class="bento-tag amber">On-Device AI</span>
+                        <div class="feature-content">
+                            <h3>On-Device Models</h3>
+                            <p>Monocular depth estimation and portrait segmentation running locally via ONNX Runtime Web and WebAssembly SIMD.</p>
+                        </div>
                     </div>
-                    <div class="bento-content">
-                        <h3>Depth Anything V2</h3>
-                        <p>State-of-the-art monocular depth estimation and portrait segmentation executed client-side via ONNX Runtime Web and multi-threaded SIMD.</p>
-                    </div>
-                    <div class="bento-metric-row">
-                        <span>Inference Engine</span>
-                        <span class="bento-metric-highlight">WASM SIMD Multi-Core</span>
-                    </div>
-                </div>
 
-                <!-- Bento 4: Permissive Open Source -->
-                <div class="bento-card">
-                    <div class="bento-card-top">
-                        <div class="bento-icon-box cyan">
-                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2">
+                    <div class="feature-card">
+                        <div class="feature-icon slate">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M16 18l6-6-6-6"></path>
                                 <path d="M8 6l-6 6 6 6"></path>
                             </svg>
                         </div>
-                        <span class="bento-tag cyan">MIT Licensed</span>
+                        <div class="feature-content">
+                            <h3>Free &amp; Open Source</h3>
+                            <p>MIT licensed. No paywalls, no watermark on exports, and no ads. Free to inspect, fork, or use for your own projects.</p>
+                        </div>
                     </div>
-                    <div class="bento-content">
-                        <h3>Free &amp; Open Forever</h3>
-                        <p>No paywalls, no subscriptions, and zero watermarks. Full 8K resolution output with 100% creator ownership under permissive open source.</p>
-                    </div>
-                    <div class="bento-metric-row">
-                        <span>Subscription / Cost</span>
-                        <span class="bento-metric-highlight">$0 / Free Forever</span>
-                    </div>
-                </div>
 
-            </section>
+                </section>
+
+            </div>
         </div>
     </main>
 
-    <!-- Sleek Single-Line Micro-Footer -->
+    <!-- Simple Micro-Footer -->
     <footer class="micro-footer">
         <div class="micro-footer-inner">
-            <div class="footer-left">
-                <span>&copy; 2026 Orlume &bull; Built by Kunal Chaugule</span>
-                <span class="status-badge">
-                    <span class="status-dot-green"></span>
-                    100% Client-Side
-                </span>
-            </div>
-
+            <span>&copy; 2026 Kunal Chaugule &bull; MIT License</span>
             <div class="footer-links">
                 <a href="/docs">Docs</a>
                 <a href="/tutorials">Tutorials</a>
                 <a href="/blog">Blog</a>
-                <a href="/changelog">Changelog</a>
-                <a href="/contribute">Contribute</a>
-                <a href="/privacy">Privacy</a>
-                <span class="footer-shortcut-hint">
-                    Press <kbd>E</kbd> for Studio
-                </span>
+                <a href="/feedback">Feedback</a>
+                <a href="https://github.com/kunal0230/Orlume" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <span>Press <kbd style="background:#f1f5f9; border:1px solid #cbd5e1; padding:1px 4px; border-radius:3px; font-family:'JetBrains Mono',monospace; font-size:10px;">E</kbd> for Editor</span>
             </div>
         </div>
     </footer>
 
     <!-- Global Keydown & Navigation Scripts -->
     <script>
-        // Global shortcut: press E to open editor (if not typing in input)
+        // Press E to launch editor
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
             if (e.key === 'e' || e.key === 'E') {

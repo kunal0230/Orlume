@@ -171,6 +171,11 @@ export class FeedbackModule {
     }
     
     openCrashReport(crashData) {
+        // Guard: Do not display a crash modal if there is no actionable stack trace
+        if (!crashData || !crashData.stack || crashData.stack === 'No stack trace available') {
+            return;
+        }
+
         this.openModal('Crash Report');
         
         // Pre-fill the message textarea with crash details
