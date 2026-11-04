@@ -222,6 +222,16 @@ export class WebGPUBackend extends GPUBackend {
                 hasRedCurve: f32,
                 hasGreenCurve: f32,
                 hasBlueCurve: f32,
+                // Color Grading Uniforms (aligned to 16 bytes)
+                shadowsColor: vec2f,
+                midtonesColor: vec2f,
+                highlightsColor: vec2f,
+                shadowsLum: f32,
+                midtonesLum: f32,
+                highlightsLum: f32,
+                colorBalance: f32,
+                colorBlending: f32,
+                _pad2: f32,
             }
 
             @vertex
@@ -476,6 +486,87 @@ export class WebGPUBackend extends GPUBackend {
                 return mix(v1, v2, f);
             }
 
+            // === Color Grading Helpers ===
+            fn hueToRgbWGSL(p: f32, q: f32, t_in: f32) -> f32 {
+                var t = t_in;
+                if (t < 0.0) { t = t + 1.0; }
+                if (t > 1.0) { t = t - 1.0; }
+                if (t < 1.0 / 6.0) { return p + (q - p) * 6.0 * t; }
+                if (t < 1.0 / 2.0) { return q; }
+                if (t < 2.0 / 3.0) { return p + (q - p) * (2.0 / 3.0 - t) * 6.0; }
+                return p;
+            }
+
+            fn hslToRgbNormWGSL(h: f32, s: f32, l: f32) -> vec3f {
+                if (s <= 0.0) {
+                    return vec3f(l, l, l);
+                }
+                var q: f32;
+                if (l < 0.5) {
+                    q = l * (1.0 + s);
+                } else {
+                    q = l + s - l * s;
+                }
+                let p = 2.0 * l - q;
+                return vec3f(
+                    hueToRgbWGSL(p, q, h + 1.0 / 3.0),
+                    hueToRgbWGSL(p, q, h),
+                    hueToRgbWGSL(p, q, h - 1.0 / 3.0)
+                );
+            }
+
+            fn setGradingLuminanceWGSL(color: vec3f, targetLuma: f32) -> vec3f {
+                let currentLuma = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+                let diff = color - currentLuma;
+                return targetLuma + diff;
+            }
+
+            fn applyColorGradingWGSL(
+                color: vec3f,
+                shadows: vec2f,
+                midtones: vec2f,
+                highlights: vec2f,
+                balance: f32,
+                blending: f32,
+                shadowsLum: f32,
+                midtonesLum: f32,
+                highlightsLum: f32
+            ) -> vec3f {
+                let luma = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+                let mid = 0.5 + balance * 0.25;
+                let blend = 0.2 + blending * 0.3;
+
+                let shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, luma);
+                let highlightWeight = smoothstep(mid - blend * 0.5, 1.0, luma);
+                let midDist = (luma - mid) / max(0.15, blend);
+                let midtoneWeight = exp(-midDist * midDist * 2.0);
+
+                let shadowTint = hslToRgbNormWGSL(shadows.x, 1.0, 0.5);
+                let midtoneTint = hslToRgbNormWGSL(midtones.x, 1.0, 0.5);
+                let highlightTint = hslToRgbNormWGSL(highlights.x, 1.0, 0.5);
+
+                var tintVector = vec3f(0.0);
+                if (shadows.y > 0.0) {
+                    tintVector = tintVector + (shadowTint - 0.5) * 2.0 * shadowWeight * shadows.y;
+                }
+                if (midtones.y > 0.0) {
+                    tintVector = tintVector + (midtoneTint - 0.5) * 2.0 * midtoneWeight * midtones.y;
+                }
+                if (highlights.y > 0.0) {
+                    tintVector = tintVector + (highlightTint - 0.5) * 2.0 * highlightWeight * highlights.y;
+                }
+
+                var graded = color + tintVector * 0.5;
+                graded = setGradingLuminanceWGSL(graded, luma);
+
+                let lumShift = shadowsLum * shadowWeight * 0.3
+                             + midtonesLum * midtoneWeight * 0.3
+                             + highlightsLum * highlightWeight * 0.3;
+                graded = graded + lumShift;
+
+                return max(graded, vec3f(0.0));
+            }
+
             @fragment
             fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
                 let pixel = textureSample(tex, texSampler, texCoord);
@@ -615,6 +706,28 @@ export class WebGPUBackend extends GPUBackend {
                     linear = max(linear, vec3f(0.0));
                 }
                 
+                // === COLOR GRADING (3-Way) ===
+                if (u.shadowsColor.y > 0.0 || u.midtonesColor.y > 0.0 || u.highlightsColor.y > 0.0 ||
+                    u.shadowsLum != 0.0 || u.midtonesLum != 0.0 || u.highlightsLum != 0.0) {
+                    let balance = u.colorBalance * 0.01;
+                    let blending = u.colorBlending * 0.01;
+                    let sLum = u.shadowsLum * 0.01;
+                    let mLum = u.midtonesLum * 0.01;
+                    let hLum = u.highlightsLum * 0.01;
+
+                    linear = applyColorGradingWGSL(
+                        linear,
+                        u.shadowsColor,
+                        u.midtonesColor,
+                        u.highlightsColor,
+                        balance,
+                        blending,
+                        sLum,
+                        mLum,
+                        hLum
+                    );
+                }
+
                 // Convert back to sRGB
                 var finalSrgb = vec3f(
                     linearToSRGB(clamp(linear.r, 0.0, 1.0)),
@@ -873,7 +986,20 @@ export class WebGPUBackend extends GPUBackend {
             (uniforms.curveLutRgb && uniforms.curveLutRgb.length > 0) ? 1.0 : 0.0,
             (uniforms.curveLutRed && uniforms.curveLutRed.length > 0) ? 1.0 : 0.0,
             (uniforms.curveLutGreen && uniforms.curveLutGreen.length > 0) ? 1.0 : 0.0,
-            (uniforms.curveLutBlue && uniforms.curveLutBlue.length > 0) ? 1.0 : 0.0
+            (uniforms.curveLutBlue && uniforms.curveLutBlue.length > 0) ? 1.0 : 0.0,
+            // Color Grading (12 floats)
+            uniforms.shadowsHue || 0,
+            uniforms.shadowsSat || 0,
+            uniforms.midtonesHue || 0,
+            uniforms.midtonesSat || 0,
+            uniforms.highlightsHue || 0,
+            uniforms.highlightsSat || 0,
+            uniforms.shadowsLum || 0,
+            uniforms.midtonesLum || 0,
+            uniforms.highlightsLum || 0,
+            uniforms.colorBalance || 0,
+            uniforms.colorBlending !== undefined ? uniforms.colorBlending : 50,
+            0 // _pad2
         ]);
 
         // Process Tone Curve Textures

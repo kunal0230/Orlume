@@ -312,6 +312,9 @@ export class PresetsModule {
                 }
             }
         }
+
+        // Color Grading wheels and sliders
+        this.editorUI.colorGradingModule?.updateUIFromState();
     }
 
     /**

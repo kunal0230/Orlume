@@ -10,22 +10,9 @@ vec3 setLuminance(vec3 color, float targetLuma) {
     return targetLuma + diff;
 }
 
-// Helper: Gaussian function for smooth weight distribution
-float gaussian(float x, float sigma) {
-    return exp(-(x * x) / (2.0 * sigma * sigma));
-}
-
-// Convert HSL to RGB (Helper if not already in common.glsl, but it likely is. 
-// If common.glsl is included, we might have it. Let's assume common.glsl defines HSLtoRGB or similar.
-// develop.glsl includes common.glsl. common.glsl usually has hsl2rgb.
-// Checking common.glsl content in memory... it has `hsl2rgb`.
-// But wait, the previous plan used `HSLtoRGB`. I should check common.glsl to be sure of the function name.
-// For safety, I'll use the one from common.glsl or define a local one if needed. 
-// actually, I'll stick to standard mix logic first.
-
 vec3 applyColorGrading(
     vec3 color,
-    vec2 u_shadows,   // Hue, Sat
+    vec2 u_shadows,   // Hue (0..1), Sat (0..1)
     vec2 u_midtones,
     vec2 u_highlights,
     float u_balance,  // -1 to 1
@@ -38,36 +25,29 @@ vec3 applyColorGrading(
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     
     // 1. Calculate Zone Weights with Smooth Falloff
-    
     // Balance [-1, 1] shifts the midpoint
-    // Default midpoint is 0.5. Balance shifts it +/- 0.25 (range 0.25 to 0.75)
-    float midpoint = 0.5 + u_balance * 0.25; 
+    float mid = 0.5 + u_balance * 0.25; 
     
-    // Blending [0, 1] controls the width (sigma) / overlap
-    // Low blending = sharp transitions. High blending = broad overlap.
-    float smoothRange = 0.15 + u_blending * 0.5;
+    // Blending [0, 1] controls the width / overlap
+    float blend = 0.2 + u_blending * 0.3;
     
-    // Shadows: Low pass filter. 1.0 at 0, falling off.
-    float shadowWeight = 1.0 - smoothstep(midpoint - smoothRange, midpoint + smoothRange, luma);
+    // Shadows: Low pass filter. 1.0 at 0, falling off toward mid + blend * 0.5.
+    float shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, luma);
     
-    // Highlights: High pass filter. 0.0 at 0, rising.
-    float highlightWeight = smoothstep(midpoint - smoothRange, midpoint + smoothRange, luma);
+    // Highlights: High pass filter. 0.0 below mid - blend * 0.5, rising to 1.0 at 1.0.
+    float highlightWeight = smoothstep(mid - blend * 0.5, 1.0, luma);
     
-    // Midtones: The remaining weight (Band pass)
-    float midtoneWeight = 1.0 - shadowWeight - highlightWeight;
+    // Midtones: Gaussian bell curve centered at mid
+    float midDist = (luma - mid) / max(0.15, blend);
+    float midtoneWeight = exp(-midDist * midDist * 2.0);
     
     // 2. Prepare Tints
-    // Assuming hsl2rgb(vec3(h, s, l)) is available from common.glsl
-    // We want pure color at 50% lightness for the tint vector
-    vec3 shadowTint = hslToRgb(vec3(u_shadows.x, 1.0, 0.5));
-    vec3 midtoneTint = hslToRgb(vec3(u_midtones.x, 1.0, 0.5));
-    vec3 highlightTint = hslToRgb(vec3(u_highlights.x, 1.0, 0.5));
+    // hslToRgb expects hue in degrees (0-360)
+    vec3 shadowTint = hslToRgb(vec3(u_shadows.x * 360.0, 1.0, 0.5));
+    vec3 midtoneTint = hslToRgb(vec3(u_midtones.x * 360.0, 1.0, 0.5));
+    vec3 highlightTint = hslToRgb(vec3(u_highlights.x * 360.0, 1.0, 0.5));
     
     // 3. Apply Tinting
-    // We calculate a tint vector which is the deviation from gray.
-    // (Tint - 0.5) gives us a push vector in RGB space.
-    // We scale this by the user's saturation (strength) and the zone weight.
-    
     vec3 tintVector = vec3(0.0);
     
     // Shadow tint
@@ -86,17 +66,18 @@ vec3 applyColorGrading(
     }
     
     // Apply tint vector efficiently
-    vec3 graded = color + tintVector * 0.5; // Scale for manageable strength
+    vec3 graded = color + tintVector * 0.5;
     
-    // 4. Apply Per-Zone Luminance Adjustments
-    // This allows lifting shadows or dimming highlights independently
-    graded += u_shadowsLum * shadowWeight * 0.2;
-    graded += u_midtonesLum * midtoneWeight * 0.2;
-    graded += u_highlightsLum * highlightWeight * 0.2;
-    
-    // 5. LUMINANCE LOCK
+    // 4. LUMINANCE LOCK
     // Crucially restore original luminance to prevent exposure shifts from tinting
     graded = setLuminance(graded, luma);
     
-    return graded;
+    // 5. Apply Per-Zone Luminance Adjustments
+    // Now that tint luminance is locked, deliberate luminance shifts take effect
+    float lumShift = u_shadowsLum * shadowWeight * 0.3
+                   + u_midtonesLum * midtoneWeight * 0.3
+                   + u_highlightsLum * highlightWeight * 0.3;
+    graded += lumShift;
+    
+    return max(graded, vec3(0.0));
 }

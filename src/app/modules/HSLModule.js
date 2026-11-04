@@ -41,6 +41,20 @@ export class HSLModule {
     init() {
         this._initTabSwitching();
         this._initSliders();
+        this._initResetButton();
+    }
+
+    _initResetButton() {
+        const btnReset = document.getElementById('btn-hsl-reset');
+        if (btnReset) {
+            btnReset.addEventListener('click', () => {
+                this.reset();
+                if (this.editorUI.colorGradingModule?.resetToDefaults) {
+                    this.editorUI.colorGradingModule.resetToDefaults();
+                }
+                this.editorUI._pushHistoryDebounced?.();
+            });
+        }
     }
 
     /**
@@ -184,6 +198,7 @@ export class HSLModule {
      */
     reset() {
         this.colors.forEach(color => {
+            const capColor = this._capitalize(color);
             ['hue', 'sat', 'lum'].forEach(type => {
                 const sliderId = `slider-hsl-${type}-${color}`;
                 const slider = document.getElementById(sliderId);
@@ -192,13 +207,14 @@ export class HSLModule {
 
                 if (slider) slider.value = 0;
                 if (valueDisplay) valueDisplay.textContent = '0';
-            });
 
-            // Reset GPU params
-            this.gpu.setParam(`hslHue${this._capitalize(color)}`, 0);
-            this.gpu.setParam(`hslSat${this._capitalize(color)}`, 0);
-            this.gpu.setParam(`hslLum${this._capitalize(color)}`, 0);
+                const capType = type.charAt(0).toUpperCase() + type.slice(1);
+                const paramName = `hsl${capType}${capColor}`;
+                this.gpu.params[paramName] = 0;
+                this.state[paramName] = 0;
+            });
         });
+        this.gpu.render();
     }
     /**
      * Get current state for history

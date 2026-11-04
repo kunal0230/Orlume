@@ -1,4 +1,3 @@
-
 import { ColorGradingWheel } from '../../components/ColorGradingWheel.js';
 
 export class ColorGradingModule {
@@ -17,16 +16,26 @@ export class ColorGradingModule {
             return;
         }
 
-        // Clear previous
+        // Clean up previous wheels if re-initializing
+        this.destroy();
         container.innerHTML = '';
 
         // Create 3 wheels
-        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
-        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
-        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l), () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
+        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l), () => this.editorUI._pushHistoryDebounced());
+        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l), () => this.editorUI._pushHistoryDebounced());
+        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l), () => this.editorUI._pushHistoryDebounced());
 
-        // Global Controls
+        // Global Controls (Blending & Balance)
         this._createGlobalControls(container);
+
+        // Wire reset button if present in header
+        const resetBtn = document.getElementById('btn-color-grading-reset');
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                this.resetToDefaults();
+                this.editorUI._pushHistoryDebounced();
+            };
+        }
 
         // Initialize values from state
         this.updateUIFromState();
@@ -73,12 +82,19 @@ export class ColorGradingModule {
             this.state.globalAdjustments.highlightsLum || 0
         );
 
-        // Globals
+        // Globals: Balance
         const balanceSlider = document.getElementById('grading-balance');
-        if (balanceSlider) balanceSlider.value = this.state.globalAdjustments.colorBalance || 0;
+        const balanceVal = document.getElementById('grading-balance-val');
+        const curBalance = this.state.globalAdjustments.colorBalance || 0;
+        if (balanceSlider) balanceSlider.value = `${curBalance}`;
+        if (balanceVal) balanceVal.textContent = curBalance > 0 ? `+${curBalance}` : `${curBalance}`;
 
+        // Globals: Blending
         const blendingSlider = document.getElementById('grading-blending');
-        if (blendingSlider) blendingSlider.value = this.state.globalAdjustments.colorBlending ?? 50;
+        const blendingVal = document.getElementById('grading-blending-val');
+        const curBlending = this.state.globalAdjustments.colorBlending ?? 50;
+        if (blendingSlider) blendingSlider.value = `${curBlending}`;
+        if (blendingVal) blendingVal.textContent = `${curBlending}`;
     }
 
     /**
@@ -119,7 +135,7 @@ export class ColorGradingModule {
             }
         }
 
-        // Update UI wheels
+        // Update UI wheels and render once
         this.updateUIFromState();
         this.gpu.render();
     }
@@ -150,9 +166,9 @@ export class ColorGradingModule {
 
     _createGlobalControls(container) {
         const controls = document.createElement('div');
-        controls.style.marginTop = '15px';
+        controls.style.marginTop = '12px';
         controls.style.width = '100%';
-        controls.style.padding = '0 10px';
+        controls.style.padding = '0 6px';
 
         // Blending
         this._createSlider(controls, 'Blending', 'grading-blending', 0, 100, 50, (v) => this.updateGlobal('colorBlending', v));
@@ -167,26 +183,56 @@ export class ColorGradingModule {
         const wrap = document.createElement('div');
         wrap.style.marginBottom = '10px';
 
-        const labelEl = document.createElement('div');
+        const labelRow = document.createElement('div');
+        labelRow.style.display = 'flex';
+        labelRow.style.justifyContent = 'space-between';
+        labelRow.style.alignItems = 'center';
+        labelRow.style.fontSize = '12px';
+        labelRow.style.marginBottom = '4px';
+        labelRow.style.color = '#ccc';
+
+        const labelEl = document.createElement('span');
         labelEl.textContent = label;
-        labelEl.style.fontSize = '12px';
-        labelEl.style.marginBottom = '4px';
-        labelEl.style.color = '#ccc';
+
+        const valSpan = document.createElement('span');
+        valSpan.id = `${id}-val`;
+        valSpan.textContent = def > 0 && id === 'grading-balance' ? `+${def}` : `${def}`;
+        valSpan.style.color = 'var(--text-secondary, #888)';
+        valSpan.style.fontSize = '11px';
+
+        labelRow.appendChild(labelEl);
+        labelRow.appendChild(valSpan);
 
         const input = document.createElement('input');
         input.type = 'range';
         input.id = id;
-        input.min = min;
-        input.max = max;
-        input.value = def;
+        input.min = `${min}`;
+        input.max = `${max}`;
+        input.value = `${def}`;
         input.style.width = '100%';
 
-        input.addEventListener('input', (e) => onChange(parseFloat(e.target.value)));
-        input.addEventListener('change', () => this.editorUI._pushHistoryDebounced()); // FIXED: color-grading-history
+        input.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            valSpan.textContent = v > 0 && id === 'grading-balance' ? `+${v}` : `${v}`;
+            onChange(v);
+        });
+        input.addEventListener('change', () => this.editorUI._pushHistoryDebounced());
+        input.addEventListener('dblclick', () => {
+            input.value = `${def}`;
+            valSpan.textContent = def > 0 && id === 'grading-balance' ? `+${def}` : `${def}`;
+            onChange(def);
+            this.editorUI._pushHistoryDebounced();
+        });
 
-        wrap.appendChild(labelEl);
+        wrap.appendChild(labelRow);
         wrap.appendChild(input);
         parent.appendChild(wrap);
     }
-}
 
+    destroy() {
+        for (const wheel of Object.values(this.wheels)) {
+            wheel?.destroy();
+        }
+        this.wheels = {};
+    }
+}

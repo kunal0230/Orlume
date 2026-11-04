@@ -1374,7 +1374,10 @@
                     <!-- Color Grading Section -->
                     <div class="section" id="color-grading-section"
                         style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
-                        <div class="section-header">Color Grading</div>
+                        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Color Grading</span>
+                            <button id="btn-color-grading-reset" class="btn-text" style="font-size: 11px; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 2px 6px;">Reset</button>
+                        </div>
                         <div id="color-grading-container">
                             <!-- ColorGradingWheel components mounted here -->
                         </div>

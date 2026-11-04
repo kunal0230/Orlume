@@ -317,6 +317,7 @@ export class EditorUI {
             case 'hsl':
                 document.getElementById('hsl-mode-header')?.style.setProperty('display', 'block');
                 document.getElementById('panel-hsl')?.classList.add('active');
+                this.colorGradingModule.updateUIFromState();
                 break;
 
             case 'presets':
