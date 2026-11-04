@@ -1713,3 +1713,88 @@ kbd {
     color: var(--red);
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
+/* ========================================
+   Tool Down / Maintenance States
+   ======================================== */
+.tool-btn.tool-down {
+    position: relative;
+    opacity: 0.7;
+}
+
+.tool-btn.tool-down::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.75);
+}
+
+.tool-btn.tool-down:hover {
+    opacity: 0.9;
+}
+
+.tool-offline-banner {
+    padding: 10px 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.tool-offline-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.tool-offline-dot {
+    color: #ef4444;
+    font-size: 11px;
+}
+
+.tool-offline-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f87171;
+}
+
+.tool-offline-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Mask Tool Down Selector State */
+.mask-tool-btn.mask-tool-down {
+    opacity: 0.55;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.mask-tool-btn.mask-tool-down:hover {
+    background: var(--bg-dark);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+.mask-down-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 8px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}

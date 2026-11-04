@@ -316,6 +316,12 @@ export class BackgroundRemovalModule {
      * Remove background from current image using AI
      */
     async removeBackground() {
+        const btn = document.getElementById('btn-remove-background');
+        if (btn?.disabled) {
+            alert('AI Background Removal is currently offline for server maintenance.');
+            return;
+        }
+
         if (!this.state.hasImage) {
             alert('Please load an image first.');
             return;
@@ -328,7 +334,6 @@ export class BackgroundRemovalModule {
 
         if (this.isProcessing) return;
 
-        const btn = document.getElementById('btn-remove-background');
         const originalText = btn.innerHTML;
         btn.innerHTML = '<span class="spinner"></span> Removing...';
         btn.disabled = true;

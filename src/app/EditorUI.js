@@ -182,6 +182,11 @@ export class EditorUI {
         // Mask tool buttons within Masks panel
         document.querySelectorAll('.mask-tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (btn.classList.contains('mask-tool-down')) {
+                    const toolName = btn.id.includes('radial') ? 'Radial Mask' : 'Linear Mask';
+                    alert(`${toolName} is currently down for maintenance. Please use Brush Mask for localized adjustments.`);
+                    return;
+                }
                 const toolId = btn.id.replace('mask-tool-', '');
                 this.setMaskTool(toolId);
             });

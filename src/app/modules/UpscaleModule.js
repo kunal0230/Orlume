@@ -128,6 +128,12 @@ export class UpscaleModule {
      * Apply upscale to image
      */
     async apply() {
+        const btnApply = document.getElementById('btn-upscale-apply');
+        if (btnApply?.disabled) {
+            alert('AI Image Upscaling is currently offline for server maintenance.');
+            return;
+        }
+
         if (!this.state.hasImage) {
             console.warn('No image loaded for upscaling');
             return;
@@ -137,7 +143,6 @@ export class UpscaleModule {
         const progressBar = document.getElementById('upscale-progress-bar');
         const progressText = document.getElementById('upscale-progress-text');
         const progressPercent = document.getElementById('upscale-progress-percent');
-        const btnApply = document.getElementById('btn-upscale-apply');
 
         // Show progress and disable button
         if (progressSection) progressSection.style.display = 'block';

@@ -295,6 +295,12 @@ export class HealingModule {
      * Perform AI healing using LaMa
      */
     async performHealing() {
+        const btn = document.getElementById('btn-heal');
+        if (btn?.disabled) {
+            alert('AI Spot Healing is currently down for scheduled maintenance.');
+            return;
+        }
+
         if (!this.healingTool.hasMaskDrawn()) {
             alert('Please paint over the area you want to heal first.');
             return;
@@ -305,7 +311,6 @@ export class HealingModule {
             return;
         }
 
-        const btn = document.getElementById('btn-heal');
         const originalText = btn.textContent;
         btn.textContent = '⏳ Healing...';
         btn.disabled = true;
