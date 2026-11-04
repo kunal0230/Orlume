@@ -61,7 +61,7 @@ export class HistoryModule {
         const globalAdjustments = { ...this.state.globalAdjustments };
 
         // Mask layer adjustments (don't store texture data, just adjustments)
-        const maskLayerAdjustments = this.masks.layers.map(layer => ({
+        const maskLayerAdjustments = (this.masks?.layers || []).map(layer => ({
             id: layer.id,
             name: layer.name,
             adjustments: { ...layer.adjustments },
@@ -286,7 +286,7 @@ export class HistoryModule {
         }
 
         // Restore mask layer adjustments
-        if (snapshot.maskLayerAdjustments) {
+        if (snapshot.maskLayerAdjustments && this.masks?.layers) {
             for (const savedLayer of snapshot.maskLayerAdjustments) {
                 const layer = this.masks.layers.find(l => l.id === savedLayer.id);
                 if (layer) {
@@ -308,7 +308,9 @@ export class HistoryModule {
                     if (savedLayer.strokes) {
                         layer.strokes = [...savedLayer.strokes];
                         // Replay strokes on GPU
-                        this.masks.replayLayer(layer.id);
+                        if (typeof this.masks.replayLayer === 'function') {
+                            this.masks.replayLayer(layer.id);
+                        }
                     }
                 }
             }

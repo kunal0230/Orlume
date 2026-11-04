@@ -481,7 +481,8 @@ export class EditorUI {
         if (brushSizeSlider) {
             brushSizeSlider.addEventListener('input', () => {
                 const size = parseInt(brushSizeSlider.value);
-                document.getElementById('val-brush-size').textContent = size;
+                const valEl = document.getElementById('val-brush-size');
+                if (valEl) valEl.textContent = size;
                 this.masks.brushSettings.size = size;
                 this.state.setBrushSetting('size', size);
                 this.updateBrushCursor();
@@ -494,7 +495,8 @@ export class EditorUI {
         if (brushHardnessSlider) {
             brushHardnessSlider.addEventListener('input', () => {
                 const hardness = parseInt(brushHardnessSlider.value);
-                document.getElementById('val-brush-hardness').textContent = hardness;
+                const valEl = document.getElementById('val-brush-hardness');
+                if (valEl) valEl.textContent = hardness;
                 this.masks.brushSettings.hardness = hardness / 100;
                 this.state.setBrushSetting('hardness', hardness);
                 this.updateBrushPreview();
@@ -506,7 +508,8 @@ export class EditorUI {
         if (brushOpacitySlider) {
             brushOpacitySlider.addEventListener('input', () => {
                 const opacity = parseInt(brushOpacitySlider.value);
-                document.getElementById('val-brush-opacity').textContent = opacity;
+                const valEl = document.getElementById('val-brush-opacity');
+                if (valEl) valEl.textContent = opacity;
                 this.masks.brushSettings.opacity = opacity / 100;
                 this.state.setBrushSetting('opacity', opacity);
                 this.updateBrushPreview();
@@ -705,7 +708,8 @@ export class EditorUI {
         const brushSizeSlider = document.getElementById('slider-brush-size');
         this.masks.brushSettings.size = Math.max(1, Math.min(500, this.masks.brushSettings.size + delta));
         if (brushSizeSlider) brushSizeSlider.value = this.masks.brushSettings.size;
-        document.getElementById('val-brush-size').textContent = this.masks.brushSettings.size;
+        const valEl = document.getElementById('val-brush-size');
+        if (valEl) valEl.textContent = this.masks.brushSettings.size;
         this.updateBrushCursor();
         this.updateBrushSizeIndicator(this.masks.brushSettings.size);
     }

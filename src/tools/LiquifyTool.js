@@ -153,6 +153,7 @@ export class LiquifyTool {
 
         // Create texture
         this.texture = gl.createTexture();
+        if (!this.texture) return;
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageOrCanvas);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -261,6 +262,7 @@ export class LiquifyTool {
         gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
 
         // Bind texture
+        if (!this.texture || !gl.isTexture(this.texture)) return;
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.uniform1i(gl.getUniformLocation(this.program, 'u_texture'), 0);

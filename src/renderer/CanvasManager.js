@@ -247,14 +247,16 @@ export class CanvasManager {
 
     zoom(factor) {
         this.zoomLevel = Math.max(0.25, Math.min(4, this.zoomLevel * factor));
-        document.getElementById('zoom-level').textContent = `${Math.round(this.zoomLevel * 100)}%`;
+        const zoomEl = document.getElementById('zoom-level');
+        if (zoomEl) zoomEl.textContent = `${Math.round(this.zoomLevel * 100)}%`;
         this.updateCanvasSize();
         this.syncEffectCanvases();
     }
 
     fitToView() {
         this.zoomLevel = 1;
-        document.getElementById('zoom-level').textContent = '100%';
+        const zoomEl = document.getElementById('zoom-level');
+        if (zoomEl) zoomEl.textContent = '100%';
         this.updateCanvasSize();
         this.syncEffectCanvases();
     }

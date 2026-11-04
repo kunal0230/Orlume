@@ -232,6 +232,7 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         const gl = this.gl;
 
         const texture = gl.createTexture();
+        if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
         // Determine format
@@ -303,6 +304,15 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         const albedoTex = this.createTexture(albedo, width, height);
         const normalTex = this._createNormalsTexture(normals, width, height);
         const depthTex = this._createDepthTexture(depth, width, height);
+        const sceneMapTex = this.createTexture(sceneMap, width, height);
+
+        if (!albedoTex || !normalTex || !depthTex || !sceneMapTex) {
+            if (albedoTex) gl.deleteTexture(albedoTex);
+            if (normalTex) gl.deleteTexture(normalTex);
+            if (depthTex) gl.deleteTexture(depthTex);
+            if (sceneMapTex) gl.deleteTexture(sceneMapTex);
+            return null;
+        }
 
         // Clear
         gl.clearColor(0, 0, 0, 1);
@@ -326,7 +336,6 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         gl.uniform1i(prog.uniforms.u_depth, 2);
 
         // Scene map texture
-        const sceneMapTex = this.createTexture(sceneMap, width, height);
         gl.activeTexture(gl.TEXTURE3);
         gl.bindTexture(gl.TEXTURE_2D, sceneMapTex);
         gl.uniform1i(prog.uniforms.u_sceneMap, 3);
@@ -427,6 +436,7 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         }
 
         const texture = gl.createTexture();
+        if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, packedData);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -465,6 +475,7 @@ export class WebGL2DeferredRenderer extends RenderingEngine {
         }
 
         const texture = gl.createTexture();
+        if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, packedData);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);

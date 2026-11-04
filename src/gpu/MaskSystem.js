@@ -277,6 +277,7 @@ export class MaskSystem {
 
         // Create mask texture (single channel would be ideal, using RGBA for compatibility)
         const maskTexture = gl.createTexture();
+        if (!maskTexture) return null;
         gl.bindTexture(gl.TEXTURE_2D, maskTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -636,10 +637,11 @@ export class MaskSystem {
      * Render the active mask as a red overlay for visual feedback during painting
      */
     renderMaskOverlay() {
-        if (this.activeLayerIndex < 0) return;
+        if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
         const gl = this.gl;
+        if (!layer || !layer.maskTexture || !gl.isTexture(layer.maskTexture)) return;
         const program = this.programs.get('maskOverlay');
         if (!program) return;
 
@@ -678,7 +680,7 @@ export class MaskSystem {
      * @param {WebGLTexture} baseTexture - The base processed image texture
      */
     applyMaskedAdjustments(baseTexture) {
-        if (this.layers.length === 0 || !baseTexture) return baseTexture;
+        if (this.layers.length === 0 || !baseTexture || !this.gl.isTexture(baseTexture)) return baseTexture;
 
         const gl = this.gl;
         const program = this.programs.get('maskedAdjustment');
@@ -700,6 +702,7 @@ export class MaskSystem {
 
             // Create texture A
             this._pingPongA = gl.createTexture();
+            if (!this._pingPongA) return baseTexture;
             gl.bindTexture(gl.TEXTURE_2D, this._pingPongA);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -713,6 +716,11 @@ export class MaskSystem {
 
             // Create texture B
             this._pingPongB = gl.createTexture();
+            if (!this._pingPongB) {
+                gl.deleteTexture(this._pingPongA);
+                this._pingPongA = null;
+                return baseTexture;
+            }
             gl.bindTexture(gl.TEXTURE_2D, this._pingPongB);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -747,6 +755,9 @@ export class MaskSystem {
             gl.useProgram(program);
 
             // Bind base texture (current state)
+            if (!readTexture || !gl.isTexture(readTexture)) {
+                return baseTexture;
+            }
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, readTexture);
             gl.uniform1i(gl.getUniformLocation(program, 'u_base'), 0);

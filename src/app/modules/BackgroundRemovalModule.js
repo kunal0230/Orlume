@@ -73,13 +73,15 @@ export class BackgroundRemovalModule {
         // Transform control sliders
         document.getElementById('bg-scale-slider')?.addEventListener('input', (e) => {
             this.transform.scale = parseFloat(e.target.value);
-            document.getElementById('bg-scale-value').textContent = `${Math.round(this.transform.scale * 100)}%`;
+            const valEl = document.getElementById('bg-scale-value');
+            if (valEl) valEl.textContent = `${Math.round(this.transform.scale * 100)}%`;
             this._showPreview();
         });
 
         document.getElementById('bg-rotation-slider')?.addEventListener('input', (e) => {
             this.transform.rotation = parseFloat(e.target.value);
-            document.getElementById('bg-rotation-value').textContent = `${this.transform.rotation}°`;
+            const valEl = document.getElementById('bg-rotation-value');
+            if (valEl) valEl.textContent = `${this.transform.rotation}°`;
             this._showPreview();
         });
 

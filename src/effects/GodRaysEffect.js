@@ -237,6 +237,7 @@ export class GodRaysEffect {
     _createTexture(imageData) {
         const gl = this.gl;
         const texture = gl.createTexture();
+        if (!texture) return null;
 
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
@@ -397,7 +398,7 @@ export class GodRaysEffect {
      * Render the god rays effect
      */
     render() {
-        if (!this.gl || !this.imageTexture) return null;
+        if (!this.gl || !this.imageTexture || !this.gl.isTexture(this.imageTexture)) return null;
 
         const gl = this.gl;
 
@@ -414,8 +415,9 @@ export class GodRaysEffect {
         gl.bindTexture(gl.TEXTURE_2D, this.imageTexture);
         gl.uniform1i(this.uniforms.u_image, 0);
 
+        const depthTex = (this.depthTexture && gl.isTexture(this.depthTexture)) ? this.depthTexture : this.imageTexture;
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, this.depthTexture || this.imageTexture);
+        gl.bindTexture(gl.TEXTURE_2D, depthTex);
         gl.uniform1i(this.uniforms.u_depth, 1);
 
         // Set uniforms

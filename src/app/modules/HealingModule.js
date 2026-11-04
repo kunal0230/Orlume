@@ -58,30 +58,40 @@ export class HealingModule {
         const tokenInput = document.getElementById('replicate-api-token');
         if (tokenInput && this.replicate.hasApiToken()) {
             tokenInput.value = this.replicate.getApiToken();
-            document.getElementById('api-status').textContent = '✅ Token loaded from storage';
-            document.getElementById('api-status').style.color = 'var(--accent)';
+            const status = document.getElementById('api-status');
+            if (status) {
+                status.textContent = '✅ Token loaded from storage';
+                status.style.color = 'var(--accent)';
+            }
         }
 
         // API Token input
         tokenInput?.addEventListener('change', () => {
             this.replicate.setApiToken(tokenInput.value);
-            document.getElementById('api-status').textContent = '💾 Token saved';
-            document.getElementById('api-status').style.color = 'var(--accent)';
+            const status = document.getElementById('api-status');
+            if (status) {
+                status.textContent = '💾 Token saved';
+                status.style.color = 'var(--accent)';
+            }
         });
 
         // Test API button
         document.getElementById('btn-test-api')?.addEventListener('click', async () => {
             const status = document.getElementById('api-status');
-            status.textContent = '🔄 Testing connection...';
-            status.style.color = 'var(--text-secondary)';
+            if (status) {
+                status.textContent = '🔄 Testing connection...';
+                status.style.color = 'var(--text-secondary)';
+            }
 
             const result = await this.replicate.testConnection();
-            if (result.success) {
-                status.textContent = '✅ Connection successful!';
-                status.style.color = 'var(--accent)';
-            } else {
-                status.textContent = `❌ ${result.error}`;
-                status.style.color = 'var(--text-error)';
+            if (status) {
+                if (result.success) {
+                    status.textContent = '✅ Connection successful!';
+                    status.style.color = 'var(--accent)';
+                } else {
+                    status.textContent = `❌ ${result.error}`;
+                    status.style.color = 'var(--text-error)';
+                }
             }
         });
 

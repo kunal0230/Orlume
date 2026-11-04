@@ -115,7 +115,8 @@ export class EditorApp {
                 }
 
                 document.getElementById('drop-zone')?.classList.add('hidden');
-                document.getElementById('perf').textContent = `${img.width}×${img.height}`;
+                const perfEl = document.getElementById('perf');
+                if (perfEl) perfEl.textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.ui.renderHistogram(), 100);
                 resolve(img);
             };

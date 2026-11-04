@@ -278,6 +278,7 @@ export class WebGL2Backend extends GPUBackend {
         const height = source.naturalHeight || source.height;
 
         const texture = gl.createTexture();
+        if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -294,6 +295,7 @@ export class WebGL2Backend extends GPUBackend {
     createTexture(width, height) {
         const gl = this.gl;
         const texture = gl.createTexture();
+        if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -334,6 +336,7 @@ export class WebGL2Backend extends GPUBackend {
     _renderBlurPass(inputTexture, outputFbo, direction) {
         const gl = this.gl;
         const program = this.programs.get('blur');
+        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
         gl.useProgram(program);
 
         gl.uniform2f(program.u_direction, direction[0], direction[1]);
@@ -382,14 +385,16 @@ export class WebGL2Backend extends GPUBackend {
 
         // === FINAL PASS ===
         const program = this.programs.get('develop');
-        if (!program) return;
+        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
 
         gl.useProgram(program);
 
         // Bind Blur Texture to Unit 5 (0-4 are used by main and LUTS)
-        gl.activeTexture(gl.TEXTURE5);
-        gl.bindTexture(gl.TEXTURE_2D, blurTexture._internal);
-        gl.uniform1i(program.u_blurTexture, 5);
+        if (blurTexture?._internal && gl.isTexture(blurTexture._internal)) {
+            gl.activeTexture(gl.TEXTURE5);
+            gl.bindTexture(gl.TEXTURE_2D, blurTexture._internal);
+            gl.uniform1i(program.u_blurTexture, 5);
+        }
 
         // Set uniforms
         gl.uniform1f(program.u_exposure, uniforms.exposure || 0);
@@ -525,8 +530,9 @@ export class WebGL2Backend extends GPUBackend {
 
         // Create texture if needed
         let texture = existingTexture;
-        if (!texture) {
+        if (!texture || !gl.isTexture(texture)) {
             texture = gl.createTexture();
+            if (!texture) return null;
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -548,7 +554,7 @@ export class WebGL2Backend extends GPUBackend {
     renderPassthrough(inputTexture, target = null, useFBOCoords = false) {
         const gl = this.gl;
         const program = this.programs.get('passthrough');
-        if (!program) return;
+        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
 
         gl.useProgram(program);
 
