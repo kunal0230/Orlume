@@ -380,7 +380,15 @@ export class EditorUI {
         if (this.masks) {
             const currentLayer = this.masks.getActiveLayer?.();
             if (!currentLayer || currentLayer.type !== tool) {
-                this.masks.createLayer(tool);
+                if (typeof this.masks.createLayer === 'function') {
+                    this.masks.createLayer(tool);
+                } else if (typeof this.masks.createBrushLayer === 'function' && tool === 'brush') {
+                    this.masks.createBrushLayer();
+                } else if (typeof this.masks.createRadialLayer === 'function' && tool === 'radial') {
+                    this.masks.createRadialLayer();
+                } else if (typeof this.masks.createGradientLayer === 'function' && tool === 'gradient') {
+                    this.masks.createGradientLayer();
+                }
                 this.updateLayersList();
                 this.syncLayerUI();
 
@@ -400,8 +408,9 @@ export class EditorUI {
      * Legacy setTool for backward compatibility with keyboard shortcuts
      */
     setTool(tool) {
-        if (['develop', '3d', 'export', 'crop', 'upscale', 'liquify', 'healing', 'godrays'].includes(tool)) {
-            this.setMode(tool);
+        const mode = (tool === '3d' || tool === 'depth') ? '3d-pro' : tool;
+        if (['develop', '3d-pro', 'export', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'hsl', 'presets', 'bg-remove', 'text', 'godrays'].includes(mode)) {
+            this.setMode(mode);
         } else if (['brush', 'radial', 'gradient'].includes(tool)) {
             // Switch to develop mode and masks tab, then select the tool
             this.setMode('develop');
@@ -516,15 +525,19 @@ export class EditorUI {
             });
         }
 
-        // Brush opacity slider
-        const brushOpacitySlider = document.getElementById('slider-brush-opacity');
-        if (brushOpacitySlider) {
-            brushOpacitySlider.addEventListener('input', () => {
-                const opacity = parseInt(brushOpacitySlider.value);
-                const valEl = document.getElementById('val-brush-opacity');
-                if (valEl) valEl.textContent = opacity;
-                this.masks.brushSettings.opacity = opacity / 100;
-                this.state.setBrushSetting('opacity', opacity);
+        // Brush flow / opacity slider
+        const brushFlowSlider = document.getElementById('slider-brush-flow') || document.getElementById('slider-brush-opacity');
+        if (brushFlowSlider) {
+            brushFlowSlider.addEventListener('input', () => {
+                const flow = parseInt(brushFlowSlider.value);
+                const valEl = document.getElementById('val-brush-flow') || document.getElementById('val-brush-opacity');
+                if (valEl) valEl.textContent = flow;
+                if (this.masks?.brushSettings) {
+                    this.masks.brushSettings.flow = flow / 100;
+                    this.masks.brushSettings.opacity = flow / 100;
+                }
+                this.state.setBrushSetting('flow', flow);
+                this.state.setBrushSetting('opacity', flow);
                 this.updateBrushPreview();
             });
         }
@@ -716,7 +729,10 @@ export class EditorUI {
                 if (this.state.isPainting) {
                     this.state.setPainting(false, null);
                     this._maskDragStart = null;
-                    this.renderWithMask(false);
+                    if (this.state.hasImage) {
+                        this.renderWithMask(false);
+                        this._pushHistoryDebounced();
+                    }
                 }
             });
         }
@@ -1140,6 +1156,9 @@ export class EditorUI {
         const btnReset = document.getElementById('btn-reset');
         if (btnReset) {
             btnReset.addEventListener('click', () => {
+                // Cancel pending debounced push before pushing manual snapshot (Law 1)
+                clearTimeout(this._historyDebounceTimer);
+
                 // Save state BEFORE reset for undo support
                 const snapshot = this._captureFullState();
                 this.history.pushState(snapshot);
@@ -1150,9 +1169,12 @@ export class EditorUI {
                     if (slider) {
                         slider.value = 0;
                         valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
-                        this.gpu.setParam(name, 0);
+                    }
+                    if (name in this.gpu.params) {
+                        this.gpu.params[name] = 0;
                     }
                 });
+                this.gpu.render();
                 this.state.resetAdjustments();
 
                 // H3 FIX: Also reset HSL, Tone Curves, Color Grading, and Presets
@@ -1284,14 +1306,16 @@ export class EditorUI {
         if (!resultTexture) return;
 
         // Step 2: Apply masked adjustments (if any layers with adjustments)
-        resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
+            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        }
 
         // Step 3: Blit result to canvas
         this.gpu.blitToCanvas(resultTexture);
 
         // Step 4: If painting, show red mask overlay for visual feedback
-        if (showOverlay && this.masks.getActiveLayer()) {
-            this.masks.renderMaskOverlay();
+        if (showOverlay && this.masks?.getActiveLayer?.()) {
+            this.masks.renderMaskOverlay?.();
         }
     }
 

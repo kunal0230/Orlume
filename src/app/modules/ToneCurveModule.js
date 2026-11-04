@@ -65,7 +65,7 @@ export class ToneCurveModule {
 
         if (this._hasAdjustments) {
             // Update GPU params with curve LUTs
-            this.gpu.params.curveLutRgb = luts.rgb;
+            this.gpu.params.curveLutRgb = this._hasChannelAdjustment('rgb') ? luts.rgb : null;
             this.gpu.params.curveLutRed = this._hasChannelAdjustment('red') ? luts.red : null;
             this.gpu.params.curveLutGreen = this._hasChannelAdjustment('green') ? luts.green : null;
             this.gpu.params.curveLutBlue = this._hasChannelAdjustment('blue') ? luts.blue : null;
@@ -140,6 +140,10 @@ export class ToneCurveModule {
         if (curves && this.curveEditor) {
             this.curveEditor.setCurves(curves);
         }
+    }
+
+    setCurves(curves) {
+        this.setCurveState(curves);
     }
 
     /**

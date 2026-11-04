@@ -427,6 +427,7 @@ export class CloneModule {
 
             // Re-initialize with new image
             if (this.state.currentTool === 'clone') {
+                this.deactivate();
                 this.activate();
             }
 

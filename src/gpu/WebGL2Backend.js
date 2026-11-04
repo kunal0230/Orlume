@@ -336,14 +336,22 @@ export class WebGL2Backend extends GPUBackend {
     _renderBlurPass(inputTexture, outputFbo, direction) {
         const gl = this.gl;
         const program = this.programs.get('blur');
-        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
+        const rawTexture = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
+            ? inputTexture
+            : inputTexture?._internal;
+        if (!program || !rawTexture || typeof WebGLTexture === 'undefined' || !(rawTexture instanceof WebGLTexture)) return;
+        try {
+            if (!gl.isTexture(rawTexture)) return;
+        } catch {
+            return;
+        }
         gl.useProgram(program);
 
         gl.uniform2f(program.u_direction, direction[0], direction[1]);
         gl.uniform2f(program.u_resolution, this.width, this.height);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, inputTexture._internal);
+        gl.bindTexture(gl.TEXTURE_2D, rawTexture);
         gl.uniform1i(program.u_texture, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
@@ -385,15 +393,30 @@ export class WebGL2Backend extends GPUBackend {
 
         // === FINAL PASS ===
         const program = this.programs.get('develop');
-        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
+        const rawInput = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
+            ? inputTexture
+            : inputTexture?._internal;
+        if (!program || !rawInput || typeof WebGLTexture === 'undefined' || !(rawInput instanceof WebGLTexture)) return;
+        try {
+            if (!gl.isTexture(rawInput)) return;
+        } catch {
+            return;
+        }
 
         gl.useProgram(program);
 
         // Bind Blur Texture to Unit 5 (0-4 are used by main and LUTS)
-        if (blurTexture?._internal && gl.isTexture(blurTexture._internal)) {
-            gl.activeTexture(gl.TEXTURE5);
-            gl.bindTexture(gl.TEXTURE_2D, blurTexture._internal);
-            gl.uniform1i(program.u_blurTexture, 5);
+        const rawBlur = (typeof WebGLTexture !== 'undefined' && blurTexture instanceof WebGLTexture)
+            ? blurTexture
+            : blurTexture?._internal;
+        if (rawBlur && typeof WebGLTexture !== 'undefined' && (rawBlur instanceof WebGLTexture)) {
+            let isValid = false;
+            try { isValid = gl.isTexture(rawBlur); } catch { isValid = false; }
+            if (isValid) {
+                gl.activeTexture(gl.TEXTURE5);
+                gl.bindTexture(gl.TEXTURE_2D, rawBlur);
+                gl.uniform1i(program.u_blurTexture, 5);
+            }
         }
 
         // Set uniforms
@@ -530,7 +553,11 @@ export class WebGL2Backend extends GPUBackend {
 
         // Create texture if needed
         let texture = existingTexture;
-        if (!texture || !gl.isTexture(texture)) {
+        let isExistingValid = false;
+        if (texture && typeof WebGLTexture !== 'undefined' && (texture instanceof WebGLTexture)) {
+            try { isExistingValid = gl.isTexture(texture); } catch { isExistingValid = false; }
+        }
+        if (!isExistingValid) {
             texture = gl.createTexture();
             if (!texture) return null;
             gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -554,12 +581,21 @@ export class WebGL2Backend extends GPUBackend {
     renderPassthrough(inputTexture, target = null, useFBOCoords = false) {
         const gl = this.gl;
         const program = this.programs.get('passthrough');
-        if (!program || !inputTexture?._internal || !gl.isTexture(inputTexture._internal)) return;
+        const rawTexture = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
+            ? inputTexture
+            : inputTexture?._internal;
+
+        if (!program || !rawTexture || typeof WebGLTexture === 'undefined' || !(rawTexture instanceof WebGLTexture)) return;
+        try {
+            if (!gl.isTexture(rawTexture)) return;
+        } catch {
+            return;
+        }
 
         gl.useProgram(program);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, inputTexture._internal);
+        gl.bindTexture(gl.TEXTURE_2D, rawTexture);
         gl.uniform1i(program.u_texture, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);

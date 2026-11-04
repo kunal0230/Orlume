@@ -148,24 +148,31 @@ export class ZoomPanModule {
 
         let startX = 0, startY = 0;
         let startPanX = 0, startPanY = 0;
+        let isSpaceDown = false;
 
         // Track Space key state
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !this.zoom.isPanning && !this.state.showingBefore) {
-                canvasArea.style.cursor = 'grab';
+            if (e.code === 'Space' && !e.target.matches('input, textarea, [contenteditable]')) {
+                isSpaceDown = true;
+                if (!this.zoom.isPanning) {
+                    canvasArea.style.cursor = 'grab';
+                }
             }
         });
 
         document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && !this.zoom.isPanning) {
-                canvasArea.style.cursor = '';
+            if (e.code === 'Space') {
+                isSpaceDown = false;
+                if (!this.zoom.isPanning) {
+                    canvasArea.style.cursor = '';
+                }
             }
         });
 
         // Mouse down - start panning if Space is held
         canvasArea.addEventListener('mousedown', (e) => {
-            // Check if Space is being held (we check via keyboard state)
-            if (e.buttons === 1 && canvasArea.style.cursor === 'grab') {
+            // Check if Space is being held
+            if (e.buttons === 1 && isSpaceDown) {
                 e.preventDefault();
                 this.zoom.isPanning = true;
                 startX = e.clientX;
@@ -193,7 +200,7 @@ export class ZoomPanModule {
                 this.zoom.isPanning = false;
                 const canvasArea = document.querySelector('.canvas-area');
                 if (canvasArea) {
-                    canvasArea.style.cursor = '';
+                    canvasArea.style.cursor = isSpaceDown ? 'grab' : '';
                 }
             }
         });

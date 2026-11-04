@@ -138,6 +138,7 @@ export class LayersModule {
                     this.updateList();
                     this.syncUI();
                     this.editor.renderWithMask(false);
+                    this.editor._pushHistoryDebounced?.();
                 }
             });
         });

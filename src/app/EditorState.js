@@ -48,7 +48,17 @@ export class EditorState {
             midtonesLum: 0,
             highlightsLum: 0,
             colorBalance: 0,
-            colorBlending: 50
+            colorBlending: 50,
+
+            // HSL (8 channels x Hue, Sat, Lum)
+            hslHueRed: 0, hslSatRed: 0, hslLumRed: 0,
+            hslHueOrange: 0, hslSatOrange: 0, hslLumOrange: 0,
+            hslHueYellow: 0, hslSatYellow: 0, hslLumYellow: 0,
+            hslHueGreen: 0, hslSatGreen: 0, hslLumGreen: 0,
+            hslHueAqua: 0, hslSatAqua: 0, hslLumAqua: 0,
+            hslHueBlue: 0, hslSatBlue: 0, hslLumBlue: 0,
+            hslHuePurple: 0, hslSatPurple: 0, hslLumPurple: 0,
+            hslHueMagenta: 0, hslSatMagenta: 0, hslLumMagenta: 0
         };
 
         // Event listeners

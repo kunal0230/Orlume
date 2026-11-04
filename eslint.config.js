@@ -40,9 +40,12 @@ export default [
                 ImageBitmap: 'readonly', // FIXED: missing-browser-globals
                 HTMLCanvasElement: 'readonly',
                 HTMLImageElement: 'readonly',
+                HTMLElement: 'readonly',
                 CanvasRenderingContext2D: 'readonly',
                 WebGLRenderingContext: 'readonly',
                 WebGL2RenderingContext: 'readonly',
+                WebGLTexture: 'readonly',
+                GPUTexture: 'readonly',
                 OffscreenCanvas: 'readonly',
                 createImageBitmap: 'readonly',
                 performance: 'readonly',

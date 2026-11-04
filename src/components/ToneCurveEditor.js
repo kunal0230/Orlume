@@ -126,6 +126,10 @@ export class ToneCurveEditor {
         const resetBtn = this.element.querySelector('.curve-reset-btn');
         resetBtn.addEventListener('click', () => this.resetCurrentCurve());
 
+        // Window drag handlers
+        this._boundWindowMouseMove = (e) => this._onMouseMove(e);
+        this._boundWindowMouseUp = (e) => this._onMouseUp(e);
+
         // Canvas interactions
         this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
@@ -190,6 +194,8 @@ export class ToneCurveEditor {
             this.selectedPointIndex = pointIndex;
             this.isDragging = true;
             this.canvas.style.cursor = 'grabbing';
+            window.addEventListener('mousemove', this._boundWindowMouseMove);
+            window.addEventListener('mouseup', this._boundWindowMouseUp);
         } else {
             // Add new point
             const normalized = this._coordsToNormalized(x, y);
@@ -221,6 +227,8 @@ export class ToneCurveEditor {
     _onMouseUp() {
         if (this.isDragging) {
             this.isDragging = false;
+            window.removeEventListener('mousemove', this._boundWindowMouseMove);
+            window.removeEventListener('mouseup', this._boundWindowMouseUp);
             this.canvas.style.cursor = this.hoveredPointIndex >= 0 ? 'grab' : 'crosshair';
             this.options.onInteractionEnd();
         }
@@ -228,13 +236,14 @@ export class ToneCurveEditor {
 
     _onMouseLeave() {
         this.hoveredPointIndex = -1;
-        this.isDragging = false;
-        this.canvas.style.cursor = 'crosshair';
-        this.render();
+        if (!this.isDragging) {
+            this.canvas.style.cursor = 'crosshair';
+            this.render();
 
-        // Clear I/O display
-        this.element.querySelector('.curve-input-val').textContent = '--';
-        this.element.querySelector('.curve-output-val').textContent = '--';
+            // Clear I/O display
+            this.element.querySelector('.curve-input-val').textContent = '--';
+            this.element.querySelector('.curve-output-val').textContent = '--';
+        }
     }
 
     _onDoubleClick(e) {
@@ -283,10 +292,11 @@ export class ToneCurveEditor {
         this.selectedPointIndex = insertIndex;
         this.isDragging = true;
         this.canvas.style.cursor = 'grabbing';
+        window.addEventListener('mousemove', this._boundWindowMouseMove);
+        window.addEventListener('mouseup', this._boundWindowMouseUp);
 
         this._onCurveChanged();
         this.render();
-        this.options.onInteractionEnd();
     }
 
     _removePoint(index) {
@@ -454,6 +464,7 @@ export class ToneCurveEditor {
         this.selectedPointIndex = -1;
         this.options.onChange(this.getLUTs());
         this.render();
+        this.options.onInteractionEnd();
     }
 
     /**
@@ -658,6 +669,8 @@ export class ToneCurveEditor {
      * Cleanup
      */
     dispose() {
+        window.removeEventListener('mousemove', this._boundWindowMouseMove);
+        window.removeEventListener('mouseup', this._boundWindowMouseUp);
         this.element.remove();
     }
 }

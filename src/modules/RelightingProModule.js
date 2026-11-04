@@ -1316,6 +1316,9 @@ export class RelightingProModule {
 
     deactivate() {
         this.isActive = false;
+        if (this.hasAnalyzed && this.ui?.state?.originalImage && this.ui?.gpu) {
+            this.ui.gpu.loadImage(this.ui.state.originalImage);
+        }
     }
 
     isReady() {

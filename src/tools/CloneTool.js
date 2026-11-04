@@ -43,6 +43,8 @@ export class CloneTool {
         this.isDrawing = false;
         this.lastX = 0;
         this.lastY = 0;
+        this.strokeStartX = 0;
+        this.strokeStartY = 0;
 
         // Source image data
         this.sourceImage = null;
@@ -151,6 +153,8 @@ export class CloneTool {
         this.isDrawing = true;
         this.lastX = x;
         this.lastY = y;
+        this.strokeStartX = x;
+        this.strokeStartY = y;
 
         // Calculate offset on first stroke
         if (this.aligned && !this.offsetSet) {
@@ -195,8 +199,8 @@ export class CloneTool {
             srcX = destX + this.offsetX;
             srcY = destY + this.offsetY;
         } else {
-            srcX = this.sourceX + (destX - this.lastX);
-            srcY = this.sourceY + (destY - this.lastY);
+            srcX = this.sourceX + (destX - this.strokeStartX);
+            srcY = this.sourceY + (destY - this.strokeStartY);
         }
 
         const radius = this.brushSize / 2;

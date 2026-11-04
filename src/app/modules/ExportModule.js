@@ -88,7 +88,9 @@ export class ExportModule {
             // Make sure we have the latest render with all adjustments
             let resultTexture = this.gpu.renderToTexture();
             if (resultTexture) {
-                resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
+                    resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                }
                 this.gpu.blitToCanvas(resultTexture);
             }
         } else {
@@ -100,7 +102,9 @@ export class ExportModule {
             // Render with current adjustments
             let resultTexture = this.gpu.renderToTexture();
             if (resultTexture) {
-                resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
+                    resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+                }
                 this.gpu.blitToCanvas(resultTexture);
             }
         }
@@ -111,7 +115,12 @@ export class ExportModule {
             compositeCanvas.width = exportCanvas.width;
             compositeCanvas.height = exportCanvas.height;
             const compCtx = compositeCanvas.getContext('2d');
-            compCtx.drawImage(exportCanvas, 0, 0);
+            const imgData = this.gpu.toImageData();
+            if (imgData) {
+                compCtx.putImageData(imgData, 0, 0);
+            } else {
+                compCtx.drawImage(exportCanvas, 0, 0);
+            }
             this.editor.app.textLayers.renderToCanvas(compositeCanvas);
             finalExportCanvas = compositeCanvas;
         }
@@ -180,7 +189,9 @@ export class ExportModule {
             this._updateFileSizeDisplay('--');
             return;
         }
-        resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        if (this.masks && typeof this.masks.applyMaskedAdjustments === 'function') {
+            resultTexture = this.masks.applyMaskedAdjustments(resultTexture);
+        }
         this.gpu.blitToCanvas(resultTexture);
 
         // Generate blob to estimate size

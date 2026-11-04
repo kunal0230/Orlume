@@ -171,6 +171,9 @@ export class HSLModule {
 
             // Update local state
             this.state[paramName] = value;
+
+            // Sync with editor state (Law 3)
+            this.editorUI.state?.setAdjustment(paramName, value);
         });
 
         // Double-click to reset
@@ -178,6 +181,9 @@ export class HSLModule {
             slider.value = 0;
             if (valueDisplay) valueDisplay.textContent = '0';
             this.gpu.setParam(paramName, 0);
+            this.state[paramName] = 0;
+            this.editorUI.state?.setAdjustment(paramName, 0);
+            this.editorUI._pushHistoryDebounced?.();
         });
 
         // Push to history when slider is released
@@ -212,6 +218,7 @@ export class HSLModule {
                 const paramName = `hsl${capType}${capColor}`;
                 this.gpu.params[paramName] = 0;
                 this.state[paramName] = 0;
+                this.editorUI.state?.setAdjustment(paramName, 0);
             });
         });
         this.gpu.render();
@@ -233,8 +240,11 @@ export class HSLModule {
 
         // Restore all values
         for (const [param, value] of Object.entries(this.state)) {
-            // Update GPU
-            this.gpu.setParam(param, value);
+            // Update GPU and EditorState without redundant renders
+            if (param in this.gpu.params) {
+                this.gpu.params[param] = value;
+            }
+            this.editorUI.state?.setAdjustment(param, value);
 
             // Derive UI ID from parameter name
             // param: hslHueRed -> hue, red
@@ -271,5 +281,6 @@ export class HSLModule {
                 }
             }
         }
+        this.gpu.render();
     }
 }

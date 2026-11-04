@@ -440,16 +440,19 @@ export class HealingModule {
             }
 
             // Reinitialize healing tool with new image for next use
-            // M4 FIX: Can't use WebGPU canvas directly — use toImageData() like activate() does
-            const imageData = this.gpu.toImageData();
-            if (imageData) {
-                const sourceCanvas = document.createElement('canvas');
-                sourceCanvas.width = imageData.width;
-                sourceCanvas.height = imageData.height;
-                const sourceCtx = sourceCanvas.getContext('2d');
-                sourceCtx.putImageData(imageData, 0, 0);
-                this.healingTool.setImage(sourceCanvas);
+            // Prefer clean originalImage so adjustments are not doubled
+            const sourceCanvas = document.createElement('canvas');
+            sourceCanvas.width = this.gpu.width;
+            sourceCanvas.height = this.gpu.height;
+            const sourceCtx = sourceCanvas.getContext('2d');
+
+            if (this.state.originalImage) {
+                sourceCtx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+            } else {
+                const imageData = this.gpu.toImageData();
+                if (imageData) sourceCtx.putImageData(imageData, 0, 0);
             }
+            this.healingTool.setImage(sourceCanvas);
             this.healingTool.clearMask();
 
 
@@ -475,12 +478,17 @@ export class HealingModule {
         btn.disabled = true;
 
         try {
-            // Capture current image
+            // Capture current image from clean originalImage or gpu.toImageData() (Law 7)
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = this.gpu.width;
             tempCanvas.height = this.gpu.height;
             const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
+            if (this.state.originalImage) {
+                ctx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+            } else {
+                const imageData = this.gpu.toImageData();
+                if (imageData) ctx.putImageData(imageData, 0, 0);
+            }
             const imageDataUrl = tempCanvas.toDataURL('image/png');
 
             const result = await this.replicate.enhanceFace(imageDataUrl);
@@ -529,12 +537,17 @@ export class HealingModule {
         btn.disabled = true;
 
         try {
-            // Capture current image
+            // Capture current image from clean originalImage or gpu.toImageData() (Law 7)
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = this.gpu.width;
             tempCanvas.height = this.gpu.height;
             const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(this.elements.canvas, 0, 0);
+            if (this.state.originalImage) {
+                ctx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
+            } else {
+                const imageData = this.gpu.toImageData();
+                if (imageData) ctx.putImageData(imageData, 0, 0);
+            }
             const imageDataUrl = tempCanvas.toDataURL('image/png');
 
             const result = await this.replicate.removeBackground(imageDataUrl);

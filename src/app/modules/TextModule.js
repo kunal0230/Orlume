@@ -9,6 +9,8 @@
  * - Property panel synchronization
  */
 
+import { TextLayer } from '../TextLayer.js';
+
 export class TextModule {
     constructor(editor) {
         this.editor = editor;
@@ -696,6 +698,7 @@ export class TextModule {
 
         // Serialize all layers
         return {
+            selectedLayerId: this.textManager.selectedLayerId,
             layers: this.textManager.layers.map(layer => ({
                 id: layer.id,
                 text: layer.text,
@@ -740,16 +743,20 @@ export class TextModule {
 
         // Clear existing layers
         this.textManager.layers = [];
-        this.textManager.selectedLayerId = null;
+        this.textManager.selectedLayerId = state.selectedLayerId || null;
 
-        // Restore layers
+        // Restore layers directly without emitting duplicate events
         state.layers.forEach(layerData => {
-            const layer = this.textManager.addLayer();
-            // Assign properties
+            const layer = new TextLayer(layerData);
             Object.assign(layer, layerData);
-            // Ensure ID matches for consistent history
-            layer.id = layerData.id;
+            this.textManager.layers.push(layer);
         });
+
+        if (this.textManager.layers.length > 0) {
+            this.textManager.showOverlay();
+        } else if (!this.isActive) {
+            this.textManager.hideOverlay();
+        }
 
         // Update UI
         this._updateTextLayerList();

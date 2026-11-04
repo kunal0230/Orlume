@@ -328,6 +328,48 @@ export class MaskSystem {
     }
 
     /**
+     * Create a brush mask layer (backwards compatibility alias)
+     * @param {string} [name] - Optional layer name
+     * @returns {Object|null} Created layer
+     */
+    createBrushLayer(name) {
+        const layer = this.createLayer('brush');
+        if (layer && name) layer.name = name;
+        return layer;
+    }
+
+    /**
+     * Create a radial mask layer (backwards compatibility alias)
+     * @param {string} [name] - Optional layer name
+     * @returns {Object|null} Created layer
+     */
+    createRadialLayer(name) {
+        const layer = this.createLayer('radial');
+        if (layer && name) layer.name = name;
+        return layer;
+    }
+
+    /**
+     * Create a gradient/linear mask layer (backwards compatibility alias)
+     * @param {string} [name] - Optional layer name
+     * @returns {Object|null} Created layer
+     */
+    createGradientLayer(name) {
+        const layer = this.createLayer('gradient');
+        if (layer && name) layer.name = name;
+        return layer;
+    }
+
+    /**
+     * Create a linear mask layer (alias for createGradientLayer)
+     * @param {string} [name] - Optional layer name
+     * @returns {Object|null} Created layer
+     */
+    createLinearLayer(name) {
+        return this.createGradientLayer(name);
+    }
+
+    /**
      * Paint a brush stroke at the given coordinates
      * @param {number} x - X coordinate in image pixels
      * @param {number} y - Y coordinate in image pixels
@@ -680,6 +722,38 @@ export class MaskSystem {
     }
 
     /**
+     * Extract raw WebGLTexture from either a raw WebGLTexture or a backend texture wrapper
+     * @param {WebGLTexture|Object} tex
+     * @returns {WebGLTexture|null}
+     */
+    _getRawTexture(tex) {
+        if (!tex) return null;
+        if (typeof WebGLTexture !== 'undefined' && tex instanceof WebGLTexture) {
+            return tex;
+        }
+        if (tex._internal && typeof WebGLTexture !== 'undefined' && tex._internal instanceof WebGLTexture) {
+            return tex._internal;
+        }
+        return null;
+    }
+
+    /**
+     * Safely check if a value is a valid WebGLTexture without throwing WebIDL TypeErrors
+     * @param {any} tex
+     * @returns {boolean}
+     */
+    _isValidTexture(tex) {
+        if (!tex || typeof WebGLTexture === 'undefined') return false;
+        const raw = (tex instanceof WebGLTexture) ? tex : tex?._internal;
+        if (!raw || !(raw instanceof WebGLTexture)) return false;
+        try {
+            return !!this.gl?.isTexture(raw);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Render the active mask as a red overlay for visual feedback during painting
      */
     renderMaskOverlay() {
@@ -687,7 +761,7 @@ export class MaskSystem {
 
         const layer = this.layers[this.activeLayerIndex];
         const gl = this.gl;
-        if (!layer || !layer.maskTexture || !gl.isTexture(layer.maskTexture)) return;
+        if (!layer || !this._isValidTexture(layer.maskTexture)) return;
         const program = this.programs.get('maskOverlay');
         if (!program) return;
 
@@ -723,10 +797,21 @@ export class MaskSystem {
     /**
      * Apply all layer adjustments composited with masks.
      * Uses ping-pong buffers to properly chain multiple layer effects.
-     * @param {WebGLTexture} baseTexture - The base processed image texture
+     * Accepts either a raw WebGLTexture or a backend texture wrapper ({ width, height, _internal: WebGLTexture })
+     * @param {WebGLTexture|Object} baseTexture - The base processed image texture
+     * @returns {WebGLTexture|Object} Output texture in same wrapper structure as input
      */
     applyMaskedAdjustments(baseTexture) {
-        if (this.layers.length === 0 || !baseTexture || !this.gl.isTexture(baseTexture)) return baseTexture;
+        if (this.layers.length === 0 || !baseTexture) return baseTexture;
+
+        const rawBase = this._getRawTexture(baseTexture);
+        if (!rawBase || !this._isValidTexture(rawBase)) return baseTexture;
+
+        // Check if any layer actually has non-zero adjustments
+        const hasAdjustments = this.layers.some(layer =>
+            layer.visible && layer.adjustments && Object.values(layer.adjustments).some(v => v !== 0)
+        );
+        if (!hasAdjustments) return baseTexture;
 
         const gl = this.gl;
         const program = this.programs.get('maskedAdjustment');
@@ -781,7 +866,7 @@ export class MaskSystem {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
 
-        let readTexture = baseTexture;
+        let readTexture = rawBase;
         let writeTexture = this._pingPongA;
         let writeFbo = this._pingPongFboA;
         let useA = true;
@@ -792,8 +877,7 @@ export class MaskSystem {
 
             // Check if any adjustments are non-zero
             const adj = layer.adjustments;
-            if (adj.exposure === 0 && adj.contrast === 0 && adj.shadows === 0 &&
-                adj.temperature === 0 && adj.saturation === 0) {
+            if (!adj || Object.values(adj).every(v => v === 0)) {
                 continue;
             }
 
@@ -801,7 +885,7 @@ export class MaskSystem {
             gl.useProgram(program);
 
             // Bind base texture (current state)
-            if (!readTexture || !gl.isTexture(readTexture)) {
+            if (!this._isValidTexture(readTexture)) {
                 return baseTexture;
             }
             gl.activeTexture(gl.TEXTURE0);
@@ -810,7 +894,7 @@ export class MaskSystem {
 
             // Bind mask texture — guard against stale/invalid texture handle
             // (can occur after a WebGL context loss or canvas resize)
-            if (!layer.maskTexture || !gl.isTexture(layer.maskTexture)) {
+            if (!this._isValidTexture(layer.maskTexture)) {
                 console.warn('[MaskSystem] Skipping layer with invalid maskTexture:', layer.name);
                 continue;
             }
@@ -853,6 +937,19 @@ export class MaskSystem {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, width, height);
+
+        if (readTexture === rawBase) {
+            return baseTexture;
+        }
+
+        // If caller passed a wrapped texture, return a wrapped texture
+        if (baseTexture && typeof baseTexture === 'object' && ('_internal' in baseTexture)) {
+            return {
+                width: baseTexture.width || width,
+                height: baseTexture.height || height,
+                _internal: readTexture
+            };
+        }
 
         return readTexture;
     }

@@ -245,10 +245,11 @@ export class LiquifyModule {
         this.liquifyCanvas.style.display = 'none';
         this.liquifyCanvas.style.pointerEvents = 'none';
 
-        // Clear canvas content to prevent overlap
-        const ctx = this.liquifyCanvas.getContext('2d');
-        if (ctx) {
-            ctx.clearRect(0, 0, this.liquifyCanvas.width, this.liquifyCanvas.height);
+        // Clear WebGL2 canvas content to prevent overlap
+        const gl = this.liquifyTool?.gl || this.liquifyCanvas.getContext('webgl2');
+        if (gl) {
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
         }
 
         // Hide brush cursor
@@ -325,7 +326,8 @@ export class LiquifyModule {
 
             // Re-initialize the liquify tool with the new image
             if (this.state.currentTool === 'liquify') {
-                setTimeout(() => this.activate(), 100);
+                this.deactivate();
+                this.activate();
             }
 
         } catch (error) {

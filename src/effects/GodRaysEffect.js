@@ -398,7 +398,12 @@ export class GodRaysEffect {
      * Render the god rays effect
      */
     render() {
-        if (!this.gl || !this.imageTexture || !this.gl.isTexture(this.imageTexture)) return null;
+        const isImageTexValid = !!(this.imageTexture && typeof WebGLTexture !== 'undefined' && (this.imageTexture instanceof WebGLTexture));
+        let isImageTex = false;
+        if (isImageTexValid) {
+            try { isImageTex = this.gl.isTexture(this.imageTexture); } catch { isImageTex = false; }
+        }
+        if (!this.gl || !isImageTex) return null;
 
         const gl = this.gl;
 
@@ -415,7 +420,11 @@ export class GodRaysEffect {
         gl.bindTexture(gl.TEXTURE_2D, this.imageTexture);
         gl.uniform1i(this.uniforms.u_image, 0);
 
-        const depthTex = (this.depthTexture && gl.isTexture(this.depthTexture)) ? this.depthTexture : this.imageTexture;
+        let isDepthTex = false;
+        if (this.depthTexture && typeof WebGLTexture !== 'undefined' && (this.depthTexture instanceof WebGLTexture)) {
+            try { isDepthTex = gl.isTexture(this.depthTexture); } catch { isDepthTex = false; }
+        }
+        const depthTex = isDepthTex ? this.depthTexture : this.imageTexture;
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, depthTex);
         gl.uniform1i(this.uniforms.u_depth, 1);

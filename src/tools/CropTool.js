@@ -247,10 +247,6 @@ export class CropTool {
      * Get the current crop region in pixel coordinates
      */
     getCropPixels() {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / canvasRect.width;
-        const scaleY = this.canvas.height / canvasRect.height;
-
         return {
             x: Math.round(this.region.x * this.canvas.width),
             y: Math.round(this.region.y * this.canvas.height),

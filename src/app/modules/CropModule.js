@@ -470,12 +470,10 @@ export class CropModule {
             this._clearTransformPreview();
 
             // Reactivate crop tool for the new image (stay in crop mode)
-            setTimeout(() => {
-                if (this.state.currentTool === 'crop') {
-                    this.cropTool?.deactivate();
-                    this.activate();
-                }
-            }, 150);
+            if (this.state.currentTool === 'crop') {
+                this.cropTool?.deactivate();
+                this.activate();
+            }
         };
         croppedImage.src = outputCanvas.toDataURL('image/png');
     }

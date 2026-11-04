@@ -272,8 +272,10 @@ export class HistoryModule {
                 // Update state
                 this.state.globalAdjustments[name] = value;
 
-                // Update GPU
-                this.gpu.setParam(name, value);
+                // Update GPU params directly without redundant renders (Law 14)
+                if (name in this.gpu.params) {
+                    this.gpu.params[name] = value;
+                }
 
                 // Update slider UI
                 const slider = document.getElementById(`slider-${name}`);
@@ -283,6 +285,7 @@ export class HistoryModule {
                     valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
                 }
             }
+            this.gpu.render();
         }
 
         // Restore mask layer adjustments

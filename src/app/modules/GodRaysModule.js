@@ -787,8 +787,9 @@ export class GodRaysModule {
             Object.entries(state.params).forEach(([id, value]) => {
                 if (value !== undefined) {
                     // 1. Update UI Slider (Silent, no event)
-                    const slider = document.getElementById(`slider-godrays-${id}`);
-                    const valueDisplay = document.getElementById(`val-${id}`);
+                    const sliderKey = id === 'sunRadius' ? 'radius' : id.toLowerCase();
+                    const slider = document.getElementById(`slider-godrays-${sliderKey}`);
+                    const valueDisplay = document.getElementById(`val-godrays-${sliderKey}`);
                     if (slider) {
                         slider.value = value;
                         if (valueDisplay) valueDisplay.textContent = value;

@@ -79,6 +79,7 @@ export class KeyboardModule {
         if (e.code === 'KeyV' && !e.metaKey && !e.ctrlKey) this.editor.setTool('godrays');
         if (e.code === 'KeyT' && !e.metaKey && !e.ctrlKey) this.editor.setTool('text');
         if (e.code === 'KeyS' && !e.metaKey && !e.ctrlKey) this.editor.setTool('clone');
+        if (e.code === 'KeyP' && !e.metaKey && !e.ctrlKey) this.editor.setTool('3d-pro');
 
         // Brush mode toggle
         if (e.code === 'KeyX' && this.state.currentTool === 'brush') {

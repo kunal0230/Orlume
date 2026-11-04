@@ -262,7 +262,12 @@ export class LiquifyTool {
         gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
 
         // Bind texture
-        if (!this.texture || !gl.isTexture(this.texture)) return;
+        if (!this.texture || typeof WebGLTexture === 'undefined' || !(this.texture instanceof WebGLTexture)) return;
+        try {
+            if (!gl.isTexture(this.texture)) return;
+        } catch {
+            return;
+        }
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.uniform1i(gl.getUniformLocation(this.program, 'u_texture'), 0);
@@ -382,9 +387,10 @@ export class LiquifyTool {
         const currentX = this.currentPositions[idx];
         const currentY = this.currentPositions[idx + 1];
 
-        // Lerp toward original
-        this.currentPositions[idx] = currentX + (originalX - currentX) * effect * 2;  // Increased from 0.5 to 2
-        this.currentPositions[idx + 1] = currentY + (originalY - currentY) * effect * 2;
+        // Lerp toward original (clamped to prevent overshoot)
+        const factor = Math.min(1.0, effect * 2);
+        this.currentPositions[idx] = currentX + (originalX - currentX) * factor;
+        this.currentPositions[idx + 1] = currentY + (originalY - currentY) * factor;
     }
 
     /**

@@ -142,11 +142,12 @@ export async function initApp() {
         const toolParam = urlParams.get('tool');
         if (toolParam) {
             // Valid tools that can be deep-linked
-            const validTools = ['develop', '3d', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export', 'text'];
-            if (validTools.includes(toolParam)) {
+            const validTools = ['develop', '3d', '3d-pro', 'godrays', 'hsl', 'presets', 'bg-remove', 'crop', 'upscale', 'liquify', 'healing', 'clone', 'export', 'text'];
+            const mappedTool = (toolParam === '3d' || toolParam === 'depth') ? '3d-pro' : toolParam;
+            if (validTools.includes(mappedTool)) {
                 // Small delay to ensure UI is fully ready
                 setTimeout(() => {
-                    app.ui.setMode(toolParam);
+                    app.ui.setMode(mappedTool);
                 }, 100);
             }
         }

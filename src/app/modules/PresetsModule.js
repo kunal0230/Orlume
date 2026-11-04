@@ -268,7 +268,7 @@ export class PresetsModule {
         const globalSliders = [
             'exposure', 'contrast', 'highlights', 'shadows',
             'whites', 'blacks', 'temperature', 'tint',
-            'vibrance', 'saturation', 'clarity', 'structure' // FIXED: texture-to-structure
+            'vibrance', 'saturation', 'clarity', 'dehaze', 'structure' // FIXED: texture-to-structure
         ];
 
         for (const param of globalSliders) {

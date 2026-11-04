@@ -28,10 +28,10 @@ export class ComparisonModule {
      * Initialize Before/After comparison slider
      */
     init() {
-        const canvasArea = document.querySelector('.canvas-area');
-        if (!canvasArea) return;
+        const canvasContainer = document.querySelector('.canvas-container') || document.querySelector('.canvas-area');
+        if (!canvasContainer) return;
 
-        // Create comparison slider container
+        // Create comparison slider container inside canvasContainer for accurate split-alignment
         const slider = document.createElement('div');
         slider.className = 'comparison-slider';
         slider.id = 'comparison-slider';
@@ -46,17 +46,14 @@ export class ComparisonModule {
             <div class="comparison-label comparison-label-before">Before</div>
             <div class="comparison-label comparison-label-after">After</div>
         `;
-        canvasArea.appendChild(slider);
+        canvasContainer.appendChild(slider);
 
         // Create original canvas overlay for comparison
         const originalCanvas = document.createElement('canvas');
         originalCanvas.id = 'original-canvas';
         originalCanvas.className = 'original-canvas';
         originalCanvas.style.display = 'none';
-        const canvasContainer = document.querySelector('.canvas-container');
-        if (canvasContainer) {
-            canvasContainer.appendChild(originalCanvas);
-        }
+        canvasContainer.appendChild(originalCanvas);
 
         // Slider drag handling
         const handle = slider.querySelector('.comparison-handle');
@@ -69,9 +66,9 @@ export class ComparisonModule {
         document.addEventListener('mousemove', (e) => {
             if (!this._isDragging || !this.comparison.active) return;
 
-            const rect = canvasArea.getBoundingClientRect();
+            const rect = canvasContainer.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            this.comparison.position = Math.max(5, Math.min(95, (x / rect.width) * 100));
+            this.comparison.position = Math.max(0, Math.min(100, (x / rect.width) * 100));
             this._updateSlider();
         });
 
