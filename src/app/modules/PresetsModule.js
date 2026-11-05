@@ -1,18 +1,26 @@
 /**
- * PresetsModule - Lightroom-Grade Presets & Film Profiles Management
+ * PresetsModule - Minimalist, Pro-Grade Presets & Film Simulations Management
  * 
- * Features:
- * - Dual Mode Switcher: Film Profiles (3D LUTs) & Creative Presets (Handcrafted packs)
- * - Real-time live search across 56+ film stocks, presets, and descriptions
- * - Dynamic category filter chips with live counts
- * - Smooth interactive hover preview on canvas before applying
- * - Dual intensity sliders (Profile Amount & Preset Strength) with real-time hardware blending
- * - Custom Adobe .CUBE LUT import and preview
- * - Preserves all history undo/redo and parameter synchronization contracts
+ * Elegant, clutter-free design inspired by Leica & Lightroom Classic:
+ * - Unified dual-mode switcher: Film Stocks (14) & Presets (42)
+ * - Quiet 1-line integrated slider (only visible when an adjustment is active)
+ * - Lightroom Classic-style collapsible folders for both film stocks and presets
+ * - Clean 2-column pills with authentic tonal dots and crisp typography
+ * - Non-destructive instant hover preview on canvas
+ * - Custom Adobe .CUBE LUT import with immediate live preview
+ * - 100% contained within sidebar (strictly zero horizontal scroll)
  */
 
 import { PresetCategories, Presets, getPresetsByCategory, getPresetById, blendPreset } from '../../presets/PresetLibrary.js';
 import { BUILTIN_LUTS, CubeLutParser } from '../../utils/CubeLutParser.js';
+
+// Clean Film Stock Categories
+const FILM_STOCK_CATEGORIES = [
+    { id: 'negative', name: 'Color Negative' },
+    { id: 'slide', name: 'Color Slide' },
+    { id: 'bw', name: 'Black & White' },
+    { id: 'cinematic', name: 'Cinematic' }
+];
 
 export class PresetsModule {
     constructor(editorUI) {
@@ -20,13 +28,12 @@ export class PresetsModule {
         this.gpu = editorUI.gpu;
         this.state = editorUI.state;
 
-        // Active View State
+        // View State
         this.currentTab = 'profiles'; // 'profiles' | 'presets'
-        this.profileFilter = 'all';  // 'all' | 'negative' | 'slide' | 'bw' | 'cinematic'
-        this.presetFilter = 'all';   // 'all' | category id
         this.searchQuery = '';
+        this.expandedFolders = new Set(['negative', 'film']); // Default first category in each mode open
 
-        // Selection State
+        // Adjustment State
         this.activePresetId = null;
         this.activeProfileId = 'none';
         this.presetIntensity = 100;
@@ -45,7 +52,6 @@ export class PresetsModule {
      * Initialize the module
      */
     init() {
-        // Sync active state from EditorState if present
         if (this.state?.globalAdjustments?.lutPreset) {
             this.activeProfileId = this.state.globalAdjustments.lutPreset;
         }
@@ -58,51 +64,37 @@ export class PresetsModule {
     }
 
     /**
-     * Render the complete presets & profiles user interface
+     * Render the minimalist Presets & Film Stocks UI
      */
     _renderMainUI() {
         const panel = document.getElementById('panel-presets');
         if (!panel) return;
+
+        const isProfileActive = this.activeProfileId && this.activeProfileId !== 'none';
+        const isPresetActive = Boolean(this.activePresetId);
 
         panel.innerHTML = `
             <div class="presets-module-container">
                 <!-- Mode Switcher Tabs -->
                 <div class="presets-nav-tabs">
                     <button class="presets-nav-tab ${this.currentTab === 'profiles' ? 'active' : ''}" data-tab="profiles">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <line x1="7" y1="3" x2="7" y2="21"/>
-                            <line x1="17" y1="3" x2="17" y2="21"/>
-                            <line x1="3" y1="8" x2="7" y2="8"/>
-                            <line x1="3" y1="12" x2="7" y2="12"/>
-                            <line x1="3" y1="16" x2="7" y2="16"/>
-                            <line x1="17" y1="8" x2="21" y2="8"/>
-                            <line x1="17" y1="12" x2="21" y2="12"/>
-                            <line x1="17" y1="16" x2="21" y2="16"/>
-                        </svg>
-                        <span>Film Simulations</span>
+                        <span>Film Stocks</span>
                         <span class="tab-badge">${BUILTIN_LUTS.length}</span>
                     </button>
                     <button class="presets-nav-tab ${this.currentTab === 'presets' ? 'active' : ''}" data-tab="presets">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2C6.5 2 2 6.5 2 12a10 10 0 0 0 15.3 8.5c.8-.5 1.2-1.4 1.2-2.3 0-1.1.9-2 2-2h.5A3.5 3.5 0 0 0 22 12.5C22 6.7 17.5 2 12 2z"/>
-                            <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
-                            <circle cx="12" cy="7.5" r="1" fill="currentColor"/>
-                            <circle cx="16.5" cy="10.5" r="1" fill="currentColor"/>
-                        </svg>
-                        <span>Creative Presets</span>
+                        <span>Presets</span>
                         <span class="tab-badge">${Presets.length}</span>
                     </button>
                 </div>
 
-                <!-- Live Search Bar -->
+                <!-- Quiet Search Input -->
                 <div class="presets-search-wrap">
                     <svg class="presets-search-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input type="text" id="presets-search-input" class="presets-search-input" 
-                        placeholder="Search film stocks & presets..." value="${this.searchQuery}" autocomplete="off" spellcheck="false">
+                        placeholder="Filter looks..." value="${this.searchQuery}" autocomplete="off" spellcheck="false">
                     <button id="presets-search-clear" class="presets-search-clear" title="Clear search" style="${this.searchQuery ? 'display: flex;' : 'display: none;'}">
                         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -111,116 +103,48 @@ export class PresetsModule {
                     </button>
                 </div>
 
-                <!-- Dynamic Filter Chips -->
-                <div id="presets-chips-container" class="presets-chips-row">
-                    ${this._renderFilterChipsHTML()}
+                <!-- Minimal 1-Line Slider Bar (Profiles) -->
+                <div id="profile-intensity-bar" class="minimal-slider-bar" style="${this.currentTab === 'profiles' && isProfileActive ? 'display: flex;' : 'display: none;'}">
+                    <span class="minimal-slider-label">Amount</span>
+                    <input type="range" id="slider-lut-intensity" min="0" max="100" step="1" value="${this.profileIntensity}">
+                    <span id="val-lut-intensity" class="minimal-slider-val">${this.profileIntensity}%</span>
+                    <button class="minimal-clear-btn" id="btn-clear-profile" title="Clear film stock">×</button>
                 </div>
 
-                <!-- Profile Intensity Slider (visible when a profile is selected) -->
-                <div id="profile-intensity-panel" class="presets-intensity-panel" style="${this.activeProfileId !== 'none' ? 'display: flex;' : 'display: none;'}">
-                    <div class="presets-intensity-header">
-                        <span class="presets-intensity-title">Simulation Intensity</span>
-                        <span id="val-lut-intensity" class="presets-intensity-val">${this.profileIntensity}%</span>
-                    </div>
-                    <div class="control-group">
-                        <input type="range" id="slider-lut-intensity" class="slider-lut-intensity" min="0" max="100" step="1" value="${this.profileIntensity}"
-                            style="background: linear-gradient(to right, var(--bg-dark), var(--accent));">
-                    </div>
+                <!-- Minimal 1-Line Slider Bar (Presets) -->
+                <div id="preset-intensity-bar" class="minimal-slider-bar" style="${this.currentTab === 'presets' && isPresetActive ? 'display: flex;' : 'display: none;'}">
+                    <span class="minimal-slider-label">Amount</span>
+                    <input type="range" id="slider-preset-intensity" min="0" max="100" step="1" value="${this.presetIntensity}">
+                    <span id="preset-intensity-value" class="minimal-slider-val">${this.presetIntensity}%</span>
+                    <button class="minimal-clear-btn" id="btn-clear-preset" title="Reset preset">×</button>
                 </div>
 
-                <!-- Preset Intensity Slider (visible when a preset is selected) -->
-                <div id="preset-intensity-panel" class="presets-intensity-panel" style="${this.activePresetId ? 'display: flex;' : 'display: none;'}">
-                    <div class="presets-intensity-header">
-                        <span class="presets-intensity-title">Preset Strength</span>
-                        <span id="preset-intensity-value" class="presets-intensity-val">${this.presetIntensity}%</span>
-                    </div>
-                    <div class="control-group">
-                        <input type="range" id="slider-preset-intensity" min="0" max="100" step="1" value="${this.presetIntensity}"
-                            style="background: linear-gradient(to right, var(--bg-dark), var(--accent));">
-                    </div>
-                </div>
-
-                <!-- Main Content Cards Area -->
+                <!-- Main Content Area -->
                 <div id="presets-content-container">
                     ${this._renderContentHTML()}
                 </div>
 
-                <!-- Reset Actions -->
-                <div class="section" style="margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border);">
-                    <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-sm" id="btn-reset-current" style="flex: 1; font-size: 11px; padding: 7px 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                <path d="M3 3v5h5"/>
-                            </svg>
-                            <span>${this.currentTab === 'profiles' ? 'Reset Film Stock' : 'Reset Preset'}</span>
-                        </button>
-                        <button class="btn btn-sm" id="btn-reset-all-looks" style="flex: 1; font-size: 11px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset both film simulation and creative presets">
-                            Reset All
-                        </button>
-                    </div>
+                <!-- Subtle Reset Footer -->
+                <div class="presets-footer-reset">
+                    <button id="btn-reset-all-looks" class="presets-footer-reset-btn">
+                        Reset All Adjustments
+                    </button>
                 </div>
 
-                <!-- Hidden file input & select for custom .CUBE support and LutModule compatibility -->
+                <!-- Hidden elements for backward compatibility with LutModule -->
                 <input type="file" id="input-lut-file" accept=".cube,.CUBE,text/plain" style="display: none;">
                 <select id="select-lut" style="display: none;">
                     <option value="none">None</option>
                     ${BUILTIN_LUTS.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
                     <option value="custom">Custom</option>
                 </select>
-                <!-- Hidden button for legacy bindings -->
                 <button id="btn-import-lut" style="display: none;"></button>
             </div>
         `;
     }
 
     /**
-     * Render the filter chips for the current tab
-     */
-    _renderFilterChipsHTML() {
-        if (this.searchQuery.trim()) {
-            return `
-                <div class="presets-chip active" style="cursor: default;">
-                    Results for "${this.searchQuery.trim()}"
-                </div>
-            `;
-        }
-
-        if (this.currentTab === 'profiles') {
-            const categories = [
-                { id: 'all', label: `All (${BUILTIN_LUTS.length})` },
-                { id: 'negative', label: 'Color Negative' },
-                { id: 'slide', label: 'Slide Film' },
-                { id: 'bw', label: 'Black & White' },
-                { id: 'cinematic', label: 'Cinematic' }
-            ];
-
-            return categories.map(cat => `
-                <button class="presets-chip ${this.profileFilter === cat.id ? 'active' : ''}" data-filter="${cat.id}">
-                    ${cat.label}
-                </button>
-            `).join('');
-        }
-
-        // Presets tab categories
-        const allCount = Presets.length;
-        const chips = [
-            `<button class="presets-chip ${this.presetFilter === 'all' ? 'active' : ''}" data-filter="all">All (${allCount})</button>`,
-            ...PresetCategories.map(cat => {
-                const count = getPresetsByCategory(cat.id).length;
-                return `
-                    <button class="presets-chip ${this.presetFilter === cat.id ? 'active' : ''}" data-filter="${cat.id}">
-                        ${cat.name} (${count})
-                    </button>
-                `;
-            })
-        ];
-
-        return chips.join('');
-    }
-
-    /**
-     * Render the main cards grid based on active tab and filters
+     * Render content based on active tab and search query
      */
     _renderContentHTML() {
         if (this.searchQuery.trim()) {
@@ -228,141 +152,125 @@ export class PresetsModule {
         }
 
         if (this.currentTab === 'profiles') {
-            return this._renderProfilesHTML();
+            return this._renderFilmStocksHTML();
         }
 
-        return this._renderPresetsHTML();
+        return this._renderPresetFoldersHTML();
     }
 
     /**
-     * Render the Film Profiles grid
+     * Render Film Stocks view with utility row & collapsible folders
      */
-    _renderProfilesHTML() {
-        const filtered = this.profileFilter === 'all'
-            ? BUILTIN_LUTS
-            : BUILTIN_LUTS.filter(l => l.category === this.profileFilter);
-
+    _renderFilmStocksHTML() {
         const customLut = this.editorUI.lutModule?.customLut;
         const isCustomActive = this.activeProfileId === 'custom';
-        const isStandardActive = this.activeProfileId === 'none' || !this.activeProfileId;
+        const isStandardActive = !this.activeProfileId || this.activeProfileId === 'none';
 
         return `
-            <div class="presets-cards-grid">
-                <!-- Standard / Natural Profile Tile -->
-                <div class="profile-card ${isStandardActive ? 'active' : ''}" data-profile="none" title="Standard Camera Natural Profile">
-                    <div class="profile-card-banner" style="background: linear-gradient(135deg, #25252a 0%, #3a3a44 100%);">
-                        <span class="profile-card-tag">Natural</span>
-                    </div>
-                    <div class="profile-card-body">
-                        <span class="profile-card-name">Standard Natural</span>
-                        <span class="profile-card-desc">Original camera colors</span>
-                    </div>
-                    <div class="profile-card-check">
-                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"/>
+            <div>
+                <!-- Utility Row: Standard & Custom .CUBE -->
+                <div class="presets-utility-row">
+                    <button class="presets-utility-btn ${isStandardActive ? 'active' : ''}" data-profile="none" title="Camera standard colors (no simulation)">
+                        <span class="utility-dot" style="background: #52525b;"></span>
+                        <span>Standard (Natural)</span>
+                        ${isStandardActive ? '<span class="preset-pill-active-dot"></span>' : ''}
+                    </button>
+                    <button class="presets-utility-btn ${isCustomActive ? 'active' : ''}" id="tile-custom-lut" data-profile="custom" title="Load custom Adobe .CUBE 3D LUT">
+                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
-                    </div>
+                        <span id="text-custom-lut-name">${customLut ? (customLut.title || 'Custom LUT') : 'Import .CUBE'}</span>
+                        ${isCustomActive ? '<span class="preset-pill-active-dot"></span>' : ''}
+                    </button>
                 </div>
 
-                <!-- Custom .CUBE Import Card -->
-                <div class="profile-card profile-card-custom ${isCustomActive ? 'active' : ''}" id="card-custom-lut" data-profile="custom" title="Load custom Adobe .CUBE 3D LUT">
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    <span class="profile-card-custom-text">${customLut ? (customLut.title || 'Custom .CUBE') : 'Import .CUBE'}</span>
-                    <span class="profile-card-custom-sub">${customLut ? 'Loaded LUT' : 'Adobe 3D LUT'}</span>
-                    <div class="profile-card-check">
-                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                    </div>
-                </div>
+                <!-- Unified Collapsible Folders for Film Stocks -->
+                <div class="preset-folders-list">
+                    ${FILM_STOCK_CATEGORIES.map(cat => {
+                        const stocks = BUILTIN_LUTS.filter(l => l.category === cat.id);
+                        if (stocks.length === 0) return '';
 
-                <!-- Builtin Film Profiles -->
-                ${filtered.map(lut => this._renderProfileCardHTML(lut)).join('')}
+                        const isExpanded = this.expandedFolders.has(cat.id);
+                        const hasActive = stocks.some(l => l.id === this.activeProfileId);
+
+                        return `
+                            <div class="preset-folder ${isExpanded ? 'expanded' : ''}" data-folder="${cat.id}">
+                                <div class="preset-folder-header" data-folder="${cat.id}">
+                                    <div class="folder-header-left">
+                                        <svg class="preset-folder-chevron" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="9 18 15 12 9 6"/>
+                                        </svg>
+                                        <span class="folder-title ${hasActive ? 'has-active' : ''}">${cat.name}</span>
+                                    </div>
+                                    <span class="preset-folder-count">${stocks.length}</span>
+                                </div>
+                                <div class="preset-folder-items">
+                                    ${stocks.map(lut => {
+                                        const isActive = this.activeProfileId === lut.id;
+                                        return `
+                                            <div class="preset-item-pill ${isActive ? 'active' : ''}" data-profile="${lut.id}" title="${lut.name} • ${lut.description}">
+                                                <div class="preset-pill-swatch" style="background: ${lut.gradient};"></div>
+                                                <span class="preset-pill-name">${lut.tag || lut.name}</span>
+                                                ${isActive ? '<div class="preset-pill-active-dot"></div>' : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
             </div>
         `;
     }
 
     /**
-     * Render a single film profile card
+     * Render collapsible preset folders (Lightroom Classic style)
      */
-    _renderProfileCardHTML(lut) {
-        const isActive = this.activeProfileId === lut.id;
-
+    _renderPresetFoldersHTML() {
         return `
-            <div class="profile-card ${isActive ? 'active' : ''}" data-profile="${lut.id}" title="${lut.name} - ${lut.description}">
-                <div class="profile-card-banner" style="background: ${lut.gradient};">
-                    <span class="profile-card-tag">${lut.tag}</span>
-                </div>
-                <div class="profile-card-body">
-                    <span class="profile-card-name">${lut.name}</span>
-                    <span class="profile-card-desc">${lut.description}</span>
-                </div>
-                <div class="profile-card-check">
-                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                </div>
+            <div class="preset-folders-list">
+                ${PresetCategories.map(cat => {
+                    const presets = getPresetsByCategory(cat.id);
+                    if (presets.length === 0) return '';
+
+                    const isExpanded = this.expandedFolders.has(cat.id);
+                    const hasActivePreset = presets.some(p => p.id === this.activePresetId);
+
+                    return `
+                        <div class="preset-folder ${isExpanded ? 'expanded' : ''}" data-folder="${cat.id}">
+                            <div class="preset-folder-header" data-folder="${cat.id}">
+                                <div class="folder-header-left">
+                                    <svg class="preset-folder-chevron" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="9 18 15 12 9 6"/>
+                                    </svg>
+                                    <span class="folder-title ${hasActivePreset ? 'has-active' : ''}">${cat.name}</span>
+                                </div>
+                                <span class="preset-folder-count">${presets.length}</span>
+                            </div>
+                            <div class="preset-folder-items">
+                                ${presets.map(p => {
+                                    const isActive = this.activePresetId === p.id;
+                                    return `
+                                        <div class="preset-item-pill ${isActive ? 'active' : ''}" data-preset="${p.id}" title="${p.name} • ${p.description}">
+                                            <div class="preset-pill-swatch" style="background: ${p.color};"></div>
+                                            <span class="preset-pill-name">${p.name}</span>
+                                            ${isActive ? '<div class="preset-pill-active-dot"></div>' : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
 
     /**
-     * Render the Creative Presets grid
-     */
-    _renderPresetsHTML() {
-        const categoriesToRender = this.presetFilter === 'all'
-            ? PresetCategories
-            : PresetCategories.filter(c => c.id === this.presetFilter);
-
-        return categoriesToRender.map(cat => {
-            const presets = getPresetsByCategory(cat.id);
-            if (presets.length === 0) return '';
-
-            return `
-                <div class="presets-section-block" style="margin-bottom: 12px;">
-                    <div class="presets-section-heading">
-                        <span class="presets-section-title">
-                            ${this._getCategoryIcon(cat.icon)}
-                            <span>${cat.name}</span>
-                        </span>
-                        <span class="presets-section-count">${presets.length}</span>
-                    </div>
-                    <div class="presets-cards-grid" style="margin-top: 8px;">
-                        ${presets.map(p => this._renderPresetCardHTML(p)).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    /**
-     * Render a single creative preset card
-     */
-    _renderPresetCardHTML(preset) {
-        const isActive = this.activePresetId === preset.id;
-
-        return `
-            <div class="preset-item-card ${isActive ? 'active' : ''}" data-preset="${preset.id}" title="${preset.description}">
-                <div class="preset-item-swatch" style="background: ${preset.color};"></div>
-                <div class="preset-item-info">
-                    <span class="preset-item-name">${preset.name}</span>
-                    <span class="preset-item-desc">${preset.description}</span>
-                </div>
-                <div class="preset-item-check">
-                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render Search Results across both profiles and presets
+     * Render search results in a clean 2-column grid
      */
     _renderSearchResultsHTML() {
         const q = this.searchQuery.toLowerCase().trim();
@@ -380,44 +288,54 @@ export class PresetsModule {
             p.category.toLowerCase().includes(q)
         );
 
-        const totalMatches = matchedProfiles.length + matchedPresets.length;
+        const total = matchedProfiles.length + matchedPresets.length;
 
-        if (totalMatches === 0) {
+        if (total === 0) {
             return `
-                <div style="text-align: center; padding: 32px 16px; color: var(--text-secondary);">
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <p style="font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">No matches found</p>
-                    <p style="font-size: 11px;">Try searching for "Portra", "Velvia", "Warm", "B&W", or "Cinematic"</p>
+                <div class="presets-search-empty">
+                    <p class="empty-title">No matching looks</p>
+                    <p class="empty-sub">Try searching "Portra", "Velvia", "Warm", or "B&W"</p>
                 </div>
             `;
         }
 
         return `
-            <div>
+            <div class="presets-search-results">
                 ${matchedProfiles.length > 0 ? `
-                    <div style="margin-bottom: 14px;">
-                        <div class="presets-section-heading">
-                            <span class="presets-section-title">Film Profiles</span>
-                            <span class="presets-section-count">${matchedProfiles.length}</span>
-                        </div>
-                        <div class="presets-cards-grid" style="margin-top: 8px;">
-                            ${matchedProfiles.map(l => this._renderProfileCardHTML(l)).join('')}
-                        </div>
+                    <div class="search-category-title">
+                        <span>Film Stocks</span>
+                        <span class="search-category-count">${matchedProfiles.length}</span>
+                    </div>
+                    <div class="preset-folder-items" style="display: grid; padding: 4px 0 10px 0;">
+                        ${matchedProfiles.map(lut => {
+                            const isActive = this.activeProfileId === lut.id;
+                            return `
+                                <div class="preset-item-pill ${isActive ? 'active' : ''}" data-profile="${lut.id}" title="${lut.name} • ${lut.description}">
+                                    <div class="preset-pill-swatch" style="background: ${lut.gradient};"></div>
+                                    <span class="preset-pill-name">${lut.tag || lut.name}</span>
+                                    ${isActive ? '<div class="preset-pill-active-dot"></div>' : ''}
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 ` : ''}
 
                 ${matchedPresets.length > 0 ? `
-                    <div style="margin-bottom: 14px;">
-                        <div class="presets-section-heading">
-                            <span class="presets-section-title">Creative Presets</span>
-                            <span class="presets-section-count">${matchedPresets.length}</span>
-                        </div>
-                        <div class="presets-cards-grid" style="margin-top: 8px;">
-                            ${matchedPresets.map(p => this._renderPresetCardHTML(p)).join('')}
-                        </div>
+                    <div class="search-category-title">
+                        <span>Presets</span>
+                        <span class="search-category-count">${matchedPresets.length}</span>
+                    </div>
+                    <div class="preset-folder-items" style="display: grid; padding: 4px 0 10px 0;">
+                        ${matchedPresets.map(p => {
+                            const isActive = this.activePresetId === p.id;
+                            return `
+                                <div class="preset-item-pill ${isActive ? 'active' : ''}" data-preset="${p.id}" title="${p.name} • ${p.description}">
+                                    <div class="preset-pill-swatch" style="background: ${p.color};"></div>
+                                    <span class="preset-pill-name">${p.name}</span>
+                                    ${isActive ? '<div class="preset-pill-active-dot"></div>' : ''}
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 ` : ''}
             </div>
@@ -425,64 +343,45 @@ export class PresetsModule {
     }
 
     /**
-     * Get clean SVG icon for category
-     */
-    _getCategoryIcon(iconId) {
-        switch (iconId) {
-            case 'film':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4"/></svg>`;
-            case 'cinematic':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><polygon points="10 9 15 12 10 15" fill="currentColor"/></svg>`;
-            case 'portrait':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-1.5a5.5 5.5 0 0 1 11 0V20"/></svg>`;
-            case 'mood':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg>`;
-            case 'bw':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>`;
-            case 'creative':
-                return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12a10 10 0 0 0 15.3 8.5c.8-.5 1.2-1.4 1.2-2.3 0-1.1.9-2 2-2h.5A3.5 3.5 0 0 0 22 12.5C22 6.7 17.5 2 12 2z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor"/></svg>`;
-            default:
-                return '';
-        }
-    }
-
-    /**
-     * Initialize all interactive event listeners
+     * Initialize all interactive listeners
      */
     _initEventListeners() {
         const panel = document.getElementById('panel-presets');
         if (!panel) return;
 
-        // Nav Tab Switcher (Film Profiles vs Creative Presets)
+        // Click Handling via Event Delegation
         panel.addEventListener('click', (e) => {
+            // Tab Switcher
             const tabBtn = e.target.closest('.presets-nav-tab');
             if (tabBtn) {
                 const targetTab = tabBtn.dataset.tab;
                 if (targetTab !== this.currentTab) {
                     this.currentTab = targetTab;
-                    this._updateView();
+                    this._updateTabUI();
                 }
                 return;
             }
 
-            // Filter Chip Click
-            const chip = e.target.closest('.presets-chip');
-            if (chip && chip.dataset.filter) {
-                const filter = chip.dataset.filter;
-                if (this.currentTab === 'profiles') {
-                    this.profileFilter = filter;
+            // Folder Header (Expand / Collapse)
+            const folderHeader = e.target.closest('.preset-folder-header');
+            if (folderHeader) {
+                const folderId = folderHeader.dataset.folder;
+                const folder = folderHeader.closest('.preset-folder');
+                if (this.expandedFolders.has(folderId)) {
+                    this.expandedFolders.delete(folderId);
+                    folder?.classList.remove('expanded');
                 } else {
-                    this.presetFilter = filter;
+                    this.expandedFolders.add(folderId);
+                    folder?.classList.add('expanded');
                 }
-                this._updateFilterChipsAndContent();
                 return;
             }
 
-            // Profile Card Click
-            const profileCard = e.target.closest('.profile-card');
-            if (profileCard) {
+            // Film Stock Tile / Utility Click
+            const stockTile = e.target.closest('[data-profile]');
+            if (stockTile) {
                 this._endHoverPreview();
-                const profileId = profileCard.dataset.profile;
+                const profileId = stockTile.dataset.profile;
                 if (profileId === 'custom') {
                     const input = document.getElementById('input-lut-file');
                     if (this.editorUI.lutModule?.customLut && this.activeProfileId !== 'custom') {
@@ -491,8 +390,7 @@ export class PresetsModule {
                         input.click();
                     }
                 } else {
-                    // Toggle off if clicking the active profile
-                    if (this.activeProfileId === profileId) {
+                    if (this.activeProfileId === profileId && profileId !== 'none') {
                         this._applyProfile('none');
                     } else {
                         this._applyProfile(profileId);
@@ -501,29 +399,33 @@ export class PresetsModule {
                 return;
             }
 
-            // Preset Card Click
-            const presetCard = e.target.closest('.preset-item-card');
-            if (presetCard) {
+            // Preset Pill Click
+            const presetPill = e.target.closest('.preset-item-pill[data-preset]');
+            if (presetPill) {
                 this._endHoverPreview();
-                const presetId = presetCard.dataset.preset;
-                this._applyPreset(presetId);
-                return;
-            }
-
-            // Reset current tab button
-            const resetCurrentBtn = e.target.closest('#btn-reset-current');
-            if (resetCurrentBtn) {
-                if (this.currentTab === 'profiles') {
-                    this._applyProfile('none');
-                } else {
+                const presetId = presetPill.dataset.preset;
+                if (this.activePresetId === presetId) {
                     this._resetPresets();
+                } else {
+                    this._applyPreset(presetId);
                 }
                 return;
             }
 
-            // Reset All looks button
-            const resetAllBtn = e.target.closest('#btn-reset-all-looks');
-            if (resetAllBtn) {
+            // Clear Profile Button (x)
+            if (e.target.closest('#btn-clear-profile')) {
+                this._applyProfile('none');
+                return;
+            }
+
+            // Clear Preset Button (x)
+            if (e.target.closest('#btn-clear-preset')) {
+                this._resetPresets();
+                return;
+            }
+
+            // Reset All Adjustments
+            if (e.target.closest('#btn-reset-all-looks')) {
                 this._resetAll();
                 return;
             }
@@ -539,7 +441,7 @@ export class PresetsModule {
                 if (clearBtn) {
                     clearBtn.style.display = this.searchQuery ? 'flex' : 'none';
                 }
-                this._updateFilterChipsAndContent();
+                this._updateContentContainer();
             });
         }
 
@@ -551,27 +453,7 @@ export class PresetsModule {
                     searchInput.focus();
                 }
                 clearBtn.style.display = 'none';
-                this._updateFilterChipsAndContent();
-            });
-        }
-
-        // Preset Intensity Slider
-        const presetSlider = document.getElementById('slider-preset-intensity');
-        if (presetSlider) {
-            presetSlider.addEventListener('input', () => {
-                this.presetIntensity = parseInt(presetSlider.value, 10);
-                const display = document.getElementById('preset-intensity-value');
-                if (display) {
-                    display.textContent = `${this.presetIntensity}%`;
-                }
-
-                if (this.activePresetId) {
-                    this._applyPreset(this.activePresetId, false);
-                }
-            });
-
-            presetSlider.addEventListener('change', () => {
-                this.editorUI._pushHistoryDebounced?.();
+                this._updateContentContainer();
             });
         }
 
@@ -598,23 +480,43 @@ export class PresetsModule {
             });
         }
 
-        // Interactive Hover Preview on Cards
+        // Preset Intensity Slider
+        const presetSlider = document.getElementById('slider-preset-intensity');
+        if (presetSlider) {
+            presetSlider.addEventListener('input', () => {
+                this.presetIntensity = parseInt(presetSlider.value, 10);
+                const display = document.getElementById('preset-intensity-value');
+                if (display) {
+                    display.textContent = `${this.presetIntensity}%`;
+                }
+
+                if (this.activePresetId) {
+                    this._applyPreset(this.activePresetId, false);
+                }
+            });
+
+            presetSlider.addEventListener('change', () => {
+                this.editorUI._pushHistoryDebounced?.();
+            });
+        }
+
+        // Non-destructive Hover Preview
         panel.addEventListener('pointerover', (e) => {
-            const presetCard = e.target.closest('.preset-item-card');
-            if (presetCard) {
-                this._startHoverPreview('preset', presetCard.dataset.preset);
+            const presetPill = e.target.closest('.preset-item-pill[data-preset]');
+            if (presetPill) {
+                this._startHoverPreview('preset', presetPill.dataset.preset);
                 return;
             }
 
-            const profileCard = e.target.closest('.profile-card');
-            if (profileCard && profileCard.dataset.profile !== 'custom') {
-                this._startHoverPreview('profile', profileCard.dataset.profile);
+            const stockTile = e.target.closest('[data-profile]');
+            if (stockTile && stockTile.dataset.profile !== 'custom') {
+                this._startHoverPreview('profile', stockTile.dataset.profile);
                 return;
             }
         });
 
         panel.addEventListener('pointerout', (e) => {
-            const card = e.target.closest('.preset-item-card, .profile-card');
+            const card = e.target.closest('.preset-item-pill, [data-profile]');
             if (card && (!e.relatedTarget || !card.contains(e.relatedTarget))) {
                 this._endHoverPreview();
             }
@@ -622,7 +524,7 @@ export class PresetsModule {
     }
 
     /**
-     * Start live hover preview on canvas
+     * Start live canvas preview
      */
     _startHoverPreview(type, id) {
         if (!this.gpu || !this.gpu.inputTexture) return;
@@ -664,7 +566,7 @@ export class PresetsModule {
     }
 
     /**
-     * End live hover preview and restore saved state
+     * End live hover preview
      */
     _endHoverPreview() {
         if (!this._hoverState.isHovering || !this.gpu) return;
@@ -686,47 +588,41 @@ export class PresetsModule {
     }
 
     /**
-     * Update view when tab changes
+     * Switch view tab
      */
-    _updateView() {
-        // Update nav tab buttons
+    _updateTabUI() {
         document.querySelectorAll('.presets-nav-tab').forEach(tab => {
-            if (tab.dataset.tab === this.currentTab) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
+            tab.classList.toggle('active', tab.dataset.tab === this.currentTab);
         });
 
-        // Update Reset Current button text
-        const resetCurrentBtn = document.getElementById('btn-reset-current');
-        if (resetCurrentBtn) {
-            const label = resetCurrentBtn.querySelector('span');
-            if (label) {
-                label.textContent = this.currentTab === 'profiles' ? 'Reset Film Stock' : 'Reset Preset';
-            }
+        const isProfileActive = this.activeProfileId && this.activeProfileId !== 'none';
+        const isPresetActive = Boolean(this.activePresetId);
+
+        const profileBar = document.getElementById('profile-intensity-bar');
+        const presetBar = document.getElementById('preset-intensity-bar');
+
+        if (profileBar) {
+            profileBar.style.display = (this.currentTab === 'profiles' && isProfileActive) ? 'flex' : 'none';
+        }
+        if (presetBar) {
+            presetBar.style.display = (this.currentTab === 'presets' && isPresetActive) ? 'flex' : 'none';
         }
 
-        this._updateFilterChipsAndContent();
+        this._updateContentContainer();
     }
 
     /**
-     * Update filter chips and content cards
+     * Re-render content container
      */
-    _updateFilterChipsAndContent() {
-        const chipsContainer = document.getElementById('presets-chips-container');
-        if (chipsContainer) {
-            chipsContainer.innerHTML = this._renderFilterChipsHTML();
-        }
-
-        const contentContainer = document.getElementById('presets-content-container');
-        if (contentContainer) {
-            contentContainer.innerHTML = this._renderContentHTML();
+    _updateContentContainer() {
+        const container = document.getElementById('presets-content-container');
+        if (container) {
+            container.innerHTML = this._renderContentHTML();
         }
     }
 
     /**
-     * Apply a film profile (3D LUT)
+     * Apply film stock profile
      */
     _applyProfile(lutId, pushHistory = true) {
         this.activeProfileId = lutId || 'none';
@@ -752,7 +648,7 @@ export class PresetsModule {
     }
 
     /**
-     * Update profile UI indicators and sliders
+     * Update profile indicators and sliders
      */
     updateProfileUI(lutId, intensity) {
         this.activeProfileId = lutId || 'none';
@@ -760,44 +656,40 @@ export class PresetsModule {
             this.profileIntensity = intensity;
         }
 
-        const intensityPanel = document.getElementById('profile-intensity-panel');
-        const intensitySlider = document.getElementById('slider-lut-intensity');
-        const intensityVal = document.getElementById('val-lut-intensity');
+        const isProfileActive = this.activeProfileId && this.activeProfileId !== 'none';
+        const profileBar = document.getElementById('profile-intensity-bar');
+        const profileSlider = document.getElementById('slider-lut-intensity');
+        const profileVal = document.getElementById('val-lut-intensity');
 
-        if (intensityPanel) {
-            intensityPanel.style.display = this.activeProfileId !== 'none' ? 'flex' : 'none';
+        if (profileBar) {
+            profileBar.style.display = (this.currentTab === 'profiles' && isProfileActive) ? 'flex' : 'none';
         }
-        if (intensitySlider) {
-            intensitySlider.value = `${this.profileIntensity}`;
+        if (profileSlider) {
+            profileSlider.value = `${this.profileIntensity}`;
         }
-        if (intensityVal) {
-            intensityVal.textContent = `${this.profileIntensity}%`;
+        if (profileVal) {
+            profileVal.textContent = `${this.profileIntensity}%`;
         }
 
-        // Update active class on profile cards
-        document.querySelectorAll('.profile-card').forEach(card => {
-            if (card.dataset.profile === this.activeProfileId) {
-                card.classList.add('active');
-            } else {
-                card.classList.remove('active');
+        // Highlight active profile buttons
+        document.querySelectorAll('[data-profile]').forEach(tile => {
+            const isMatch = tile.dataset.profile === this.activeProfileId;
+            tile.classList.toggle('active', isMatch);
+            let dot = tile.querySelector('.preset-pill-active-dot');
+            if (isMatch && !dot) {
+                tile.insertAdjacentHTML('beforeend', '<div class="preset-pill-active-dot"></div>');
+            } else if (!isMatch && dot) {
+                dot.remove();
             }
         });
 
-        // Update custom LUT card text if loaded
-        const customCard = document.getElementById('card-custom-lut');
-        if (customCard) {
-            const customLut = this.editorUI.lutModule?.customLut;
-            const titleSpan = customCard.querySelector('.profile-card-custom-text');
-            const subSpan = customCard.querySelector('.profile-card-custom-sub');
-            if (titleSpan) {
-                titleSpan.textContent = customLut ? (customLut.title || 'Custom .CUBE') : 'Import .CUBE';
-            }
-            if (subSpan) {
-                subSpan.textContent = customLut ? 'Loaded LUT' : 'Adobe 3D LUT';
-            }
+        // Update custom LUT name if custom
+        const customNameSpan = document.getElementById('text-custom-lut-name');
+        if (customNameSpan && this.editorUI.lutModule?.customLut) {
+            customNameSpan.textContent = this.editorUI.lutModule.customLut.title || 'Custom LUT';
         }
 
-        // Sync hidden select if exists
+        // Sync hidden select
         const select = document.getElementById('select-lut');
         if (select && select.value !== this.activeProfileId) {
             select.value = this.activeProfileId;
@@ -805,7 +697,7 @@ export class PresetsModule {
     }
 
     /**
-     * Apply a creative preset
+     * Apply creative preset
      */
     _applyPreset(presetId, pushHistory = true) {
         const preset = getPresetById(presetId);
@@ -814,30 +706,23 @@ export class PresetsModule {
         this.activePresetId = presetId;
         const adjustments = blendPreset(preset, this.presetIntensity);
 
-        // Reset all params to 0 (clean slate)
         this._resetParams();
 
-        // Apply adjustments to GPU
         for (const [key, value] of Object.entries(adjustments)) {
             if (key in this.gpu.params) {
                 this.gpu.params[key] = value;
             }
         }
 
-        // Sync state back to EditorState
         for (const key in this.gpu.params) {
             if (!key.startsWith('curveLut') && key !== 'lut3d' && key !== 'lut3dIntensity') {
                 this.editorUI.state.setAdjustment(key, this.gpu.params[key]);
             }
         }
 
-        // Sync develop and HSL sliders
         this._syncSlidersToParams();
-
-        // Render
         this.gpu.render();
 
-        // Update active preset UI
         this._updateActivePresetUI();
 
         if (pushHistory) {
@@ -846,25 +731,39 @@ export class PresetsModule {
     }
 
     /**
-     * Update active preset card highlight
+     * Highlight active preset
      */
     _updateActivePresetUI() {
-        document.querySelectorAll('.preset-item-card').forEach(card => {
-            if (card.dataset.preset === this.activePresetId) {
-                card.classList.add('active');
-            } else {
-                card.classList.remove('active');
+        document.querySelectorAll('.preset-item-pill[data-preset]').forEach(pill => {
+            const isMatch = pill.dataset.preset === this.activePresetId;
+            pill.classList.toggle('active', isMatch);
+            let dot = pill.querySelector('.preset-pill-active-dot');
+            if (isMatch && !dot) {
+                pill.insertAdjacentHTML('beforeend', '<div class="preset-pill-active-dot"></div>');
+            } else if (!isMatch && dot) {
+                dot.remove();
             }
         });
 
-        const presetIntensityPanel = document.getElementById('preset-intensity-panel');
-        if (presetIntensityPanel) {
-            presetIntensityPanel.style.display = this.activePresetId ? 'flex' : 'none';
+        const presetBar = document.getElementById('preset-intensity-bar');
+        if (presetBar) {
+            presetBar.style.display = (this.currentTab === 'presets' && this.activePresetId) ? 'flex' : 'none';
         }
+
+        // Highlight folder headers if active preset is within
+        document.querySelectorAll('.preset-folder').forEach(folder => {
+            const folderId = folder.dataset.folder;
+            const presets = getPresetsByCategory(folderId);
+            const hasActive = presets.some(p => p.id === this.activePresetId);
+            const title = folder.querySelector('.folder-title');
+            if (title) {
+                title.classList.toggle('has-active', hasActive);
+            }
+        });
     }
 
     /**
-     * Reset all parameters to zero / null
+     * Reset parameters to zero
      */
     _resetParams() {
         for (const key in this.gpu.params) {
@@ -879,7 +778,7 @@ export class PresetsModule {
     }
 
     /**
-     * Sync UI sliders to current GPU params
+     * Sync UI sliders
      */
     _syncSlidersToParams() {
         const globalSliders = [
@@ -906,18 +805,14 @@ export class PresetsModule {
             }
         }
 
-        // HSL sliders
         const colors = ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'magenta'];
         const hslTypes = ['hue', 'sat', 'lum'];
 
         for (const color of colors) {
             for (const type of hslTypes) {
                 const paramName = `hsl${type.charAt(0).toUpperCase() + type.slice(1)}${color.charAt(0).toUpperCase() + color.slice(1)}`;
-                const sliderId = `slider-hsl-${type}-${color}`;
-                const valueId = `hsl-${type}-${color}`;
-
-                const slider = document.getElementById(sliderId);
-                const valueDisplay = document.getElementById(valueId);
+                const slider = document.getElementById(`slider-hsl-${type}-${color}`);
+                const valueDisplay = document.getElementById(`hsl-${type}-${color}`);
 
                 if (slider) {
                     const value = Math.round(this.gpu.params[paramName] || 0);
@@ -933,7 +828,7 @@ export class PresetsModule {
     }
 
     /**
-     * Reset creative preset adjustments
+     * Reset presets adjustments
      */
     _resetPresets() {
         this._resetParams();
@@ -958,7 +853,7 @@ export class PresetsModule {
     }
 
     /**
-     * Reset all adjustments (presets + film profile)
+     * Reset all looks (presets + film profile)
      */
     _resetAll() {
         this._resetPresets();

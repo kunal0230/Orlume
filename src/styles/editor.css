@@ -2126,38 +2126,38 @@ kbd {
 }
 
 /* ========================================
-   Presets & Profiles Module (Lightroom-Grade UI)
+   Presets & Profiles Module (Lightroom Classic / Leica Serene UI)
    ======================================== */
 .presets-module-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     padding-bottom: 24px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
 }
 
 #panel-presets {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
 }
 
 #panel-presets * {
     box-sizing: border-box;
 }
 
-/* Mode Switcher Tabs */
+/* Minimalist Mode Switcher Tabs */
 .presets-nav-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
+    gap: 2px;
     background: #121214;
-    padding: 3px;
-    border-radius: 8px;
+    padding: 2px;
+    border-radius: 6px;
     border: 1px solid var(--border);
     width: 100%;
     max-width: 100%;
@@ -2168,438 +2168,432 @@ kbd {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 7px 6px;
+    gap: 5px;
+    padding: 5px 4px;
     background: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--text-secondary);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.12s ease;
     min-width: 0;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .presets-nav-tab:hover {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.04);
 }
 
 .presets-nav-tab.active {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    background: #242428;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .presets-nav-tab .tab-badge {
-    font-size: 9px;
+    font-size: 8.5px;
+    color: #71717a;
     font-weight: 500;
-    padding: 1px 5px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-secondary);
-    flex-shrink: 0;
 }
 
 .presets-nav-tab.active .tab-badge {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    color: #a1a1aa;
 }
 
-/* Search Bar */
+/* Subtle Search Input */
 .presets-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box;
 }
 
 .presets-search-input {
     width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    background: #141416;
+    background: #111113;
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 7px 28px 7px 30px;
+    border-radius: 5px;
+    padding: 5px 24px 5px 26px;
     color: var(--text-primary);
-    font-size: 11.5px;
+    font-size: 11px;
     outline: none;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .presets-search-input:focus {
-    border-color: var(--accent);
-    background: #17171a;
+    border-color: #3b82f6;
+    background: #141418;
+}
+
+.presets-search-input::placeholder {
+    color: #55555e;
 }
 
 .presets-search-icon {
     position: absolute;
-    left: 9px;
-    color: var(--text-secondary);
+    left: 8px;
+    color: #666670;
     pointer-events: none;
-    flex-shrink: 0;
 }
 
 .presets-search-clear {
     position: absolute;
-    right: 8px;
+    right: 6px;
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: #777;
     cursor: pointer;
     padding: 2px;
     display: none;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
 }
 
 .presets-search-clear:hover {
     color: var(--text-primary);
 }
 
-/* Category Filter Chips - Wrapped, No Horizontal Scroll */
-.presets-chips-row {
+/* Compact 1-Line Slider Bar (Quiet & Integrated) */
+.minimal-slider-bar {
     display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.presets-chip {
-    padding: 3px 8px;
-    background: #17171a;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 10px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.presets-chip:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
-    border-color: #3e3e44;
-}
-
-.presets-chip.active {
-    background: rgba(59, 130, 246, 0.18);
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.45);
-    font-weight: 600;
-}
-
-/* Amount / Intensity Control Box */
-.presets-intensity-panel {
-    background: #141418;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.presets-intensity-header {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 11px;
+    gap: 8px;
+    padding: 5px 8px;
+    background: #131316;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 10.5px;
+    animation: fadeInSlider 0.15s ease-out;
 }
 
-.presets-intensity-title {
-    color: var(--text-secondary);
+@keyframes fadeInSlider {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.minimal-slider-label {
+    color: #a1a1aa;
     font-weight: 500;
+    white-space: nowrap;
+    font-size: 10.5px;
 }
 
-.presets-intensity-val {
-    color: var(--accent);
-    font-weight: 700;
+.minimal-slider-bar input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a30;
+    border-radius: 2px;
+    outline: none;
+}
+
+.minimal-slider-bar input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    border: 1px solid #ffffff;
+}
+
+.minimal-slider-val {
+    color: #60a5fa;
+    font-weight: 600;
+    font-size: 10.5px;
+    min-width: 28px;
+    text-align: right;
     font-variant-numeric: tabular-nums;
 }
 
-/* Cards Grid - Strictly constrained columns */
-.presets-cards-grid {
+.minimal-clear-btn {
+    background: none;
+    border: none;
+    color: #71717a;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.minimal-clear-btn:hover {
+    color: #e4e4e7;
+}
+
+/* Presets & Stocks Utility Row */
+.presets-utility-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-/* Film Profile Card */
-.profile-card {
-    background: #151518;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    padding: 0;
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.profile-card:hover {
-    border-color: #4a4a52;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-}
-
-.profile-card.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(59, 130, 246, 0.2);
-    background: #181920;
-}
-
-.profile-card-banner {
-    height: 36px;
-    width: 100%;
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding: 4px 5px;
-    box-sizing: border-box;
-}
-
-.profile-card-tag {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    padding: 1.5px 4.5px;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 90%;
-}
-
-.profile-card-body {
-    padding: 6px 7px 7px 7px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-.profile-card-name {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.25;
-}
-
-.profile-card-desc {
-    font-size: 9px;
-    color: var(--text-secondary);
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.profile-card-check {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: white;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.profile-card.active .profile-card-check {
-    display: flex;
-}
-
-/* Custom LUT Import Card */
-.profile-card-custom {
-    border-style: dashed;
-    border-color: #383840;
-    background: rgba(255, 255, 255, 0.02);
-    min-height: 76px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 6px;
-    text-align: center;
-    gap: 4px;
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-.profile-card-custom:hover {
-    border-color: var(--accent);
-    background: rgba(59, 130, 246, 0.05);
-}
-
-.profile-card-custom svg {
-    color: var(--text-secondary);
-}
-
-.profile-card-custom:hover svg {
-    color: var(--accent);
-}
-
-.profile-card-custom-text {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
-
-.profile-card-custom-sub {
-    font-size: 8.5px;
-    color: var(--text-secondary);
-}
-
-/* Creative Preset Card */
-.preset-item-card {
-    background: #151518;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
     gap: 5px;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    text-align: left;
-    min-width: 0;
-    max-width: 100%;
+    margin-bottom: 6px;
+    width: 100%;
     box-sizing: border-box;
 }
 
-.preset-item-card:hover {
-    border-color: #4a4a52;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-}
-
-.preset-item-card.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(59, 130, 246, 0.2);
-    background: #181920;
-}
-
-.preset-item-swatch {
-    height: 20px;
-    width: 100%;
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-    position: relative;
-}
-
-.preset-item-info {
+.presets-utility-btn {
     display: flex;
-    flex-direction: column;
-    gap: 1.5px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #a1a1aa;
+    font-size: 10.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     min-width: 0;
 }
 
-.preset-item-name {
-    font-size: 10.5px;
+.presets-utility-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.presets-utility-btn.active {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: #3b82f6;
+    border-style: solid;
+    color: #93c5fd;
     font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.25;
 }
 
-.preset-item-desc {
-    font-size: 8.5px;
-    color: var(--text-secondary);
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.preset-item-check {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    width: 13px;
-    height: 13px;
+.utility-dot {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--accent);
-    color: white;
-    display: none;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
 }
 
-.preset-item-card.active .preset-item-check {
+/* Lightroom Classic-Style Collapsible Folders */
+.preset-folders-list {
     display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Category Section Header in Presets list */
-.presets-section-heading {
+.preset-folder {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.preset-folder:last-child {
+    border-bottom: none;
+}
+
+.preset-folder-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 2px;
-    margin-top: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 7px 2px;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    transition: color 0.12s ease;
+}
+
+.folder-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.preset-folder-chevron {
+    color: #71717a;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.preset-folder.expanded .preset-folder-chevron {
+    transform: rotate(90deg);
+}
+
+.folder-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: #a1a1aa;
+    letter-spacing: 0.1px;
+    transition: color 0.12s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preset-folder-header:hover .folder-title {
+    color: #ffffff;
+}
+
+.folder-title.has-active {
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.preset-folder-count {
+    font-size: 9px;
+    color: #71717a;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.preset-folder-items {
+    display: none;
+    padding: 3px 0 7px 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
     width: 100%;
     box-sizing: border-box;
 }
 
-.presets-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-primary);
+.preset-folder.expanded .preset-folder-items {
+    display: grid;
+}
+
+/* Preset & Film Stock Pill (Quiet Luxury) */
+.preset-item-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    letter-spacing: 0.2px;
+    height: 28px;
+    padding: 0 7px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s ease, border-color 0.1s ease;
+    min-width: 0;
+    user-select: none;
 }
 
-.presets-section-count {
+.preset-item-pill:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.preset-item-pill.active {
+    background: rgba(59, 130, 246, 0.14);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.preset-pill-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.preset-pill-name {
+    font-size: 10.5px;
+    color: #e4e4e7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    min-width: 0;
+    flex: 1;
+}
+
+.preset-item-pill.active .preset-pill-name {
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+.preset-pill-active-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #3b82f6;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Search Results View */
+.presets-search-results {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.search-category-title {
     font-size: 9.5px;
-    color: var(--text-secondary);
-    background: #1a1a1e;
-    padding: 1px 6px;
-    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #71717a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 2px 3px 2px;
+}
+
+.search-category-count {
+    font-size: 9px;
+    color: #52525b;
+}
+
+.presets-search-empty {
+    text-align: center;
+    padding: 24px 12px;
+}
+
+.empty-title {
+    font-size: 11px;
+    color: #d4d4d8;
+    margin-bottom: 3px;
+    font-weight: 500;
+}
+
+.empty-sub {
+    font-size: 9.5px;
+    color: #71717a;
+}
+
+/* Understated Footer Reset Link */
+.presets-footer-reset {
+    display: flex;
+    justify-content: center;
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.presets-footer-reset-btn {
+    background: none;
+    border: none;
+    color: #71717a;
+    font-size: 10.5px;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 4px;
+    transition: color 0.12s ease;
+}
+
+.presets-footer-reset-btn:hover {
+    color: #e4e4e7;
 }
