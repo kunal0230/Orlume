@@ -80,7 +80,7 @@ export class PresetsModule {
                             <line x1="17" y1="12" x2="21" y2="12"/>
                             <line x1="17" y1="16" x2="21" y2="16"/>
                         </svg>
-                        <span>Film Profiles</span>
+                        <span>Film Simulations</span>
                         <span class="tab-badge">${BUILTIN_LUTS.length}</span>
                     </button>
                     <button class="presets-nav-tab ${this.currentTab === 'presets' ? 'active' : ''}" data-tab="presets">
@@ -102,7 +102,7 @@ export class PresetsModule {
                         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input type="text" id="presets-search-input" class="presets-search-input" 
-                        placeholder="Search profiles & presets..." value="${this.searchQuery}" autocomplete="off" spellcheck="false">
+                        placeholder="Search film stocks & presets..." value="${this.searchQuery}" autocomplete="off" spellcheck="false">
                     <button id="presets-search-clear" class="presets-search-clear" title="Clear search" style="${this.searchQuery ? 'display: flex;' : 'display: none;'}">
                         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -119,7 +119,7 @@ export class PresetsModule {
                 <!-- Profile Intensity Slider (visible when a profile is selected) -->
                 <div id="profile-intensity-panel" class="presets-intensity-panel" style="${this.activeProfileId !== 'none' ? 'display: flex;' : 'display: none;'}">
                     <div class="presets-intensity-header">
-                        <span class="presets-intensity-title">Profile Amount</span>
+                        <span class="presets-intensity-title">Simulation Intensity</span>
                         <span id="val-lut-intensity" class="presets-intensity-val">${this.profileIntensity}%</span>
                     </div>
                     <div class="control-group">
@@ -153,9 +153,9 @@ export class PresetsModule {
                                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                                 <path d="M3 3v5h5"/>
                             </svg>
-                            <span>${this.currentTab === 'profiles' ? 'Reset Profile' : 'Reset Preset'}</span>
+                            <span>${this.currentTab === 'profiles' ? 'Reset Film Stock' : 'Reset Preset'}</span>
                         </button>
-                        <button class="btn btn-sm" id="btn-reset-all-looks" style="flex: 1; font-size: 11px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset both profile simulation and creative adjustments">
+                        <button class="btn btn-sm" id="btn-reset-all-looks" style="flex: 1; font-size: 11px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset both film simulation and creative presets">
                             Reset All
                         </button>
                     </div>
@@ -244,9 +244,26 @@ export class PresetsModule {
 
         const customLut = this.editorUI.lutModule?.customLut;
         const isCustomActive = this.activeProfileId === 'custom';
+        const isStandardActive = this.activeProfileId === 'none' || !this.activeProfileId;
 
         return `
             <div class="presets-cards-grid">
+                <!-- Standard / Natural Profile Tile -->
+                <div class="profile-card ${isStandardActive ? 'active' : ''}" data-profile="none" title="Standard Camera Natural Profile">
+                    <div class="profile-card-banner" style="background: linear-gradient(135deg, #25252a 0%, #3a3a44 100%);">
+                        <span class="profile-card-tag">Natural</span>
+                    </div>
+                    <div class="profile-card-body">
+                        <span class="profile-card-name">Standard Natural</span>
+                        <span class="profile-card-desc">Original camera colors</span>
+                    </div>
+                    <div class="profile-card-check">
+                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    </div>
+                </div>
+
                 <!-- Custom .CUBE Import Card -->
                 <div class="profile-card profile-card-custom ${isCustomActive ? 'active' : ''}" id="card-custom-lut" data-profile="custom" title="Load custom Adobe .CUBE 3D LUT">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -686,7 +703,7 @@ export class PresetsModule {
         if (resetCurrentBtn) {
             const label = resetCurrentBtn.querySelector('span');
             if (label) {
-                label.textContent = this.currentTab === 'profiles' ? 'Reset Profile' : 'Reset Preset';
+                label.textContent = this.currentTab === 'profiles' ? 'Reset Film Stock' : 'Reset Preset';
             }
         }
 
