@@ -103,6 +103,7 @@ export class ZoomPanModule {
         if (zoomLevelDisplay) {
             zoomLevelDisplay.textContent = `${Math.round(this.zoom.level * 100)}%`;
         }
+        this.editor.updateBrushCursor?.();
     }
 
     /**

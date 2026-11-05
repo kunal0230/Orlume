@@ -195,11 +195,13 @@ export class EditorUI {
                     this.setMaskTool(tool, false);
                     this.updateLayersList();
                     this.syncLayerUI();
+                    this.updateMaskGuides();
                     this.gpu.render();
                 } else if (panelId === 'develop') {
                     if (this.masks) this.masks.isMaskMode = false;
                     this.state.setTool('develop');
                     if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
+                    this.hideMaskGuides();
                     this.gpu.render();
                 }
             });
@@ -291,8 +293,9 @@ export class EditorUI {
         // Hide all panels
         document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
 
-        // Hide brush cursor by default
+        // Hide brush cursor and mask guides by default
         if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
+        this.hideMaskGuides();
 
         switch (mode) {
             case 'develop': {
@@ -305,6 +308,7 @@ export class EditorUI {
                     this.setMaskTool(tool, false);
                     this.updateLayersList();
                     this.syncLayerUI();
+                    this.updateMaskGuides();
                 } else {
                     document.getElementById('panel-develop')?.classList.add('active');
                     this.state.setTool('develop');
@@ -418,16 +422,20 @@ export class EditorUI {
             if (brushSettings) brushSettings.style.display = 'block';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
             if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'block';
+            this.updateBrushCursor();
+            this.hideMaskGuides();
         } else if (tool === 'radial') {
             this.state.setTool('radial');
             if (brushSettings) brushSettings.style.display = 'none';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
             if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
+            this.updateMaskGuides();
         } else if (tool === 'gradient') {
             this.state.setTool('gradient');
             if (brushSettings) brushSettings.style.display = 'none';
             if (maskAdjustments) maskAdjustments.style.display = 'block';
             if (this.elements?.brushCursor) this.elements.brushCursor.style.display = 'none';
+            this.updateMaskGuides();
         }
 
         if (this.masks) {
@@ -435,6 +443,7 @@ export class EditorUI {
             if (currentLayer && currentLayer.type === tool) {
                 this.updateLayersList();
                 this.syncLayerUI();
+                this.updateMaskGuides();
                 return;
             }
 
@@ -444,6 +453,7 @@ export class EditorUI {
                 this.masks.activeLayerIndex = existingIndex;
                 this.updateLayersList();
                 this.syncLayerUI();
+                this.updateMaskGuides();
                 return;
             }
 
@@ -464,6 +474,7 @@ export class EditorUI {
 
                 if (layer) {
                     this.gpu.render();
+                    this.updateMaskGuides();
                     this._pushHistoryDebounced();
                 }
             }
@@ -502,7 +513,7 @@ export class EditorUI {
 
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
-                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+                valueDisplay.textContent = name === 'exposure' ? (value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)) : Math.round(value);
                 this.state.setAdjustment(name, value);
 
                 const start = performance.now();
@@ -541,7 +552,7 @@ export class EditorUI {
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
                 if (name === 'exposure') {
-                    valueDisplay.textContent = value.toFixed(2);
+                    valueDisplay.textContent = value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
                 } else if (name === 'density') {
                     valueDisplay.textContent = `${Math.round(value)}%`;
                 } else {
@@ -635,14 +646,14 @@ export class EditorUI {
             });
         }
 
-        // Brush hardness slider
+        // Brush hardness (feather) slider
         const brushHardnessSlider = document.getElementById('slider-brush-hardness');
         if (brushHardnessSlider) {
             brushHardnessSlider.addEventListener('input', () => {
-                const hardness = parseInt(brushHardnessSlider.value);
+                const hardness = parseInt(brushHardnessSlider.value, 10);
                 const valEl = document.getElementById('val-brush-hardness');
                 if (valEl) valEl.textContent = hardness;
-                this.masks.brushSettings.hardness = hardness / 100;
+                this.masks.brushSettings.hardness = hardness;
                 this.state.setBrushSetting('hardness', hardness);
                 this.updateBrushPreview();
                 this.updateBrushCursor();
@@ -653,12 +664,12 @@ export class EditorUI {
         const brushFlowSlider = document.getElementById('slider-brush-flow') || document.getElementById('slider-brush-opacity');
         if (brushFlowSlider) {
             brushFlowSlider.addEventListener('input', () => {
-                const flow = parseInt(brushFlowSlider.value);
+                const flow = parseInt(brushFlowSlider.value, 10);
                 const valEl = document.getElementById('val-brush-flow') || document.getElementById('val-brush-opacity');
                 if (valEl) valEl.textContent = flow;
                 if (this.masks?.brushSettings) {
-                    this.masks.brushSettings.flow = flow / 100;
-                    this.masks.brushSettings.opacity = flow / 100;
+                    this.masks.brushSettings.flow = flow;
+                    this.masks.brushSettings.opacity = 100;
                 }
                 this.state.setBrushSetting('flow', flow);
                 this.state.setBrushSetting('opacity', flow);
@@ -847,7 +858,24 @@ export class EditorUI {
                     const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
                     const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
 
-                    if (this.state.currentTool === 'brush') {
+                    if (this._isDraggingPin && this._lastPinPos) {
+                        const dx = x - this._lastPinPos.x;
+                        const dy = y - this._lastPinPos.y;
+                        this._lastPinPos = { x, y };
+
+                        const layer = this.masks?.getActiveLayer?.();
+                        if (layer?.shape && this.state.currentTool === 'gradient') {
+                            const { startX, startY, endX, endY, feather, invert } = layer.shape;
+                            this.masks.createLinearMask(startX + dx, startY + dy, endX + dx, endY + dy, feather, invert);
+                            this.renderWithMask(true);
+                            this.updateMaskGuides();
+                        } else if (layer?.shape && this.state.currentTool === 'radial') {
+                            const { centerX, centerY, innerRadius, outerRadius, invert } = layer.shape;
+                            this.masks.createRadialMask(centerX + dx, centerY + dy, innerRadius, outerRadius, invert);
+                            this.renderWithMask(true);
+                            this.updateMaskGuides();
+                        }
+                    } else if (this.state.currentTool === 'brush') {
                         if (this.state.lastPaintPos) {
                             this.masks.paintStroke(this.state.lastPaintPos.x, this.state.lastPaintPos.y, x, y);
                         } else {
@@ -857,20 +885,32 @@ export class EditorUI {
                         this.renderWithMask(true);
                     } else if (this.state.currentTool === 'radial') {
                         const start = this._maskDragStart || { x, y };
-                        const radius = Math.hypot(x - start.x, y - start.y);
-                        this.masks.createRadialMask(start.x, start.y, radius * 0.25, Math.max(10, radius), false);
+                        const radiusPx = Math.hypot(x - start.x, y - start.y);
+                        const outerRadius = Math.max(0.02, radiusPx / this.gpu.height);
+                        const innerRadius = outerRadius * 0.4;
+                        this.masks.createRadialMask(start.x, start.y, innerRadius, outerRadius, false);
                         this.renderWithMask(true);
+                        this.updateMaskGuides();
                     } else if (this.state.currentTool === 'gradient') {
                         const start = this._maskDragStart || { x, y };
                         this.masks.createLinearMask(start.x, start.y, x, y, 0.5, false);
                         this.renderWithMask(true);
+                        this.updateMaskGuides();
                     }
+                }
+            });
+
+            canvasArea.addEventListener('mouseenter', () => {
+                if (this.state.currentTool === 'brush') {
+                    if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'block';
+                    this.updateBrushCursor();
                 }
             });
 
             canvasArea.addEventListener('mouseleave', () => {
                 const badge = document.getElementById('wb-sample-badge');
                 if (badge) badge.style.display = 'none';
+                if (this.elements.brushCursor) this.elements.brushCursor.style.display = 'none';
             });
         }
 
@@ -892,8 +932,15 @@ export class EditorUI {
                 const tool = this.state.currentTool;
                 if (!['brush', 'radial', 'gradient'].includes(tool)) return;
 
-                if (!this.masks || this.masks.activeLayerIndex < 0) {
-                    this.masks?.createLayer?.(tool);
+                const activeLayer = this.masks?.getActiveLayer?.();
+                if (!activeLayer || activeLayer.type !== tool) {
+                    // Look for existing layer with matching type first
+                    const existingIndex = this.masks?.layers ? this.masks.layers.findIndex(l => l.type === tool) : -1;
+                    if (existingIndex >= 0) {
+                        this.masks.activeLayerIndex = existingIndex;
+                    } else {
+                        this.masks?.createLayer?.(tool);
+                    }
                     this.updateLayersList();
                     this.syncLayerUI();
                 }
@@ -902,18 +949,45 @@ export class EditorUI {
                 const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
                 const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
 
+                // Check if user clicked on existing pin handle to drag/reposition
+                const currentLayer = this.masks?.getActiveLayer?.();
+                const pinThreshold = 22 * (this.gpu.width / rect.width);
+                this._isDraggingPin = false;
+                this._lastPinPos = null;
+
+                if (currentLayer?.shape) {
+                    if (tool === 'gradient') {
+                        const midX = (currentLayer.shape.startX + currentLayer.shape.endX) * 0.5;
+                        const midY = (currentLayer.shape.startY + currentLayer.shape.endY) * 0.5;
+                        if (Math.hypot(x - midX, y - midY) <= pinThreshold) {
+                            this._isDraggingPin = true;
+                            this._lastPinPos = { x, y };
+                        }
+                    } else if (tool === 'radial') {
+                        if (Math.hypot(x - currentLayer.shape.centerX, y - currentLayer.shape.centerY) <= pinThreshold) {
+                            this._isDraggingPin = true;
+                            this._lastPinPos = { x, y };
+                        }
+                    }
+                }
+
                 this._maskDragStart = { x, y };
                 this.state.setPainting(true, { x, y });
 
                 if (tool === 'brush') {
+                    this.hideMaskGuides();
                     this.masks.paintBrush(x, y);
                     this.renderWithMask(true);
-                } else if (tool === 'radial') {
-                    this.masks.createRadialMask(x, y, 0, 10, false);
-                    this.renderWithMask(true);
-                } else if (tool === 'gradient') {
-                    this.masks.createLinearMask(x, y, x, y, 0.5, false);
-                    this.renderWithMask(true);
+                } else if (!this._isDraggingPin) {
+                    if (tool === 'radial') {
+                        this.masks.createRadialMask(x, y, 0.01, 0.05, false);
+                        this.renderWithMask(true);
+                        this.updateMaskGuides();
+                    } else if (tool === 'gradient') {
+                        this.masks.createLinearMask(x, y, x, y, 0.5, false);
+                        this.renderWithMask(true);
+                        this.updateMaskGuides();
+                    }
                 }
             });
 
@@ -921,9 +995,12 @@ export class EditorUI {
                 if (this.state.isPainting) {
                     this.state.setPainting(false, null);
                     this._maskDragStart = null;
+                    this._isDraggingPin = false;
+                    this._lastPinPos = null;
                     if (this.state.hasImage) {
                         this.renderWithMask(false);
                         this.layersModule?.updateThumbnails?.();
+                        this.updateMaskGuides();
                         this._pushHistoryDebounced();
                     }
                 }
@@ -966,9 +1043,9 @@ export class EditorUI {
      */
     adjustBrushHardness(delta) {
         if (!this.masks?.brushSettings) return;
-        const currentHardness = Math.round((this.masks.brushSettings.hardness !== undefined ? this.masks.brushSettings.hardness : 0.5) * 100);
+        const currentHardness = this.masks.brushSettings.hardness !== undefined ? this.masks.brushSettings.hardness : 50;
         const newHardness = Math.max(0, Math.min(100, currentHardness + delta));
-        this.masks.brushSettings.hardness = newHardness / 100;
+        this.masks.brushSettings.hardness = newHardness;
         this.state.setBrushSetting('hardness', newHardness);
         const slider = document.getElementById('slider-brush-hardness');
         if (slider) slider.value = newHardness;
@@ -1863,16 +1940,22 @@ export class EditorUI {
         const cursor = this.elements.brushCursor;
         if (!cursor) return;
         const size = this.masks?.brushSettings?.size || 100;
-        const hardness = this.masks?.brushSettings?.hardness !== undefined ? this.masks.brushSettings.hardness : 0.5;
-        cursor.style.width = `${size}px`;
-        cursor.style.height = `${size}px`;
+        const rect = this.elements.canvas?.getBoundingClientRect();
+        const scale = (rect && this.gpu?.width) ? (rect.width / this.gpu.width) : 1;
+        const screenDiameter = Math.max(4, Math.round(size * scale));
+        cursor.style.width = `${screenDiameter}px`;
+        cursor.style.height = `${screenDiameter}px`;
 
         const isEraser = Boolean(this.masks?.brushSettings?.erase);
         cursor.classList.toggle('is-eraser', isEraser);
 
         const innerCursor = document.getElementById('brush-cursor-inner');
         if (innerCursor) {
-            const innerSize = Math.max(2, Math.round(size * hardness));
+            // Feather slider in UI: 0 = hard, 100 = soft
+            // Hardness ratio: (100 - feather) / 100
+            const featherVal = this.masks?.brushSettings?.hardness !== undefined ? this.masks.brushSettings.hardness : 50;
+            const hardnessRatio = Math.max(0.05, Math.min(1.0, (100 - featherVal) / 100));
+            const innerSize = Math.max(2, Math.round(screenDiameter * hardnessRatio));
             innerCursor.style.width = `${innerSize}px`;
             innerCursor.style.height = `${innerSize}px`;
         }
@@ -1902,14 +1985,14 @@ export class EditorUI {
      */
     updateBrushPreview() {
         const previewCircle = this.elements.brushPreviewCircle;
-        if (!previewCircle) return;
-        const opacity = this.masks.brushSettings.opacity;
-        const hardness = this.masks.brushSettings.hardness;
-        const stopPos = Math.max(0, hardness * 70);
+        if (!previewCircle || !this.masks?.brushSettings) return;
+        const featherVal = this.masks.brushSettings.hardness !== undefined ? this.masks.brushSettings.hardness : 50;
+        const hardnessRatio = (100 - featherVal) / 100;
+        const stopPos = Math.max(5, Math.round(hardnessRatio * 75));
         previewCircle.style.background = `radial-gradient(circle, 
-            rgba(255,255,255,${opacity}) 0%, 
-            rgba(255,255,255,${opacity}) ${stopPos}%, 
-            rgba(255,255,255,0) 70%)`;
+            rgba(255,255,255,0.95) 0%, 
+            rgba(255,255,255,0.85) ${stopPos}%, 
+            rgba(255,255,255,0) 100%)`;
     }
 
     /**
@@ -1918,6 +2001,128 @@ export class EditorUI {
     updateBrushSizeIndicator(size) {
         const indicator = this.elements.brushSizeIndicator;
         if (indicator) indicator.textContent = `${size}px`;
+    }
+
+    /**
+     * Hide Lightroom-style mask guidelines
+     */
+    hideMaskGuides() {
+        const svg = document.getElementById('mask-guides-svg');
+        if (svg) {
+            svg.style.display = 'none';
+            svg.innerHTML = '';
+        }
+    }
+
+    /**
+     * Update and render Lightroom-style mask guidelines for Linear and Radial masks
+     */
+    updateMaskGuides() {
+        const svg = document.getElementById('mask-guides-svg');
+        const canvas = this.elements.canvas;
+        if (!svg || !canvas || !this.state.hasImage) {
+            this.hideMaskGuides();
+            return;
+        }
+
+        const layer = this.masks?.getActiveLayer?.();
+        const isMaskMode = this.state.currentTab === 'masks' || ['radial', 'gradient', 'brush'].includes(this.state.currentTool);
+        if (!isMaskMode || !layer || !layer.shape || !['radial', 'gradient'].includes(layer.type)) {
+            this.hideMaskGuides();
+            return;
+        }
+
+        const imgW = this.gpu.width;
+        const imgH = this.gpu.height;
+        if (!imgW || !imgH) {
+            this.hideMaskGuides();
+            return;
+        }
+
+        // Align SVG viewbox and bounds to canvas
+        svg.style.display = 'block';
+        svg.setAttribute('viewBox', `0 0 ${imgW} ${imgH}`);
+        svg.style.width = `${canvas.offsetWidth}px`;
+        svg.style.height = `${canvas.offsetHeight}px`;
+        svg.style.left = `${canvas.offsetLeft}px`;
+        svg.style.top = `${canvas.offsetTop}px`;
+
+        if (layer.type === 'gradient') {
+            const { startX, startY, endX, endY } = layer.shape;
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const dist = Math.hypot(dx, dy);
+
+            // Unit perpendicular vector
+            const lineLen = Math.max(imgW, imgH) * 1.5;
+            let nx = 0;
+            let ny = 1;
+            if (dist > 0.001) {
+                nx = -dy / dist;
+                ny = dx / dist;
+            }
+
+            const midX = (startX + endX) * 0.5;
+            const midY = (startY + endY) * 0.5;
+
+            // Pin size in image units (~12px on screen)
+            const scale = canvas.offsetWidth > 0 ? (imgW / canvas.offsetWidth) : 1;
+            const pinRadius = Math.max(5, Math.round(7 * scale));
+
+            svg.innerHTML = `
+                <!-- Connecting guide arrow line -->
+                <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" class="mask-guide-arrow" />
+                
+                <!-- 100% Start boundary line (Full effect) -->
+                <line x1="${startX - nx * lineLen}" y1="${startY - ny * lineLen}" 
+                      x2="${startX + nx * lineLen}" y2="${startY + ny * lineLen}" 
+                      class="mask-guide-line-solid" />
+                
+                <!-- 50% Midpoint Center line -->
+                <line x1="${midX - nx * lineLen}" y1="${midY - ny * lineLen}" 
+                      x2="${midX + nx * lineLen}" y2="${midY + ny * lineLen}" 
+                      class="mask-guide-line-center" />
+                
+                <!-- 0% End boundary line (Fade boundary) -->
+                <line x1="${endX - nx * lineLen}" y1="${endY - ny * lineLen}" 
+                      x2="${endX + nx * lineLen}" y2="${endY + ny * lineLen}" 
+                      class="mask-guide-line" />
+                
+                <!-- Center Pin Handle -->
+                <circle cx="${midX}" cy="${midY}" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition gradient" />
+            `;
+        } else if (layer.type === 'radial') {
+            const { centerX, centerY, innerRadius, outerRadius } = layer.shape;
+            const aspect = imgW / imgH;
+
+            // Radii in image pixels
+            const rOutY = outerRadius * imgH;
+            const rOutX = rOutY / aspect;
+
+            const rInY = innerRadius * imgH;
+            const rInX = rInY / aspect;
+
+            const scale = canvas.offsetWidth > 0 ? (imgW / canvas.offsetWidth) : 1;
+            const pinRadius = Math.max(5, Math.round(7 * scale));
+            const handleRadius = Math.max(3, Math.round(5 * scale));
+
+            svg.innerHTML = `
+                <!-- Outer boundary (0% effect edge) -->
+                <ellipse cx="${centerX}" cy="${centerY}" rx="${rOutX}" ry="${rOutY}" class="mask-guide-line-solid" />
+                
+                <!-- Inner boundary (100% effect edge / feather start) -->
+                <ellipse cx="${centerX}" cy="${centerY}" rx="${rInX}" ry="${rInY}" class="mask-guide-line" />
+                
+                <!-- Center Pin Handle -->
+                <circle cx="${centerX}" cy="${centerY}" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition radial mask" />
+                
+                <!-- 4 Cardinal Handles (Top, Bottom, Left, Right) -->
+                <circle cx="${centerX}" cy="${centerY - rOutY}" r="${handleRadius}" class="mask-guide-handle" />
+                <circle cx="${centerX}" cy="${centerY + rOutY}" r="${handleRadius}" class="mask-guide-handle" />
+                <circle cx="${centerX - rOutX}" cy="${centerY}" r="${handleRadius}" class="mask-guide-handle" />
+                <circle cx="${centerX + rOutX}" cy="${centerY}" r="${handleRadius}" class="mask-guide-handle" />
+            `;
+        }
     }
 
     /**

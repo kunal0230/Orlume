@@ -249,11 +249,12 @@ export class MaskSystem {
                     return;
                 }
                 
-                vec3 color = base.rgb;
-                
-                // Exposure
-                float expMult = pow(2.0, u_exposure);
-                color *= expMult;
+                // Linear exposure conversion (calibrated to match global develop)
+                vec3 lin = pow(max(base.rgb, vec3(0.0)), vec3(2.2));
+                if (u_exposure != 0.0) {
+                    lin *= pow(2.0, u_exposure);
+                }
+                vec3 color = pow(max(lin, vec3(0.0)), vec3(1.0 / 2.2));
                 
                 // Contrast
                 color = (color - 0.5) * (1.0 + u_contrast) + 0.5;
@@ -601,7 +602,7 @@ export class MaskSystem {
     paintBrush(x, y, record = true) {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
         const layer = this.layers[this.activeLayerIndex];
-        if (!layer) return;
+        if (!layer || layer.type !== 'brush') return;
 
         // Record stroke
         if (record) {
@@ -612,8 +613,6 @@ export class MaskSystem {
                 settings: { ...this.brushSettings }
             });
         }
-
-        if (layer.type !== 'brush') return;
 
         const gl = this.gl;
         const program = this.programs.get('brushStamp');
@@ -627,7 +626,8 @@ export class MaskSystem {
         const centerX = x / width;
         const centerY = 1.0 - (y / height);
         const aspect = width / height;
-        const radius = this.brushSettings.size / height;
+        // Size is diameter; radius is half diameter in height-normalized coords
+        const radius = (this.brushSettings.size * 0.5) / height;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
@@ -638,14 +638,19 @@ export class MaskSystem {
             gl.blendFunc(gl.ONE, gl.ONE);
         } else {
             gl.blendEquation(gl.FUNC_ADD);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         }
 
         gl.useProgram(program);
 
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), centerX, centerY);
         gl.uniform1f(gl.getUniformLocation(program, 'u_radius'), radius);
-        gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), this.brushSettings.hardness / 100);
+
+        // Feather slider in UI: 0 = hard, 100 = soft.
+        // Hardness parameter in shader: 1.0 = hard edge, 0.0 = maximum feathered edge.
+        const featherVal = this.brushSettings.hardness !== undefined ? this.brushSettings.hardness : 50;
+        const hardness = Math.max(0.0, Math.min(1.0, (100 - featherVal) / 100));
+        gl.uniform1f(gl.getUniformLocation(program, 'u_hardness'), hardness);
         gl.uniform1f(gl.getUniformLocation(program, 'u_opacity'), (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100));
         gl.uniform1f(gl.getUniformLocation(program, 'u_aspect'), aspect);
 
@@ -671,7 +676,7 @@ export class MaskSystem {
     paintStroke(x1, y1, x2, y2, record = true) {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
         const layer = this.layers[this.activeLayerIndex];
-        if (!layer) return;
+        if (!layer || layer.type !== 'brush') return;
 
         if (record) {
             if (!layer.strokes) layer.strokes = [];
@@ -682,7 +687,7 @@ export class MaskSystem {
             });
         }
 
-        const spacing = Math.max(2, this.brushSettings.size * 0.18);
+        const spacing = Math.max(1, this.brushSettings.size * 0.12);
         const dx = x2 - x1;
         const dy = y2 - y1;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -693,7 +698,7 @@ export class MaskSystem {
         }
 
         const steps = Math.ceil(dist / spacing);
-        for (let i = 0; i <= steps; i++) {
+        for (let i = 1; i <= steps; i++) {
             const t = i / steps;
             this.paintBrush(x1 + dx * t, y1 + dy * t, false);
         }

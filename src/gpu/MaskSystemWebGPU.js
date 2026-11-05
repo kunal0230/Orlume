@@ -501,7 +501,7 @@ export class MaskSystemWebGPU {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
-        if (!layer) return;
+        if (!layer || layer.type !== 'brush') return;
 
         if (record) {
             if (!layer.strokes) layer.strokes = [];
@@ -511,8 +511,6 @@ export class MaskSystemWebGPU {
                 settings: { ...this.brushSettings }
             });
         }
-
-        if (layer.type !== 'brush') return;
 
         const pipelineName = this.brushSettings.erase ? 'brushErase' : 'brushStamp';
         const pipeline = this.pipelines.get(pipelineName);
@@ -526,13 +524,16 @@ export class MaskSystemWebGPU {
         const centerX = x / width;
         const centerY = y / height;
         const aspect = width / height;
-        const radius = this.brushSettings.size / height;
+        const radius = (this.brushSettings.size * 0.5) / height;
         const opacity = (this.brushSettings.opacity / 100) * (this.brushSettings.flow / 100);
+
+        const featherVal = this.brushSettings.hardness !== undefined ? this.brushSettings.hardness : 50;
+        const hardness = Math.max(0.0, Math.min(1.0, (100 - featherVal) / 100));
 
         const uniformData = new Float32Array([
             centerX, centerY,
             radius,
-            this.brushSettings.hardness / 100,
+            hardness,
             opacity,
             aspect,
             0, 0
@@ -578,7 +579,7 @@ export class MaskSystemWebGPU {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
-        if (!layer) return;
+        if (!layer || layer.type !== 'brush') return;
 
         if (record) {
             if (!layer.strokes) layer.strokes = [];
@@ -589,7 +590,7 @@ export class MaskSystemWebGPU {
             });
         }
 
-        const spacing = Math.max(2, this.brushSettings.size * 0.18);
+        const spacing = Math.max(1, this.brushSettings.size * 0.12);
         const dx = x2 - x1;
         const dy = y2 - y1;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -600,7 +601,7 @@ export class MaskSystemWebGPU {
         }
 
         const steps = Math.ceil(dist / spacing);
-        for (let i = 0; i <= steps; i++) {
+        for (let i = 1; i <= steps; i++) {
             const t = i / steps;
             this.paintBrush(x1 + dx * t, y1 + dy * t, false);
         }

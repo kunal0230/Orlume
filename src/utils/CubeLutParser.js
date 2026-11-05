@@ -269,3 +269,4 @@ export class CubeLutParser {
         return preset;
     }
 }
+

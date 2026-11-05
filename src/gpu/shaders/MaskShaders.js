@@ -278,11 +278,12 @@ export const maskedAdjustmentShader = /* wgsl */`
             return base;
         }
         
-        var color = base.rgb;
-        
-        // Exposure
-        let expMult = pow(2.0, u.exposure);
-        color *= expMult;
+        // Linear exposure conversion (calibrated to match global develop)
+        var lin = pow(max(base.rgb, vec3f(0.0)), vec3f(2.2));
+        if (u.exposure != 0.0) {
+            lin *= pow(2.0, u.exposure);
+        }
+        var color = pow(max(lin, vec3f(0.0)), vec3f(1.0 / 2.2));
         
         // Contrast
         color = (color - 0.5) * (1.0 + u.contrast) + 0.5;

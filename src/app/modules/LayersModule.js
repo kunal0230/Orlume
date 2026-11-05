@@ -276,6 +276,7 @@ export class LayersModule {
 
                 this.updateList();
                 this.syncUI();
+                this.editor.updateMaskGuides?.();
                 this.editor.gpu.render();
             });
         });
@@ -479,7 +480,7 @@ export class LayersModule {
             if (slider) slider.value = value;
             if (valueDisplay) {
                 if (name === 'exposure') {
-                    valueDisplay.textContent = value.toFixed(2);
+                    valueDisplay.textContent = value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
                 } else if (name === 'density') {
                     valueDisplay.textContent = `${Math.round(value)}%`;
                 } else {

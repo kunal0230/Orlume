@@ -292,7 +292,7 @@ export class HistoryModule {
                 const valueDisplay = document.getElementById(`val-${name}`);
                 if (slider && valueDisplay) {
                     slider.value = value;
-                    valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+                    valueDisplay.textContent = name === 'exposure' ? (value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)) : Math.round(value);
                 }
             }
             this.editor.lutModule?.syncUI?.();
@@ -343,6 +343,7 @@ export class HistoryModule {
             // 4. Update UI
             this.editor.updateLayersList?.();
             this.editor.syncLayerUI?.();
+            this.editor.updateMaskGuides?.();
         }
 
         // Dynamic Module State Restoration
