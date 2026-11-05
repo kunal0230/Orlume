@@ -1,5 +1,7 @@
 #version 300 es
 precision highp float;
+precision mediump sampler2D;
+precision mediump sampler3D;
 in vec2 v_texCoord;
 uniform sampler2D u_texture;
 out vec4 fragColor;
@@ -42,11 +44,10 @@ uniform sampler2D u_curveLutTexBlue;
 
 // 3D LUT Color Grading
 uniform bool u_hasLut3d;
-uniform sampler3D u_lut3dTexture;
+uniform mediump sampler3D u_lut3dTexture;
 uniform float u_lut3dIntensity;
 uniform float u_lut3dSize;
 
-// Multi-pass textures
 // Multi-pass textures
 uniform sampler2D u_blurTexture;
 

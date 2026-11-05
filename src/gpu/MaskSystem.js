@@ -159,6 +159,7 @@ export class MaskSystem {
         // Mask invert shader
         const maskInvertFragment = `#version 300 es
             precision highp float;
+            precision mediump sampler2D;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
@@ -173,6 +174,7 @@ export class MaskSystem {
         // Mask composite shader - applies masked adjustments
         const maskCompositeFragment = `#version 300 es
             precision highp float;
+            precision mediump sampler2D;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
@@ -193,6 +195,7 @@ export class MaskSystem {
         // Mask overlay shader - shows mask with customizable overlay color
         const maskOverlayFragment = `#version 300 es
             precision highp float;
+            precision mediump sampler2D;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
@@ -209,6 +212,7 @@ export class MaskSystem {
         // Masked adjustment shader - applies adjustments only in masked areas with Pro tonal controls
         const maskedAdjustmentFragment = `#version 300 es
             precision highp float;
+            precision mediump sampler2D;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
