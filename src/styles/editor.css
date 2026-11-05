@@ -2060,6 +2060,7 @@ kbd {
 }
 
 .mask-guide-line {
+    fill: none !important;
     stroke: rgba(255, 255, 255, 0.85);
     stroke-width: 1.5;
     stroke-dasharray: 4 3;
@@ -2067,18 +2068,21 @@ kbd {
 }
 
 .mask-guide-line-solid {
+    fill: none !important;
     stroke: rgba(255, 255, 255, 0.9);
     stroke-width: 1.5;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
 }
 
 .mask-guide-line-center {
+    fill: none !important;
     stroke: #3b82f6;
     stroke-width: 2;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.95));
 }
 
 .mask-guide-arrow {
+    fill: none !important;
     stroke: rgba(255, 255, 255, 0.65);
     stroke-width: 1.5;
     stroke-dasharray: 3 3;

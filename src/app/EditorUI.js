@@ -2233,21 +2233,21 @@ export class EditorUI {
             svg.innerHTML = `
                 <g transform="translate(${midX}, ${midY}) rotate(${rotDeg})">
                     <!-- Direction arrow line (Start to End) -->
-                    <line x1="${-dist * 0.5}" y1="0" x2="${dist * 0.5}" y2="0" class="mask-guide-arrow" />
+                    <line x1="${-dist * 0.5}" y1="0" x2="${dist * 0.5}" y2="0" class="mask-guide-arrow" fill="none" />
                     <!-- Direction arrowhead at End -->
                     <polygon points="${dist * 0.5},0 ${dist * 0.5 - arrowHead},${-arrowHead * 0.55} ${dist * 0.5 - arrowHead},${arrowHead * 0.55}" fill="rgba(255,255,255,0.95)" />
 
                     <!-- 100% Start boundary line (Full effect) -->
-                    <line x1="${-dist * 0.5}" y1="${-lineLen}" x2="${-dist * 0.5}" y2="${lineLen}" class="mask-guide-line-solid" />
+                    <line x1="${-dist * 0.5}" y1="${-lineLen}" x2="${-dist * 0.5}" y2="${lineLen}" class="mask-guide-line-solid" fill="none" />
                     <circle cx="${-dist * 0.5}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="Start boundary (100% effect)" />
 
                     <!-- 50% Midpoint Center line -->
-                    <line x1="0" y1="${-lineLen}" x2="0" y2="${lineLen}" class="mask-guide-line-center" />
+                    <line x1="0" y1="${-lineLen}" x2="0" y2="${lineLen}" class="mask-guide-line-center" fill="none" />
                     <!-- Center Pin Handle -->
                     <circle cx="0" cy="0" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition gradient" />
 
                     <!-- 0% End boundary line (Fade boundary) -->
-                    <line x1="${dist * 0.5}" y1="${-lineLen}" x2="${dist * 0.5}" y2="${lineLen}" class="mask-guide-line" />
+                    <line x1="${dist * 0.5}" y1="${-lineLen}" x2="${dist * 0.5}" y2="${lineLen}" class="mask-guide-line" fill="none" />
                     <circle cx="${dist * 0.5}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="End boundary (0% effect)" />
                 </g>
             `;
@@ -2268,10 +2268,10 @@ export class EditorUI {
             svg.innerHTML = `
                 <g transform="translate(${centerX}, ${centerY}) rotate(${rotDeg})">
                     <!-- Outer boundary (0% effect edge) -->
-                    <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" class="mask-guide-line-solid" />
+                    <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" class="mask-guide-line-solid" fill="none" />
                     
                     <!-- Inner boundary (100% effect edge / feather start) -->
-                    <ellipse cx="0" cy="0" rx="${innerRx}" ry="${innerRy}" class="mask-guide-line" />
+                    <ellipse cx="0" cy="0" rx="${innerRx}" ry="${innerRy}" class="mask-guide-line" fill="none" />
                     
                     <!-- Center Pin Handle -->
                     <circle cx="0" cy="0" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition radial mask" />
@@ -2283,7 +2283,7 @@ export class EditorUI {
                     <circle cx="${rx}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="Drag to adjust width" />
 
                     <!-- Rotation Stem & Handle (Lightroom style) -->
-                    <line x1="0" y1="${-ry}" x2="0" y2="${-ry - stemLen}" class="mask-guide-arrow" />
+                    <line x1="0" y1="${-ry}" x2="0" y2="${-ry - stemLen}" class="mask-guide-arrow" fill="none" />
                     <circle cx="0" cy="${-ry - stemLen}" r="${handleRadius}" class="mask-guide-pin" style="fill: #3b82f6;" title="Drag to rotate" />
                 </g>
             `;
