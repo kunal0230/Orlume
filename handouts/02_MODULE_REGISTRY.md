@@ -129,11 +129,15 @@ new ToneCurveEditor(container, onCurveChange)
 - Reads tool from `editorUI.state.currentTool` (System Contract LAW 6).
 - Calls `feedbackModule.openCrashReport(crashData)` to pre-fill the feedback modal.
 
-### MaskSystem & LayersModule
+### MaskSystem & LayersModule (PRO)
 - Operates under both WebGL2 (`MaskSystem.js`) and WebGPU (`MaskSystemWebGPU.js`).
 - `GPUProcessor.render()` natively composites active mask adjustments on top of develop adjustments via `applyMaskedAdjustments()`.
 - Supports Brush (isotropic stamps with hardness/flow/erase), Radial Gradient (inside-out isotropic falloff with invert), and Linear Gradient (half-plane linear ramp with invert).
-- Red rubylith overlay visualization can be toggled via button or 'O' key, and is automatically hidden when navigating away from Masks panel (`isMaskMode = false`).
+- Pro adjustment controls: Mask Amount / Density (`0-100%`), Exposure, Contrast, Highlights, Shadows, Clarity, Temperature, Tint, and Saturation.
+- Multi-color overlay visualization (Red, Green, Blue, White, Black) with live color indicator and `Shift+O` shortcut to cycle colors.
+- Dual-ring brush cursor with outer ring for size, inner dashed ring for core hardness / feather visualization, and red dashed styling in eraser mode.
+- Real-time 36×24 layer mask thumbnails rendering live black/white silhouettes in the layer stack.
+- Pro keyboard shortcuts: `Shift+[` and `Shift+]` for hardness, `Cmd/Ctrl+I` to invert mask, `Cmd/Ctrl+J` to duplicate active mask layer, `Delete`/`Backspace` to delete active layer.
 - Full undo/redo integration in `HistoryModule` captures layer IDs, names, types, visibility, adjustments, and replayed strokes/shapes.
 - Automatically handles dimension updates via `onImageDimensionsChanged()` when cropping or upscaling.
 

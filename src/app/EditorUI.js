@@ -38,7 +38,9 @@ export class EditorUI {
             'temperature', 'tint', 'vibrance', 'saturation'
         ];
 
-        this.maskSliders = ['exposure', 'contrast', 'shadows', 'temperature', 'saturation'];
+        this.maskSliders = [
+            'density', 'exposure', 'contrast', 'highlights', 'shadows', 'clarity', 'temperature', 'tint', 'saturation'
+        ];
 
         // Initialize undo/redo history manager
         this.history = new HistoryManager(50);
@@ -529,7 +531,13 @@ export class EditorUI {
 
             slider.addEventListener('input', () => {
                 const value = parseFloat(slider.value);
-                valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+                if (name === 'exposure') {
+                    valueDisplay.textContent = value.toFixed(2);
+                } else if (name === 'density') {
+                    valueDisplay.textContent = `${Math.round(value)}%`;
+                } else {
+                    valueDisplay.textContent = Math.round(value);
+                }
                 this.masks.setActiveAdjustment(name, value);
                 this.renderWithMask(false);
             });
@@ -540,9 +548,16 @@ export class EditorUI {
             });
 
             slider.addEventListener('dblclick', () => {
-                slider.value = 0;
-                valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
-                this.masks.setActiveAdjustment(name, 0);
+                const defaultVal = name === 'density' ? 100 : 0;
+                slider.value = defaultVal;
+                if (name === 'exposure') {
+                    valueDisplay.textContent = '0.00';
+                } else if (name === 'density') {
+                    valueDisplay.textContent = '100%';
+                } else {
+                    valueDisplay.textContent = '0';
+                }
+                this.masks.setActiveAdjustment(name, defaultVal);
                 this.renderWithMask(false);
                 this._pushHistoryDebounced();
             });
@@ -577,6 +592,7 @@ export class EditorUI {
                 this.masks.brushSettings.hardness = hardness / 100;
                 this.state.setBrushSetting('hardness', hardness);
                 this.updateBrushPreview();
+                this.updateBrushCursor();
             });
         }
 
@@ -744,6 +760,7 @@ export class EditorUI {
             btnAdd?.classList.add('active');
             btnErase?.classList.remove('active');
         }
+        this.updateBrushCursor();
     }
 
     /**
@@ -823,6 +840,7 @@ export class EditorUI {
                     this._maskDragStart = null;
                     if (this.state.hasImage) {
                         this.renderWithMask(false);
+                        this.layersModule?.updateThumbnails?.();
                         this._pushHistoryDebounced();
                     }
                 }
@@ -858,6 +876,51 @@ export class EditorUI {
         if (valEl) valEl.textContent = this.masks.brushSettings.size;
         this.updateBrushCursor();
         this.updateBrushSizeIndicator(this.masks.brushSettings.size);
+    }
+
+    /**
+     * Adjust brush hardness / feather by delta
+     */
+    adjustBrushHardness(delta) {
+        if (!this.masks?.brushSettings) return;
+        const currentHardness = Math.round((this.masks.brushSettings.hardness !== undefined ? this.masks.brushSettings.hardness : 0.5) * 100);
+        const newHardness = Math.max(0, Math.min(100, currentHardness + delta));
+        this.masks.brushSettings.hardness = newHardness / 100;
+        this.state.setBrushSetting('hardness', newHardness);
+        const slider = document.getElementById('slider-brush-hardness');
+        if (slider) slider.value = newHardness;
+        const valEl = document.getElementById('val-brush-hardness');
+        if (valEl) valEl.textContent = newHardness;
+        this.updateBrushPreview();
+        this.updateBrushCursor();
+    }
+
+    /**
+     * Cycle through mask overlay colors (Shift+O)
+     */
+    cycleMaskOverlayColor() {
+        this.layersModule.cycleOverlayColor();
+    }
+
+    /**
+     * Invert active mask (Cmd/Ctrl+I)
+     */
+    invertActiveMask() {
+        this.layersModule.invertActiveMask();
+    }
+
+    /**
+     * Duplicate active mask layer (Cmd/Ctrl+J)
+     */
+    duplicateActiveMaskLayer() {
+        this.layersModule.duplicateActiveLayer();
+    }
+
+    /**
+     * Delete active mask layer (Del/Backspace)
+     */
+    deleteActiveMaskLayer() {
+        this.layersModule.deleteActiveLayer();
     }
 
     /**
@@ -1534,9 +1597,20 @@ export class EditorUI {
     updateBrushCursor() {
         const cursor = this.elements.brushCursor;
         if (!cursor) return;
-        const size = this.masks.brushSettings.size;
+        const size = this.masks?.brushSettings?.size || 100;
+        const hardness = this.masks?.brushSettings?.hardness !== undefined ? this.masks.brushSettings.hardness : 0.5;
         cursor.style.width = `${size}px`;
         cursor.style.height = `${size}px`;
+
+        const isEraser = Boolean(this.masks?.brushSettings?.erase);
+        cursor.classList.toggle('is-eraser', isEraser);
+
+        const innerCursor = document.getElementById('brush-cursor-inner');
+        if (innerCursor) {
+            const innerSize = Math.max(2, Math.round(size * hardness));
+            innerCursor.style.width = `${innerSize}px`;
+            innerCursor.style.height = `${innerSize}px`;
+        }
     }
 
     /**

@@ -81,9 +81,14 @@ export class KeyboardModule {
         if (e.code === 'KeyS' && !e.metaKey && !e.ctrlKey) this.editor.setTool('clone');
         if (e.code === 'KeyP' && !e.metaKey && !e.ctrlKey) this.editor.setTool('3d-pro');
 
-        // Mask overlay toggle (O)
+        // Mask overlay toggle (O) and cycle color (Shift + O)
         if (e.code === 'KeyO' && !e.metaKey && !e.ctrlKey) {
-            this.editor.toggleMaskOverlay?.();
+            e.preventDefault();
+            if (e.shiftKey) {
+                this.editor.cycleMaskOverlayColor?.();
+            } else {
+                this.editor.toggleMaskOverlay?.();
+            }
         }
 
         // Brush mode toggle
@@ -92,12 +97,44 @@ export class KeyboardModule {
             this.editor.setBrushMode(!currentErase);
         }
 
-        // Brush size adjustment
+        // Brush size / feather adjustment ([ / ])
         if (e.code === 'BracketLeft') {
-            this.editor.adjustBrushSize(-10);
+            if (e.shiftKey) {
+                this.editor.adjustBrushHardness?.(-10);
+            } else {
+                this.editor.adjustBrushSize(-10);
+            }
         }
         if (e.code === 'BracketRight') {
-            this.editor.adjustBrushSize(10);
+            if (e.shiftKey) {
+                this.editor.adjustBrushHardness?.(10);
+            } else {
+                this.editor.adjustBrushSize(10);
+            }
+        }
+
+        // Invert mask (Cmd/Ctrl + I)
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyI') {
+            if (this.state.currentTab === 'masks' || ['brush', 'radial', 'gradient'].includes(this.state.currentTool)) {
+                e.preventDefault();
+                this.editor.invertActiveMask?.();
+            }
+        }
+
+        // Duplicate active mask layer (Cmd/Ctrl + J)
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyJ') {
+            if (this.state.currentTab === 'masks' || ['brush', 'radial', 'gradient'].includes(this.state.currentTool)) {
+                e.preventDefault();
+                this.editor.duplicateActiveMaskLayer?.();
+            }
+        }
+
+        // Delete active mask layer (Delete or Backspace)
+        if ((e.code === 'Delete' || e.code === 'Backspace') && !e.metaKey && !e.ctrlKey) {
+            if (this.state.currentTab === 'masks' || ['brush', 'radial', 'gradient'].includes(this.state.currentTool)) {
+                e.preventDefault();
+                this.editor.deleteActiveMaskLayer?.();
+            }
         }
 
         // Show keyboard shortcuts modal with ? key

@@ -252,7 +252,9 @@
                 <p>or click to browse</p>
                 <button class="btn btn-primary" id="btn-browse">Choose Image</button>
             </div>
-            <div class="brush-cursor" id="brush-cursor"></div>
+            <div class="brush-cursor" id="brush-cursor">
+                <div class="brush-cursor-inner" id="brush-cursor-inner"></div>
+            </div>
 
             <!-- Before/After Toggle Button -->
             <button class="btn before-after-toggle" id="btn-before-after" title="Toggle Before/After Comparison (\)">
@@ -270,7 +272,7 @@
             <!-- Develop Mode Tabs (shown when in develop mode) -->
             <div class="panel-tabs" id="develop-mode-tabs">
                 <button class="panel-tab active" data-panel="develop">Develop</button>
-                <button class="panel-tab" data-panel="masks">Masks <span class="badge-beta">Beta</span></button>
+                <button class="panel-tab" data-panel="masks">Masks <span class="badge-pro">PRO</span></button>
             </div>
 
             <!-- 3D Mode Header (shown when in 3D mode) -->
@@ -507,17 +509,17 @@
 
                 <!-- Masks Panel -->
                 <div class="panel-section" id="panel-masks">
-                    <!-- Mask Beta Notice -->
+                    <!-- Mask Pro Banner -->
                     <div class="section" style="padding-bottom: 0;">
-                        <div class="tool-beta-banner">
-                            <span class="tool-beta-dot">✦</span>
-                            <span><strong>Masks (Beta)</strong>: Local adjustments and gradient masking are newly implemented and in active beta testing.</span>
+                        <div class="tool-pro-banner">
+                            <span class="tool-pro-badge">PRO</span>
+                            <span><strong>Masking Studio</strong>: Layer-based non-destructive local adjustments with hardware-accelerated masks.</span>
                         </div>
                     </div>
 
                     <!-- Mask Tool Selector -->
                     <div class="section">
-                        <div class="section-header">Mask Tools <span class="badge-beta">Beta</span></div>
+                        <div class="section-header">Mask Tools <span class="badge-pro">PRO</span></div>
                         <div class="mask-tool-selector">
                             <button class="mask-tool-btn active" id="mask-tool-brush" title="Brush (B)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -548,11 +550,8 @@
                     <div class="section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <div class="section-header" style="margin-bottom: 0;">Layers</div>
-                            <button class="btn btn-sm" id="btn-toggle-mask-overlay" title="Toggle red mask overlay (O)" style="font-size: 11px; padding: 4px 8px; display: flex; align-items: center; gap: 4px;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                                </svg>
+                            <button class="btn btn-sm" id="btn-toggle-mask-overlay" title="Toggle mask overlay (O) • Shift+O to cycle color" style="font-size: 11px; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
+                                <span class="overlay-color-indicator" id="overlay-color-indicator"></span>
                                 <span>Overlay [O]</span>
                             </button>
                         </div>
@@ -629,12 +628,20 @@
 
                         <div
                             style="font-size: 10px; color: var(--text-secondary); margin-top: 12px; text-align: center;">
-                            <kbd>[</kbd> / <kbd>]</kbd> = resize &nbsp; <kbd>X</kbd> = toggle mode
+                            <kbd>[</kbd> / <kbd>]</kbd> size &nbsp; <kbd>Shift+[</kbd> / <kbd>Shift+]</kbd> feather &nbsp; <kbd>X</kbd> erase
                         </div>
                     </div>
 
                     <div class="section" id="mask-adjustments" style="display: none;">
                         <div class="section-header">Mask Adjustments</div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Mask Amount</span>
+                                <span id="val-mask-density">100%</span>
+                            </div>
+                            <input type="range" id="slider-mask-density" min="0" max="100" step="1" value="100">
+                        </div>
 
                         <div class="control-group">
                             <div class="control-label">
@@ -654,6 +661,14 @@
 
                         <div class="control-group">
                             <div class="control-label">
+                                <span>Highlights</span>
+                                <span id="val-mask-highlights">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-highlights" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
                                 <span>Shadows</span>
                                 <span id="val-mask-shadows">0</span>
                             </div>
@@ -662,10 +677,26 @@
 
                         <div class="control-group">
                             <div class="control-label">
+                                <span>Clarity</span>
+                                <span id="val-mask-clarity">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-clarity" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
                                 <span>Temperature</span>
                                 <span id="val-mask-temperature">0</span>
                             </div>
                             <input type="range" id="slider-mask-temperature" min="-100" max="100" step="1" value="0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Tint</span>
+                                <span id="val-mask-tint">0</span>
+                            </div>
+                            <input type="range" id="slider-mask-tint" min="-100" max="100" step="1" value="0">
                         </div>
 
                         <div class="control-group">
@@ -2380,16 +2411,16 @@
                     <div class="shortcut-row"><kbd>C</kbd><span>Crop</span></div>
                 </div>
                 <div class="shortcut-section">
-                    <h4>Mask Tools</h4>
-                    <div class="shortcut-row"><kbd>B</kbd><span>Brush</span></div>
-                    <div class="shortcut-row"><kbd>R</kbd><span>Radial</span></div>
-                    <div class="shortcut-row"><kbd>G</kbd><span>Gradient</span></div>
-                </div>
-                <div class="shortcut-section">
-                    <h4>Brush</h4>
-                    <div class="shortcut-row"><kbd>[</kbd><span>Decrease Size</span></div>
-                    <div class="shortcut-row"><kbd>]</kbd><span>Increase Size</span></div>
+                    <h4>Masks & Brush</h4>
+                    <div class="shortcut-row"><kbd>B / R / G</kbd><span>Brush / Radial / Linear</span></div>
+                    <div class="shortcut-row"><kbd>[ / ]</kbd><span>Brush Size</span></div>
+                    <div class="shortcut-row"><kbd>Shift+[ / ]</kbd><span>Brush Feather</span></div>
                     <div class="shortcut-row"><kbd>X</kbd><span>Toggle Add/Erase</span></div>
+                    <div class="shortcut-row"><kbd>O</kbd><span>Toggle Overlay</span></div>
+                    <div class="shortcut-row"><kbd>Shift+O</kbd><span>Cycle Overlay Color</span></div>
+                    <div class="shortcut-row"><kbd>⌘/Ctrl+I</kbd><span>Invert Mask</span></div>
+                    <div class="shortcut-row"><kbd>⌘/Ctrl+J</kbd><span>Duplicate Layer</span></div>
+                    <div class="shortcut-row"><kbd>Del / ⌫</kbd><span>Delete Layer</span></div>
                 </div>
                 <div class="shortcut-section">
                     <h4>View</h4>

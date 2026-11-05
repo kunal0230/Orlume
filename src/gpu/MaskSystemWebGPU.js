@@ -45,6 +45,14 @@ export class MaskSystemWebGPU {
         this.showOverlay = false;
         this.isMaskMode = true;
         this._isPaintingOverlay = false;
+        this.overlayColors = [
+            { name: 'Red', rgb: [1.0, 0.25, 0.25], hex: '#ef4444' },
+            { name: 'Green', rgb: [0.15, 0.9, 0.35], hex: '#22c55e' },
+            { name: 'Blue', rgb: [0.25, 0.6, 1.0], hex: '#3b82f6' },
+            { name: 'White', rgb: [1.0, 1.0, 1.0], hex: '#ffffff' },
+            { name: 'Black', rgb: [0.08, 0.08, 0.08], hex: '#1f2937' }
+        ];
+        this.overlayColorIndex = 0;
         this._layerCounter = 0;
         this._pendingLayers = [];
     }
@@ -249,6 +257,7 @@ export class MaskSystemWebGPU {
             width,
             height,
             adjustments: {
+                density: 100,
                 exposure: 0,
                 contrast: 0,
                 highlights: 0,
@@ -772,12 +781,27 @@ export class MaskSystemWebGPU {
      * Check if active masks exist
      */
     hasActiveMasks() {
-        return this.layers.length > 0 && this.layers.some(l => l.visible && Object.values(l.adjustments).some(v => v !== 0));
+        return this.layers.length > 0 && this.layers.some(l => l.visible && l.adjustments && Object.entries(l.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0));
     }
 
     toggleOverlay() {
         this.showOverlay = !this.showOverlay;
         return this.showOverlay;
+    }
+
+    /**
+     * Cycle through Photoshop/Lightroom overlay colors (Red, Green, Blue, White, Black)
+     */
+    cycleOverlayColor() {
+        this.overlayColorIndex = (this.overlayColorIndex + 1) % this.overlayColors.length;
+        return this.overlayColors[this.overlayColorIndex];
+    }
+
+    /**
+     * Get current overlay color configuration
+     */
+    getCurrentOverlayColor() {
+        return this.overlayColors[this.overlayColorIndex] || this.overlayColors[0];
     }
 
     shouldShowOverlay() {
@@ -819,11 +843,25 @@ export class MaskSystemWebGPU {
         const pipeline = this._overlayCanvasPipeline;
         const bindGroupLayout = this._overlayCanvasBindGroupLayout;
 
+        const overlayColor = this.getCurrentOverlayColor();
+        const uniformData = new Float32Array([
+            overlayColor.rgb[0],
+            overlayColor.rgb[1],
+            overlayColor.rgb[2],
+            0.5
+        ]);
+        const uniformBuffer = this.device.createBuffer({
+            size: uniformData.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+        this.device.queue.writeBuffer(uniformBuffer, 0, uniformData);
+
         const bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
             entries: [
                 { binding: 0, resource: this.backend.sampler },
-                { binding: 1, resource: layer.maskTexture.createView() }
+                { binding: 1, resource: layer.maskTexture.createView() },
+                { binding: 2, resource: { buffer: uniformBuffer } }
             ]
         });
 
@@ -844,6 +882,7 @@ export class MaskSystemWebGPU {
         passEncoder.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
+        uniformBuffer.destroy();
     }
 
     _createCanvasOverlayPipeline() {
@@ -853,7 +892,8 @@ export class MaskSystemWebGPU {
         const bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
                 { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-                { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} }
+                { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+                { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }
             ]
         });
         this._overlayCanvasBindGroupLayout = bindGroupLayout;
@@ -957,7 +997,7 @@ export class MaskSystemWebGPU {
         if (this.layers.length === 0 || !baseTexture) return baseTexture;
 
         const hasAdjustments = this.layers.some(layer =>
-            layer.visible && Object.values(layer.adjustments).some(v => v !== 0)
+            layer.visible && layer.adjustments && Object.entries(layer.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0)
         );
         if (!hasAdjustments) return baseTexture;
 
@@ -983,16 +1023,20 @@ export class MaskSystemWebGPU {
             if (!layer.visible) continue;
 
             const adj = layer.adjustments;
-            if (Object.values(adj).every(v => v === 0)) continue;
+            if (Object.entries(adj).every(([k, v]) => k === 'density' ? v === 100 : v === 0)) continue;
 
             const outputFBO = usePing ? this._pingFBO : this._pongFBO;
 
             const uniformData = new Float32Array([
                 adj.exposure || 0,
                 (adj.contrast || 0) / 100,
+                (adj.highlights || 0) / 100,
                 (adj.shadows || 0) / 100,
                 (adj.temperature || 0) / 100,
+                (adj.tint || 0) / 100,
                 (adj.saturation || 0) / 100,
+                (adj.clarity || 0) / 100,
+                adj.density !== undefined ? adj.density / 100 : 1.0,
                 0, 0, 0
             ]);
 

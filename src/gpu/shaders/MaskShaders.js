@@ -164,11 +164,16 @@ export const linearGradientShader = /* wgsl */`
     }
 `;
 
-// Mask overlay shader - shows mask as red overlay
+// Mask overlay shader - shows mask with customizable overlay color
 export const maskOverlayShader = /* wgsl */`
     struct VertexOutput {
         @builtin(position) position: vec4f,
         @location(0) texCoord: vec2f,
+    }
+
+    struct OverlayUniforms {
+        color: vec3f,
+        opacity: f32,
     }
 
     @vertex
@@ -181,12 +186,12 @@ export const maskOverlayShader = /* wgsl */`
 
     @group(0) @binding(0) var texSampler: sampler;
     @group(0) @binding(1) var maskTex: texture_2d<f32>;
+    @group(0) @binding(2) var<uniform> u: OverlayUniforms;
 
     @fragment
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
         let maskValue = textureSample(maskTex, texSampler, texCoord).a;
-        // Red overlay with mask alpha
-        return vec4f(1.0, 0.3, 0.3, maskValue * 0.5);
+        return vec4f(u.color, maskValue * u.opacity);
     }
 `;
 
@@ -215,7 +220,7 @@ export const maskInvertShader = /* wgsl */`
     }
 `;
 
-// Masked adjustment shader - applies adjustments in masked areas
+// Masked adjustment shader - applies adjustments in masked areas with Pro tonal controls
 export const maskedAdjustmentShader = /* wgsl */`
     struct VertexOutput {
         @builtin(position) position: vec4f,
@@ -225,9 +230,13 @@ export const maskedAdjustmentShader = /* wgsl */`
     struct AdjustmentUniforms {
         exposure: f32,
         contrast: f32,
+        highlights: f32,
         shadows: f32,
         temperature: f32,
+        tint: f32,
         saturation: f32,
+        clarity: f32,
+        density: f32,
         _pad1: f32,
         _pad2: f32,
         _pad3: f32,
@@ -249,7 +258,8 @@ export const maskedAdjustmentShader = /* wgsl */`
     @fragment
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
         let base = textureSample(baseTex, texSampler, texCoord);
-        let maskValue = textureSample(maskTex, texSampler, texCoord).a;
+        let rawMask = textureSample(maskTex, texSampler, texCoord).a;
+        let maskValue = clamp(rawMask * u.density, 0.0, 1.0);
         
         if (maskValue < 0.001) {
             return base;
@@ -264,14 +274,27 @@ export const maskedAdjustmentShader = /* wgsl */`
         // Contrast
         color = (color - 0.5) * (1.0 + u.contrast) + 0.5;
         
-        // Shadows lift
+        // Luminance for tonal weighting
         let lum = dot(color, vec3f(0.299, 0.587, 0.114));
-        let shadowWeight = 1.0 - smoothstep(0.0, 0.3, lum);
+        
+        // Shadows lift / drop
+        let shadowWeight = 1.0 - smoothstep(0.0, 0.35, lum);
         color += u.shadows * shadowWeight * 0.3;
         
-        // Temperature
+        // Highlights recovery / boost
+        let highlightWeight = smoothstep(0.65, 1.0, lum);
+        color += u.highlights * highlightWeight * 0.3;
+        
+        // White balance (Temperature & Tint)
         color.r += u.temperature * 0.1;
         color.b -= u.temperature * 0.1;
+        color.g -= u.tint * 0.08;
+        color.r += u.tint * 0.04;
+        color.b += u.tint * 0.04;
+        
+        // Clarity (Midtone contrast)
+        let midtoneWeight = 1.0 - abs(lum - 0.5) * 2.0;
+        color += (color - vec3f(lum)) * u.clarity * midtoneWeight * 0.6;
         
         // Saturation
         let gray = dot(color, vec3f(0.299, 0.587, 0.114));

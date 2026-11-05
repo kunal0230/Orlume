@@ -2,12 +2,13 @@
  * LayersModule - Mask layer management
  * 
  * Handles:
- * - Layer list UI rendering (Photoshop-like layer items with visibility, icons, rename)
+ * - Layer list UI rendering (Photoshop-like layer items with live thumbnails, visibility, icons, rename)
  * - Layer selection, activation, and tool synchronization
  * - Layer renaming (inline double-click)
  * - Layer visibility toggle
- * - Layer inversion, duplication, and clearing
- * - Layer deletion with confirmation
+ * - Layer inversion, duplication, clearing, and deletion
+ * - Live 36x24 mask thumbnail rendering (silhouettes)
+ * - Lightroom-style overlay color cycling (Shift+O)
  * - Syncing slider UI with active layer adjustments
  */
 
@@ -16,7 +17,9 @@ export class LayersModule {
         this.editor = editor;
         this.state = editor.state;
         this.masks = editor.masks;
-        this.maskSliders = editor.maskSliders;
+        this.maskSliders = editor.maskSliders || [
+            'density', 'exposure', 'contrast', 'highlights', 'shadows', 'clarity', 'temperature', 'tint', 'saturation'
+        ];
     }
 
     /**
@@ -33,8 +36,13 @@ export class LayersModule {
 
         const duplicateBtn = document.getElementById('btn-duplicate-layer');
         const overlayBtn = document.getElementById('btn-toggle-mask-overlay');
+        const colorIndicator = document.getElementById('overlay-color-indicator');
+
         if (overlayBtn) {
             overlayBtn.classList.toggle('active', !!this.masks?.showOverlay);
+        }
+        if (colorIndicator && this.masks?.getCurrentOverlayColor) {
+            colorIndicator.style.backgroundColor = this.masks.getCurrentOverlayColor().hex;
         }
 
         if (!this.masks || !this.masks.layers || this.masks.layers.length === 0) {
@@ -93,24 +101,152 @@ export class LayersModule {
                     <span class="mask-layer-visibility" data-visibility="${i}" title="${isVisible ? 'Hide layer' : 'Show layer'}">
                         ${eyeSvg}
                     </span>
+                    <canvas class="mask-layer-thumb" width="36" height="24" data-thumb-index="${i}" title="Mask preview"></canvas>
                     <div class="mask-layer-icon" title="Type: ${layer.type}">
                         ${typeIconSvg}
                     </div>
                     <div class="mask-layer-name" data-layer-index="${i}" title="Double-click to rename">${layer.name}</div>
                     <div class="mask-layer-actions">
-                        <span class="mask-layer-invert-btn" data-invert="${i}" title="Invert this mask">
+                        <span class="mask-layer-invert-btn" data-invert="${i}" title="Invert this mask (⌘/Ctrl+I)">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"></path>
                             </svg>
                         </span>
-                        <span class="mask-layer-delete" data-delete="${i}" title="Delete layer">×</span>
+                        <span class="mask-layer-delete" data-delete="${i}" title="Delete layer (Del)">×</span>
                     </div>
                 </div>
             `;
         }).join('');
 
+        this._renderAllThumbnails(container);
         this._bindEvents(container);
+    }
+
+    /**
+     * Render all layer thumbnails
+     */
+    _renderAllThumbnails(container) {
+        if (!this.masks?.layers) return;
+        const canvases = container.querySelectorAll('.mask-layer-thumb');
+        canvases.forEach(canvas => {
+            const index = parseInt(canvas.dataset.thumbIndex, 10);
+            const layer = this.masks.layers[index];
+            if (layer) {
+                this._drawLayerThumbnail(canvas, layer);
+            }
+        });
+    }
+
+    /**
+     * Update all thumbnails in existing DOM without rebuild
+     */
+    updateThumbnails() {
+        const container = document.getElementById('mask-layers');
+        if (container) {
+            this._renderAllThumbnails(container);
+        }
+    }
+
+    /**
+     * Draw live mask thumbnail on a 36x24 canvas
+     */
+    _drawLayerThumbnail(canvas, layer) {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Base image dimensions
+        const imgW = this.masks?.gpu?.width || this.editor.state.image?.width || 1000;
+        const imgH = this.masks?.gpu?.height || this.editor.state.image?.height || 1000;
+        const scaleX = w / imgW;
+        const scaleY = h / imgH;
+
+        ctx.save();
+        ctx.clearRect(0, 0, w, h);
+
+        // Black background = masked out
+        ctx.fillStyle = '#06090e';
+        ctx.fillRect(0, 0, w, h);
+
+        if (layer.type === 'radial' && layer.shape) {
+            const cx = layer.shape.centerX * scaleX;
+            const cy = layer.shape.centerY * scaleY;
+            const rOut = Math.max(2, (layer.shape.outerRadius || 50) * Math.min(scaleX, scaleY));
+            const rIn = Math.max(0, (layer.shape.innerRadius || 0) * Math.min(scaleX, scaleY));
+
+            if (layer.shape.invert) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                const grad = ctx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+                grad.addColorStop(0, '#06090e');
+                grad.addColorStop(1, 'rgba(6, 9, 14, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, rOut, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const grad = ctx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, rOut, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (layer.type === 'gradient' && layer.shape) {
+            const x1 = layer.shape.startX * scaleX;
+            const y1 = layer.shape.startY * scaleY;
+            const x2 = layer.shape.endX * scaleX;
+            const y2 = layer.shape.endY * scaleY;
+
+            const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+            if (layer.shape.invert) {
+                grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                grad.addColorStop(1, '#ffffff');
+            } else {
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+        } else {
+            // Brush layer strokes
+            if (layer.strokes && layer.strokes.length > 0) {
+                for (const op of layer.strokes) {
+                    const isErase = Boolean(op.settings?.erase);
+                    const strokeColor = isErase ? '#06090e' : '#ffffff';
+                    const radius = Math.max(1, (op.settings?.size || 40) * Math.min(scaleX, scaleY) * 0.5);
+
+                    ctx.fillStyle = strokeColor;
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.lineWidth = radius * 2;
+
+                    if (op.type === 'brush') {
+                        ctx.beginPath();
+                        ctx.arc(op.x * scaleX, op.y * scaleY, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (op.type === 'stroke') {
+                        ctx.beginPath();
+                        ctx.moveTo(op.x1 * scaleX, op.y1 * scaleY);
+                        ctx.lineTo(op.x2 * scaleX, op.y2 * scaleY);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Dim if hidden
+        if (layer.visible === false) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        ctx.restore();
     }
 
     /**
@@ -261,11 +397,30 @@ export class LayersModule {
     }
 
     /**
+     * Delete active layer
+     */
+    deleteActiveLayer() {
+        if (!this.masks || this.masks.activeLayerIndex < 0) return;
+        const index = this.masks.activeLayerIndex;
+        const layer = this.masks.layers[index];
+        if (!layer) return;
+
+        if (confirm(`Delete "${layer.name}"?`)) {
+            this.masks.deleteLayer(index);
+            this.updateList();
+            this.syncUI();
+            this.editor.gpu.render();
+            this.editor._pushHistoryDebounced?.();
+        }
+    }
+
+    /**
      * Invert active mask
      */
     invertActiveMask() {
         if (!this.masks || this.masks.activeLayerIndex < 0) return;
         this.masks.invertActiveMask();
+        this.updateThumbnails();
         this.editor.gpu.render();
         this.editor._pushHistoryDebounced?.();
     }
@@ -276,6 +431,7 @@ export class LayersModule {
     clearActiveMask() {
         if (!this.masks || this.masks.activeLayerIndex < 0) return;
         this.masks.clearActiveMask();
+        this.updateThumbnails();
         this.editor.gpu.render();
         this.editor._pushHistoryDebounced?.();
     }
@@ -295,6 +451,21 @@ export class LayersModule {
     }
 
     /**
+     * Cycle through mask overlay colors (Shift+O)
+     */
+    cycleOverlayColor() {
+        if (!this.masks) return;
+        const color = this.masks.cycleOverlayColor();
+        const indicator = document.getElementById('overlay-color-indicator');
+        if (indicator && color) {
+            indicator.style.backgroundColor = color.hex;
+        }
+        if (this.masks.showOverlay) {
+            this.editor.gpu.render();
+        }
+    }
+
+    /**
      * Sync layer UI with active layer adjustments
      */
     syncUI() {
@@ -303,9 +474,18 @@ export class LayersModule {
         this.maskSliders.forEach(name => {
             const slider = document.getElementById(`slider-mask-${name}`);
             const valueDisplay = document.getElementById(`val-mask-${name}`);
-            const value = adj ? (adj[name] || 0) : 0;
+            const defaultValue = name === 'density' ? 100 : 0;
+            const value = adj ? (adj[name] !== undefined ? adj[name] : defaultValue) : defaultValue;
             if (slider) slider.value = value;
-            if (valueDisplay) valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
+            if (valueDisplay) {
+                if (name === 'exposure') {
+                    valueDisplay.textContent = value.toFixed(2);
+                } else if (name === 'density') {
+                    valueDisplay.textContent = `${Math.round(value)}%`;
+                } else {
+                    valueDisplay.textContent = Math.round(value);
+                }
+            }
         });
     }
 }

@@ -29,6 +29,14 @@ export class MaskSystem {
         this.showOverlay = false;
         this.isMaskMode = true;
         this._isPaintingOverlay = false;
+        this.overlayColors = [
+            { name: 'Red', rgb: [1.0, 0.25, 0.25], hex: '#ef4444' },
+            { name: 'Green', rgb: [0.15, 0.9, 0.35], hex: '#22c55e' },
+            { name: 'Blue', rgb: [0.25, 0.6, 1.0], hex: '#3b82f6' },
+            { name: 'White', rgb: [1.0, 1.0, 1.0], hex: '#ffffff' },
+            { name: 'Black', rgb: [0.08, 0.08, 0.08], hex: '#1f2937' }
+        ];
+        this.overlayColorIndex = 0;
         this._layerCounter = 0;
         this._pendingLayers = [];
 
@@ -182,22 +190,23 @@ export class MaskSystem {
             }
         `;
 
-        // Mask overlay shader - shows mask as red overlay for visual feedback
+        // Mask overlay shader - shows mask with customizable overlay color
         const maskOverlayFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
             uniform sampler2D u_mask;
+            uniform vec3 u_overlayColor;
+            uniform float u_overlayOpacity;
             
             void main() {
                 float maskValue = texture(u_mask, v_texCoord).a;
-                // Red overlay with mask alpha
-                fragColor = vec4(1.0, 0.3, 0.3, maskValue * 0.5);
+                fragColor = vec4(u_overlayColor, maskValue * u_overlayOpacity);
             }
         `;
 
-        // Masked adjustment shader - applies adjustments only in masked areas
+        // Masked adjustment shader - applies adjustments only in masked areas with Pro tonal controls
         const maskedAdjustmentFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
@@ -209,13 +218,18 @@ export class MaskSystem {
             // Local adjustments
             uniform float u_exposure;
             uniform float u_contrast;
+            uniform float u_highlights;
             uniform float u_shadows;
             uniform float u_temperature;
+            uniform float u_tint;
             uniform float u_saturation;
+            uniform float u_clarity;
+            uniform float u_density;
             
             void main() {
                 vec4 base = texture(u_base, v_texCoord);
-                float maskValue = texture(u_mask, v_texCoord).a;
+                float rawMask = texture(u_mask, v_texCoord).a;
+                float maskValue = clamp(rawMask * u_density, 0.0, 1.0);
                 
                 if (maskValue < 0.001) {
                     fragColor = base;
@@ -231,14 +245,27 @@ export class MaskSystem {
                 // Contrast
                 color = (color - 0.5) * (1.0 + u_contrast) + 0.5;
                 
-                // Shadows lift
+                // Luminance for tonal weighting
                 float lum = dot(color, vec3(0.299, 0.587, 0.114));
-                float shadowWeight = 1.0 - smoothstep(0.0, 0.3, lum);
+                
+                // Shadows lift / drop
+                float shadowWeight = 1.0 - smoothstep(0.0, 0.35, lum);
                 color += u_shadows * shadowWeight * 0.3;
                 
-                // Temperature
+                // Highlights recovery / boost
+                float highlightWeight = smoothstep(0.65, 1.0, lum);
+                color += u_highlights * highlightWeight * 0.3;
+                
+                // White balance (Temperature & Tint)
                 color.r += u_temperature * 0.1;
                 color.b -= u_temperature * 0.1;
+                color.g -= u_tint * 0.08;
+                color.r += u_tint * 0.04;
+                color.b += u_tint * 0.04;
+                
+                // Clarity (Midtone contrast)
+                float midtoneWeight = 1.0 - abs(lum - 0.5) * 2.0;
+                color += (color - vec3(lum)) * u_clarity * midtoneWeight * 0.6;
                 
                 // Saturation
                 float gray = dot(color, vec3(0.299, 0.587, 0.114));
@@ -247,7 +274,7 @@ export class MaskSystem {
                 // Clamp
                 color = clamp(color, 0.0, 1.0);
                 
-                // Blend based on mask
+                // Blend based on effective maskValue
                 fragColor = vec4(mix(base.rgb, color, maskValue), base.a);
             }
         `;
@@ -353,6 +380,7 @@ export class MaskSystem {
             width: width,
             height: height,
             adjustments: {
+                density: 100,
                 exposure: 0,
                 contrast: 0,
                 highlights: 0,
@@ -868,7 +896,7 @@ export class MaskSystem {
      * Check if active masks exist with non-zero adjustments
      */
     hasActiveMasks() {
-        return this.layers.length > 0 && this.layers.some(l => l.visible && Object.values(l.adjustments).some(v => v !== 0));
+        return this.layers.length > 0 && this.layers.some(l => l.visible && l.adjustments && Object.entries(l.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0));
     }
 
     /**
@@ -877,6 +905,21 @@ export class MaskSystem {
     toggleOverlay() {
         this.showOverlay = !this.showOverlay;
         return this.showOverlay;
+    }
+
+    /**
+     * Cycle through Photoshop/Lightroom overlay colors (Red, Green, Blue, White, Black)
+     */
+    cycleOverlayColor() {
+        this.overlayColorIndex = (this.overlayColorIndex + 1) % this.overlayColors.length;
+        return this.overlayColors[this.overlayColorIndex];
+    }
+
+    /**
+     * Get current overlay color configuration
+     */
+    getCurrentOverlayColor() {
+        return this.overlayColors[this.overlayColorIndex] || this.overlayColors[0];
     }
 
     shouldShowOverlay() {
@@ -957,6 +1000,10 @@ export class MaskSystem {
         gl.bindTexture(gl.TEXTURE_2D, layer.maskTexture);
         gl.uniform1i(gl.getUniformLocation(program, 'u_mask'), 0);
 
+        const overlayColor = this.getCurrentOverlayColor();
+        gl.uniform3f(gl.getUniformLocation(program, 'u_overlayColor'), overlayColor.rgb[0], overlayColor.rgb[1], overlayColor.rgb[2]);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_overlayOpacity'), 0.5);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
         gl.vertexAttribPointer(program.a_position, 2, gl.FLOAT, false, 0, 0);
@@ -980,7 +1027,7 @@ export class MaskSystem {
         if (!rawBase || !this._isValidTexture(rawBase)) return baseTexture;
 
         const hasAdjustments = this.layers.some(layer =>
-            layer.visible && layer.adjustments && Object.values(layer.adjustments).some(v => v !== 0)
+            layer.visible && layer.adjustments && Object.entries(layer.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0)
         );
         if (!hasAdjustments) return baseTexture;
 
@@ -1043,7 +1090,7 @@ export class MaskSystem {
             if (!layer.visible) continue;
 
             const adj = layer.adjustments;
-            if (!adj || Object.values(adj).every(v => v === 0)) {
+            if (!adj || Object.entries(adj).every(([k, v]) => k === 'density' ? v === 100 : v === 0)) {
                 continue;
             }
 
@@ -1065,9 +1112,13 @@ export class MaskSystem {
 
             gl.uniform1f(gl.getUniformLocation(program, 'u_exposure'), adj.exposure || 0);
             gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), (adj.contrast || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_highlights'), (adj.highlights || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_shadows'), (adj.shadows || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_temperature'), (adj.temperature || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_tint'), (adj.tint || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), (adj.saturation || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_clarity'), (adj.clarity || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_density'), adj.density !== undefined ? adj.density / 100 : 1.0);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
             gl.enableVertexAttribArray(program.a_position);
