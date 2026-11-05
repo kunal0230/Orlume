@@ -68,7 +68,7 @@ export const brushStampShader = /* wgsl */`
     }
 `;
 
-// Radial gradient shader
+// Radial gradient shader - Lightroom style elliptical with angle & feather
 export const radialGradientShader = /* wgsl */`
     struct VertexOutput {
         @builtin(position) position: vec4f,
@@ -77,12 +77,11 @@ export const radialGradientShader = /* wgsl */`
 
     struct RadialUniforms {
         center: vec2f,
-        innerRadius: f32,
-        outerRadius: f32,
+        radii: vec2f,
+        angle: f32,
+        feather: f32,
         aspect: f32,
         invert: f32,
-        _pad1: f32,
-        _pad2: f32,
     }
 
     @vertex
@@ -99,10 +98,20 @@ export const radialGradientShader = /* wgsl */`
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
         var diff = texCoord - u.center;
         diff.x *= u.aspect;
-        let dist = length(diff);
         
-        let maxR = max(u.outerRadius, u.innerRadius + 0.0001);
-        var alpha = 1.0 - smoothstep(u.innerRadius, maxR, dist);
+        let cosA = cos(u.angle);
+        let sinA = sin(u.angle);
+        let rot = vec2f(
+            diff.x * cosA + diff.y * sinA,
+            -diff.x * sinA + diff.y * cosA
+        );
+        
+        let r = max(u.radii, vec2f(0.0001, 0.0001));
+        let dist = length(rot / r);
+        
+        let featherFrac = clamp(u.feather, 0.01, 1.0);
+        let innerEdge = max(0.0, 1.0 - featherFrac);
+        var alpha = 1.0 - smoothstep(innerEdge, 1.0, dist);
         
         if (u.invert > 0.5) {
             alpha = 1.0 - alpha;

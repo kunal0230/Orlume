@@ -467,9 +467,11 @@ export class EditorUI {
                 const w = this.gpu.width || 1000;
                 const h = this.gpu.height || 1000;
                 if (tool === 'radial' && this.masks.createRadialMask) {
-                    this.masks.createRadialMask(w / 2, h / 2, Math.min(w, h) * 0.1, Math.min(w, h) * 0.35, false);
+                    const rx = Math.round(Math.min(w, h) * 0.28);
+                    const ry = Math.round(Math.min(w, h) * 0.22);
+                    this.masks.createRadialMask(w / 2, h / 2, rx, ry, 0, 0.5, false);
                 } else if (tool === 'gradient' && this.masks.createLinearMask) {
-                    this.masks.createLinearMask(w / 2, h * 0.2, w / 2, h * 0.8, 0.5, false);
+                    this.masks.createLinearMask(w / 2, h * 0.25, w / 2, h * 0.75, 0.5, false);
                 }
 
                 if (layer) {
@@ -853,29 +855,16 @@ export class EditorUI {
 
                 this.updateBrushCursorPosition(e);
 
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
+                const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const tool = this.state.currentTool;
+
                 if (this.state.isPainting) {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
-                    const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                    const layer = this.masks?.getActiveLayer?.();
+                    const dragMode = this._maskDragMode || 'move';
 
-                    if (this._isDraggingPin && this._lastPinPos) {
-                        const dx = x - this._lastPinPos.x;
-                        const dy = y - this._lastPinPos.y;
-                        this._lastPinPos = { x, y };
-
-                        const layer = this.masks?.getActiveLayer?.();
-                        if (layer?.shape && this.state.currentTool === 'gradient') {
-                            const { startX, startY, endX, endY, feather, invert } = layer.shape;
-                            this.masks.createLinearMask(startX + dx, startY + dy, endX + dx, endY + dy, feather, invert);
-                            this.renderWithMask(true);
-                            this.updateMaskGuides();
-                        } else if (layer?.shape && this.state.currentTool === 'radial') {
-                            const { centerX, centerY, innerRadius, outerRadius, invert } = layer.shape;
-                            this.masks.createRadialMask(centerX + dx, centerY + dy, innerRadius, outerRadius, invert);
-                            this.renderWithMask(true);
-                            this.updateMaskGuides();
-                        }
-                    } else if (this.state.currentTool === 'brush') {
+                    if (tool === 'brush') {
                         if (this.state.lastPaintPos) {
                             this.masks.paintStroke(this.state.lastPaintPos.x, this.state.lastPaintPos.y, x, y);
                         } else {
@@ -883,19 +872,162 @@ export class EditorUI {
                         }
                         this.state.updatePaintPos({ x, y });
                         this.renderWithMask(true);
-                    } else if (this.state.currentTool === 'radial') {
-                        const start = this._maskDragStart || { x, y };
-                        const radiusPx = Math.hypot(x - start.x, y - start.y);
-                        const outerRadius = Math.max(0.02, radiusPx / this.gpu.height);
-                        const innerRadius = outerRadius * 0.4;
-                        this.masks.createRadialMask(start.x, start.y, innerRadius, outerRadius, false);
+                    } else if (layer?.shape && tool === 'gradient') {
+                        const { startX, startY, endX, endY, feather = 0.5, invert = false } = layer.shape;
+                        const midX = (startX + endX) * 0.5;
+                        const midY = (startY + endY) * 0.5;
+
+                        if (dragMode === 'move' && this._lastPinPos) {
+                            const dx = x - this._lastPinPos.x;
+                            const dy = y - this._lastPinPos.y;
+                            this._lastPinPos = { x, y };
+                            this.masks.createLinearMask(startX + dx, startY + dy, endX + dx, endY + dy, feather, invert);
+                        } else if (dragMode === 'linear-start') {
+                            let newStartX = x;
+                            let newStartY = y;
+                            if (e.shiftKey) {
+                                const curD = Math.hypot(endX - newStartX, endY - newStartY);
+                                const snapA = Math.round(Math.atan2(newStartY - endY, newStartX - endX) / (Math.PI / 4)) * (Math.PI / 4);
+                                newStartX = endX + Math.cos(snapA) * curD;
+                                newStartY = endY + Math.sin(snapA) * curD;
+                            }
+                            this.masks.createLinearMask(newStartX, newStartY, endX, endY, feather, invert);
+                        } else if (dragMode === 'linear-end') {
+                            let newEndX = x;
+                            let newEndY = y;
+                            if (e.shiftKey) {
+                                const curD = Math.hypot(newEndX - startX, newEndY - startY);
+                                const snapA = Math.round(Math.atan2(newEndY - startY, newEndX - startX) / (Math.PI / 4)) * (Math.PI / 4);
+                                newEndX = startX + Math.cos(snapA) * curD;
+                                newEndY = startY + Math.sin(snapA) * curD;
+                            }
+                            this.masks.createLinearMask(startX, startY, newEndX, newEndY, feather, invert);
+                        } else if (dragMode === 'linear-rotate') {
+                            const curD = Math.max(10, Math.hypot(endX - startX, endY - startY) * 0.5);
+                            let rotA = Math.atan2(y - midY, x - midX);
+                            if (e.shiftKey) {
+                                rotA = Math.round(rotA / (Math.PI / 4)) * (Math.PI / 4);
+                            }
+                            this.masks.createLinearMask(
+                                midX - Math.cos(rotA) * curD,
+                                midY - Math.sin(rotA) * curD,
+                                midX + Math.cos(rotA) * curD,
+                                midY + Math.sin(rotA) * curD,
+                                feather,
+                                invert
+                            );
+                        } else if (dragMode === 'linear-create') {
+                            const start = this._maskDragStart || { x, y };
+                            let endPtX = x;
+                            let endPtY = y;
+                            if (e.shiftKey) {
+                                const curD = Math.hypot(endPtX - start.x, endPtY - start.y);
+                                const snapA = Math.round(Math.atan2(endPtY - start.y, endPtX - start.x) / (Math.PI / 4)) * (Math.PI / 4);
+                                endPtX = start.x + Math.cos(snapA) * curD;
+                                endPtY = start.y + Math.sin(snapA) * curD;
+                            }
+                            this.masks.createLinearMask(start.x, start.y, endPtX, endPtY, 0.5, false);
+                        }
                         this.renderWithMask(true);
                         this.updateMaskGuides();
-                    } else if (this.state.currentTool === 'gradient') {
-                        const start = this._maskDragStart || { x, y };
-                        this.masks.createLinearMask(start.x, start.y, x, y, 0.5, false);
+                    } else if (layer?.shape && tool === 'radial') {
+                        const { centerX, centerY, angle = 0, feather = 0.5, invert = false } = layer.shape;
+                        const rx = layer.shape.radiusX || 100;
+                        const ry = layer.shape.radiusY || 100;
+                        const rot = angle || 0;
+
+                        const relX = x - centerX;
+                        const relY = y - centerY;
+                        const cosA = Math.cos(rot);
+                        const sinA = Math.sin(rot);
+                        const lx = relX * cosA + relY * sinA;
+                        const ly = -relX * sinA + relY * cosA;
+
+                        if (dragMode === 'move' && this._lastPinPos) {
+                            const dx = x - this._lastPinPos.x;
+                            const dy = y - this._lastPinPos.y;
+                            this._lastPinPos = { x, y };
+                            this.masks.createRadialMask(centerX + dx, centerY + dy, rx, ry, rot, feather, invert);
+                        } else if (dragMode === 'radial-right' || dragMode === 'radial-left') {
+                            const newRx = Math.max(10, Math.abs(lx));
+                            const newRy = e.shiftKey ? newRx : ry;
+                            this.masks.createRadialMask(centerX, centerY, newRx, newRy, rot, feather, invert);
+                        } else if (dragMode === 'radial-top' || dragMode === 'radial-bottom') {
+                            const newRy = Math.max(10, Math.abs(ly));
+                            const newRx = e.shiftKey ? newRy : rx;
+                            this.masks.createRadialMask(centerX, centerY, newRx, newRy, rot, feather, invert);
+                        } else if (dragMode === 'radial-rotate') {
+                            let newAngle = Math.atan2(x - centerX, -(y - centerY));
+                            if (e.shiftKey) {
+                                newAngle = Math.round(newAngle / (Math.PI / 12)) * (Math.PI / 12);
+                            }
+                            this.masks.createRadialMask(centerX, centerY, rx, ry, newAngle, feather, invert);
+                        } else if (dragMode === 'radial-scale') {
+                            const factor = Math.max(0.05, Math.hypot(lx / rx, ly / ry));
+                            this.masks.createRadialMask(centerX, centerY, Math.max(10, Math.round(rx * factor)), Math.max(10, Math.round(ry * factor)), rot, feather, invert);
+                        } else if (dragMode === 'radial-create') {
+                            const start = this._maskDragStart || { x, y };
+                            const diffX = x - start.x;
+                            const diffY = y - start.y;
+                            let newRx = Math.max(10, Math.abs(diffX));
+                            let newRy = Math.max(10, Math.abs(diffY));
+                            if (e.shiftKey) {
+                                const circR = Math.max(10, Math.hypot(diffX, diffY));
+                                newRx = circR;
+                                newRy = circR;
+                            }
+                            this.masks.createRadialMask(start.x, start.y, newRx, newRy, 0, 0.5, false);
+                        }
                         this.renderWithMask(true);
                         this.updateMaskGuides();
+                    }
+                } else if (['radial', 'gradient'].includes(tool)) {
+                    // Update hover cursor based on handle hit test
+                    const layer = this.masks?.getActiveLayer?.();
+                    if (layer?.shape) {
+                        const scale = rect.width > 0 ? (this.gpu.width / rect.width) : 1;
+                        const hitThreshold = 18 * scale;
+                        let hoverCursor = 'crosshair';
+
+                        if (tool === 'gradient') {
+                            const { startX, startY, endX, endY } = layer.shape;
+                            const midX = (startX + endX) * 0.5;
+                            const midY = (startY + endY) * 0.5;
+                            const dist = Math.hypot(endX - startX, endY - startY);
+                            const ang = Math.atan2(endY - startY, endX - startX);
+                            const lx = (x - midX) * Math.cos(ang) + (y - midY) * Math.sin(ang);
+                            const ly = -(x - midX) * Math.sin(ang) + (y - midY) * Math.cos(ang);
+
+                            if (Math.hypot(lx, ly) <= hitThreshold) {
+                                hoverCursor = 'move';
+                            } else if (Math.hypot(lx - (-dist * 0.5), ly) <= hitThreshold || Math.hypot(lx - dist * 0.5, ly) <= hitThreshold) {
+                                hoverCursor = 'pointer';
+                            } else if (Math.abs(lx) <= hitThreshold) {
+                                hoverCursor = 'grab';
+                            }
+                        } else if (tool === 'radial') {
+                            const { centerX, centerY, angle = 0 } = layer.shape;
+                            const rx = layer.shape.radiusX || 100;
+                            const ry = layer.shape.radiusY || 100;
+                            const stemLen = Math.max(18, Math.round(26 * scale));
+                            const relX = x - centerX;
+                            const relY = y - centerY;
+                            const lx = relX * Math.cos(angle) + relY * Math.sin(angle);
+                            const ly = -relX * Math.sin(angle) + relY * Math.cos(angle);
+
+                            if (Math.hypot(lx, ly) <= hitThreshold) {
+                                hoverCursor = 'move';
+                            } else if (Math.hypot(lx, ly - (-ry - stemLen)) <= hitThreshold) {
+                                hoverCursor = 'grab';
+                            } else if (Math.hypot(lx, ly - (-ry)) <= hitThreshold || Math.hypot(lx, ly - ry) <= hitThreshold) {
+                                hoverCursor = 'ns-resize';
+                            } else if (Math.hypot(lx - rx, ly) <= hitThreshold || Math.hypot(lx - (-rx), ly) <= hitThreshold) {
+                                hoverCursor = 'ew-resize';
+                            } else if (Math.abs(Math.hypot(lx / rx, ly / ry) - 1.0) * Math.min(rx, ry) <= hitThreshold) {
+                                hoverCursor = 'pointer';
+                            }
+                        }
+                        canvas.style.cursor = hoverCursor;
                     }
                 }
             });
@@ -934,7 +1066,6 @@ export class EditorUI {
 
                 const activeLayer = this.masks?.getActiveLayer?.();
                 if (!activeLayer || activeLayer.type !== tool) {
-                    // Look for existing layer with matching type first
                     const existingIndex = this.masks?.layers ? this.masks.layers.findIndex(l => l.type === tool) : -1;
                     if (existingIndex >= 0) {
                         this.masks.activeLayerIndex = existingIndex;
@@ -948,46 +1079,82 @@ export class EditorUI {
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
                 const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const scale = rect.width > 0 ? (this.gpu.width / rect.width) : 1;
+                const hitThreshold = 18 * scale;
 
-                // Check if user clicked on existing pin handle to drag/reposition
+                this._maskDragMode = null;
+                this._lastPinPos = { x, y };
+                this._maskDragStart = { x, y };
+
                 const currentLayer = this.masks?.getActiveLayer?.();
-                const pinThreshold = 22 * (this.gpu.width / rect.width);
-                this._isDraggingPin = false;
-                this._lastPinPos = null;
-
                 if (currentLayer?.shape) {
                     if (tool === 'gradient') {
-                        const midX = (currentLayer.shape.startX + currentLayer.shape.endX) * 0.5;
-                        const midY = (currentLayer.shape.startY + currentLayer.shape.endY) * 0.5;
-                        if (Math.hypot(x - midX, y - midY) <= pinThreshold) {
-                            this._isDraggingPin = true;
-                            this._lastPinPos = { x, y };
+                        const { startX, startY, endX, endY } = currentLayer.shape;
+                        const midX = (startX + endX) * 0.5;
+                        const midY = (startY + endY) * 0.5;
+                        const dist = Math.hypot(endX - startX, endY - startY);
+                        const ang = Math.atan2(endY - startY, endX - startX);
+                        const lx = (x - midX) * Math.cos(ang) + (y - midY) * Math.sin(ang);
+                        const ly = -(x - midX) * Math.sin(ang) + (y - midY) * Math.cos(ang);
+
+                        if (Math.hypot(lx, ly) <= hitThreshold) {
+                            this._maskDragMode = 'move';
+                        } else if (Math.hypot(lx - (-dist * 0.5), ly) <= hitThreshold) {
+                            this._maskDragMode = 'linear-start';
+                        } else if (Math.hypot(lx - dist * 0.5, ly) <= hitThreshold) {
+                            this._maskDragMode = 'linear-end';
+                        } else if (Math.abs(lx) <= hitThreshold) {
+                            this._maskDragMode = 'linear-rotate';
+                        } else {
+                            this._maskDragMode = 'linear-create';
                         }
                     } else if (tool === 'radial') {
-                        if (Math.hypot(x - currentLayer.shape.centerX, y - currentLayer.shape.centerY) <= pinThreshold) {
-                            this._isDraggingPin = true;
-                            this._lastPinPos = { x, y };
+                        const { centerX, centerY, angle = 0 } = currentLayer.shape;
+                        const rx = currentLayer.shape.radiusX || 100;
+                        const ry = currentLayer.shape.radiusY || 100;
+                        const stemLen = Math.max(18, Math.round(26 * scale));
+                        const relX = x - centerX;
+                        const relY = y - centerY;
+                        const lx = relX * Math.cos(angle) + relY * Math.sin(angle);
+                        const ly = -relX * Math.sin(angle) + relY * Math.cos(angle);
+
+                        if (Math.hypot(lx, ly) <= hitThreshold) {
+                            this._maskDragMode = 'move';
+                        } else if (Math.hypot(lx, ly - (-ry - stemLen)) <= hitThreshold) {
+                            this._maskDragMode = 'radial-rotate';
+                        } else if (Math.hypot(lx, ly - (-ry)) <= hitThreshold) {
+                            this._maskDragMode = 'radial-top';
+                        } else if (Math.hypot(lx, ly - ry) <= hitThreshold) {
+                            this._maskDragMode = 'radial-bottom';
+                        } else if (Math.hypot(lx - rx, ly) <= hitThreshold) {
+                            this._maskDragMode = 'radial-right';
+                        } else if (Math.hypot(lx - (-rx), ly) <= hitThreshold) {
+                            this._maskDragMode = 'radial-left';
+                        } else if (Math.abs(Math.hypot(lx / rx, ly / ry) - 1.0) * Math.min(rx, ry) <= hitThreshold) {
+                            this._maskDragMode = 'radial-scale';
+                        } else {
+                            this._maskDragMode = 'radial-create';
                         }
                     }
+                } else {
+                    if (tool === 'gradient') this._maskDragMode = 'linear-create';
+                    if (tool === 'radial') this._maskDragMode = 'radial-create';
                 }
 
-                this._maskDragStart = { x, y };
                 this.state.setPainting(true, { x, y });
 
                 if (tool === 'brush') {
                     this.hideMaskGuides();
                     this.masks.paintBrush(x, y);
                     this.renderWithMask(true);
-                } else if (!this._isDraggingPin) {
-                    if (tool === 'radial') {
-                        this.masks.createRadialMask(x, y, 0.01, 0.05, false);
-                        this.renderWithMask(true);
-                        this.updateMaskGuides();
-                    } else if (tool === 'gradient') {
-                        this.masks.createLinearMask(x, y, x, y, 0.5, false);
-                        this.renderWithMask(true);
-                        this.updateMaskGuides();
-                    }
+                } else if (this._maskDragMode === 'radial-create') {
+                    this.masks.createRadialMask(x, y, 10, 10, 0, 0.5, false);
+                    this.renderWithMask(true);
+                    this.updateMaskGuides();
+                } else if (this._maskDragMode === 'linear-create') {
+                    this.masks.createLinearMask(x, y, x + 1, y + 1, 0.5, false);
+                    this.renderWithMask(true);
+                    this.updateMaskGuides();
                 }
             });
 
@@ -995,7 +1162,7 @@ export class EditorUI {
                 if (this.state.isPainting) {
                     this.state.setPainting(false, null);
                     this._maskDragStart = null;
-                    this._isDraggingPin = false;
+                    this._maskDragMode = null;
                     this._lastPinPos = null;
                     if (this.state.hasImage) {
                         this.renderWithMask(false);
@@ -2053,74 +2220,72 @@ export class EditorUI {
             const dy = endY - startY;
             const dist = Math.hypot(dx, dy);
 
-            // Unit perpendicular vector
-            const lineLen = Math.max(imgW, imgH) * 1.5;
-            let nx = 0;
-            let ny = 1;
-            if (dist > 0.001) {
-                nx = -dy / dist;
-                ny = dx / dist;
-            }
-
             const midX = (startX + endX) * 0.5;
             const midY = (startY + endY) * 0.5;
+            const rotDeg = Math.atan2(dy, dx) * (180 / Math.PI);
 
-            // Pin size in image units (~12px on screen)
             const scale = canvas.offsetWidth > 0 ? (imgW / canvas.offsetWidth) : 1;
             const pinRadius = Math.max(5, Math.round(7 * scale));
+            const handleRadius = Math.max(4, Math.round(5.5 * scale));
+            const lineLen = Math.max(imgW, imgH) * 1.5;
+            const arrowHead = Math.max(6, Math.round(8 * scale));
 
             svg.innerHTML = `
-                <!-- Connecting guide arrow line -->
-                <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" class="mask-guide-arrow" />
-                
-                <!-- 100% Start boundary line (Full effect) -->
-                <line x1="${startX - nx * lineLen}" y1="${startY - ny * lineLen}" 
-                      x2="${startX + nx * lineLen}" y2="${startY + ny * lineLen}" 
-                      class="mask-guide-line-solid" />
-                
-                <!-- 50% Midpoint Center line -->
-                <line x1="${midX - nx * lineLen}" y1="${midY - ny * lineLen}" 
-                      x2="${midX + nx * lineLen}" y2="${midY + ny * lineLen}" 
-                      class="mask-guide-line-center" />
-                
-                <!-- 0% End boundary line (Fade boundary) -->
-                <line x1="${endX - nx * lineLen}" y1="${endY - ny * lineLen}" 
-                      x2="${endX + nx * lineLen}" y2="${endY + ny * lineLen}" 
-                      class="mask-guide-line" />
-                
-                <!-- Center Pin Handle -->
-                <circle cx="${midX}" cy="${midY}" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition gradient" />
+                <g transform="translate(${midX}, ${midY}) rotate(${rotDeg})">
+                    <!-- Direction arrow line (Start to End) -->
+                    <line x1="${-dist * 0.5}" y1="0" x2="${dist * 0.5}" y2="0" class="mask-guide-arrow" />
+                    <!-- Direction arrowhead at End -->
+                    <polygon points="${dist * 0.5},0 ${dist * 0.5 - arrowHead},${-arrowHead * 0.55} ${dist * 0.5 - arrowHead},${arrowHead * 0.55}" fill="rgba(255,255,255,0.95)" />
+
+                    <!-- 100% Start boundary line (Full effect) -->
+                    <line x1="${-dist * 0.5}" y1="${-lineLen}" x2="${-dist * 0.5}" y2="${lineLen}" class="mask-guide-line-solid" />
+                    <circle cx="${-dist * 0.5}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="Start boundary (100% effect)" />
+
+                    <!-- 50% Midpoint Center line -->
+                    <line x1="0" y1="${-lineLen}" x2="0" y2="${lineLen}" class="mask-guide-line-center" />
+                    <!-- Center Pin Handle -->
+                    <circle cx="0" cy="0" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition gradient" />
+
+                    <!-- 0% End boundary line (Fade boundary) -->
+                    <line x1="${dist * 0.5}" y1="${-lineLen}" x2="${dist * 0.5}" y2="${lineLen}" class="mask-guide-line" />
+                    <circle cx="${dist * 0.5}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="End boundary (0% effect)" />
+                </g>
             `;
         } else if (layer.type === 'radial') {
-            const { centerX, centerY, innerRadius, outerRadius } = layer.shape;
-            const aspect = imgW / imgH;
-
-            // Radii in image pixels
-            const rOutY = outerRadius * imgH;
-            const rOutX = rOutY / aspect;
-
-            const rInY = innerRadius * imgH;
-            const rInX = rInY / aspect;
+            const { centerX, centerY } = layer.shape;
+            const rx = layer.shape.radiusX || (layer.shape.outerRadius ? layer.shape.outerRadius * (layer.shape.outerRadius < 2 ? imgH : 1) : Math.round(imgW * 0.25));
+            const ry = layer.shape.radiusY || (layer.shape.outerRadius ? layer.shape.outerRadius * (layer.shape.outerRadius < 2 ? imgH : 1) : Math.round(imgH * 0.2));
+            const rotDeg = (layer.shape.angle || 0) * (180 / Math.PI);
+            const feather = typeof layer.shape.feather === 'number' ? layer.shape.feather : 0.5;
+            const innerRx = Math.max(2, Math.round(rx * (1.0 - feather)));
+            const innerRy = Math.max(2, Math.round(ry * (1.0 - feather)));
 
             const scale = canvas.offsetWidth > 0 ? (imgW / canvas.offsetWidth) : 1;
             const pinRadius = Math.max(5, Math.round(7 * scale));
-            const handleRadius = Math.max(3, Math.round(5 * scale));
+            const handleRadius = Math.max(3.5, Math.round(5 * scale));
+            const stemLen = Math.max(18, Math.round(26 * scale));
 
             svg.innerHTML = `
-                <!-- Outer boundary (0% effect edge) -->
-                <ellipse cx="${centerX}" cy="${centerY}" rx="${rOutX}" ry="${rOutY}" class="mask-guide-line-solid" />
-                
-                <!-- Inner boundary (100% effect edge / feather start) -->
-                <ellipse cx="${centerX}" cy="${centerY}" rx="${rInX}" ry="${rInY}" class="mask-guide-line" />
-                
-                <!-- Center Pin Handle -->
-                <circle cx="${centerX}" cy="${centerY}" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition radial mask" />
-                
-                <!-- 4 Cardinal Handles (Top, Bottom, Left, Right) -->
-                <circle cx="${centerX}" cy="${centerY - rOutY}" r="${handleRadius}" class="mask-guide-handle" />
-                <circle cx="${centerX}" cy="${centerY + rOutY}" r="${handleRadius}" class="mask-guide-handle" />
-                <circle cx="${centerX - rOutX}" cy="${centerY}" r="${handleRadius}" class="mask-guide-handle" />
-                <circle cx="${centerX + rOutX}" cy="${centerY}" r="${handleRadius}" class="mask-guide-handle" />
+                <g transform="translate(${centerX}, ${centerY}) rotate(${rotDeg})">
+                    <!-- Outer boundary (0% effect edge) -->
+                    <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" class="mask-guide-line-solid" />
+                    
+                    <!-- Inner boundary (100% effect edge / feather start) -->
+                    <ellipse cx="0" cy="0" rx="${innerRx}" ry="${innerRy}" class="mask-guide-line" />
+                    
+                    <!-- Center Pin Handle -->
+                    <circle cx="0" cy="0" r="${pinRadius}" class="mask-guide-pin" title="Drag to reposition radial mask" />
+                    
+                    <!-- 4 Cardinal Handles (Top, Bottom, Left, Right) -->
+                    <circle cx="0" cy="${-ry}" r="${handleRadius}" class="mask-guide-handle" title="Drag to adjust height" />
+                    <circle cx="0" cy="${ry}" r="${handleRadius}" class="mask-guide-handle" title="Drag to adjust height" />
+                    <circle cx="${-rx}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="Drag to adjust width" />
+                    <circle cx="${rx}" cy="0" r="${handleRadius}" class="mask-guide-handle" title="Drag to adjust width" />
+
+                    <!-- Rotation Stem & Handle (Lightroom style) -->
+                    <line x1="0" y1="${-ry}" x2="0" y2="${-ry - stemLen}" class="mask-guide-arrow" />
+                    <circle cx="0" cy="${-ry - stemLen}" r="${handleRadius}" class="mask-guide-pin" style="fill: #3b82f6;" title="Drag to rotate" />
+                </g>
             `;
         }
     }

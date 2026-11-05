@@ -382,11 +382,17 @@ export class MaskSystemWebGPU {
         if (layer.shape && (layer.type === 'radial' || layer.type === 'gradient')) {
             layer.shape.invert = !layer.shape.invert;
             if (layer.type === 'radial') {
+                const rx = layer.shape.radiusX || layer.shape.outerRadius || 100;
+                const ry = layer.shape.radiusY || layer.shape.outerRadius || 100;
+                const rot = layer.shape.angle || 0;
+                const feat = layer.shape.feather !== undefined ? layer.shape.feather : 0.5;
                 this.createRadialMask(
                     layer.shape.centerX,
                     layer.shape.centerY,
-                    layer.shape.innerRadius,
-                    layer.shape.outerRadius,
+                    rx,
+                    ry,
+                    rot,
+                    feat,
                     layer.shape.invert
                 );
             } else {
@@ -619,11 +625,17 @@ export class MaskSystemWebGPU {
         this.activeLayerIndex = this.layers.indexOf(layer);
 
         if (layer.type === 'radial' && layer.shape) {
+            const rx = layer.shape.radiusX || layer.shape.outerRadius || 100;
+            const ry = layer.shape.radiusY || layer.shape.outerRadius || 100;
+            const rot = layer.shape.angle || 0;
+            const feat = layer.shape.feather !== undefined ? layer.shape.feather : 0.5;
             this.createRadialMask(
                 layer.shape.centerX,
                 layer.shape.centerY,
-                layer.shape.innerRadius,
-                layer.shape.outerRadius,
+                rx,
+                ry,
+                rot,
+                feat,
                 layer.shape.invert
             );
         } else if (layer.type === 'gradient' && layer.shape) {
@@ -669,9 +681,9 @@ export class MaskSystemWebGPU {
     }
 
     /**
-     * Create radial mask (isotropic, no inverted Y)
+     * Create radial mask (isotropic, Lightroom-style elliptical with angle & feather)
      */
-    createRadialMask(centerX, centerY, innerRadius, outerRadius, invert = false) {
+    createRadialMask(centerX, centerY, radiusX, radiusY, angle = 0, feather = 0.5, invert = false) {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
@@ -684,15 +696,34 @@ export class MaskSystemWebGPU {
         const height = this.backend.height;
         if (width <= 0 || height <= 0) return;
 
-        layer.shape = { centerX, centerY, innerRadius, outerRadius, invert };
+        let rx = radiusX;
+        let ry = radiusY;
+        let rot = 0;
+        let feat = 0.5;
+        let inv = false;
+
+        if (typeof angle === 'boolean') {
+            inv = angle;
+            const outerR = Math.max(1, radiusY);
+            const innerR = Math.max(0, radiusX);
+            rx = outerR;
+            ry = outerR;
+            feat = Math.max(0.01, (outerR - innerR) / outerR);
+        } else {
+            rot = angle || 0;
+            feat = typeof feather === 'number' ? feather : 0.5;
+            inv = Boolean(invert);
+        }
+
+        layer.shape = { centerX, centerY, radiusX: rx, radiusY: ry, angle: rot, feather: feat, invert: inv };
 
         const cx = centerX / width;
         const cy = centerY / height;
         const aspect = width / height;
-        const ir = innerRadius / height;
-        const or = outerRadius / height;
+        const rxNorm = rx / height;
+        const ryNorm = ry / height;
 
-        const uniformData = new Float32Array([cx, cy, ir, or, aspect, invert ? 1 : 0, 0, 0]);
+        const uniformData = new Float32Array([cx, cy, rxNorm, ryNorm, rot, feat, aspect, inv ? 1 : 0]);
         const uniformBuffer = this.device.createBuffer({
             size: uniformData.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
@@ -783,10 +814,29 @@ export class MaskSystemWebGPU {
     }
 
     /**
+     * Check if a layer has any active non-neutral adjustments
+     */
+    _hasLayerAdjustments(adj) {
+        if (!adj) return false;
+        return (
+            (adj.exposure && Math.abs(adj.exposure) > 0.001) ||
+            (adj.contrast && Math.abs(adj.contrast) > 0.001) ||
+            (adj.highlights && Math.abs(adj.highlights) > 0.001) ||
+            (adj.shadows && Math.abs(adj.shadows) > 0.001) ||
+            (adj.temperature && Math.abs(adj.temperature) > 0.001) ||
+            (adj.tint && Math.abs(adj.tint) > 0.001) ||
+            (adj.saturation && Math.abs(adj.saturation) > 0.001) ||
+            (adj.clarity && Math.abs(adj.clarity) > 0.001) ||
+            (adj.density !== undefined && adj.density < 99.9) ||
+            (adj.useLumRange && (adj.lumMin > 0 || adj.lumMax < 100))
+        );
+    }
+
+    /**
      * Check if active masks exist
      */
     hasActiveMasks() {
-        return this.layers.length > 0 && this.layers.some(l => l.visible && l.adjustments && Object.entries(l.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0));
+        return this.layers.length > 0 && this.layers.some(l => l.visible && this._hasLayerAdjustments(l.adjustments));
     }
 
     toggleOverlay() {
@@ -1002,7 +1052,7 @@ export class MaskSystemWebGPU {
         if (this.layers.length === 0 || !baseTexture) return baseTexture;
 
         const hasAdjustments = this.layers.some(layer =>
-            layer.visible && layer.adjustments && Object.entries(layer.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0)
+            layer.visible && this._hasLayerAdjustments(layer.adjustments)
         );
         if (!hasAdjustments) return baseTexture;
 

@@ -93,24 +93,39 @@ export class MaskSystem {
             }
         `;
 
-        // Radial gradient shader - isotropic, default inside out
+        // Radial gradient shader - Lightroom style rotated ellipse with feather
         const radialGradientFragment = `#version 300 es
             precision highp float;
             in vec2 v_texCoord;
             out vec4 fragColor;
             
             uniform vec2 u_center;      // Center in UV coords
-            uniform vec2 u_radii;       // Inner and outer radii (height-normalized)
+            uniform vec2 u_radii;       // rx, ry (height-normalized)
+            uniform float u_angle;      // Rotation in radians
+            uniform float u_feather;    // 0.0 - 1.0 feather amount
             uniform float u_aspect;     // width / height
             uniform float u_invert;     // 0 or 1
             
             void main() {
                 vec2 diff = v_texCoord - u_center;
                 diff.x *= u_aspect;
-                float dist = length(diff);
                 
-                float maxR = max(u_radii.y, u_radii.x + 0.0001);
-                float alpha = 1.0 - smoothstep(u_radii.x, maxR, dist);
+                // Rotate by -u_angle
+                float cosA = cos(u_angle);
+                float sinA = sin(u_angle);
+                vec2 rot = vec2(
+                    diff.x * cosA + diff.y * sinA,
+                    -diff.x * sinA + diff.y * cosA
+                );
+                
+                // Normalized elliptical distance
+                vec2 r = max(u_radii, vec2(0.0001));
+                float dist = length(rot / r);
+                
+                // Feather zone: feather is fraction of radius (0.01 to 1.0)
+                float featherFrac = clamp(u_feather, 0.01, 1.0);
+                float innerEdge = max(0.0, 1.0 - featherFrac);
+                float alpha = 1.0 - smoothstep(innerEdge, 1.0, dist);
                 
                 if (u_invert > 0.5) {
                     alpha = 1.0 - alpha;
@@ -527,11 +542,17 @@ export class MaskSystem {
         if (layer.shape && (layer.type === 'radial' || layer.type === 'gradient')) {
             layer.shape.invert = !layer.shape.invert;
             if (layer.type === 'radial') {
+                const rx = layer.shape.radiusX || layer.shape.outerRadius || 100;
+                const ry = layer.shape.radiusY || layer.shape.outerRadius || 100;
+                const rot = layer.shape.angle || 0;
+                const feat = layer.shape.feather !== undefined ? layer.shape.feather : 0.5;
                 this.createRadialMask(
                     layer.shape.centerX,
                     layer.shape.centerY,
-                    layer.shape.innerRadius,
-                    layer.shape.outerRadius,
+                    rx,
+                    ry,
+                    rot,
+                    feat,
                     layer.shape.invert
                 );
             } else {
@@ -720,11 +741,17 @@ export class MaskSystem {
         this.activeLayerIndex = this.layers.indexOf(layer);
 
         if (layer.type === 'radial' && layer.shape) {
+            const rx = layer.shape.radiusX || layer.shape.outerRadius || 100;
+            const ry = layer.shape.radiusY || layer.shape.outerRadius || 100;
+            const rot = layer.shape.angle || 0;
+            const feat = layer.shape.feather !== undefined ? layer.shape.feather : 0.5;
             this.createRadialMask(
                 layer.shape.centerX,
                 layer.shape.centerY,
-                layer.shape.innerRadius,
-                layer.shape.outerRadius,
+                rx,
+                ry,
+                rot,
+                feat,
                 layer.shape.invert
             );
         } else if (layer.type === 'gradient' && layer.shape) {
@@ -764,9 +791,9 @@ export class MaskSystem {
     }
 
     /**
-     * Create a radial gradient mask
+     * Create a radial gradient mask (Lightroom style rotated ellipse with feather)
      */
-    createRadialMask(centerX, centerY, innerRadius, outerRadius, invert = false) {
+    createRadialMask(centerX, centerY, radiusX, radiusY, angle = 0, feather = 0.5, invert = false) {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
 
         const layer = this.layers[this.activeLayerIndex];
@@ -778,13 +805,42 @@ export class MaskSystem {
         const height = this.gpu.height;
         if (width <= 0 || height <= 0) return;
 
-        layer.shape = { centerX, centerY, innerRadius, outerRadius, invert };
+        // Backward compatibility: if 5th arg is boolean, it's (cx, cy, innerR, outerR, invert)
+        let rx = radiusX;
+        let ry = radiusY;
+        let rot = 0;
+        let feat = 0.5;
+        let inv = false;
+
+        if (typeof angle === 'boolean') {
+            inv = angle;
+            const outerR = Math.max(1, radiusY);
+            const innerR = Math.max(0, radiusX);
+            rx = outerR;
+            ry = outerR;
+            feat = Math.max(0.01, (outerR - innerR) / outerR);
+        } else {
+            rot = angle || 0;
+            feat = typeof feather === 'number' ? feather : 0.5;
+            inv = Boolean(invert);
+        }
+
+        // Store shape in image pixel space
+        layer.shape = {
+            centerX,
+            centerY,
+            radiusX: rx,
+            radiusY: ry,
+            angle: rot,
+            feather: feat,
+            invert: inv
+        };
 
         const cx = centerX / width;
         const cy = 1.0 - (centerY / height);
         const aspect = width / height;
-        const ir = innerRadius / height;
-        const or = outerRadius / height;
+        const rxNorm = rx / height;
+        const ryNorm = ry / height;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, layer.maskFramebuffer);
         gl.viewport(0, 0, width, height);
@@ -794,9 +850,11 @@ export class MaskSystem {
         gl.useProgram(program);
 
         gl.uniform2f(gl.getUniformLocation(program, 'u_center'), cx, cy);
-        gl.uniform2f(gl.getUniformLocation(program, 'u_radii'), ir, or);
+        gl.uniform2f(gl.getUniformLocation(program, 'u_radii'), rxNorm, ryNorm);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_angle'), rot);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_feather'), feat);
         gl.uniform1f(gl.getUniformLocation(program, 'u_aspect'), aspect);
-        gl.uniform1f(gl.getUniformLocation(program, 'u_invert'), invert ? 1.0 : 0.0);
+        gl.uniform1f(gl.getUniformLocation(program, 'u_invert'), inv ? 1.0 : 0.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);
@@ -919,10 +977,29 @@ export class MaskSystem {
     }
 
     /**
+     * Check if a layer has any active non-neutral adjustments
+     */
+    _hasLayerAdjustments(adj) {
+        if (!adj) return false;
+        return (
+            (adj.exposure && Math.abs(adj.exposure) > 0.001) ||
+            (adj.contrast && Math.abs(adj.contrast) > 0.001) ||
+            (adj.highlights && Math.abs(adj.highlights) > 0.001) ||
+            (adj.shadows && Math.abs(adj.shadows) > 0.001) ||
+            (adj.temperature && Math.abs(adj.temperature) > 0.001) ||
+            (adj.tint && Math.abs(adj.tint) > 0.001) ||
+            (adj.saturation && Math.abs(adj.saturation) > 0.001) ||
+            (adj.clarity && Math.abs(adj.clarity) > 0.001) ||
+            (adj.density !== undefined && adj.density < 99.9) ||
+            (adj.useLumRange && (adj.lumMin > 0 || adj.lumMax < 100))
+        );
+    }
+
+    /**
      * Check if active masks exist with non-zero adjustments
      */
     hasActiveMasks() {
-        return this.layers.length > 0 && this.layers.some(l => l.visible && l.adjustments && Object.entries(l.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0));
+        return this.layers.length > 0 && this.layers.some(l => l.visible && this._hasLayerAdjustments(l.adjustments));
     }
 
     /**
@@ -1053,7 +1130,7 @@ export class MaskSystem {
         if (!rawBase || !this._isValidTexture(rawBase)) return baseTexture;
 
         const hasAdjustments = this.layers.some(layer =>
-            layer.visible && layer.adjustments && Object.entries(layer.adjustments).some(([k, v]) => k === 'density' ? v < 100 : v !== 0)
+            layer.visible && this._hasLayerAdjustments(layer.adjustments)
         );
         if (!hasAdjustments) return baseTexture;
 
@@ -1064,7 +1141,7 @@ export class MaskSystem {
         const width = this.gpu.width;
         const height = this.gpu.height;
 
-        // Initialize ping-pong buffers
+        // Initialize ping-pong buffers with sized gl.RGBA8 renderable format
         if (!this._pingPongA || this._pingPongWidth !== width || this._pingPongHeight !== height) {
             if (this._pingPongA) gl.deleteTexture(this._pingPongA);
             if (this._pingPongB) gl.deleteTexture(this._pingPongB);
@@ -1077,7 +1154,7 @@ export class MaskSystem {
             this._pingPongA = gl.createTexture();
             if (!this._pingPongA) return baseTexture;
             gl.bindTexture(gl.TEXTURE_2D, this._pingPongA);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -1094,7 +1171,7 @@ export class MaskSystem {
                 return baseTexture;
             }
             gl.bindTexture(gl.TEXTURE_2D, this._pingPongB);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -1116,7 +1193,7 @@ export class MaskSystem {
             if (!layer.visible) continue;
 
             const adj = layer.adjustments;
-            if (!adj || Object.entries(adj).every(([k, v]) => k === 'density' ? v === 100 : v === 0)) {
+            if (!this._hasLayerAdjustments(adj)) {
                 continue;
             }
 

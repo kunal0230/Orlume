@@ -174,28 +174,37 @@ export class LayersModule {
         if (layer.type === 'radial' && layer.shape) {
             const cx = layer.shape.centerX * scaleX;
             const cy = layer.shape.centerY * scaleY;
-            const rOut = Math.max(2, (layer.shape.outerRadius || 50) * Math.min(scaleX, scaleY));
-            const rIn = Math.max(0, (layer.shape.innerRadius || 0) * Math.min(scaleX, scaleY));
+            const rx = Math.max(2, (layer.shape.radiusX || layer.shape.outerRadius || 50) * scaleX);
+            const ry = Math.max(2, (layer.shape.radiusY || layer.shape.outerRadius || 50) * scaleY);
+            const rot = layer.shape.angle || 0;
+            const feat = layer.shape.feather !== undefined ? layer.shape.feather : 0.5;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rot);
 
             if (layer.shape.invert) {
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, w, h);
-                const grad = ctx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+                ctx.fillRect(-cx, -cy, w, h);
+                const grad = ctx.createRadialGradient(0, 0, Math.max(0, rx * (1 - feat)), 0, 0, Math.max(2, rx));
                 grad.addColorStop(0, '#06090e');
                 grad.addColorStop(1, 'rgba(6, 9, 14, 0)');
                 ctx.fillStyle = grad;
+                ctx.scale(1, ry / Math.max(1, rx));
                 ctx.beginPath();
-                ctx.arc(cx, cy, rOut, 0, Math.PI * 2);
+                ctx.arc(0, 0, rx, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                const grad = ctx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+                const grad = ctx.createRadialGradient(0, 0, Math.max(0, rx * (1 - feat)), 0, 0, Math.max(2, rx));
                 grad.addColorStop(0, '#ffffff');
                 grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
                 ctx.fillStyle = grad;
+                ctx.scale(1, ry / Math.max(1, rx));
                 ctx.beginPath();
-                ctx.arc(cx, cy, rOut, 0, Math.PI * 2);
+                ctx.arc(0, 0, rx, 0, Math.PI * 2);
                 ctx.fill();
             }
+            ctx.restore();
         } else if (layer.type === 'gradient' && layer.shape) {
             const x1 = layer.shape.startX * scaleX;
             const y1 = layer.shape.startY * scaleY;
