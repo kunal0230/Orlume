@@ -10,12 +10,12 @@
  */
 
 export const PresetCategories = [
-    { id: 'film', name: 'Film Emulation', icon: '🎞️' },
-    { id: 'cinematic', name: 'Cinematic', icon: '🎬' },
-    { id: 'portrait', name: 'Portrait', icon: '👤' },
-    { id: 'mood', name: 'Mood & Editorial', icon: '✨' },
-    { id: 'bw', name: 'Black & White', icon: '⚫' },
-    { id: 'creative', name: 'Creative & Bold', icon: '🎨' }
+    { id: 'film', name: 'Film Emulation', icon: 'film' },
+    { id: 'cinematic', name: 'Cinematic', icon: 'cinematic' },
+    { id: 'portrait', name: 'Portrait', icon: 'portrait' },
+    { id: 'mood', name: 'Mood & Editorial', icon: 'mood' },
+    { id: 'bw', name: 'Black & White', icon: 'bw' },
+    { id: 'creative', name: 'Creative & Bold', icon: 'creative' }
 ];
 
 export const Presets = [

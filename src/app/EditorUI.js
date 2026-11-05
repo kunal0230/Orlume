@@ -375,6 +375,7 @@ export class EditorUI {
             case 'presets':
                 document.getElementById('presets-mode-header')?.style.setProperty('display', 'block');
                 document.getElementById('panel-presets')?.classList.add('active');
+                this.lutModule?.syncUI?.();
                 break;
 
             case 'bg-remove':

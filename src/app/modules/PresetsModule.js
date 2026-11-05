@@ -30,21 +30,47 @@ export class PresetsModule {
     }
 
     /**
+     * Get clean SVG icon for category
+     */
+    _getCategoryIcon(iconId) {
+        switch (iconId) {
+            case 'film':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4"/></svg>`;
+            case 'cinematic':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><polygon points="10 9 15 12 10 15" fill="currentColor"/></svg>`;
+            case 'portrait':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-1.5a5.5 5.5 0 0 1 11 0V20"/></svg>`;
+            case 'mood':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg>`;
+            case 'bw':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>`;
+            case 'creative':
+                return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12a10 10 0 0 0 15.3 8.5c.8-.5 1.2-1.4 1.2-2.3 0-1.1.9-2 2-2h.5A3.5 3.5 0 0 0 22 12.5C22 6.7 17.5 2 12 2z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor"/></svg>`;
+            default:
+                return '';
+        }
+    }
+
+    /**
      * Render the complete presets UI
      */
     _renderPresetsUI() {
-        const panel = document.getElementById('panel-presets');
-        if (!panel) return;
+        const container = document.getElementById('presets-library-container');
+        const target = container || document.getElementById('panel-presets');
+        if (!target) return;
 
-        panel.innerHTML = `
+        target.innerHTML = `
             <div class="presets-container">
+                <!-- Section Header for Preset Packs -->
+                <div class="section-header" style="margin-bottom: 8px;">Preset Packs</div>
+
                 <!-- Category Sections -->
                 ${PresetCategories.map(cat => this._renderCategory(cat)).join('')}
                 
                 <!-- Intensity Control -->
                 <div class="section" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
                     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>Intensity</span>
+                        <span>Preset Intensity</span>
                         <span id="preset-intensity-value" style="color: var(--accent); font-weight: 600;">${this.intensity}%</span>
                     </div>
                     <div class="control-group" style="margin-top: 8px;">
@@ -60,7 +86,7 @@ export class PresetsModule {
                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                             <path d="M3 3v5h5"/>
                         </svg>
-                        Reset All
+                        Reset All Presets
                     </button>
                 </div>
             </div>
@@ -81,7 +107,7 @@ export class PresetsModule {
                            background: var(--bg-dark); border-radius: 8px; cursor: pointer; margin-bottom: ${isExpanded ? '8px' : '4px'};
                            transition: all 0.2s ease;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 14px;">${category.icon}</span>
+                        <span style="display: flex; align-items: center; color: var(--text-secondary);">${this._getCategoryIcon(category.icon)}</span>
                         <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">${category.name}</span>
                         <span style="font-size: 10px; color: var(--text-secondary); background: var(--bg-panel); padding: 2px 6px; border-radius: 10px;">${presets.length}</span>
                     </div>
@@ -353,6 +379,7 @@ export class PresetsModule {
         }
 
         // Also reset other modules to match global reset
+        if (this.editorUI.lutModule?.reset) this.editorUI.lutModule.reset();
         if (this.editorUI.hslModule?.reset) this.editorUI.hslModule.reset();
         if (this.editorUI.toneCurveModule?.reset) this.editorUI.toneCurveModule.reset();
         if (this.editorUI.colorGradingModule?.resetToDefaults) this.editorUI.colorGradingModule.resetToDefaults();

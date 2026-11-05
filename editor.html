@@ -318,7 +318,7 @@
 
             <!-- Presets Mode Header -->
             <div class="panel-header mode-header" id="presets-mode-header" style="display: none;">
-                <span class="panel-title">Presets</span>
+                <span class="panel-title">Presets & Profiles</span>
             </div>
 
             <!-- Background Remove Mode Header -->
@@ -515,45 +515,6 @@
                             </div>
                             <input type="range" id="slider-saturation" class="slider-saturation" min="-100" max="100"
                                 step="1" value="0">
-                        </div>
-                    </div>
-
-                    <!-- 3D LUT & Film Simulation Section -->
-                    <div class="section" id="lut-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div class="section-header" style="margin-bottom: 0;">3D LUT & Film Simulation</div>
-                            <span class="badge-pro" style="font-size: 9px; padding: 2px 6px;">PRO</span>
-                        </div>
-                        
-                        <div class="control-group" style="margin-bottom: 8px;">
-                            <label class="control-label" for="select-lut" style="margin-bottom: 4px; display: block; font-size: 11px;">Profile / Simulation</label>
-                            <div style="display: flex; gap: 6px;">
-                                <select id="select-lut" class="form-select" style="flex: 1; background: var(--bg-surface-elevated, #242428); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #3a3a40); border-radius: 4px; padding: 6px 8px; font-size: 12px;">
-                                    <option value="none">None (Standard)</option>
-                                    <optgroup label="Film Simulations">
-                                        <option value="kodak-portra">Kodak Portra 400 (Warm Skin, Soft Tone)</option>
-                                        <option value="fuji-pro">Fuji Pro 400H (Pastel, Emerald Greens)</option>
-                                        <option value="teal-orange">Cinematic Teal & Orange (Blockbuster)</option>
-                                        <option value="kodachrome">Vintage Kodachrome 64 (Punchy, Nostalgic)</option>
-                                        <option value="film-noir">Film Noir (Silver Halide B&W)</option>
-                                    </optgroup>
-                                    <optgroup label="Custom">
-                                        <option value="custom">Load Custom .CUBE LUT...</option>
-                                    </optgroup>
-                                </select>
-                                <button class="btn btn-sm" id="btn-import-lut" title="Import Adobe .CUBE LUT file" style="padding: 0 10px; font-size: 11px; white-space: nowrap;">
-                                    📁 .CUBE
-                                </button>
-                                <input type="file" id="input-lut-file" accept=".cube,.CUBE,text/plain" style="display: none;">
-                            </div>
-                        </div>
-
-                        <div class="control-group" id="lut-intensity-group" style="display: none; margin-top: 8px;">
-                            <div class="control-label">
-                                <span>LUT Intensity</span>
-                                <span id="val-lut-intensity">100%</span>
-                            </div>
-                            <input type="range" id="slider-lut-intensity" class="slider-lut-intensity" min="0" max="100" step="1" value="100">
                         </div>
                     </div>
 
@@ -1570,55 +1531,66 @@
 
                 <!-- Presets Panel -->
                 <div class="panel-section" id="panel-presets">
-                    <div class="section">
-                        <div class="section-header">Color Presets</div>
-                        <div class="presets-grid"
-                            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                            <button class="preset-btn" data-preset="vibrant"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Vibrant</span>
-                            </button>
-                            <button class="preset-btn" data-preset="warm"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Warm</span>
-                            </button>
-                            <button class="preset-btn" data-preset="cool"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Cool</span>
-                            </button>
-                            <button class="preset-btn" data-preset="bw"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">B&W</span>
-                            </button>
-                            <button class="preset-btn" data-preset="cinematic"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Cinematic</span>
-                            </button>
-                            <button class="preset-btn" data-preset="vintage"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Vintage</span>
-                            </button>
-                            <button class="preset-btn" data-preset="film"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Film</span>
-                            </button>
-                            <button class="preset-btn" data-preset="matte"
-                                style="padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                                <span style="font-size: 12px; color: var(--text-primary);">Matte</span>
-                            </button>
+                    <!-- 3D LUT & Film Simulation Section -->
+                    <div class="section" id="lut-section" style="margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div class="section-header" style="margin-bottom: 0;">3D LUT & Film Simulation</div>
+                        </div>
+                        
+                        <div class="control-group" style="margin-bottom: 8px;">
+                            <label class="control-label" for="select-lut" style="margin-bottom: 4px; display: block; font-size: 11px;">Profile / Simulation</label>
+                            <div style="display: flex; gap: 6px;">
+                                <select id="select-lut" class="form-select" style="flex: 1; background: var(--bg-surface-elevated, #242428); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #3a3a40); border-radius: 4px; padding: 6px 8px; font-size: 12px;">
+                                    <option value="none">None (Standard)</option>
+                                    <optgroup label="Color Negative Film">
+                                        <option value="kodak-portra">Kodak Portra 400 (Warm Skin, Soft Tone)</option>
+                                        <option value="fuji-pro">Fujifilm Pro 400H (Pastel, Emerald Greens)</option>
+                                        <option value="agfa-vista">Agfa Vista 200 (Warm Golden, Poppy Reds)</option>
+                                        <option value="cinestill-800t">CineStill 800T (Tungsten Glow, Halation)</option>
+                                    </optgroup>
+                                    <optgroup label="Color Slide & Reversal">
+                                        <option value="fuji-velvia">Fujifilm Velvia 50 (Vivid Landscape, Deep Blues)</option>
+                                        <option value="kodachrome">Vintage Kodachrome 64 (Punchy Reds & Yellows)</option>
+                                        <option value="fuji-classic-chrome">Fujifilm Classic Chrome (Documentary, Subdued)</option>
+                                        <option value="polaroid-600">Vintage Polaroid 600 (Instant Film, Creamy)</option>
+                                    </optgroup>
+                                    <optgroup label="Black & White Film">
+                                        <option value="kodak-tri-x">Kodak Tri-X 400 (Punchy Street Photojournalism)</option>
+                                        <option value="ilford-hp5">Ilford HP5 Plus (Velvety Smooth Midtones)</option>
+                                        <option value="film-noir">Film Noir (Dramatic Silver Halide)</option>
+                                        <option value="leica-monochrome">Leica M Monochrom (Pure Sensor Tonality)</option>
+                                    </optgroup>
+                                    <optgroup label="Cinematic & Creative">
+                                        <option value="teal-orange">Cinematic Teal & Orange (Blockbuster Grade)</option>
+                                        <option value="bleach-bypass">Bleach Bypass (Gritty Metallic Silver)</option>
+                                    </optgroup>
+                                    <optgroup label="Custom">
+                                        <option value="custom">Load Custom .CUBE LUT...</option>
+                                    </optgroup>
+                                </select>
+                                <button class="btn btn-sm" id="btn-import-lut" title="Import Adobe .CUBE LUT file" style="padding: 0 10px; font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    <span>.CUBE</span>
+                                </button>
+                                <input type="file" id="input-lut-file" accept=".cube,.CUBE,text/plain" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="control-group" id="lut-intensity-group" style="display: none; margin-top: 8px;">
+                            <div class="control-label">
+                                <span>LUT Intensity</span>
+                                <span id="val-lut-intensity">100%</span>
+                            </div>
+                            <input type="range" id="slider-lut-intensity" class="slider-lut-intensity" min="0" max="100" step="1" value="100">
                         </div>
                     </div>
 
-                    <div class="section">
-                        <div class="section-header">Intensity</div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Strength</span>
-                                <span id="preset-intensity">100%</span>
-                            </div>
-                            <input type="range" id="slider-preset-intensity" min="0" max="100" step="1" value="100">
-                        </div>
-                    </div>
+                    <!-- Presets Library Container (rendered by PresetsModule) -->
+                    <div id="presets-library-container"></div>
                 </div>
 
                 <!-- Background Remove Panel -->
