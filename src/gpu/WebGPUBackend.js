@@ -24,6 +24,12 @@ export class WebGPUBackend extends GPUBackend {
         this._curveLutTexBlue = null;
         this._defaultLutTex = null; // Identity LUT for inactive curves
 
+        // 3D LUT Textures (WebGPU)
+        this._lut3dTex = null;
+        this._defaultLut3dTex = null;
+        this._lastLut3dData = null;
+        this._lut3dSampler = null;
+
         // Vertex buffer for fullscreen quad
         this.vertexBuffer = null;
         this.texCoordBuffer = null;
@@ -89,6 +95,14 @@ export class WebGPUBackend extends GPUBackend {
                 minFilter: 'linear',
                 addressModeU: 'clamp-to-edge',
                 addressModeV: 'clamp-to-edge'
+            });
+
+            this._lut3dSampler = this.device.createSampler({
+                magFilter: 'linear',
+                minFilter: 'linear',
+                addressModeU: 'clamp-to-edge',
+                addressModeV: 'clamp-to-edge',
+                addressModeW: 'clamp-to-edge'
             });
 
             // Create fullscreen quad geometry
@@ -231,7 +245,15 @@ export class WebGPUBackend extends GPUBackend {
                 highlightsLum: f32,
                 colorBalance: f32,
                 colorBlending: f32,
-                _pad2: f32,
+                showClipping: f32,
+                clipShadows: f32,
+                clipHighlights: f32,
+                _padClipping: f32,
+                // 3D LUT Uniforms (aligned to 16 bytes)
+                hasLut3d: f32,
+                lut3dIntensity: f32,
+                lut3dSize: f32,
+                _padLut3d: f32,
             }
 
             @vertex
@@ -249,6 +271,8 @@ export class WebGPUBackend extends GPUBackend {
             @group(0) @binding(4) var curveRedTex: texture_2d<f32>;
             @group(0) @binding(5) var curveGreenTex: texture_2d<f32>;
             @group(0) @binding(6) var curveBlueTex: texture_2d<f32>;
+            @group(0) @binding(7) var lut3dSampler: sampler;
+            @group(0) @binding(8) var lut3dTex: texture_3d<f32>;
 
             // Color center hues for HSL (in degrees)
             const COLOR_HUES = array<f32, 8>(0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
@@ -753,6 +777,22 @@ export class WebGPUBackend extends GPUBackend {
                     finalSrgb.b = sampleCurve(curveBlueTex, finalSrgb.b);
                 }
                 
+                // === 3D LUT COLOR GRADING ===
+                if (u.hasLut3d > 0.5) {
+                    let lutCoord = (clamp(finalSrgb, vec3f(0.0), vec3f(1.0)) * (u.lut3dSize - 1.0) + 0.5) / u.lut3dSize;
+                    let graded = textureSample(lut3dTex, lut3dSampler, lutCoord).rgb;
+                    finalSrgb = mix(finalSrgb, graded, u.lut3dIntensity);
+                }
+                
+                if (u.showClipping > 0.5) {
+                    if (u.clipHighlights > 0.5 && finalSrgb.r >= 0.996 && finalSrgb.g >= 0.996 && finalSrgb.b >= 0.996) {
+                        return vec4f(1.0, 0.0, 0.0, pixel.a);
+                    }
+                    if (u.clipShadows > 0.5 && finalSrgb.r <= 0.003 && finalSrgb.g <= 0.003 && finalSrgb.b <= 0.003) {
+                        return vec4f(0.0, 0.35, 1.0, pixel.a);
+                    }
+                }
+                
                 return vec4f(finalSrgb, pixel.a);
             }
         `;
@@ -791,6 +831,18 @@ export class WebGPUBackend extends GPUBackend {
                     texture: { sampleType: 'unfilterable-float', viewDimension: '2d' }
                 });
             }
+
+            // Bindings for 3D LUT sampler (7) and 3D LUT texture (8)
+            bindGroupLayoutEntries.push({
+                binding: 7,
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: { type: 'filtering' }
+            });
+            bindGroupLayoutEntries.push({
+                binding: 8,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: { sampleType: 'float', viewDimension: '3d' }
+            });
         }
 
         const bindGroupLayout = this.device.createBindGroupLayout({
@@ -935,9 +987,69 @@ export class WebGPUBackend extends GPUBackend {
     }
 
     /**
+     * Get or create a 2x2x2 identity 3D LUT texture (WebGPU)
+     */
+    _getOrCreateDefaultLut3d() {
+        if (!this._defaultLut3dTex) {
+            const texture = this.device.createTexture({
+                dimension: '3d',
+                size: [2, 2, 2],
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+            });
+
+            const identity = new Uint8Array([
+                0, 0, 0, 255,     255, 0, 0, 255,
+                0, 255, 0, 255,   255, 255, 0, 255,
+                0, 0, 255, 255,   255, 0, 255, 255,
+                0, 255, 255, 255, 255, 255, 255, 255
+            ]);
+
+            this.device.queue.writeTexture(
+                { texture: texture },
+                identity,
+                { bytesPerRow: 8, rowsPerImage: 2 },
+                { width: 2, height: 2, depthOrArrayLayers: 2 }
+            );
+
+            this._defaultLut3dTex = { _internal: texture };
+        }
+        return this._defaultLut3dTex;
+    }
+
+    /**
+     * Create or update a 3D LUT texture (WebGPU)
+     */
+    _updateLut3dTexture(existingTexture, lutInfo) {
+        const size = lutInfo.size;
+        let texture = existingTexture?._internal;
+
+        if (!texture || texture.width !== size || texture.height !== size || texture.depthOrArrayLayers !== size) {
+            if (texture) {
+                texture.destroy();
+            }
+            texture = this.device.createTexture({
+                dimension: '3d',
+                size: [size, size, size],
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+            });
+        }
+
+        this.device.queue.writeTexture(
+            { texture: texture },
+            lutInfo.data,
+            { bytesPerRow: size * 4, rowsPerImage: size },
+            { width: size, height: size, depthOrArrayLayers: size }
+        );
+
+        return { _internal: texture };
+    }
+
+    /**
      * Render with develop pipeline
      */
-    renderDevelop(inputTexture, uniforms, target = null) {
+    renderDevelop(inputTexture, uniforms, target = null, clippingOpts = null) {
         const pipeline = this.pipelines.get('develop');
         const bindGroupLayout = this.bindGroupLayouts.get('develop');
 
@@ -999,7 +1111,15 @@ export class WebGPUBackend extends GPUBackend {
             uniforms.highlightsLum || 0,
             uniforms.colorBalance || 0,
             uniforms.colorBlending !== undefined ? uniforms.colorBlending : 50,
-            0 // _pad2
+            (clippingOpts && clippingOpts.show) ? 1.0 : 0.0,
+            (clippingOpts && clippingOpts.shadows) ? 1.0 : 0.0,
+            (clippingOpts && clippingOpts.highlights) ? 1.0 : 0.0,
+            0.0, // _padClipping
+            // 3D LUT (4 floats)
+            (uniforms.lut3d && uniforms.lut3d.data && uniforms.lut3d.size > 0) ? 1.0 : 0.0,
+            (uniforms.lut3dIntensity !== undefined ? uniforms.lut3dIntensity : 100) / 100,
+            (uniforms.lut3d && uniforms.lut3d.size > 0) ? uniforms.lut3d.size : 2.0,
+            0.0 // _padLut3d
         ]);
 
         // Process Tone Curve Textures
@@ -1039,6 +1159,19 @@ export class WebGPUBackend extends GPUBackend {
             texBlue = this._getOrCreateDefaultLut()._internal;
         }
 
+        // Process 3D LUT Texture
+        const hasLut3d = Boolean(uniforms.lut3d && uniforms.lut3d.data && uniforms.lut3d.size > 0);
+        let texLut3d;
+        if (hasLut3d) {
+            if (this._lastLut3dData !== uniforms.lut3d) {
+                this._lut3dTex = this._updateLut3dTexture(this._lut3dTex, uniforms.lut3d);
+                this._lastLut3dData = uniforms.lut3d;
+            }
+            texLut3d = this._lut3dTex._internal;
+        } else {
+            texLut3d = this._getOrCreateDefaultLut3d()._internal;
+        }
+
         const uniformBuffer = this.device.createBuffer({
             size: uniformData.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
@@ -1055,7 +1188,9 @@ export class WebGPUBackend extends GPUBackend {
                 { binding: 3, resource: texRgb.createView() },
                 { binding: 4, resource: texRed.createView() },
                 { binding: 5, resource: texGreen.createView() },
-                { binding: 6, resource: texBlue.createView() }
+                { binding: 6, resource: texBlue.createView() },
+                { binding: 7, resource: this._lut3dSampler },
+                { binding: 8, resource: texLut3d.createView({ dimension: '3d' }) }
             ]
         });
 

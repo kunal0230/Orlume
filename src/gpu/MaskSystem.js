@@ -225,11 +225,24 @@ export class MaskSystem {
             uniform float u_saturation;
             uniform float u_clarity;
             uniform float u_density;
+            uniform float u_lumMin;
+            uniform float u_lumMax;
+            uniform float u_lumFeather;
+            uniform float u_useLumRange;
             
             void main() {
                 vec4 base = texture(u_base, v_texCoord);
                 float rawMask = texture(u_mask, v_texCoord).a;
                 float maskValue = clamp(rawMask * u_density, 0.0, 1.0);
+                
+                // Luminance range qualification (Lightroom style)
+                if (u_useLumRange > 0.5) {
+                    float baseLum = dot(base.rgb, vec3(0.299, 0.587, 0.114));
+                    float feather = max(0.005, u_lumFeather);
+                    float lowWeight = smoothstep(u_lumMin - feather, u_lumMin, baseLum);
+                    float highWeight = 1.0 - smoothstep(u_lumMax, u_lumMax + feather, baseLum);
+                    maskValue = maskValue * lowWeight * highWeight;
+                }
                 
                 if (maskValue < 0.001) {
                     fragColor = base;
@@ -388,7 +401,11 @@ export class MaskSystem {
                 temperature: 0,
                 tint: 0,
                 saturation: 0,
-                clarity: 0
+                clarity: 0,
+                lumMin: 0,
+                lumMax: 100,
+                lumFeather: 20,
+                useLumRange: 0
             },
             shape: null,
             visible: true,
@@ -1119,6 +1136,10 @@ export class MaskSystem {
             gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), (adj.saturation || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_clarity'), (adj.clarity || 0) / 100);
             gl.uniform1f(gl.getUniformLocation(program, 'u_density'), adj.density !== undefined ? adj.density / 100 : 1.0);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_lumMin'), (adj.lumMin || 0) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_lumMax'), (adj.lumMax !== undefined ? adj.lumMax : 100) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_lumFeather'), (adj.lumFeather !== undefined ? adj.lumFeather : 20) / 100);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_useLumRange'), adj.useLumRange ? 1.0 : 0.0);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, this.gpu.positionBuffer);
             gl.enableVertexAttribArray(program.a_position);

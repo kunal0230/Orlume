@@ -20,5 +20,6 @@ export { PresetsModule } from './PresetsModule.js';
 export { TextModule } from './TextModule.js';
 export { ToneCurveModule } from './ToneCurveModule.js';
 export { ColorGradingModule } from './ColorGradingModule.js';
+export { LutModule } from './LutModule.js';
 export { FeedbackModule } from './FeedbackModule.js';
 export { CrashReporterModule } from './CrashReporterModule.js';

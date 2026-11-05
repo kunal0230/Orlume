@@ -74,12 +74,25 @@ export class KeyboardModule {
         if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) this.editor.setTool('crop');
         if (e.code === 'KeyE' && !e.metaKey && !e.ctrlKey) this.editor.setTool('export');
         if (e.code === 'KeyU' && !e.metaKey && !e.ctrlKey) this.editor.setTool('upscale');
-        if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) this.editor.setTool('liquify');
+        if (e.code === 'KeyW' && !e.metaKey && !e.ctrlKey) {
+            if (this.state.currentTab === 'develop' || this.state.currentTool === 'develop') {
+                e.preventDefault();
+                this.editor.toggleWBPicker?.();
+            } else {
+                this.editor.setTool('liquify');
+            }
+        }
         if (e.code === 'KeyH' && !e.metaKey && !e.ctrlKey) this.editor.setTool('healing');
         if (e.code === 'KeyV' && !e.metaKey && !e.ctrlKey) this.editor.setTool('godrays');
         if (e.code === 'KeyT' && !e.metaKey && !e.ctrlKey) this.editor.setTool('text');
         if (e.code === 'KeyS' && !e.metaKey && !e.ctrlKey) this.editor.setTool('clone');
         if (e.code === 'KeyP' && !e.metaKey && !e.ctrlKey) this.editor.setTool('3d-pro');
+
+        // Toggle clipping warnings (J)
+        if (e.code === 'KeyJ' && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            this.editor.toggleClippingWarnings?.();
+        }
 
         // Mask overlay toggle (O) and cycle color (Shift + O)
         if (e.code === 'KeyO' && !e.metaKey && !e.ctrlKey) {
@@ -143,9 +156,12 @@ export class KeyboardModule {
             this.toggleShortcutsModal(true);
         }
 
-        // Close modal with Escape (or cancel crop if in crop mode)
+        // Close modal with Escape (or cancel WB picking / crop)
         if (e.code === 'Escape') {
-            if (this.state.currentTool === 'crop') {
+            if (this.editor.isWBPicking) {
+                e.preventDefault();
+                this.editor.deactivateWBPicker?.();
+            } else if (this.state.currentTool === 'crop') {
                 e.preventDefault();
                 this.editor.cancelCrop();
             } else {

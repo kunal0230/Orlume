@@ -351,6 +351,80 @@ body {
     border-radius: 4px;
 }
 
+.histogram-clip-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    width: 20px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: 9px;
+    line-height: 1;
+    transition: all 0.15s ease;
+}
+
+.histogram-clip-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.histogram-clip-btn#btn-clip-shadows.has-clipping {
+    color: #3b82f6;
+    text-shadow: 0 0 6px rgba(59, 130, 246, 0.8);
+}
+
+.histogram-clip-btn#btn-clip-highlights.has-clipping {
+    color: #ef4444;
+    text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+.histogram-clip-btn.active {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.histogram-clip-btn#btn-clip-shadows.active {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.histogram-clip-btn#btn-clip-highlights.active {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.2);
+}
+
+#btn-wb-picker.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+.canvas-area.is-wb-picking canvas {
+    cursor: crosshair !important;
+}
+
+.wb-sample-badge {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #f8fafc;
+    font-family: monospace;
+    z-index: 100;
+    transform: translate(14px, 14px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
 /* ========================================
    Controls
    ======================================== */

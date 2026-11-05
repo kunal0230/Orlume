@@ -88,7 +88,11 @@ export class GPUProcessor {
             curveLutRgb: null,
             curveLutRed: null,
             curveLutGreen: null,
-            curveLutBlue: null
+            curveLutBlue: null,
+
+            // 3D LUT Color Grading
+            lut3d: null,
+            lut3dIntensity: 100
         };
 
         // Processing framebuffer
@@ -96,6 +100,44 @@ export class GPUProcessor {
 
         // Mask system reference
         this.maskSystem = null;
+
+        // Exposure clipping warnings (Lightroom style J shortcut)
+        this.clippingWarnings = false;
+        this.clipShadows = true;
+        this.clipHighlights = true;
+    }
+
+    /**
+     * Toggle exposure clipping warnings (J key)
+     */
+    toggleClippingWarnings(type = 'both') {
+        if (type === 'shadows') {
+            this.clipShadows = !this.clipShadows;
+            if (!this.clipShadows && !this.clipHighlights) {
+                this.clippingWarnings = false;
+            } else {
+                this.clippingWarnings = true;
+            }
+        } else if (type === 'highlights') {
+            this.clipHighlights = !this.clipHighlights;
+            if (!this.clipShadows && !this.clipHighlights) {
+                this.clippingWarnings = false;
+            } else {
+                this.clippingWarnings = true;
+            }
+        } else {
+            this.clippingWarnings = !this.clippingWarnings;
+            if (this.clippingWarnings) {
+                this.clipShadows = true;
+                this.clipHighlights = true;
+            }
+        }
+        this.render();
+        return {
+            active: this.clippingWarnings,
+            shadows: this.clipShadows,
+            highlights: this.clipHighlights
+        };
     }
 
     /**
@@ -206,15 +248,30 @@ export class GPUProcessor {
     }
 
     /**
+     * Set or clear 3D LUT
+     * @param {Object|null} lutInfo - { size, data, title }
+     * @param {number|null} intensity - 0 to 100
+     */
+    setLut3d(lutInfo, intensity = null) {
+        this.params.lut3d = lutInfo;
+        if (intensity !== null && !isNaN(intensity)) {
+            this.params.lut3dIntensity = intensity;
+        }
+        this.render();
+    }
+
+    /**
      * Reset all parameters
      */
     reset() {
         for (const key in this.params) {
-            // Curve LUT params must be null (identity), not 0
-            if (key.startsWith('curveLut')) {
+            // Curve LUT and 3D LUT params must be null (identity), not 0
+            if (key.startsWith('curveLut') || key === 'lut3d') {
                 this.params[key] = null;
             } else if (key === 'colorBlending') {
                 this.params[key] = 50;
+            } else if (key === 'lut3dIntensity') {
+                this.params[key] = 100;
             } else {
                 this.params[key] = 0;
             }
@@ -271,6 +328,12 @@ export class GPUProcessor {
         const wantsOverlay = showOverlay || (this.maskSystem?.shouldShowOverlay ? this.maskSystem.shouldShowOverlay() : this.maskSystem?.showOverlay);
         const hasMasks = this.maskSystem && typeof this.maskSystem.hasActiveMasks === 'function' && this.maskSystem.hasActiveMasks();
 
+        const clippingOpts = (!targetFBO && this.clippingWarnings) ? {
+            show: true,
+            shadows: Boolean(this.clipShadows),
+            highlights: Boolean(this.clipHighlights)
+        } : null;
+
         if (hasMasks || (wantsOverlay && this.maskSystem?.getActiveLayer?.())) {
             const baseTexture = this.renderToTexture();
             if (baseTexture) {
@@ -281,7 +344,7 @@ export class GPUProcessor {
                 if (targetFBO) {
                     this.backend.renderPassthrough(compositedTexture, targetFBO, true);
                 } else {
-                    this.blitToCanvas(compositedTexture);
+                    this.backend.renderPassthrough(compositedTexture, null, true, clippingOpts);
                 }
 
                 if (wantsOverlay && typeof this.maskSystem?.renderMaskOverlay === 'function') {
@@ -291,7 +354,7 @@ export class GPUProcessor {
             }
         }
 
-        this.backend.renderDevelop(this.inputTexture, this.params, targetFBO);
+        this.backend.renderDevelop(this.inputTexture, this.params, targetFBO, clippingOpts);
     }
 
     /**

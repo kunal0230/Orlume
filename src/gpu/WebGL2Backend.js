@@ -26,6 +26,11 @@ export class WebGL2Backend extends GPUBackend {
         // Multi-pass FBOs
         this.blurFbo1 = null;
         this.blurFbo2 = null;
+
+        // 3D LUT resources
+        this._lut3dTex = null;
+        this._defaultLut3dTex = null;
+        this._lastLut3dData = null;
     }
 
     /**
@@ -130,10 +135,24 @@ export class WebGL2Backend extends GPUBackend {
             precision highp float;
             in vec2 v_texCoord;
             uniform sampler2D u_texture;
+            uniform bool u_showClipping;
+            uniform bool u_clipShadows;
+            uniform bool u_clipHighlights;
             out vec4 fragColor;
             
             void main() {
-                fragColor = texture(u_texture, v_texCoord);
+                vec4 col = texture(u_texture, v_texCoord);
+                if (u_showClipping) {
+                    if (u_clipHighlights && (col.r >= 0.996 && col.g >= 0.996 && col.b >= 0.996)) {
+                        fragColor = vec4(1.0, 0.0, 0.0, col.a);
+                        return;
+                    }
+                    if (u_clipShadows && (col.r <= 0.003 && col.g <= 0.003 && col.b <= 0.003)) {
+                        fragColor = vec4(0.0, 0.35, 1.0, col.a);
+                        return;
+                    }
+                }
+                fragColor = col;
             }
         `;
 
@@ -193,6 +212,12 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_curveLutTexGreen = gl.getUniformLocation(dev, 'u_curveLutTexGreen');
             dev.u_hasBlueCurve = gl.getUniformLocation(dev, 'u_hasBlueCurve');
             dev.u_curveLutTexBlue = gl.getUniformLocation(dev, 'u_curveLutTexBlue');
+
+            // 3D LUT uniforms
+            dev.u_hasLut3d = gl.getUniformLocation(dev, 'u_hasLut3d');
+            dev.u_lut3dTexture = gl.getUniformLocation(dev, 'u_lut3dTexture');
+            dev.u_lut3dIntensity = gl.getUniformLocation(dev, 'u_lut3dIntensity');
+            dev.u_lut3dSize = gl.getUniformLocation(dev, 'u_lut3dSize');
         }
 
         return true;
@@ -370,7 +395,7 @@ export class WebGL2Backend extends GPUBackend {
     /**
      * Render develop
      */
-    renderDevelop(inputTexture, uniforms, target = null) {
+    renderDevelop(inputTexture, uniforms, target = null, clippingOpts = null) {
         const gl = this.gl;
 
         // === MULTI-PASS PRE-PROCESSING ===
@@ -497,6 +522,15 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1i(program.u_hasGreenCurve, hasGreenCurve ? 1 : 0);
         gl.uniform1i(program.u_hasBlueCurve, hasBlueCurve ? 1 : 0);
 
+        // Exposure clipping warning uniforms
+        if (clippingOpts && clippingOpts.show) {
+            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 1);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_clipShadows'), clippingOpts.shadows ? 1 : 0);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_clipHighlights'), clippingOpts.highlights ? 1 : 0);
+        } else {
+            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 0);
+        }
+
         // Create/update LUT textures if needed
         if (hasRgbCurve) {
             this._curveLutTexRgb = this._updateLutTexture(this._curveLutTexRgb, uniforms.curveLutRgb);
@@ -521,6 +555,28 @@ export class WebGL2Backend extends GPUBackend {
             gl.activeTexture(gl.TEXTURE4);
             gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexBlue);
             gl.uniform1i(program.u_curveLutTexBlue, 4);
+        }
+
+        // 3D LUT Color Grading
+        const hasLut3d = Boolean(uniforms.lut3d && uniforms.lut3d.data && uniforms.lut3d.size > 0);
+        const lutIntensity = (uniforms.lut3dIntensity !== undefined ? uniforms.lut3dIntensity : 100) / 100;
+
+        gl.uniform1i(program.u_hasLut3d, hasLut3d ? 1 : 0);
+        gl.uniform1f(program.u_lut3dIntensity, lutIntensity);
+        gl.uniform1f(program.u_lut3dSize, hasLut3d ? uniforms.lut3d.size : 2.0);
+
+        if (hasLut3d) {
+            if (this._lastLut3dData !== uniforms.lut3d) {
+                this._lut3dTex = this._updateLut3dTexture(this._lut3dTex, uniforms.lut3d);
+                this._lastLut3dData = uniforms.lut3d;
+            }
+            gl.activeTexture(gl.TEXTURE6);
+            gl.bindTexture(gl.TEXTURE_3D, this._lut3dTex);
+            gl.uniform1i(program.u_lut3dTexture, 6);
+        } else {
+            gl.activeTexture(gl.TEXTURE6);
+            gl.bindTexture(gl.TEXTURE_3D, this._getOrCreateDefaultLut3d());
+            gl.uniform1i(program.u_lut3dTexture, 6);
         }
 
         // Bind main texture
@@ -576,9 +632,54 @@ export class WebGL2Backend extends GPUBackend {
     }
 
     /**
+     * Get or create a 2x2x2 identity 3D LUT texture
+     */
+    _getOrCreateDefaultLut3d() {
+        const gl = this.gl;
+        if (!this._defaultLut3dTex) {
+            this._defaultLut3dTex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_3D, this._defaultLut3dTex);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+
+            const identity = new Uint8Array([
+                0, 0, 0, 255,     255, 0, 0, 255,
+                0, 255, 0, 255,   255, 255, 0, 255,
+                0, 0, 255, 255,   255, 0, 255, 255,
+                0, 255, 255, 255, 255, 255, 255, 255
+            ]);
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+            gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, 2, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, identity);
+        }
+        return this._defaultLut3dTex;
+    }
+
+    /**
+     * Create or update a 3D LUT texture from RGBA Uint8Array
+     */
+    _updateLut3dTexture(existingTexture, lutInfo) {
+        const gl = this.gl;
+        const texture = existingTexture || gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_3D, texture);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        const size = lutInfo.size;
+        gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, size, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutInfo.data);
+        return texture;
+    }
+
+    /**
      * Render passthrough
      */
-    renderPassthrough(inputTexture, target = null, useFBOCoords = false) {
+    renderPassthrough(inputTexture, target = null, useFBOCoords = false, clippingOpts = null) {
         const gl = this.gl;
         const program = this.programs.get('passthrough');
         const rawTexture = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
@@ -597,6 +698,15 @@ export class WebGL2Backend extends GPUBackend {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, rawTexture);
         gl.uniform1i(program.u_texture, 0);
+
+        // Exposure clipping warning uniforms
+        if (clippingOpts && clippingOpts.show) {
+            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 1);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_clipShadows'), clippingOpts.shadows ? 1 : 0);
+            gl.uniform1i(gl.getUniformLocation(program, 'u_clipHighlights'), clippingOpts.highlights ? 1 : 0);
+        } else {
+            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 0);
+        }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
         gl.enableVertexAttribArray(program.a_position);

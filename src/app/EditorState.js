@@ -58,7 +58,11 @@ export class EditorState {
             hslHueAqua: 0, hslSatAqua: 0, hslLumAqua: 0,
             hslHueBlue: 0, hslSatBlue: 0, hslLumBlue: 0,
             hslHuePurple: 0, hslSatPurple: 0, hslLumPurple: 0,
-            hslHueMagenta: 0, hslSatMagenta: 0, hslLumMagenta: 0
+            hslHueMagenta: 0, hslSatMagenta: 0, hslLumMagenta: 0,
+
+            // 3D LUT Color Grading
+            lutPreset: 'none',
+            lutIntensity: 100
         };
 
         // Event listeners
@@ -126,6 +130,10 @@ export class EditorState {
         for (const key of Object.keys(this.globalAdjustments)) {
             if (key === 'colorBlending') {
                 this.globalAdjustments[key] = 50;
+            } else if (key === 'lutPreset') {
+                this.globalAdjustments[key] = 'none';
+            } else if (key === 'lutIntensity') {
+                this.globalAdjustments[key] = 100;
             } else {
                 this.globalAdjustments[key] = 0;
             }

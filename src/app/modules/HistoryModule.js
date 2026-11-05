@@ -295,6 +295,7 @@ export class HistoryModule {
                     valueDisplay.textContent = name === 'exposure' ? value.toFixed(2) : Math.round(value);
                 }
             }
+            this.editor.lutModule?.syncUI?.();
             this.gpu.render();
         }
 

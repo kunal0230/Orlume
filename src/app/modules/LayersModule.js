@@ -487,5 +487,33 @@ export class LayersModule {
                 }
             }
         });
+
+        // Sync Luminance Range Qualifier UI
+        const lumToggle = document.getElementById('mask-lum-range-toggle');
+        const lumControls = document.getElementById('mask-lum-range-controls');
+        if (lumToggle) {
+            lumToggle.checked = Boolean(adj?.useLumRange);
+        }
+        if (lumControls) {
+            lumControls.style.display = adj?.useLumRange ? 'block' : 'none';
+        }
+
+        const sliderMin = document.getElementById('slider-mask-lum-min');
+        const valMin = document.getElementById('val-mask-lum-min');
+        const minVal = adj ? (adj.lumMin !== undefined ? adj.lumMin : 0) : 0;
+        if (sliderMin) sliderMin.value = minVal;
+        if (valMin) valMin.textContent = `${Math.round(minVal)}%`;
+
+        const sliderMax = document.getElementById('slider-mask-lum-max');
+        const valMax = document.getElementById('val-mask-lum-max');
+        const maxVal = adj ? (adj.lumMax !== undefined ? adj.lumMax : 100) : 100;
+        if (sliderMax) sliderMax.value = maxVal;
+        if (valMax) valMax.textContent = `${Math.round(maxVal)}%`;
+
+        const sliderFeather = document.getElementById('slider-mask-lum-feather');
+        const valFeather = document.getElementById('val-mask-lum-feather');
+        const featherVal = adj ? (adj.lumFeather !== undefined ? adj.lumFeather : 20) : 20;
+        if (sliderFeather) sliderFeather.value = featherVal;
+        if (valFeather) valFeather.textContent = `${Math.round(featherVal)}%`;
     }
 }

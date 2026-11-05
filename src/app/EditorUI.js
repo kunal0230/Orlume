@@ -5,7 +5,7 @@
 import { HistoryManager } from './HistoryManager.js';
 
 // Modular components
-import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, ToneCurveModule, ColorGradingModule, FeedbackModule, CrashReporterModule } from './modules/index.js';
+import { HistoryModule, ZoomPanModule, ExportModule, CropModule, LiquifyModule, HealingModule, CloneModule, UpscaleModule, KeyboardModule, ComparisonModule, LayersModule, BackgroundRemovalModule, GodRaysModule, HSLModule, PresetsModule, TextModule, ToneCurveModule, ColorGradingModule, LutModule, FeedbackModule, CrashReporterModule } from './modules/index.js';
 
 // v8 PRO Relighting
 import { RelightingProModule } from '../modules/RelightingProModule.js';
@@ -66,6 +66,7 @@ export class EditorUI {
         this.relightingProModule = new RelightingProModule(this);  // v8 PRO
         this.toneCurveModule = new ToneCurveModule(this);
         this.colorGradingModule = new ColorGradingModule(this);
+        this.lutModule = new LutModule(this);
         this.feedbackModule = new FeedbackModule(this);
         this.feedbackModule.init();
 
@@ -95,6 +96,11 @@ export class EditorUI {
         // Comparison slider state - exposed from module for backward compatibility
         this.comparison = null; // Will be set when comparisonModule.init() is called
 
+        // White Balance Eyedropper state
+        this.isWBPicking = false;
+        this._wbSampleCanvas = null;
+        this._wbSampleCtx = null;
+
         this._initEventListeners();
     }
 
@@ -110,6 +116,8 @@ export class EditorUI {
         this._initCanvasEvents();
         this._initFileHandling();
         this._initActionButtons();
+        this._initClippingControls();
+        this._initWBPicker();
 
         // Bind Undo/Redo buttons
         document.getElementById('btn-undo')?.addEventListener('click', () => this.undo());
@@ -132,6 +140,7 @@ export class EditorUI {
         // RelightingModule removed - using v8 PRO only
         this.toneCurveModule.init();
         this.colorGradingModule.init();
+        this.lutModule.init();
 
         // Sync tool references for backward compatibility
         this.liquifyTool = this.liquifyModule.liquifyTool;
@@ -562,6 +571,50 @@ export class EditorUI {
                 this._pushHistoryDebounced();
             });
         });
+
+        // Initialize Luminance Range Controls (Lightroom Style)
+        const lumToggle = document.getElementById('mask-lum-range-toggle');
+        const lumControls = document.getElementById('mask-lum-range-controls');
+        if (lumToggle) {
+            lumToggle.addEventListener('change', () => {
+                const enabled = lumToggle.checked ? 1 : 0;
+                if (lumControls) lumControls.style.display = enabled ? 'block' : 'none';
+                this.masks.setActiveAdjustment('useLumRange', enabled);
+                this.renderWithMask(false);
+                this._pushHistoryDebounced();
+            });
+        }
+
+        const lumParams = [
+            { id: 'min', key: 'lumMin', def: 0 },
+            { id: 'max', key: 'lumMax', def: 100 },
+            { id: 'feather', key: 'lumFeather', def: 20 }
+        ];
+
+        lumParams.forEach(({ id, key, def }) => {
+            const slider = document.getElementById(`slider-mask-lum-${id}`);
+            const valDisplay = document.getElementById(`val-mask-lum-${id}`);
+            if (!slider) return;
+
+            slider.addEventListener('input', () => {
+                const val = parseFloat(slider.value);
+                if (valDisplay) valDisplay.textContent = `${Math.round(val)}%`;
+                this.masks.setActiveAdjustment(key, val);
+                this.renderWithMask(false);
+            });
+
+            slider.addEventListener('change', () => {
+                this._pushHistoryDebounced();
+            });
+
+            slider.addEventListener('dblclick', () => {
+                slider.value = def;
+                if (valDisplay) valDisplay.textContent = `${def}%`;
+                this.masks.setActiveAdjustment(key, def);
+                this.renderWithMask(false);
+                this._pushHistoryDebounced();
+            });
+        });
     }
 
     /**
@@ -772,6 +825,21 @@ export class EditorUI {
 
         if (canvasArea) {
             canvasArea.addEventListener('mousemove', (e) => {
+                if (this.isWBPicking) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
+                    const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                    const sample = this._sampleBasePixel(x, y);
+                    const badge = document.getElementById('wb-sample-badge');
+                    if (sample && badge) {
+                        badge.style.display = 'block';
+                        badge.style.left = `${e.clientX}px`;
+                        badge.style.top = `${e.clientY}px`;
+                        badge.textContent = `R: ${Math.round(sample.r)}  G: ${Math.round(sample.g)}  B: ${Math.round(sample.b)}`;
+                    }
+                    return;
+                }
+
                 this.updateBrushCursorPosition(e);
 
                 if (this.state.isPainting) {
@@ -799,11 +867,26 @@ export class EditorUI {
                     }
                 }
             });
+
+            canvasArea.addEventListener('mouseleave', () => {
+                const badge = document.getElementById('wb-sample-badge');
+                if (badge) badge.style.display = 'none';
+            });
         }
 
         if (canvas) {
             canvas.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) return; // Only primary mouse button
+
+                // White Balance Eyedropper sampling
+                if (this.isWBPicking) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
+                    const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                    this.applyWhiteBalanceSample(x, y);
+                    return;
+                }
+
                 if (this.zoomPanModule?.zoom?.isPanning) return; // Ignore during Space-panning
 
                 const tool = this.state.currentTool;
@@ -1339,6 +1422,7 @@ export class EditorUI {
                 if (this.hslModule?.reset) this.hslModule.reset();
                 if (this.toneCurveModule?.reset) this.toneCurveModule.reset();
                 if (this.colorGradingModule?.resetToDefaults) this.colorGradingModule.resetToDefaults();
+                if (this.lutModule?.reset) this.lutModule.reset();
                 if (this.presetsModule) {
                     this.presetsModule.activePresetId = null;
                     this.presetsModule._updateActivePresetUI?.();
@@ -1556,6 +1640,187 @@ export class EditorUI {
                 blue: b
             });
         }
+
+        // Update clipping indicators (Lightroom style)
+        const totalPixels = data.length / 4;
+        const hasShadowClipping = lum[0] > (totalPixels * 0.0003);
+        const hasHighlightClipping = lum[255] > (totalPixels * 0.0003);
+
+        const btnShadows = document.getElementById('btn-clip-shadows');
+        const btnHighlights = document.getElementById('btn-clip-highlights');
+        if (btnShadows) {
+            btnShadows.classList.toggle('has-clipping', hasShadowClipping);
+            btnShadows.classList.toggle('active', Boolean(this.gpu?.clippingWarnings && this.gpu?.clipShadows));
+        }
+        if (btnHighlights) {
+            btnHighlights.classList.toggle('has-clipping', hasHighlightClipping);
+            btnHighlights.classList.toggle('active', Boolean(this.gpu?.clippingWarnings && this.gpu?.clipHighlights));
+        }
+    }
+
+    /**
+     * Initialize exposure clipping indicator buttons
+     */
+    _initClippingControls() {
+        const btnShadows = document.getElementById('btn-clip-shadows');
+        const btnHighlights = document.getElementById('btn-clip-highlights');
+
+        if (btnShadows) {
+            btnShadows.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.gpu?.toggleClippingWarnings?.('shadows');
+                this.renderHistogram();
+            });
+        }
+
+        if (btnHighlights) {
+            btnHighlights.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.gpu?.toggleClippingWarnings?.('highlights');
+                this.renderHistogram();
+            });
+        }
+    }
+
+    /**
+     * Toggle exposure clipping warnings on canvas (Lightroom J hotkey)
+     */
+    toggleClippingWarnings(type = 'both') {
+        if (!this.gpu) return;
+        this.gpu.toggleClippingWarnings(type);
+        this.renderHistogram();
+    }
+
+    /**
+     * Initialize White Balance Eyedropper tool
+     */
+    _initWBPicker() {
+        const btn = document.getElementById('btn-wb-picker');
+        if (btn) {
+            btn.addEventListener('click', () => {
+                this.toggleWBPicker();
+            });
+        }
+    }
+
+    /**
+     * Toggle White Balance eyedropper
+     */
+    toggleWBPicker() {
+        if (this.isWBPicking) {
+            this.deactivateWBPicker();
+        } else {
+            this.activateWBPicker();
+        }
+    }
+
+    /**
+     * Activate White Balance eyedropper mode
+     */
+    activateWBPicker() {
+        if (!this.state.hasImage) return;
+        this.isWBPicking = true;
+        const btn = document.getElementById('btn-wb-picker');
+        if (btn) btn.classList.add('active');
+        const canvasArea = document.querySelector('.canvas-area');
+        if (canvasArea) canvasArea.classList.add('is-wb-picking');
+
+        let badge = document.getElementById('wb-sample-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.id = 'wb-sample-badge';
+            badge.className = 'wb-sample-badge';
+            document.body.appendChild(badge);
+        }
+    }
+
+    /**
+     * Deactivate White Balance eyedropper mode
+     */
+    deactivateWBPicker() {
+        this.isWBPicking = false;
+        const btn = document.getElementById('btn-wb-picker');
+        if (btn) btn.classList.remove('active');
+        const canvasArea = document.querySelector('.canvas-area');
+        if (canvasArea) canvasArea.classList.remove('is-wb-picking');
+        const badge = document.getElementById('wb-sample-badge');
+        if (badge) badge.style.display = 'none';
+    }
+
+    /**
+     * Sample 5x5 neighborhood from base image
+     */
+    _sampleBasePixel(canvasX, canvasY) {
+        if (!this.state.originalImage) return null;
+        const img = this.state.originalImage;
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+
+        if (!this._wbSampleCanvas || this._wbSampleCanvas.width !== w || this._wbSampleCanvas.height !== h) {
+            this._wbSampleCanvas = document.createElement('canvas');
+            this._wbSampleCanvas.width = w;
+            this._wbSampleCanvas.height = h;
+            this._wbSampleCtx = this._wbSampleCanvas.getContext('2d', { willReadFrequently: true });
+            this._wbSampleCtx.drawImage(img, 0, 0);
+        }
+
+        const half = 2;
+        const startX = Math.max(0, Math.min(w - 5, Math.round(canvasX) - half));
+        const startY = Math.max(0, Math.min(h - 5, Math.round(canvasY) - half));
+        const imgData = this._wbSampleCtx.getImageData(startX, startY, 5, 5);
+        const data = imgData.data;
+
+        let sumR = 0, sumG = 0, sumB = 0;
+        const count = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+            sumR += data[i];
+            sumG += data[i + 1];
+            sumB += data[i + 2];
+        }
+
+        return {
+            r: sumR / count,
+            g: sumG / count,
+            b: sumB / count
+        };
+    }
+
+    /**
+     * Compute and apply auto-neutralized White Balance from sampled pixel
+     */
+    applyWhiteBalanceSample(canvasX, canvasY) {
+        const sample = this._sampleBasePixel(canvasX, canvasY);
+        if (!sample) return;
+
+        const { r, g, b } = sample;
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (lum < 5 || lum > 250) {
+            this.deactivateWBPicker();
+            return;
+        }
+
+        const tempDelta = Math.round(Math.max(-100, Math.min(100, ((b - r) / lum) * 115)));
+        const tintDelta = Math.round(Math.max(-100, Math.min(100, (((r + b) * 0.5 - g) / lum) * 90)));
+
+        this.state.setAdjustment('temperature', tempDelta);
+        this.state.setAdjustment('tint', tintDelta);
+        this.gpu.setParam('temperature', tempDelta);
+        this.gpu.setParam('tint', tintDelta);
+
+        const tempSlider = document.getElementById('slider-temperature');
+        const tintSlider = document.getElementById('slider-tint');
+        const tempVal = document.getElementById('val-temperature');
+        const tintVal = document.getElementById('val-tint');
+
+        if (tempSlider) tempSlider.value = tempDelta;
+        if (tintSlider) tintSlider.value = tintDelta;
+        if (tempVal) tempVal.textContent = tempDelta;
+        if (tintVal) tintVal.textContent = tintDelta;
+
+        this.gpu.render();
+        this.renderHistogram();
+        this._pushHistoryDebounced();
+        this.deactivateWBPicker();
     }
 
     /**

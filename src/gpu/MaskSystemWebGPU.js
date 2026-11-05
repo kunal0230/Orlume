@@ -265,7 +265,11 @@ export class MaskSystemWebGPU {
                 temperature: 0,
                 tint: 0,
                 saturation: 0,
-                clarity: 0
+                clarity: 0,
+                lumMin: 0,
+                lumMax: 100,
+                lumFeather: 20,
+                useLumRange: 0
             },
             shape: null,
             visible: true,
@@ -1037,6 +1041,10 @@ export class MaskSystemWebGPU {
                 (adj.saturation || 0) / 100,
                 (adj.clarity || 0) / 100,
                 adj.density !== undefined ? adj.density / 100 : 1.0,
+                (adj.lumMin || 0) / 100,
+                (adj.lumMax !== undefined ? adj.lumMax : 100) / 100,
+                (adj.lumFeather !== undefined ? adj.lumFeather : 20) / 100,
+                adj.useLumRange ? 1.0 : 0.0,
                 0, 0, 0
             ]);
 

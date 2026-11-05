@@ -237,6 +237,10 @@ export const maskedAdjustmentShader = /* wgsl */`
         saturation: f32,
         clarity: f32,
         density: f32,
+        lumMin: f32,
+        lumMax: f32,
+        lumFeather: f32,
+        useLumRange: f32,
         _pad1: f32,
         _pad2: f32,
         _pad3: f32,
@@ -259,8 +263,17 @@ export const maskedAdjustmentShader = /* wgsl */`
     fn fragmentMain(@location(0) texCoord: vec2f) -> @location(0) vec4f {
         let base = textureSample(baseTex, texSampler, texCoord);
         let rawMask = textureSample(maskTex, texSampler, texCoord).a;
-        let maskValue = clamp(rawMask * u.density, 0.0, 1.0);
+        var maskValue = clamp(rawMask * u.density, 0.0, 1.0);
         
+        // Luminance Range Qualification (Lightroom Style)
+        if (u.useLumRange > 0.5) {
+            let baseLum = dot(base.rgb, vec3f(0.299, 0.587, 0.114));
+            let feather = max(0.005, u.lumFeather);
+            let lowWeight = smoothstep(u.lumMin - feather, u.lumMin, baseLum);
+            let highWeight = 1.0 - smoothstep(u.lumMax, u.lumMax + feather, baseLum);
+            maskValue = maskValue * lowWeight * highWeight;
+        }
+
         if (maskValue < 0.001) {
             return base;
         }

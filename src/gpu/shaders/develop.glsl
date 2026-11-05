@@ -19,6 +19,11 @@ uniform float u_clarity;
 uniform float u_structure;
 uniform float u_dehaze;
 
+// Exposure Clipping Warning (Lightroom Style)
+uniform bool u_showClipping;
+uniform bool u_clipShadows;
+uniform bool u_clipHighlights;
+
 // HSL Per-Channel (8 colors × 3 channels = 24 uniforms)
 uniform float u_hslHue[8];    // Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
 uniform float u_hslSat[8];
@@ -34,6 +39,12 @@ uniform bool u_hasGreenCurve;
 uniform sampler2D u_curveLutTexGreen;
 uniform bool u_hasBlueCurve;
 uniform sampler2D u_curveLutTexBlue;
+
+// 3D LUT Color Grading
+uniform bool u_hasLut3d;
+uniform sampler3D u_lut3dTexture;
+uniform float u_lut3dIntensity;
+uniform float u_lut3dSize;
 
 // Multi-pass textures
 // Multi-pass textures
@@ -379,6 +390,25 @@ void main() {
         }
         if (u_hasBlueCurve) {
             finalSrgb.b = texture(u_curveLutTexBlue, vec2(finalSrgb.b, 0.5)).r;
+        }
+    }
+    
+    // Apply 3D LUT Color Grading (in sRGB space)
+    if (u_hasLut3d) {
+        vec3 lutCoord = (clamp(finalSrgb, 0.0, 1.0) * (u_lut3dSize - 1.0) + 0.5) / u_lut3dSize;
+        vec3 graded = texture(u_lut3dTexture, lutCoord).rgb;
+        finalSrgb = mix(finalSrgb, graded, clamp(u_lut3dIntensity, 0.0, 1.0));
+    }
+    
+    // Live Exposure Clipping Warning
+    if (u_showClipping) {
+        if (u_clipHighlights && (finalSrgb.r >= 0.996 && finalSrgb.g >= 0.996 && finalSrgb.b >= 0.996)) {
+            fragColor = vec4(1.0, 0.0, 0.0, pixel.a);
+            return;
+        }
+        if (u_clipShadows && (finalSrgb.r <= 0.003 && finalSrgb.g <= 0.003 && finalSrgb.b <= 0.003)) {
+            fragColor = vec4(0.0, 0.35, 1.0, pixel.a);
+            return;
         }
     }
     
