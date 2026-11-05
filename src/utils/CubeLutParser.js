@@ -9,20 +9,118 @@
  */
 
 export const BUILTIN_LUTS = [
-    { id: 'kodak-portra', name: 'Kodak Portra 400', category: 'negative', description: 'Warm skin tones, soft contrast, fine highlight roll-off' },
-    { id: 'fuji-pro', name: 'Fujifilm Pro 400H', category: 'negative', description: 'Pastel palette, emerald greens, cool shadows' },
-    { id: 'agfa-vista', name: 'Agfa Vista 200', category: 'negative', description: 'Warm golden cast, poppy primary reds and blues' },
-    { id: 'cinestill-800t', name: 'CineStill 800T', category: 'negative', description: 'Tungsten cinema stock, warm halation glow' },
-    { id: 'fuji-velvia', name: 'Fujifilm Velvia 50', category: 'slide', description: 'Hyper-vivid slide film, cobalt skies, punchy contrast' },
-    { id: 'kodachrome', name: 'Vintage Kodachrome 64', category: 'slide', description: 'Iconic saturated reds, warm nostalgic yellows' },
-    { id: 'fuji-classic-chrome', name: 'Fujifilm Classic Chrome', category: 'slide', description: 'Documentary style, subdued tones, hard shadow punch' },
-    { id: 'polaroid-600', name: 'Vintage Polaroid 600', category: 'slide', description: 'Instant camera look, creamy lifted blacks, cyan cast' },
-    { id: 'kodak-tri-x', name: 'Kodak Tri-X 400', category: 'bw', description: 'Iconic street photography B&W, punchy midtones' },
-    { id: 'ilford-hp5', name: 'Ilford HP5 Plus', category: 'bw', description: 'Smooth wide dynamic range, velvety neutral midtones' },
-    { id: 'film-noir', name: 'Film Noir B&W', category: 'bw', description: 'Dramatic silver halide panchromatic contrast' },
-    { id: 'leica-monochrome', name: 'Leica M Monochrom', category: 'bw', description: 'Pure monochrome sensor tonality, clean gradation' },
-    { id: 'teal-orange', name: 'Cinematic Teal & Orange', category: 'cinematic', description: 'Modern Hollywood split-complementary grade' },
-    { id: 'bleach-bypass', name: 'Bleach Bypass', category: 'cinematic', description: 'Retained silver, gritty metallic desaturation' }
+    {
+        id: 'kodak-portra',
+        name: 'Kodak Portra 400',
+        category: 'negative',
+        tag: 'Portra 400',
+        gradient: 'linear-gradient(135deg, #f5c7a9 0%, #d89b74 100%)',
+        description: 'Warm skin tones, soft contrast, fine highlight roll-off'
+    },
+    {
+        id: 'fuji-pro',
+        name: 'Fujifilm Pro 400H',
+        category: 'negative',
+        tag: 'Pro 400H',
+        gradient: 'linear-gradient(135deg, #a8d5ba 0%, #68a896 100%)',
+        description: 'Pastel palette, emerald greens, cool shadows'
+    },
+    {
+        id: 'agfa-vista',
+        name: 'Agfa Vista 200',
+        category: 'negative',
+        tag: 'Vista 200',
+        gradient: 'linear-gradient(135deg, #e3a857 0%, #c84b31 100%)',
+        description: 'Warm golden cast, poppy primary reds and blues'
+    },
+    {
+        id: 'cinestill-800t',
+        name: 'CineStill 800T',
+        category: 'negative',
+        tag: '800T Cinema',
+        gradient: 'linear-gradient(135deg, #1f2f45 0%, #9e2a2b 100%)',
+        description: 'Tungsten cinema stock, warm halation glow'
+    },
+    {
+        id: 'fuji-velvia',
+        name: 'Fujifilm Velvia 50',
+        category: 'slide',
+        tag: 'Velvia 50',
+        gradient: 'linear-gradient(135deg, #1e528e 0%, #2b7a4b 100%)',
+        description: 'Hyper-vivid slide film, cobalt skies, punchy contrast'
+    },
+    {
+        id: 'kodachrome',
+        name: 'Vintage Kodachrome 64',
+        category: 'slide',
+        tag: 'K-64',
+        gradient: 'linear-gradient(135deg, #ab2e28 0%, #c88a35 100%)',
+        description: 'Iconic saturated reds, warm nostalgic yellows'
+    },
+    {
+        id: 'fuji-classic-chrome',
+        name: 'Fujifilm Classic Chrome',
+        category: 'slide',
+        tag: 'Chrome',
+        gradient: 'linear-gradient(135deg, #5b6770 0%, #8d6b5e 100%)',
+        description: 'Documentary style, subdued tones, hard shadow punch'
+    },
+    {
+        id: 'polaroid-600',
+        name: 'Vintage Polaroid 600',
+        category: 'slide',
+        tag: 'Polaroid 600',
+        gradient: 'linear-gradient(135deg, #e8dfcf 0%, #687970 100%)',
+        description: 'Instant camera look, creamy lifted blacks, cyan cast'
+    },
+    {
+        id: 'kodak-tri-x',
+        name: 'Kodak Tri-X 400',
+        category: 'bw',
+        tag: 'Tri-X B&W',
+        gradient: 'linear-gradient(135deg, #2b2b2b 0%, #888888 100%)',
+        description: 'Iconic street photography B&W, punchy midtones'
+    },
+    {
+        id: 'ilford-hp5',
+        name: 'Ilford HP5 Plus',
+        category: 'bw',
+        tag: 'HP5 Plus',
+        gradient: 'linear-gradient(135deg, #444444 0%, #a8a8a8 100%)',
+        description: 'Smooth wide dynamic range, velvety neutral midtones'
+    },
+    {
+        id: 'film-noir',
+        name: 'Film Noir B&W',
+        category: 'bw',
+        tag: 'Noir B&W',
+        gradient: 'linear-gradient(135deg, #111111 0%, #666666 100%)',
+        description: 'Dramatic silver halide panchromatic contrast'
+    },
+    {
+        id: 'leica-monochrome',
+        name: 'Leica M Monochrom',
+        category: 'bw',
+        tag: 'Leica Mono',
+        gradient: 'linear-gradient(135deg, #1e1e1e 0%, #cccccc 100%)',
+        description: 'Pure monochrome sensor tonality, clean gradation'
+    },
+    {
+        id: 'teal-orange',
+        name: 'Cinematic Teal & Orange',
+        category: 'cinematic',
+        tag: 'Teal/Orange',
+        gradient: 'linear-gradient(135deg, #174d5c 0%, #c96d36 100%)',
+        description: 'Modern Hollywood split-complementary grade'
+    },
+    {
+        id: 'bleach-bypass',
+        name: 'Bleach Bypass',
+        category: 'cinematic',
+        tag: 'Bleach Bypass',
+        gradient: 'linear-gradient(135deg, #3a4146 0%, #8a9196 100%)',
+        description: 'Retained silver, gritty metallic desaturation'
+    }
 ];
 
 export class CubeLutParser {

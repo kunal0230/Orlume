@@ -136,6 +136,7 @@ export class LutModule {
                 this.intensityGroup.style.display = 'none';
             }
             this.state?.setAdjustment('lutPreset', 'none');
+            this.editorUI.presetsModule?.updateProfileUI?.('none', 100);
             return;
         }
 
@@ -169,6 +170,8 @@ export class LutModule {
 
         this.state?.setAdjustment('lutPreset', identifier);
         this.state?.setAdjustment('lutIntensity', intensity);
+
+        this.editorUI.presetsModule?.updateProfileUI?.(identifier, intensity);
     }
 
     /**
@@ -208,6 +211,8 @@ export class LutModule {
                 this.gpu.setLut3d(presetLut, intensity);
             }
         }
+
+        this.editorUI.presetsModule?.updateProfileUI?.(preset, intensity);
     }
 
     /**
@@ -230,6 +235,7 @@ export class LutModule {
         if (this.gpu) {
             this.gpu.setLut3d(null, 100);
         }
+        this.editorUI.presetsModule?.updateProfileUI?.('none', 100);
     }
 }
 
