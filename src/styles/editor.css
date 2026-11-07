@@ -2664,3 +2664,510 @@ kbd {
     justify-content: center;
 }
 
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVE SYSTEM (Phones <= 768px, Tablets <= 1024px)
+   ========================================================================== */
+
+/* Top bar and sheet handle are hidden on desktop by default */
+.mobile-top-bar {
+    display: none;
+}
+
+.mobile-sheet-handle-bar {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 1. App container becomes vertical column flex with dynamic 100dvh */
+    .app {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        width: 100vw !important;
+        overflow: hidden !important;
+        position: relative !important;
+        padding-top: env(safe-area-inset-top);
+        background: var(--bg-dark);
+    }
+
+    /* 2. Mobile Top Navigation Bar */
+    .mobile-top-bar {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        height: 50px;
+        min-height: 50px;
+        background: #111317;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0 12px;
+        z-index: 50;
+        flex-shrink: 0;
+        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .mobile-top-left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .mobile-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #f1f5f9;
+        text-decoration: none;
+        font-size: 14.5px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        padding: 6px 6px;
+        border-radius: 8px;
+        transition: background 0.15s;
+        touch-action: manipulation;
+    }
+
+    .mobile-back-btn:active {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .mobile-back-btn svg {
+        width: 20px;
+        height: 20px;
+        color: #94a3b8;
+    }
+
+    .mobile-top-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-btn-before {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 30px;
+        padding: 0 10px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        transition: all 0.15s ease;
+    }
+
+    .mobile-btn-before:active,
+    .mobile-btn-before.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+
+    .mobile-btn-before svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    .mobile-top-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .mobile-icon-btn {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        color: #94a3b8;
+        cursor: pointer;
+        touch-action: manipulation;
+        transition: background 0.12s, color 0.12s;
+    }
+
+    .mobile-icon-btn:active {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f8fafc;
+    }
+
+    .mobile-icon-btn svg {
+        width: 19px;
+        height: 19px;
+    }
+
+    .mobile-export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 32px;
+        padding: 0 12px;
+        background: #3b82f6;
+        border: none;
+        border-radius: 7px;
+        color: white;
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        touch-action: manipulation;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        margin-left: 2px;
+        transition: transform 0.1s, background 0.15s;
+    }
+
+    .mobile-export-btn:active {
+        background: #2563eb;
+        transform: scale(0.96);
+    }
+
+    .mobile-export-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* 3. Canvas Area */
+    .canvas-area {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+        overflow: hidden !important;
+        background: #09090c !important;
+        touch-action: none; /* Let ZoomPan handle all touch gestures */
+    }
+
+    .canvas-container {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    #gpu-canvas {
+        max-width: 96vw !important;
+        max-height: calc(100vh - 170px) !important;
+        object-fit: contain !important;
+    }
+
+    /* Hide desktop-only floating before/after button on mobile */
+    .before-after-toggle {
+        display: none !important;
+    }
+
+    /* Floating zoom controls repositioned for mobile */
+    .zoom-controls {
+        bottom: 10px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        padding: 4px 10px !important;
+        background: rgba(18, 22, 28, 0.88) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 24px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+        z-index: 25 !important;
+    }
+
+    .zoom-btn {
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    .zoom-level {
+        font-size: 11.5px !important;
+        min-width: 44px !important;
+    }
+
+    /* Mobile Drop Zone */
+    .drop-zone {
+        inset: 14px !important;
+        padding: 28px 16px !important;
+        border-radius: 16px !important;
+        background: rgba(18, 20, 26, 0.85) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 2px dashed rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .drop-zone h2 {
+        font-size: 18px !important;
+        text-align: center !important;
+    }
+
+    .drop-zone p {
+        font-size: 13px !important;
+        text-align: center !important;
+        color: #94a3b8 !important;
+    }
+
+    .drop-zone .btn-primary {
+        padding: 13px 28px !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4) !important;
+        touch-action: manipulation;
+    }
+
+    /* 4. Bottom Control Panel (Mobile Bottom Sheet) */
+    .control-panel {
+        width: 100% !important;
+        border-left: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: #13151b !important;
+        border-top-left-radius: 18px !important;
+        border-top-right-radius: 18px !important;
+        box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.7) !important;
+        z-index: 40 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        transition: height 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        overflow: hidden !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Sheet states */
+    .control-panel[data-sheet-state="collapsed"] {
+        height: 48px !important;
+    }
+
+    .control-panel[data-sheet-state="half"] {
+        height: 44vh !important;
+        max-height: 52vh !important;
+    }
+
+    .control-panel[data-sheet-state="expanded"] {
+        height: 74vh !important;
+        max-height: 84vh !important;
+    }
+
+    /* Sheet Handle Bar */
+    .mobile-sheet-handle-bar {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 26px !important;
+        min-height: 26px !important;
+        width: 100% !important;
+        cursor: pointer !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        touch-action: manipulation !important;
+        background: transparent !important;
+    }
+
+    .mobile-sheet-pill {
+        width: 42px !important;
+        height: 4.5px !important;
+        border-radius: 3px !important;
+        background: rgba(255, 255, 255, 0.28) !important;
+        transition: background 0.2s, transform 0.2s !important;
+    }
+
+    .mobile-sheet-handle-bar:active .mobile-sheet-pill {
+        background: rgba(255, 255, 255, 0.55) !important;
+        transform: scaleX(1.15) !important;
+    }
+
+    .panel-header {
+        padding: 6px 14px 10px !important;
+    }
+
+    .panel-title {
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+    }
+
+    .panel-tabs {
+        padding: 4px 12px 10px !important;
+        gap: 6px !important;
+    }
+
+    .panel-tab {
+        padding: 6px 14px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
+    }
+
+    .panel-content {
+        flex: 1 1 0% !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 4px 14px 24px !important;
+    }
+
+    /* 5. Mobile Bottom Dock (Toolbar) */
+    .toolbar {
+        order: 3 !important;
+        flex-direction: row !important;
+        width: 100% !important;
+        height: 58px !important;
+        min-height: 58px !important;
+        padding: 6px 10px max(6px, env(safe-area-inset-bottom)) !important;
+        border-right: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: #0d0f14 !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        scrollbar-width: none !important;
+        -webkit-overflow-scrolling: touch !important;
+        z-index: 45 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .toolbar::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .tool-btn {
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        border-radius: 10px !important;
+        flex-shrink: 0 !important;
+        touch-action: manipulation;
+    }
+
+    .tool-btn svg {
+        width: 21px !important;
+        height: 21px !important;
+    }
+
+    .tool-btn.active {
+        background: var(--accent) !important;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.45) !important;
+    }
+
+    /* Hide desktop-only buttons inside bottom dock */
+    .toolbar .tool-divider,
+    .toolbar #btn-undo,
+    .toolbar #btn-redo,
+    .toolbar #tool-export,
+    .toolbar div[style*="flex: 1"],
+    .toolbar div[style*="height: 12px"] {
+        display: none !important;
+    }
+
+    /* 6. Touch-Friendly Sliders & Controls */
+    .control-group {
+        margin-bottom: 14px !important;
+    }
+
+    .control-label {
+        font-size: 12.5px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .control-label span:last-child {
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        color: #cbd5e1 !important;
+    }
+
+    input[type="range"] {
+        height: 7px !important;
+        margin: 10px 0 !important;
+        border-radius: 4px !important;
+        touch-action: none !important;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        width: 24px !important;
+        height: 24px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+        border: 2px solid #ffffff !important;
+    }
+
+    /* 7. Color Grading Wheels on Mobile */
+    #color-grading-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    /* 8. Tone Curve Editor Mobile Sizing & Centering */
+    .tone-curve-canvas-container {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    .curve-channel-btn,
+    .curve-reset-btn {
+        width: 32px !important;
+        height: 32px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* 9. Presets & Film Stocks on Mobile */
+    .presets-nav-tab {
+        padding: 8px 6px !important;
+        font-size: 12px !important;
+    }
+
+    .presets-search-input {
+        padding: 8px 28px 8px 30px !important;
+        font-size: 12.5px !important;
+    }
+
+    .presets-utility-btn {
+        height: 32px !important;
+        font-size: 11.5px !important;
+    }
+
+    .preset-folder-header {
+        padding: 10px 4px !important;
+    }
+
+    .preset-item-pill {
+        height: 34px !important;
+        padding: 0 10px !important;
+        font-size: 11.5px !important;
+    }
+
+    .minimal-slider-bar {
+        padding: 8px 10px !important;
+    }
+
+    /* 10. Toast placement for mobile */
+    .editor-toast-container {
+        top: 60px !important;
+        width: 90% !important;
+        max-width: 380px !important;
+    }
+
+    .editor-toast {
+        width: 100% !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        padding: 9px 14px !important;
+    }
+}
+
+

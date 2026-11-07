@@ -287,11 +287,31 @@ export class CloneModule {
             }
         };
 
+        this._cloneTouchStart = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._cloneMouseDown(e.touches[0]);
+            }
+        };
+        this._cloneTouchMove = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._cloneMouseMove(e.touches[0]);
+            }
+        };
+        this._cloneTouchEnd = (e) => {
+            if (e.cancelable) e.preventDefault();
+            this._cloneMouseUp();
+        };
+
         this.cloneCanvas.addEventListener('mousedown', this._cloneMouseDown);
         document.addEventListener('mousemove', this._cloneMouseMove);
         document.addEventListener('mouseup', this._cloneMouseUp);
         document.addEventListener('keydown', this._cloneKeyDown);
         document.addEventListener('keyup', this._cloneKeyUp);
+        this.cloneCanvas.addEventListener('touchstart', this._cloneTouchStart, { passive: false });
+        document.addEventListener('touchmove', this._cloneTouchMove, { passive: false });
+        document.addEventListener('touchend', this._cloneTouchEnd, { passive: false });
 
         // Initial render
         this._renderPreview();
@@ -397,6 +417,15 @@ export class CloneModule {
         }
         if (this._cloneKeyUp) {
             document.removeEventListener('keyup', this._cloneKeyUp);
+        }
+        if (this._cloneTouchStart) {
+            this.cloneCanvas.removeEventListener('touchstart', this._cloneTouchStart);
+        }
+        if (this._cloneTouchMove) {
+            document.removeEventListener('touchmove', this._cloneTouchMove);
+        }
+        if (this._cloneTouchEnd) {
+            document.removeEventListener('touchend', this._cloneTouchEnd);
         }
 
         this.altPressed = false;

@@ -33,6 +33,7 @@ export class ZoomPanModule {
         this._initZoomControls();
         this._initZoomEvents();
         this._initPanEvents();
+        this._initTouchEvents();
     }
 
     /**
@@ -222,5 +223,151 @@ export class ZoomPanModule {
                 }
             }
         });
+    }
+
+    /**
+     * Initialize mobile touch gestures:
+     * - Two-finger pinch to zoom
+     * - Two-finger pan
+     * - Double-tap to toggle 100% / Fit
+     * - Tap & hold for Before / After view
+     */
+    _initTouchEvents() {
+        const canvasArea = document.querySelector('.canvas-area');
+        if (!canvasArea) return;
+
+        let initialDist = 0;
+        let initialZoom = 1;
+        let initialMidX = 0;
+        let initialMidY = 0;
+        let initialPanX = 0;
+        let initialPanY = 0;
+        let isPinching = false;
+        let lastTapTime = 0;
+        let holdTimer = null;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvasArea.addEventListener('touchstart', (e) => {
+            // Multi-touch: Pinch zoom & two-finger pan
+            if (e.touches.length === 2) {
+                if (holdTimer) {
+                    clearTimeout(holdTimer);
+                    holdTimer = null;
+                }
+                if (this.state.showingBefore) {
+                    this.state.showingBefore = false;
+                    this.editor.elements?.beforeIndicator?.classList.remove('visible');
+                    this.editor.gpu?.render();
+                }
+
+                isPinching = true;
+                this.zoom.isPanning = true;
+
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                initialDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                initialZoom = this.zoom.level;
+                initialMidX = (t1.clientX + t2.clientX) * 0.5;
+                initialMidY = (t1.clientY + t2.clientY) * 0.5;
+                initialPanX = this.zoom.panX;
+                initialPanY = this.zoom.panY;
+                return;
+            }
+
+            // Single touch
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+
+                // Double tap detection (within 300ms)
+                const now = Date.now();
+                if (now - lastTapTime < 300) {
+                    if (holdTimer) {
+                        clearTimeout(holdTimer);
+                        holdTimer = null;
+                    }
+                    lastTapTime = 0;
+                    // Double tap toggles between fit (1.0) and 2.5x zoom
+                    if (this.zoom.level > 1.15) {
+                        this.resetZoom();
+                    } else {
+                        this.setZoom(2.5);
+                    }
+                    return;
+                }
+                lastTapTime = now;
+
+                // Tap & hold for Before/After view (when not in drawing/brush/healing tools)
+                const tool = this.state.currentTool;
+                const isDrawingTool = ['brush', 'healing', 'clone', 'liquify', 'crop'].includes(tool);
+                if (!isDrawingTool && this.state.hasImage) {
+                    holdTimer = setTimeout(() => {
+                        holdTimer = null;
+                        if (!isPinching && !this.zoom.isPanning) {
+                            this.state.showingBefore = true;
+                            this.editor.elements?.beforeIndicator?.classList.add('visible');
+                            this.editor.gpu?.renderOriginal();
+                            try {
+                                navigator.vibrate?.(15);
+                            } catch {
+                                // Ignore vibration if unsupported
+                            }
+                        }
+                    }, 300);
+                }
+            }
+        }, { passive: true });
+
+        canvasArea.addEventListener('touchmove', (e) => {
+            // Handle 2-finger pinch and pan
+            if (e.touches.length === 2 && isPinching) {
+                if (e.cancelable) e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                if (initialDist > 0) {
+                    const scaleFactor = dist / initialDist;
+                    const newLevel = Math.max(this.zoom.min, Math.min(this.zoom.max, initialZoom * scaleFactor));
+
+                    const curMidX = (t1.clientX + t2.clientX) * 0.5;
+                    const curMidY = (t1.clientY + t2.clientY) * 0.5;
+                    const dx = curMidX - initialMidX;
+                    const dy = curMidY - initialMidY;
+
+                    this.zoom.panX = initialPanX + dx;
+                    this.zoom.panY = initialPanY + dy;
+                    this.setZoom(newLevel);
+                }
+                return;
+            }
+
+            // Cancel hold timer if single finger moves significantly (> 8px)
+            if (holdTimer && e.touches.length === 1) {
+                const touch = e.touches[0];
+                if (Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY) > 8) {
+                    clearTimeout(holdTimer);
+                    holdTimer = null;
+                }
+            }
+        }, { passive: false });
+
+        const endTouch = () => {
+            if (holdTimer) {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            }
+            if (this.state.showingBefore) {
+                this.state.showingBefore = false;
+                this.editor.elements?.beforeIndicator?.classList.remove('visible');
+                this.editor.gpu?.render();
+            }
+            isPinching = false;
+            this.zoom.isPanning = false;
+        };
+
+        canvasArea.addEventListener('touchend', endTouch, { passive: true });
+        canvasArea.addEventListener('touchcancel', endTouch, { passive: true });
     }
 }

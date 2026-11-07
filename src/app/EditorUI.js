@@ -134,6 +134,9 @@ export class EditorUI {
         document.getElementById('btn-undo')?.addEventListener('click', () => this.undo());
         document.getElementById('btn-redo')?.addEventListener('click', () => this.redo());
 
+        // Bind Mobile Navigation & Sheet
+        this._initMobileUI();
+
         // Initialize modular components
         this.zoomPanModule.init();
         this.cropModule.init();
@@ -408,6 +411,11 @@ export class EditorUI {
                 // Activate text tool
                 this.textModule.activate();
                 break;
+        }
+
+        // On mobile devices, ensure bottom sheet is opened to half when switching tools
+        if (window.innerWidth <= 768) {
+            this.setMobileSheetState('half');
         }
     }
 
@@ -1193,6 +1201,45 @@ export class EditorUI {
 
             canvas.addEventListener('mouseup', endMaskPainting);
             window.addEventListener('mouseup', endMaskPainting);
+
+            // Touch painting bridge for mobile touchscreen
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const tool = this.state.currentTool;
+                    if (['brush', 'radial', 'gradient'].includes(tool) || this.isWBPicking) {
+                        if (e.cancelable) e.preventDefault();
+                        const touch = e.touches[0];
+                        canvas.dispatchEvent(new MouseEvent('mousedown', {
+                            button: 0,
+                            buttons: 1,
+                            clientX: touch.clientX,
+                            clientY: touch.clientY,
+                            bubbles: true
+                        }));
+                    }
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && (this.state.isPainting || this.isWBPicking)) {
+                    if (e.cancelable) e.preventDefault();
+                    const touch = e.touches[0];
+                    canvasArea.dispatchEvent(new MouseEvent('mousemove', {
+                        button: 0,
+                        buttons: 1,
+                        clientX: touch.clientX,
+                        clientY: touch.clientY,
+                        bubbles: true
+                    }));
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (e) => {
+                if (this.state.isPainting) {
+                    if (e.cancelable) e.preventDefault();
+                    endMaskPainting();
+                }
+            }, { passive: false });
         }
     }
 
@@ -1653,6 +1700,106 @@ export class EditorUI {
     }
 
     /**
+     * Initialize mobile layout controls:
+     * - Top bar: Undo, Redo, Export, Before/After
+     * - Bottom sheet drag handle toggling (collapsed <-> half <-> expanded)
+     */
+    _initMobileUI() {
+        // Mobile Undo / Redo
+        document.getElementById('mobile-btn-undo')?.addEventListener('click', () => this.undo());
+        document.getElementById('mobile-btn-redo')?.addEventListener('click', () => this.redo());
+
+        // Mobile Export
+        document.getElementById('mobile-btn-export')?.addEventListener('click', () => {
+            this.setMode('export');
+            this.setMobileSheetState('half');
+        });
+
+        // Mobile Before/After (tap to toggle or hold to preview)
+        const mobileBtnBefore = document.getElementById('mobile-btn-before');
+        if (mobileBtnBefore) {
+            mobileBtnBefore.addEventListener('click', () => this.toggleComparison());
+
+            const startBefore = (e) => {
+                if (e.cancelable) e.preventDefault();
+                if (!this.state.hasImage || this.state.showingBefore) return;
+                this.state.showingBefore = true;
+                this.elements.beforeIndicator?.classList.add('visible');
+                mobileBtnBefore.classList.add('active');
+                this.gpu?.renderOriginal();
+                try {
+                    navigator.vibrate?.(10);
+                } catch {
+                    // Ignore if vibrate unsupported
+                }
+            };
+
+            const endBefore = () => {
+                if (this.state.showingBefore) {
+                    this.state.showingBefore = false;
+                    this.elements.beforeIndicator?.classList.remove('visible');
+                    mobileBtnBefore.classList.remove('active');
+                    this.gpu?.render();
+                }
+            };
+
+            mobileBtnBefore.addEventListener('touchstart', startBefore, { passive: false });
+            mobileBtnBefore.addEventListener('touchend', endBefore, { passive: true });
+            mobileBtnBefore.addEventListener('touchcancel', endBefore, { passive: true });
+        }
+
+        // Mobile Sheet Handle toggle
+        const sheetHandle = document.getElementById('mobile-sheet-handle');
+        const controlPanel = document.querySelector('.control-panel');
+        if (sheetHandle && controlPanel) {
+            sheetHandle.addEventListener('click', () => {
+                const curState = controlPanel.getAttribute('data-sheet-state') || 'half';
+                if (curState === 'collapsed') {
+                    this.setMobileSheetState('half');
+                } else if (curState === 'half') {
+                    this.setMobileSheetState('collapsed');
+                } else {
+                    this.setMobileSheetState('half');
+                }
+            });
+
+            // Swipe detection on handle bar
+            let startY = 0;
+            sheetHandle.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    startY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            sheetHandle.addEventListener('touchend', (e) => {
+                if (e.changedTouches.length === 1) {
+                    const deltaY = e.changedTouches[0].clientY - startY;
+                    const curState = controlPanel.getAttribute('data-sheet-state') || 'half';
+                    if (deltaY < -40) {
+                        // Swiped UP -> expand sheet
+                        if (curState === 'collapsed') this.setMobileSheetState('half');
+                        else if (curState === 'half') this.setMobileSheetState('expanded');
+                    } else if (deltaY > 40) {
+                        // Swiped DOWN -> collapse sheet
+                        if (curState === 'expanded') this.setMobileSheetState('half');
+                        else if (curState === 'half') this.setMobileSheetState('collapsed');
+                    }
+                }
+            }, { passive: true });
+        }
+    }
+
+    /**
+     * Set mobile bottom sheet drawer state ('collapsed', 'half', 'expanded')
+     */
+    setMobileSheetState(state) {
+        const controlPanel = document.querySelector('.control-panel');
+        if (controlPanel) {
+            controlPanel.setAttribute('data-sheet-state', state);
+        }
+    }
+
+    /**
      * Initialize action buttons
      */
     _initActionButtons() {
@@ -1761,6 +1908,9 @@ export class EditorUI {
                 }
 
                 this.elements.dropZone?.classList.add('hidden');
+                if (window.innerWidth <= 768) {
+                    this.setMobileSheetState('half');
+                }
                 this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
                 setTimeout(() => this.renderHistogram(), 100);
 

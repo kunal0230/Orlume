@@ -251,10 +251,30 @@ export class HealingModule {
             this.healingTool.onMouseUp();
         };
 
+        this._healingTouchStart = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._healingMouseDown(e.touches[0]);
+            }
+        };
+        this._healingTouchMove = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._healingMouseMove(e.touches[0]);
+            }
+        };
+        this._healingTouchEnd = (e) => {
+            if (e.cancelable) e.preventDefault();
+            this._healingMouseUp();
+        };
+
         this.healingCanvas.addEventListener('mousedown', this._healingMouseDown);
         this.healingCanvas.addEventListener('mousemove', this._healingMouseMove);
         this.healingCanvas.addEventListener('mouseup', this._healingMouseUp);
         this.healingCanvas.addEventListener('mouseleave', this._healingMouseUp);
+        this.healingCanvas.addEventListener('touchstart', this._healingTouchStart, { passive: false });
+        this.healingCanvas.addEventListener('touchmove', this._healingTouchMove, { passive: false });
+        this.healingCanvas.addEventListener('touchend', this._healingTouchEnd, { passive: false });
 
         // Initial render
         this._renderPreview();
@@ -281,6 +301,11 @@ export class HealingModule {
                 this.healingCanvas.removeEventListener('mousemove', this._healingMouseMove);
                 this.healingCanvas.removeEventListener('mouseup', this._healingMouseUp);
                 this.healingCanvas.removeEventListener('mouseleave', this._healingMouseUp);
+            }
+            if (this._healingTouchStart) {
+                this.healingCanvas.removeEventListener('touchstart', this._healingTouchStart);
+                this.healingCanvas.removeEventListener('touchmove', this._healingTouchMove);
+                this.healingCanvas.removeEventListener('touchend', this._healingTouchEnd);
             }
         }
 

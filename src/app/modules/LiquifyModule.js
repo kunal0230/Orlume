@@ -238,9 +238,29 @@ export class LiquifyModule {
             this.liquifyTool.onMouseUp();
         };
 
+        this._liquifyTouchStart = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._liquifyMouseDown(e.touches[0]);
+            }
+        };
+        this._liquifyTouchMove = (e) => {
+            if (e.touches.length === 1) {
+                if (e.cancelable) e.preventDefault();
+                this._liquifyMouseMove(e.touches[0]);
+            }
+        };
+        this._liquifyTouchEnd = (e) => {
+            if (e.cancelable) e.preventDefault();
+            this._liquifyMouseUp();
+        };
+
         this.liquifyCanvas.addEventListener('mousedown', this._liquifyMouseDown);
         document.addEventListener('mousemove', this._liquifyMouseMove);
         document.addEventListener('mouseup', this._liquifyMouseUp);
+        this.liquifyCanvas.addEventListener('touchstart', this._liquifyTouchStart, { passive: false });
+        document.addEventListener('touchmove', this._liquifyTouchMove, { passive: false });
+        document.addEventListener('touchend', this._liquifyTouchEnd, { passive: false });
     }
 
     /**
@@ -286,6 +306,15 @@ export class LiquifyModule {
         }
         if (this._liquifyMouseUp) {
             document.removeEventListener('mouseup', this._liquifyMouseUp);
+        }
+        if (this._liquifyTouchStart) {
+            this.liquifyCanvas.removeEventListener('touchstart', this._liquifyTouchStart);
+        }
+        if (this._liquifyTouchMove) {
+            document.removeEventListener('touchmove', this._liquifyTouchMove);
+        }
+        if (this._liquifyTouchEnd) {
+            document.removeEventListener('touchend', this._liquifyTouchEnd);
         }
     }
 

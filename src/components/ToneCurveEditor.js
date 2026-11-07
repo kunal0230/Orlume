@@ -101,6 +101,7 @@ export class ToneCurveEditor {
         this.canvas.height = this.options.height * dpr;
         this.canvas.style.width = `${this.options.width}px`;
         this.canvas.style.height = `${this.options.height}px`;
+        this.canvas.style.touchAction = 'none';
         this.ctx.scale(dpr, dpr);
 
         // Bind events
@@ -129,6 +130,8 @@ export class ToneCurveEditor {
         // Window drag handlers
         this._boundWindowMouseMove = (e) => this._onMouseMove(e);
         this._boundWindowMouseUp = (e) => this._onMouseUp(e);
+        this._boundTouchMove = (e) => this._onTouchMove(e);
+        this._boundTouchEnd = (e) => this._onTouchEnd(e);
 
         // Canvas interactions
         this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
@@ -139,8 +142,6 @@ export class ToneCurveEditor {
 
         // Touch support
         this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
-        this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
-        this.canvas.addEventListener('touchend', () => this._onMouseUp());
     }
 
     _getCanvasCoords(e) {
@@ -175,11 +176,13 @@ export class ToneCurveEditor {
     _findPointAt(x, y) {
         const points = this.curves[this.activeChannel];
         const { pointRadius } = this.options;
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const hitMargin = isTouch ? 18 : 6;
 
         for (let i = 0; i < points.length; i++) {
             const coords = this._normalizedToCoords(points[i].x, points[i].y);
             const dist = Math.sqrt((x - coords.x) ** 2 + (y - coords.y) ** 2);
-            if (dist <= pointRadius + 4) {
+            if (dist <= pointRadius + hitMargin) {
                 return i;
             }
         }
@@ -257,15 +260,38 @@ export class ToneCurveEditor {
     }
 
     _onTouchStart(e) {
+        if (!e.touches || e.touches.length === 0) return;
         e.preventDefault();
         const touch = e.touches[0];
+        this._touchId = touch.identifier;
         this._onMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
+
+        window.addEventListener('touchmove', this._boundTouchMove, { passive: false });
+        window.addEventListener('touchend', this._boundTouchEnd);
+        window.addEventListener('touchcancel', this._boundTouchEnd);
     }
 
     _onTouchMove(e) {
+        if (!this.isDragging) return;
         e.preventDefault();
-        const touch = e.touches[0];
-        this._onMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+        let touch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === this._touchId) {
+                touch = e.touches[i];
+                break;
+            }
+        }
+        if (!touch && e.touches.length > 0) touch = e.touches[0];
+        if (touch) {
+            this._onMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+        }
+    }
+
+    _onTouchEnd() {
+        window.removeEventListener('touchmove', this._boundTouchMove);
+        window.removeEventListener('touchend', this._boundTouchEnd);
+        window.removeEventListener('touchcancel', this._boundTouchEnd);
+        this._onMouseUp();
     }
 
     _addPoint(x, y) {
