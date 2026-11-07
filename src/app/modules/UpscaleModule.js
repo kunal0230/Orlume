@@ -55,6 +55,16 @@ export class UpscaleModule {
             });
         });
 
+        // Model quality selector buttons (Fast / Ultra)
+        document.querySelectorAll('.upscale-model-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.upscale-model-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const model = btn.dataset.model || 'slim';
+                this.upscaler.setModelType(model);
+            });
+        });
+
         // Sharpen toggle
         const sharpenToggle = document.getElementById('upscale-sharpen-toggle');
         if (sharpenToggle) {
@@ -128,17 +138,12 @@ export class UpscaleModule {
      * Apply upscale to image
      */
     async apply() {
-        const btnApply = document.getElementById('btn-upscale-apply');
-        if (btnApply?.disabled) {
-            alert('AI Image Upscaling is currently offline for server maintenance.');
-            return;
-        }
-
         if (!this.state.hasImage) {
-            console.warn('No image loaded for upscaling');
+            this.editor.showToast?.('Please load an image first');
             return;
         }
 
+        const btnApply = document.getElementById('btn-upscale-apply');
         const progressSection = document.getElementById('upscale-progress-section');
         const progressBar = document.getElementById('upscale-progress-bar');
         const progressText = document.getElementById('upscale-progress-text');
@@ -146,7 +151,10 @@ export class UpscaleModule {
 
         // Show progress and disable button
         if (progressSection) progressSection.style.display = 'block';
-        if (btnApply) btnApply.disabled = true;
+        if (btnApply) {
+            btnApply.disabled = true;
+            btnApply.style.opacity = '0.7';
+        }
 
         try {
             // Save state for undo (LAW 1)
@@ -206,21 +214,28 @@ export class UpscaleModule {
 
                 // Hide progress
                 if (progressSection) progressSection.style.display = 'none';
-                if (btnApply) btnApply.disabled = false;
+                if (btnApply) {
+                    btnApply.disabled = false;
+                    btnApply.style.opacity = '1';
+                }
                 if (progressBar) progressBar.style.width = '0%';
 
                 // Update dimensions display
                 this.updateDimensions();
 
                 // Visual toast confirmation
-                this.editor.showToast?.('Upscale applied');
+                this.editor.showToast?.('✓ AI Super-resolution applied');
             };
             img.src = upscaledCanvas.toDataURL('image/png');
 
         } catch (error) {
             console.error('Upscale failed:', error);
             if (progressSection) progressSection.style.display = 'none';
-            if (btnApply) btnApply.disabled = false;
+            if (btnApply) {
+                btnApply.disabled = false;
+                btnApply.style.opacity = '1';
+            }
+            this.editor.showToast?.('Upscale failed: ' + error.message);
         }
     }
 }

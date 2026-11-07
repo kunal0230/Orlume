@@ -20,6 +20,8 @@ export class ImageUpscaler {
         this.enhanceFace = false;
         this.sharpenEdges = true;
         this.processingMode = 'both'; // 'enhance', 'upscale', or 'both'
+        this.modelType = 'slim'; // 'slim' (fast, local) or 'thick' (ultra quality)
+        this.useRemoteServer = false; // By default use fast client-side WebGL
         this.serverUrl = 'http://localhost:8000';
     }
 
@@ -30,6 +32,14 @@ export class ImageUpscaler {
 
     setUseAI(enabled) {
         this.useAI = enabled;
+    }
+
+    setModelType(type) {
+        this.modelType = type === 'thick' ? 'thick' : 'slim';
+    }
+
+    setUseRemoteServer(enabled) {
+        this.useRemoteServer = Boolean(enabled);
     }
 
     setEnhanceFace(enabled) {
@@ -66,7 +76,7 @@ export class ImageUpscaler {
         try {
             const response = await fetch(`${this.serverUrl}/health`, {
                 method: 'GET',
-                signal: AbortSignal.timeout(3000)
+                signal: AbortSignal.timeout(2000)
             });
             return response.ok;
         } catch {
@@ -90,14 +100,17 @@ export class ImageUpscaler {
             const { width: outWidth, height: outHeight } = this.getOutputDimensions(srcWidth, srcHeight);
 
             if (this.useAI) {
-                // Try server first
-                const serverAvailable = await this.checkServerHealth();
-                if (serverAvailable) {
-                    return await this._processWithServer(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
-                } else {
-                    progressCallback(5, 'Server unavailable, using local AI...');
-                    return await this._processWithLocalAI(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
+                // If remote server explicitly enabled, try server first
+                if (this.useRemoteServer) {
+                    const serverAvailable = await this.checkServerHealth();
+                    if (serverAvailable) {
+                        return await this._processWithServer(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
+                    }
+                    progressCallback(5, 'Remote server unavailable, using local WebGL AI...');
                 }
+
+                // Default: Fast, private, client-side WebGL Super Resolution
+                return await this._processWithLocalAI(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
             } else {
                 return await this._processClassic(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
             }
@@ -185,44 +198,76 @@ export class ImageUpscaler {
     }
 
     /**
-     * Process with local browser AI (ESRGAN-thick fallback)
+     * Process with local browser AI (Real-ESRGAN WebGL)
      */
     async _processWithLocalAI(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback) {
-        progressCallback(10, 'Loading local AI model...');
+        progressCallback(10, 'Loading local neural super-resolution model...');
 
         try {
             const { default: Upscaler } = await import('upscaler');
 
-            let model;
             const scale = this.processingMode === 'enhance' ? 2 : this.scaleFactor;
+            const clampedScale = scale <= 2 ? 2 : (scale <= 3 ? 3 : 4);
+            let model;
 
-            if (scale <= 2) {
-                const { default: m } = await import('@upscalerjs/esrgan-thick/2x');
-                model = m;
-            } else if (scale <= 3) {
-                const { default: m } = await import('@upscalerjs/esrgan-thick/3x');
-                model = m;
+            if (this.modelType === 'thick') {
+                if (clampedScale <= 2) {
+                    const { default: m } = await import('@upscalerjs/esrgan-thick/2x');
+                    model = m;
+                } else if (clampedScale <= 3) {
+                    const { default: m } = await import('@upscalerjs/esrgan-thick/3x');
+                    model = m;
+                } else {
+                    const { default: m } = await import('@upscalerjs/esrgan-thick/4x');
+                    model = m;
+                }
             } else {
-                const { default: m } = await import('@upscalerjs/esrgan-thick/4x');
-                model = m;
+                // Default: Fast, local ESRGAN-Slim served directly from /models/esrgan-slim/
+                model = {
+                    scale: clampedScale,
+                    modelType: 'layers',
+                    path: `/models/esrgan-slim/x${clampedScale}/model.json`,
+                    inputRange: [0, 255],
+                    outputRange: [0, 255],
+                    _internals: {
+                        path: `models/x${clampedScale}/model.json`,
+                        name: '@upscalerjs/esrgan-slim',
+                        version: '1.0.0-beta.12'
+                    }
+                };
             }
 
-            progressCallback(30, 'Initializing local AI...');
+            progressCallback(25, 'Initializing WebGL GPU engine...');
+
+            if (this.upscaler) {
+                try {
+                    await this.upscaler.dispose();
+                } catch {
+                    // Ignore disposal error
+                }
+                this.upscaler = null;
+            }
 
             this.upscaler = new Upscaler({ model });
+            await this.upscaler.ready;
 
-            progressCallback(40, 'Processing...');
+            progressCallback(40, 'Processing neural patches...');
+
+            // Patch sizing: 64px for very large images to prevent GPU memory pressure, 128px for regular images
+            const patchSize = (srcWidth > 1200 || srcHeight > 1200) ? 64 : 128;
+            const padding = 6;
 
             const enhancedDataUrl = await this.upscaler.upscale(source, {
                 output: 'base64',
-                patchSize: 64,
-                padding: 6,
+                patchSize,
+                padding,
                 progress: (progress) => {
-                    progressCallback(40 + progress * 45, `Processing... ${Math.round(progress * 100)}%`);
+                    const pct = Math.round(40 + progress * 48);
+                    progressCallback(pct, `Upscaling image... ${Math.round(progress * 100)}%`);
                 }
             });
 
-            progressCallback(85, 'Finalizing...');
+            progressCallback(90, 'Finalizing enhanced image...');
 
             const img = new Image();
             await new Promise((resolve, reject) => {
@@ -244,15 +289,15 @@ export class ImageUpscaler {
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
             if (this.sharpenEdges) {
-                progressCallback(92, 'Sharpening...');
+                progressCallback(95, 'Refining edge sharpness...');
                 await this._enhanceDetails(ctx, targetWidth, targetHeight);
             }
 
-            progressCallback(100, 'Complete!');
+            progressCallback(100, 'Super-resolution complete!');
             return canvas;
 
         } catch (error) {
-            console.error('Local AI failed:', error);
+            console.error('Local AI failed, falling back to bicubic interpolation:', error);
             return await this._processClassic(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback);
         }
     }

@@ -106,6 +106,10 @@ export default defineConfig({
   // Include WASM and ONNX files as assets
   assetsInclude: ['**/*.wasm', '**/*.onnx'],
 
+  optimizeDeps: {
+    include: ['upscaler']
+  },
+
   build: {
     target: 'esnext',
     minify: 'esbuild',

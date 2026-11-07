@@ -1971,6 +1971,71 @@ kbd {
     margin: 0;
 }
 
+/* Tool Online Status Banner */
+.tool-online-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.22);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.tool-online-dot {
+    color: #22c55e;
+    font-size: 11px;
+    animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.tool-online-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.tool-online-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #86efac;
+}
+
+.tool-online-sub {
+    font-size: 10px;
+    color: #94a3b8;
+}
+
+.upscale-model-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.upscale-model-btn:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.upscale-model-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
 /* ========================================
    Beta Tool Indicator States
    ======================================== */

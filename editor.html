@@ -206,7 +206,7 @@
                     <path d="M18 22L18 18M18 18L22 18M18 18L18 8a2 2 0 0 0-2-2H6" />
                 </svg>
             </button>
-            <button class="tool-btn tool-down" id="tool-upscale" title="Upscale (U) - Service Temporarily Down">
+            <button class="tool-btn" id="tool-upscale" title="AI Super Resolution (U)">
                 <!-- Maximize/scale icon -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 3 21 3 21 9" />
@@ -1050,14 +1050,12 @@
                 <!-- Upscale Panel -->
                 <div class="panel-section" id="panel-upscale">
                     <div class="section">
-                        <div class="tool-offline-banner">
-                            <div class="tool-offline-header">
-                                <span class="tool-offline-dot">●</span>
-                                <span class="tool-offline-title">AI Upscaling Offline</span>
+                        <div class="tool-online-badge">
+                            <span class="tool-online-dot">●</span>
+                            <div class="tool-online-info">
+                                <span class="tool-online-title">UpscalerJS Real-ESRGAN Active</span>
+                                <span class="tool-online-sub">Client-side WebGL GPU accelerated • Private & local</span>
                             </div>
-                            <p class="tool-offline-desc">
-                                AI Image Upscaling is currently offline while our neural processing server is undergoing maintenance.
-                            </p>
                         </div>
                     </div>
 
@@ -1078,6 +1076,21 @@
                             <button class="scale-factor-btn" data-scale="4" title="4x Upscale">
                                 <span class="scale-value">4×</span>
                                 <span class="scale-label">Maximum</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-header">Neural Engine</div>
+                        <div class="upscale-model-selector"
+                            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 12px;">
+                            <button class="upscale-model-btn active" data-model="slim" title="Fast local Real-ESRGAN Slim model">
+                                <span style="font-size: 11px; font-weight: 600;">Fast (Slim)</span>
+                                <span style="font-size: 9.5px; color: var(--text-secondary); display: block; margin-top: 2px;">Instant • Local</span>
+                            </button>
+                            <button class="upscale-model-btn" data-model="thick" title="Ultra Quality Real-ESRGAN Thick deep network">
+                                <span style="font-size: 11px; font-weight: 600;">Ultra (Thick)</span>
+                                <span style="font-size: 9.5px; color: var(--text-secondary); display: block; margin-top: 2px;">Deep Detail</span>
                             </button>
                         </div>
                     </div>
@@ -1105,12 +1118,12 @@
                             <span>Use AI Enhancement</span>
                         </label>
                         <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-face-toggle">
-                            <span>Face Enhancement</span>
-                        </label>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
                             <input type="checkbox" id="upscale-sharpen-toggle" checked>
                             <span>Sharpen Details</span>
+                        </label>
+                        <label class="checkbox-label" style="margin-bottom: 8px;">
+                            <input type="checkbox" id="upscale-face-toggle">
+                            <span>Face Restoration</span>
                         </label>
                         <!-- Hidden server URL for code compatibility -->
                         <input type="hidden" id="ai-server-url" value="http://localhost:8000">
@@ -1162,17 +1175,17 @@
                             <button class="btn" id="btn-upscale-cancel" style="flex: 1;">
                                 Cancel
                             </button>
-                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1; opacity: 0.6; cursor: not-allowed;" disabled>
+                            <button class="btn btn-primary" id="btn-upscale-apply" style="flex: 1;">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                     stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                                     <polyline points="15 3 21 3 21 9" />
                                     <line x1="21" y1="3" x2="14" y2="10" />
                                 </svg>
-                                Service Down
+                                Enhance & Upscale
                             </button>
                         </div>
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">
-                            Higher scale factors may take longer to process.
+                            Powered by UpscalerJS WebGL tiled super-resolution.
                         </p>
                     </div>
                 </div>
