@@ -63,6 +63,12 @@ export class ComparisonModule {
             this._isDragging = true;
         });
 
+        // Touch support for slider dragging
+        handle?.addEventListener('touchstart', (e) => {
+            if (e.cancelable) e.preventDefault();
+            this._isDragging = true;
+        }, { passive: false });
+
         document.addEventListener('mousemove', (e) => {
             if (!this._isDragging || !this.comparison.active) return;
 
@@ -72,7 +78,23 @@ export class ComparisonModule {
             this._updateSlider();
         });
 
+        document.addEventListener('touchmove', (e) => {
+            if (!this._isDragging || !this.comparison.active || !e.touches?.length) return;
+
+            const rect = canvasContainer.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            this.comparison.position = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            this._updateSlider();
+        }, { passive: true });
+
         document.addEventListener('mouseup', () => {
+            this._isDragging = false;
+        });
+
+        document.addEventListener('touchend', () => {
+            this._isDragging = false;
+        });
+        document.addEventListener('touchcancel', () => {
             this._isDragging = false;
         });
 
@@ -126,6 +148,10 @@ export class ComparisonModule {
         const beforeAfterBtn = document.getElementById('btn-before-after');
         if (beforeAfterBtn) {
             beforeAfterBtn.classList.toggle('active', this.comparison.active);
+        }
+        const mobileBtnBefore = document.getElementById('mobile-btn-before');
+        if (mobileBtnBefore) {
+            mobileBtnBefore.classList.toggle('active', this.comparison.active);
         }
     }
 

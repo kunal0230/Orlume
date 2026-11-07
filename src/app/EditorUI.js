@@ -1240,6 +1240,12 @@ export class EditorUI {
                     endMaskPainting();
                 }
             }, { passive: false });
+            window.addEventListener('touchend', () => {
+                if (this.state.isPainting) endMaskPainting();
+            });
+            window.addEventListener('touchcancel', () => {
+                if (this.state.isPainting) endMaskPainting();
+            });
         }
     }
 
@@ -1715,13 +1721,35 @@ export class EditorUI {
             this.setMobileSheetState('half');
         });
 
+        // Mobile Experimental Notice Banner dismiss logic
+        const experimentalBanner = document.getElementById('mobile-experimental-banner');
+        const dismissBtn = document.getElementById('mobile-experimental-dismiss');
+        if (experimentalBanner) {
+            try {
+                if (sessionStorage.getItem('orlume_mobile_notice_dismissed') === '1') {
+                    experimentalBanner.classList.add('dismissed');
+                }
+            } catch {
+                // Ignore storage restrictions
+            }
+            dismissBtn?.addEventListener('click', () => {
+                experimentalBanner.classList.add('dismissed');
+                try {
+                    sessionStorage.setItem('orlume_mobile_notice_dismissed', '1');
+                } catch {
+                    // Ignore storage restrictions
+                }
+            });
+        }
+
         // Mobile Before/After (tap to toggle or hold to preview)
         const mobileBtnBefore = document.getElementById('mobile-btn-before');
         if (mobileBtnBefore) {
-            mobileBtnBefore.addEventListener('click', () => this.toggleComparison());
+            let holdTimer = null;
+            let touchStartTime = 0;
+            let didHold = false;
 
-            const startBefore = (e) => {
-                if (e.cancelable) e.preventDefault();
+            const startHold = () => {
                 if (!this.state.hasImage || this.state.showingBefore) return;
                 this.state.showingBefore = true;
                 this.elements.beforeIndicator?.classList.add('visible');
@@ -1734,7 +1762,7 @@ export class EditorUI {
                 }
             };
 
-            const endBefore = () => {
+            const endHold = () => {
                 if (this.state.showingBefore) {
                     this.state.showingBefore = false;
                     this.elements.beforeIndicator?.classList.remove('visible');
@@ -1743,9 +1771,42 @@ export class EditorUI {
                 }
             };
 
-            mobileBtnBefore.addEventListener('touchstart', startBefore, { passive: false });
-            mobileBtnBefore.addEventListener('touchend', endBefore, { passive: true });
-            mobileBtnBefore.addEventListener('touchcancel', endBefore, { passive: true });
+            mobileBtnBefore.addEventListener('touchstart', (e) => {
+                touchStartTime = Date.now();
+                didHold = false;
+                holdTimer = setTimeout(() => {
+                    didHold = true;
+                    startHold();
+                }, 200);
+            }, { passive: true });
+
+            mobileBtnBefore.addEventListener('touchend', (e) => {
+                if (holdTimer) {
+                    clearTimeout(holdTimer);
+                    holdTimer = null;
+                }
+                if (didHold) {
+                    // Reverted hold preview
+                    if (e.cancelable) e.preventDefault();
+                    endHold();
+                } else if (Date.now() - touchStartTime < 200) {
+                    // Quick tap -> toggle persistent comparison
+                    if (e.cancelable) e.preventDefault();
+                    this.toggleComparison();
+                }
+            }, { passive: false });
+
+            mobileBtnBefore.addEventListener('touchcancel', () => {
+                if (holdTimer) clearTimeout(holdTimer);
+                if (didHold) endHold();
+            }, { passive: true });
+
+            mobileBtnBefore.addEventListener('click', () => {
+                // If clicked via mouse or untracked tap, toggle comparison
+                if (Date.now() - touchStartTime > 300) {
+                    this.toggleComparison();
+                }
+            });
         }
 
         // Mobile Sheet Handle toggle

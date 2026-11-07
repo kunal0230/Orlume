@@ -113,6 +113,27 @@
             </div>
         </header>
 
+        <!-- Mobile Experimental Notice Banner (Visible only on mobile <= 768px) -->
+        <div class="mobile-experimental-banner" id="mobile-experimental-banner">
+            <div class="mobile-experimental-content">
+                <svg class="mobile-experimental-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div class="mobile-experimental-text">
+                    <span class="mobile-beta-tag">Experimental</span>
+                    Mobile editing is experimental. For the complete pro editing experience, please use desktop.
+                </div>
+            </div>
+            <button class="mobile-experimental-dismiss" id="mobile-experimental-dismiss" title="Dismiss notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
         <!-- Left Toolbar (Desktop Left / Mobile Bottom Dock) -->
         <div class="toolbar">
             <button class="tool-btn active" id="tool-develop" title="Develop (D)">
@@ -295,6 +316,10 @@
                 <h2>Drop Image Here</h2>
                 <p>or click to browse</p>
                 <button class="btn btn-primary" id="btn-browse">Choose Image</button>
+                <div class="mobile-dropzone-notice">
+                    <span class="experimental-pill">Note</span>
+                    Mobile version is experimental. For the complete editing experience, please use desktop.
+                </div>
             </div>
             <div class="brush-cursor" id="brush-cursor">
                 <div class="brush-cursor-inner" id="brush-cursor-inner"></div>
