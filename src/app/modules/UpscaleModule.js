@@ -212,6 +212,8 @@ export class UpscaleModule {
                 // Update dimensions display
                 this.updateDimensions();
 
+                // Visual toast confirmation
+                this.editor.showToast?.('Upscale applied');
             };
             img.src = upscaledCanvas.toDataURL('image/png');
 

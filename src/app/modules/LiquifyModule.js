@@ -38,12 +38,17 @@ export class LiquifyModule {
         this.liquifyCanvas = document.createElement('canvas');
         this.liquifyCanvas.style.cssText = `
             position: absolute;
-            top: 0;
-            left: 0;
             pointer-events: none;
             display: none;
         `;
         this.elements.canvas.parentElement.appendChild(this.liquifyCanvas);
+
+        // Window resize listener to keep overlay synced with main canvas
+        window.addEventListener('resize', () => {
+            if (this.liquifyCanvas && this.liquifyCanvas.style.display !== 'none') {
+                this._syncOverlayPosition();
+            }
+        });
 
         // Create liquify tool instance
         this.liquifyTool = new LiquifyTool(this.liquifyCanvas);
@@ -133,6 +138,19 @@ export class LiquifyModule {
     }
 
     /**
+     * Keep overlay canvas in exact alignment and size with main GPU canvas
+     */
+    _syncOverlayPosition() {
+        const canvas = this.elements.canvas;
+        if (!canvas || !this.liquifyCanvas) return;
+        this.liquifyCanvas.style.position = 'absolute';
+        this.liquifyCanvas.style.left = `${canvas.offsetLeft}px`;
+        this.liquifyCanvas.style.top = `${canvas.offsetTop}px`;
+        this.liquifyCanvas.style.width = `${canvas.offsetWidth}px`;
+        this.liquifyCanvas.style.height = `${canvas.offsetHeight}px`;
+    }
+
+    /**
      * Activate liquify tool
      */
     activate() {
@@ -142,22 +160,20 @@ export class LiquifyModule {
         this.liquifyCanvas.style.display = 'block';
         this.liquifyCanvas.style.pointerEvents = 'auto';
 
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.liquifyCanvas.style.width = rect.width + 'px';
-        this.liquifyCanvas.style.height = rect.height + 'px';
+        // Position overlay canvas directly over the main canvas
+        this._syncOverlayPosition();
 
-        // Set the image to liquify - prefer clean originalImage so develop adjustments are not doubled
+        // Capture developed image with all current color grading, curves, and adjustments
         const sourceCanvas = document.createElement('canvas');
         sourceCanvas.width = this.gpu.width;
         sourceCanvas.height = this.gpu.height;
         const sourceCtx = sourceCanvas.getContext('2d');
 
-        if (this.state.originalImage) {
+        const developedData = this.gpu.toImageData();
+        if (developedData) {
+            sourceCtx.putImageData(developedData, 0, 0);
+        } else if (this.state.originalImage) {
             sourceCtx.drawImage(this.state.originalImage, 0, 0, this.gpu.width, this.gpu.height);
-        } else {
-            const imageData = this.gpu.toImageData();
-            if (imageData) sourceCtx.putImageData(imageData, 0, 0);
         }
         this.liquifyTool.setImage(sourceCanvas);
 
@@ -184,8 +200,10 @@ export class LiquifyModule {
             const rect = this.liquifyCanvas.getBoundingClientRect();
             const scaleX = this.liquifyTool.imageWidth / rect.width;
             const scaleY = this.liquifyTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const x = Math.max(0, Math.min(this.liquifyTool.imageWidth, rawX));
+            const y = Math.max(0, Math.min(this.liquifyTool.imageHeight, rawY));
             this.liquifyTool.onMouseDown(x, y);
         };
 
@@ -208,8 +226,10 @@ export class LiquifyModule {
                 const rect = this.liquifyCanvas.getBoundingClientRect();
                 const scaleX = this.liquifyTool.imageWidth / rect.width;
                 const scaleY = this.liquifyTool.imageHeight / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
+                const rawX = (e.clientX - rect.left) * scaleX;
+                const rawY = (e.clientY - rect.top) * scaleY;
+                const x = Math.max(0, Math.min(this.liquifyTool.imageWidth, rawX));
+                const y = Math.max(0, Math.min(this.liquifyTool.imageHeight, rawY));
                 this.liquifyTool.onMouseMove(x, y);
             }
         };
@@ -281,8 +301,13 @@ export class LiquifyModule {
             const snapshot = this.editor._captureFullState();
             this.history.pushState(snapshot);
 
-            // Get the result from the liquify tool's WebGL canvas
-            const liquifyCanvas = this.liquifyTool.getResultCanvas();
+            // Get warped result: warp clean originalImage if available so GPU adjustments re-apply cleanly
+            let liquifyCanvas;
+            if (this.state.originalImage && typeof this.liquifyTool.getResultWithImage === 'function') {
+                liquifyCanvas = this.liquifyTool.getResultWithImage(this.state.originalImage);
+            } else {
+                liquifyCanvas = this.liquifyTool.getResultCanvas();
+            }
 
             // Create an intermediate 2D canvas to transfer the image
             const tempCanvas = document.createElement('canvas');
@@ -290,7 +315,7 @@ export class LiquifyModule {
             tempCanvas.height = liquifyCanvas.height;
             const tempCtx = tempCanvas.getContext('2d');
 
-            // Draw the WebGL canvas onto the 2D canvas
+            // Draw the WebGL/result canvas onto the 2D canvas
             tempCtx.drawImage(liquifyCanvas, 0, 0);
 
             // Update the GPU with the new image
@@ -320,6 +345,8 @@ export class LiquifyModule {
                 this.editor._detectAndShowTransparency(img);
             }
 
+            // Provide visual feedback
+            this.editor.showToast?.('Liquify warp applied');
 
             // Reset liquify tool for next use but stay in liquify mode
             this.liquifyTool.resetAll();

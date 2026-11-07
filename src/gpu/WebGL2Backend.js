@@ -11,10 +11,78 @@ import blurShaderSrc from './shaders/blur.glsl?raw';
 import commonShaderSrc from './shaders/modules/common.glsl?raw';
 import colorGradingShaderSrc from './shaders/modules/color_grading.glsl?raw';
 
+/**
+ * Convert HSL Hue in degrees [0, 360] to normalized OKLab chromaticity direction (a, b)
+ */
+/**
+ * Convert HSL Hue in degrees [0, 360] to normalized OKLab chromaticity direction (a, b).
+ * In OKLab, perceptual hue is defined as atan2(b, a), so the correct unit-circle direction
+ * for hue angle θ is simply (cos θ, sin θ). This avoids the up to 57.6° error introduced by
+ * the previous RGB-intermediate approach (sRGB primaries are not evenly spaced in OKLab).
+ */
+function hslHueToOKLabChromaDir(hueDegrees) {
+    if (hueDegrees === undefined || hueDegrees === null) return [0, 0];
+    const rad = ((hueDegrees % 360) + 360) % 360 * (Math.PI / 180.0);
+    return [Math.cos(rad), Math.sin(rad)];
+}
+
+/**
+ * Accurate sRGB to Bradford LMS matrices for CPU precomputation
+ */
+const BRADFORD_SRGB_TO_LMS = [
+    [0.422725, 0.491345, 0.027358],
+    [0.055700, 0.961534, 0.023184],
+    [0.021383, 0.087642, 0.980508]
+];
+
+const BRADFORD_LMS_TO_SRGB = [
+    [ 2.538045, -1.293277, -0.040237],
+    [-0.146004,  1.116648, -0.022329],
+    [-0.042299, -0.071607,  1.022753]
+];
+
+function computeWhitebalanceMatrix(temperature = 0, tint = 0, outMatrix = null) {
+    const target = outMatrix || new Float32Array(9);
+    if (temperature === 0 && tint === 0) {
+        target[0] = 1; target[1] = 0; target[2] = 0;
+        target[3] = 0; target[4] = 1; target[5] = 0;
+        target[6] = 0; target[7] = 0; target[8] = 1;
+        return target;
+    }
+    const temp = temperature * 0.35;
+    const t = tint * 0.35;
+    const sL = (1.0 + temp) * (1.0 + t * 0.30);
+    const sM = 1.0 - t * 0.65;
+    const sS = (1.0 - temp) * (1.0 + t * 0.30);
+
+    const M1 = BRADFORD_LMS_TO_SRGB;
+    const M0 = BRADFORD_SRGB_TO_LMS;
+
+    const M1_00 = M1[0][0] * sL, M1_01 = M1[0][1] * sM, M1_02 = M1[0][2] * sS;
+    const M1_10 = M1[1][0] * sL, M1_11 = M1[1][1] * sM, M1_12 = M1[1][2] * sS;
+    const M1_20 = M1[2][0] * sL, M1_21 = M1[2][1] * sM, M1_22 = M1[2][2] * sS;
+
+    const R00 = M1_00*M0[0][0] + M1_01*M0[1][0] + M1_02*M0[2][0];
+    const R01 = M1_00*M0[0][1] + M1_01*M0[1][1] + M1_02*M0[2][1];
+    const R02 = M1_00*M0[0][2] + M1_01*M0[1][2] + M1_02*M0[2][2];
+
+    const R10 = M1_10*M0[0][0] + M1_11*M0[1][0] + M1_12*M0[2][0];
+    const R11 = M1_10*M0[0][1] + M1_11*M0[1][1] + M1_12*M0[2][1];
+    const R12 = M1_10*M0[0][2] + M1_11*M0[1][2] + M1_12*M0[2][2];
+
+    const R20 = M1_20*M0[0][0] + M1_21*M0[1][0] + M1_22*M0[2][0];
+    const R21 = M1_20*M0[0][1] + M1_21*M0[1][1] + M1_22*M0[2][1];
+    const R22 = M1_20*M0[0][2] + M1_21*M0[1][2] + M1_22*M0[2][2];
+
+    target[0] = R00; target[1] = R10; target[2] = R20;
+    target[3] = R01; target[4] = R11; target[5] = R21;
+    target[6] = R02; target[7] = R12; target[8] = R22;
+    return target;
+}
+
 export class WebGL2Backend extends GPUBackend {
     constructor(canvas) {
         super(canvas);
-        this.gl = null;
         this.gl = null;
         this.programs = new Map();
 
@@ -26,11 +94,47 @@ export class WebGL2Backend extends GPUBackend {
         // Multi-pass FBOs
         this.blurFbo1 = null;
         this.blurFbo2 = null;
+        this.baseFbo1 = null;
+        this.baseFbo2 = null;
+        this.clarityFbo1 = null;
+        this.clarityFbo2 = null;
+
+        // Base illumination caching
+        this._cachedBaseInput = null;
+        this._cachedBaseVersion = 0;
+        this._cachedBaseWidth = 0;
+        this._cachedBaseHeight = 0;
+        this._cachedBaseValid = false;
+        this._textureVersionCounter = 0;
 
         // 3D LUT resources
         this._lut3dTex = null;
         this._defaultLut3dTex = null;
         this._lastLut3dData = null;
+
+        // Pre-allocated uniform caches for zero-allocation rendering
+        this._wbMatrixCache = new Float32Array(9);
+        this._lastWbTemp = null;
+        this._lastWbTint = null;
+        this._hslHueCache = new Float32Array(8);
+        this._hslSatCache = new Float32Array(8);
+        this._hslLumCache = new Float32Array(8);
+
+        // 1D LUT caching
+        this._curveLutTexRgb = null;
+        this._curveLutTexRed = null;
+        this._curveLutTexGreen = null;
+        this._curveLutTexBlue = null;
+        this._lastLutDataRgb = null;
+        this._lastLutDataRed = null;
+        this._lastLutDataGreen = null;
+        this._lastLutDataBlue = null;
+
+        // Ultra-fast histogram FBO & buffer
+        this._histFbo = null;
+        this._histPixelBuf = null;
+        this._readPixelsBuffer = null;
+        this._lastRenderFramebuffer = null;
     }
 
     /**
@@ -66,9 +170,10 @@ export class WebGL2Backend extends GPUBackend {
 
         const gl = this.gl;
 
-        // Enable extensions
-        gl.getExtension('EXT_color_buffer_float');
+        // Enable extensions and floating point buffer capabilities
+        const extColorFloat = gl.getExtension('EXT_color_buffer_float');
         gl.getExtension('OES_texture_float_linear');
+        this.supportsFloat = Boolean(extColorFloat);
 
         // Enable blending for proper alpha compositing
         gl.enable(gl.BLEND);
@@ -133,7 +238,7 @@ export class WebGL2Backend extends GPUBackend {
 
         const passthroughFragment = `#version 300 es
             precision highp float;
-            precision mediump sampler2D;
+            precision highp sampler2D;
             in vec2 v_texCoord;
             uniform sampler2D u_texture;
             uniform bool u_showClipping;
@@ -144,7 +249,7 @@ export class WebGL2Backend extends GPUBackend {
             void main() {
                 vec4 col = texture(u_texture, v_texCoord);
                 if (u_showClipping) {
-                    if (u_clipHighlights && (col.r >= 0.996 && col.g >= 0.996 && col.b >= 0.996)) {
+                    if (u_clipHighlights && (col.r >= 0.996 || col.g >= 0.996 || col.b >= 0.996)) {
                         fragColor = vec4(1.0, 0.0, 0.0, col.a);
                         return;
                     }
@@ -177,6 +282,9 @@ export class WebGL2Backend extends GPUBackend {
             const gl = this.gl;
             blur.u_direction = gl.getUniformLocation(blur, 'u_direction');
             blur.u_resolution = gl.getUniformLocation(blur, 'u_resolution');
+            blur.u_radius = gl.getUniformLocation(blur, 'u_radius');
+            blur.u_sigmaRange = gl.getUniformLocation(blur, 'u_sigmaRange');
+            blur.u_isLinear = gl.getUniformLocation(blur, 'u_isLinear');
         }
 
         // Cache develop uniform locations
@@ -197,6 +305,23 @@ export class WebGL2Backend extends GPUBackend {
             dev.u_structure = gl.getUniformLocation(dev, 'u_structure');
             dev.u_dehaze = gl.getUniformLocation(dev, 'u_dehaze');
             dev.u_blurTexture = gl.getUniformLocation(dev, 'u_blurTexture');
+            dev.u_clarityTexture = gl.getUniformLocation(dev, 'u_clarityTexture');
+            dev.u_isBaseLinear = gl.getUniformLocation(dev, 'u_isBaseLinear');
+            dev.u_wbMatrix = gl.getUniformLocation(dev, 'u_wbMatrix');
+
+            // Color grading uniforms
+            dev.u_shadowsChromaDir = gl.getUniformLocation(dev, 'u_shadowsChromaDir');
+            dev.u_midtonesChromaDir = gl.getUniformLocation(dev, 'u_midtonesChromaDir');
+            dev.u_highlightsChromaDir = gl.getUniformLocation(dev, 'u_highlightsChromaDir');
+            for (const n of [
+                'u_shadowsColor', 'u_midtonesColor', 'u_highlightsColor',
+                'u_shadowsLum', 'u_midtonesLum', 'u_highlightsLum',
+                'u_colorBalance', 'u_colorBlending',
+                'u_hasHSL', 'u_enableDither', 'u_hasBase',
+                'u_showClipping', 'u_clipShadows', 'u_clipHighlights'
+            ]) {
+                dev[n] = gl.getUniformLocation(dev, n);
+            }
 
             // HSL per-channel uniforms (arrays of 8 floats each)
             dev.u_hslHue = gl.getUniformLocation(dev, 'u_hslHue');
@@ -307,23 +432,31 @@ export class WebGL2Backend extends GPUBackend {
         if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-        return { width, height, _internal: texture };
+        const version = (this._textureVersionCounter = (this._textureVersionCounter || 0) + 1);
+        return { width, height, _internal: texture, version };
     }
 
     /**
-     * Create empty texture
+     * Create empty texture (supports RGBA16F float when requested and available)
      */
-    createTexture(width, height) {
+    createTexture(width, height, isFloat = false) {
         const gl = this.gl;
         const texture = gl.createTexture();
         if (!texture) return null;
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        if (isFloat && this.supportsFloat) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.HALF_FLOAT, null);
+        } else {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        }
+
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -334,32 +467,68 @@ export class WebGL2Backend extends GPUBackend {
     /**
      * Create framebuffer
      */
-    createFramebuffer(width, height) {
+    createFramebuffer(width, height, isFloat = false) {
         const gl = this.gl;
-        const texture = this.createTexture(width, height);
-        const fbo = gl.createFramebuffer();
+        let texture = this.createTexture(width, height, isFloat);
+        let fbo = gl.createFramebuffer();
+        let actualFloat = isFloat;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture._internal, 0);
+
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (status !== gl.FRAMEBUFFER_COMPLETE && isFloat) {
+            console.warn('Float FBO unsupported on this hardware, falling back to RGBA8');
+            this.deleteFramebuffer({ texture, _internal: fbo });
+            texture = this.createTexture(width, height, false);
+            fbo = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture._internal, 0);
+            actualFloat = false;
+        }
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return { texture, _internal: fbo };
+        return { texture, _internal: fbo, isFloat: actualFloat };
     }
 
     /**
-     * Helper to manage blur FBOs
+     * Helper to manage multi-scale illumination FBOs (in RGBA16F for high dynamic range)
      */
-    _ensureBlurFbos(width, height) {
-        if (!this.blurFbo1 || this.blurFbo1.texture.width !== width || this.blurFbo1.texture.height !== height) {
-            this.deleteFramebuffer(this.blurFbo1);
-            this.deleteFramebuffer(this.blurFbo2);
-            this.blurFbo1 = this.createFramebuffer(width, height);
-            this.blurFbo2 = this.createFramebuffer(width, height);
+    _ensureMultiScaleFbos(width, height) {
+        const maxDim = Math.max(width, height);
+
+        // Scale 1: Base illumination (Tone Base, ~3.0% of long edge)
+        // Downsample so long edge is 256px
+        const baseScale = Math.min(1.0, 256 / maxDim);
+        const baseW = Math.max(32, Math.round(width * baseScale));
+        const baseH = Math.max(32, Math.round(height * baseScale));
+
+        if (!this.baseFbo1 || this.baseFbo1.texture.width !== baseW || this.baseFbo1.texture.height !== baseH) {
+            this.deleteFramebuffer(this.baseFbo1);
+            this.deleteFramebuffer(this.baseFbo2);
+            this.baseFbo1 = this.createFramebuffer(baseW, baseH, true);
+            this.baseFbo2 = this.createFramebuffer(baseW, baseH, true);
+            this._cachedBaseValid = false;
+        }
+
+        // Scale 2: Mid-scale illumination (Clarity, ~0.86% of long edge)
+        // Downsample so long edge is 1024px
+        const clarityScale = Math.min(1.0, 1024 / maxDim);
+        const clarityW = Math.max(64, Math.round(width * clarityScale));
+        const clarityH = Math.max(64, Math.round(height * clarityScale));
+
+        if (!this.clarityFbo1 || this.clarityFbo1.texture.width !== clarityW || this.clarityFbo1.texture.height !== clarityH) {
+            this.deleteFramebuffer(this.clarityFbo1);
+            this.deleteFramebuffer(this.clarityFbo2);
+            this.clarityFbo1 = this.createFramebuffer(clarityW, clarityH, true);
+            this.clarityFbo2 = this.createFramebuffer(clarityW, clarityH, true);
+            this._cachedBaseValid = false;
         }
     }
 
     /**
-     * Render a blur pass
+     * Render a blur pass with resolution-relative radius and configurable sigma range
      */
-    _renderBlurPass(inputTexture, outputFbo, direction) {
+    _renderBlurPass(inputTexture, outputFbo, direction, radius = 1.0, sigmaRange = 1.0, isLinear = false) {
         const gl = this.gl;
         const program = this.programs.get('blur');
         const rawTexture = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
@@ -374,7 +543,10 @@ export class WebGL2Backend extends GPUBackend {
         gl.useProgram(program);
 
         gl.uniform2f(program.u_direction, direction[0], direction[1]);
-        gl.uniform2f(program.u_resolution, this.width, this.height);
+        gl.uniform2f(program.u_resolution, outputFbo.texture.width, outputFbo.texture.height);
+        gl.uniform1f(program.u_radius, radius);
+        gl.uniform1f(program.u_sigmaRange, sigmaRange);
+        gl.uniform1i(program.u_isLinear, isLinear ? 1 : 0);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, rawTexture);
@@ -388,9 +560,12 @@ export class WebGL2Backend extends GPUBackend {
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
+        // Disable alpha blending for intermediate FBO blur passes to prevent ghosting
+        gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, outputFbo._internal);
-        gl.viewport(0, 0, this.width, this.height);
+        gl.viewport(0, 0, outputFbo.texture.width, outputFbo.texture.height);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.enable(gl.BLEND);
     }
 
     /**
@@ -399,42 +574,94 @@ export class WebGL2Backend extends GPUBackend {
     renderDevelop(inputTexture, uniforms, target = null, clippingOpts = null) {
         const gl = this.gl;
 
-        // === MULTI-PASS PRE-PROCESSING ===
-        let blurTexture = inputTexture; // Default fallback if no blur needed
-
-        if ((uniforms.clarity && uniforms.clarity !== 0) || (uniforms.structure && uniforms.structure !== 0)) {
-
-            this._ensureBlurFbos(this.width, this.height);
-
-            // Pass 1: Horizontal Blur (Input -> FBO1)
-            this._renderBlurPass(inputTexture, this.blurFbo1, [1.0, 0.0]);
-
-            // Pass 2: Vertical Blur (FBO1 -> FBO2)
-            this._renderBlurPass(this.blurFbo1.texture, this.blurFbo2, [0.0, 1.0]);
-
-            blurTexture = this.blurFbo2.texture;
-        } else {
-            // No blur needed, blurTexture stays as inputTexture // FIXED: no-empty
-        }
-
-        // === FINAL PASS ===
-        const program = this.programs.get('develop');
         const rawInput = (typeof WebGLTexture !== 'undefined' && inputTexture instanceof WebGLTexture)
             ? inputTexture
             : inputTexture?._internal;
-        if (!program || !rawInput || typeof WebGLTexture === 'undefined' || !(rawInput instanceof WebGLTexture)) return;
+        if (!rawInput || typeof WebGLTexture === 'undefined' || !(rawInput instanceof WebGLTexture)) return;
         try {
             if (!gl.isTexture(rawInput)) return;
         } catch {
             return;
         }
 
+        // === MULTI-SCALE PRE-PROCESSING ===
+        let baseTexture = inputTexture;
+        let clarityTexture = inputTexture;
+
+        // Trigger multi-scale passes when any local tone, detail, or dehaze control is active
+        const needsBaseIllumination = Boolean(
+            (uniforms.clarity && uniforms.clarity !== 0) ||
+            (uniforms.structure && uniforms.structure !== 0) ||
+            (uniforms.shadows && uniforms.shadows !== 0) ||
+            (uniforms.highlights && uniforms.highlights !== 0) ||
+            (uniforms.whites && uniforms.whites !== 0) ||
+            (uniforms.blacks && uniforms.blacks !== 0) ||
+            (uniforms.dehaze && uniforms.dehaze !== 0)
+        );
+
+        if (needsBaseIllumination) {
+            this._ensureMultiScaleFbos(this.width, this.height);
+
+            const inputVersion = inputTexture.version || 0;
+            const isCacheValid = Boolean(
+                this._cachedBaseValid &&
+                this._cachedBaseInput === rawInput &&
+                this._cachedBaseVersion === inputVersion &&
+                this._cachedBaseWidth === this.width &&
+                this._cachedBaseHeight === this.height
+            );
+
+            if (!isCacheValid) {
+                // Generate mipmap on rawInput so downsampling uses pre-filtered mip levels (no aliasing/shimmer)
+                gl.bindTexture(gl.TEXTURE_2D, rawInput);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+                // Pass 1 & 2: Base Illumination B (256px buffer, radius=3.5, sigmaRange=1.0 EV)
+                // Pass 1: inputTexture (sRGB) -> baseFbo1 (Linear), isLinear = false
+                this._renderBlurPass(inputTexture, this.baseFbo1, [1.0, 0.0], 3.5, 1.0, false);
+                gl.bindTexture(gl.TEXTURE_2D, this.baseFbo1.texture._internal);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+                // Pass 2: baseFbo1 (Linear) -> baseFbo2 (Linear), isLinear = true
+                this._renderBlurPass(this.baseFbo1.texture, this.baseFbo2, [0.0, 1.0], 3.5, 1.0, true);
+
+                // Pass 3 & 4: Mid-scale Clarity Illumination M (1024px buffer, radius=4.0, sigmaRange=0.5 EV)
+                // Pass 3: inputTexture (sRGB) -> clarityFbo1 (Linear), isLinear = false
+                this._renderBlurPass(inputTexture, this.clarityFbo1, [1.0, 0.0], 4.0, 0.5, false);
+                gl.bindTexture(gl.TEXTURE_2D, this.clarityFbo1.texture._internal);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+                // Pass 4: clarityFbo1 (Linear) -> clarityFbo2 (Linear), isLinear = true
+                this._renderBlurPass(this.clarityFbo1.texture, this.clarityFbo2, [0.0, 1.0], 4.0, 0.5, true);
+
+                // Keep mipmap min filter on source texture so textureLod can sample mips
+                gl.bindTexture(gl.TEXTURE_2D, rawInput);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+                this._cachedBaseInput = rawInput;
+                this._cachedBaseVersion = inputVersion;
+                this._cachedBaseWidth = this.width;
+                this._cachedBaseHeight = this.height;
+                this._cachedBaseValid = true;
+            }
+
+            baseTexture = this.baseFbo2.texture;
+            clarityTexture = this.clarityFbo2.texture;
+        }
+
+        // === FINAL PASS ===
+        const program = this.programs.get('develop');
+        if (!program) return;
+
         gl.useProgram(program);
 
-        // Bind Blur Texture to Unit 5 (0-4 are used by main and LUTS)
-        const rawBlur = (typeof WebGLTexture !== 'undefined' && blurTexture instanceof WebGLTexture)
-            ? blurTexture
-            : blurTexture?._internal;
+        // Bind Base Illumination Texture to Unit 5
+        const rawBlur = (typeof WebGLTexture !== 'undefined' && baseTexture instanceof WebGLTexture)
+            ? baseTexture
+            : baseTexture?._internal;
         if (rawBlur && typeof WebGLTexture !== 'undefined' && (rawBlur instanceof WebGLTexture)) {
             let isValid = false;
             try { isValid = gl.isTexture(rawBlur); } catch { isValid = false; }
@@ -442,6 +669,20 @@ export class WebGL2Backend extends GPUBackend {
                 gl.activeTexture(gl.TEXTURE5);
                 gl.bindTexture(gl.TEXTURE_2D, rawBlur);
                 gl.uniform1i(program.u_blurTexture, 5);
+            }
+        }
+
+        // Bind Mid-scale Clarity Texture to Unit 7
+        const rawClarity = (typeof WebGLTexture !== 'undefined' && clarityTexture instanceof WebGLTexture)
+            ? clarityTexture
+            : clarityTexture?._internal;
+        if (rawClarity && typeof WebGLTexture !== 'undefined' && (rawClarity instanceof WebGLTexture)) {
+            let isValid = false;
+            try { isValid = gl.isTexture(rawClarity); } catch { isValid = false; }
+            if (isValid) {
+                gl.activeTexture(gl.TEXTURE7);
+                gl.bindTexture(gl.TEXTURE_2D, rawClarity);
+                gl.uniform1i(program.u_clarityTexture, 7);
             }
         }
 
@@ -454,6 +695,18 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_blacks, (uniforms.blacks || 0) / 100);
         gl.uniform1f(program.u_temperature, (uniforms.temperature || 0) / 100);
         gl.uniform1f(program.u_tint, (uniforms.tint || 0) / 100);
+        gl.uniform1i(program.u_isBaseLinear, needsBaseIllumination ? 1 : 0);
+        gl.uniform1i(program.u_hasBase, needsBaseIllumination ? 1 : 0);
+
+        const temp = (uniforms.temperature || 0) / 100;
+        const tint = (uniforms.tint || 0) / 100;
+        if (temp !== this._lastWbTemp || tint !== this._lastWbTint) {
+            computeWhitebalanceMatrix(temp, tint, this._wbMatrixCache);
+            this._lastWbTemp = temp;
+            this._lastWbTint = tint;
+        }
+        gl.uniformMatrix3fv(program.u_wbMatrix, false, this._wbMatrixCache);
+
         gl.uniform1f(program.u_vibrance, (uniforms.vibrance || 0) / 100);
         gl.uniform1f(program.u_saturation, (uniforms.saturation || 0) / 100);
         gl.uniform1f(program.u_clarity, (uniforms.clarity || 0) / 100);
@@ -465,6 +718,14 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform2f(program.u_shadowsColor, uniforms.shadowsHue || 0, uniforms.shadowsSat || 0);
         gl.uniform2f(program.u_midtonesColor, uniforms.midtonesHue || 0, uniforms.midtonesSat || 0);
         gl.uniform2f(program.u_highlightsColor, uniforms.highlightsHue || 0, uniforms.highlightsSat || 0);
+
+        const shadowsDir = hslHueToOKLabChromaDir((uniforms.shadowsHue || 0) * 360);
+        const midtonesDir = hslHueToOKLabChromaDir((uniforms.midtonesHue || 0) * 360);
+        const highlightsDir = hslHueToOKLabChromaDir((uniforms.highlightsHue || 0) * 360);
+        gl.uniform2f(program.u_shadowsChromaDir, shadowsDir[0], shadowsDir[1]);
+        gl.uniform2f(program.u_midtonesChromaDir, midtonesDir[0], midtonesDir[1]);
+        gl.uniform2f(program.u_highlightsChromaDir, highlightsDir[0], highlightsDir[1]);
+
         gl.uniform1f(program.u_shadowsLum, uniforms.shadowsLum || 0);
         gl.uniform1f(program.u_midtonesLum, uniforms.midtonesLum || 0);
         gl.uniform1f(program.u_highlightsLum, uniforms.highlightsLum || 0);
@@ -472,42 +733,50 @@ export class WebGL2Backend extends GPUBackend {
         gl.uniform1f(program.u_colorBalance, (uniforms.colorBalance || 0));
         gl.uniform1f(program.u_colorBlending, (uniforms.colorBlending !== undefined ? uniforms.colorBlending : 50)); // Default blending 50
 
-        // HSL per-channel uniforms (arrays of 8 floats)
+        // HSL per-channel uniforms (reusing pre-allocated Float32Array caches to avoid GC pressure)
         // Order: Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
-        const hslHue = new Float32Array([
-            uniforms.hslHueRed || 0,
-            uniforms.hslHueOrange || 0,
-            uniforms.hslHueYellow || 0,
-            uniforms.hslHueGreen || 0,
-            uniforms.hslHueAqua || 0,
-            uniforms.hslHueBlue || 0,
-            uniforms.hslHuePurple || 0,
-            uniforms.hslHueMagenta || 0
-        ]);
-        const hslSat = new Float32Array([
-            uniforms.hslSatRed || 0,
-            uniforms.hslSatOrange || 0,
-            uniforms.hslSatYellow || 0,
-            uniforms.hslSatGreen || 0,
-            uniforms.hslSatAqua || 0,
-            uniforms.hslSatBlue || 0,
-            uniforms.hslSatPurple || 0,
-            uniforms.hslSatMagenta || 0
-        ]);
-        const hslLum = new Float32Array([
-            uniforms.hslLumRed || 0,
-            uniforms.hslLumOrange || 0,
-            uniforms.hslLumYellow || 0,
-            uniforms.hslLumGreen || 0,
-            uniforms.hslLumAqua || 0,
-            uniforms.hslLumBlue || 0,
-            uniforms.hslLumPurple || 0,
-            uniforms.hslLumMagenta || 0
-        ]);
+        const hHue = this._hslHueCache;
+        hHue[0] = uniforms.hslHueRed || 0;
+        hHue[1] = uniforms.hslHueOrange || 0;
+        hHue[2] = uniforms.hslHueYellow || 0;
+        hHue[3] = uniforms.hslHueGreen || 0;
+        hHue[4] = uniforms.hslHueAqua || 0;
+        hHue[5] = uniforms.hslHueBlue || 0;
+        hHue[6] = uniforms.hslHuePurple || 0;
+        hHue[7] = uniforms.hslHueMagenta || 0;
 
-        gl.uniform1fv(program.u_hslHue, hslHue);
-        gl.uniform1fv(program.u_hslSat, hslSat);
-        gl.uniform1fv(program.u_hslLum, hslLum);
+        const hSat = this._hslSatCache;
+        hSat[0] = uniforms.hslSatRed || 0;
+        hSat[1] = uniforms.hslSatOrange || 0;
+        hSat[2] = uniforms.hslSatYellow || 0;
+        hSat[3] = uniforms.hslSatGreen || 0;
+        hSat[4] = uniforms.hslSatAqua || 0;
+        hSat[5] = uniforms.hslSatBlue || 0;
+        hSat[6] = uniforms.hslSatPurple || 0;
+        hSat[7] = uniforms.hslSatMagenta || 0;
+
+        const hLum = this._hslLumCache;
+        hLum[0] = uniforms.hslLumRed || 0;
+        hLum[1] = uniforms.hslLumOrange || 0;
+        hLum[2] = uniforms.hslLumYellow || 0;
+        hLum[3] = uniforms.hslLumGreen || 0;
+        hLum[4] = uniforms.hslLumAqua || 0;
+        hLum[5] = uniforms.hslLumBlue || 0;
+        hLum[6] = uniforms.hslLumPurple || 0;
+        hLum[7] = uniforms.hslLumMagenta || 0;
+
+        gl.uniform1fv(program.u_hslHue, hHue);
+        gl.uniform1fv(program.u_hslSat, hSat);
+        gl.uniform1fv(program.u_hslLum, hLum);
+
+        let hasHSL = false;
+        for (let i = 0; i < 8; i++) {
+            if (hHue[i] !== 0 || hSat[i] !== 0 || hLum[i] !== 0) {
+                hasHSL = true;
+                break;
+            }
+        }
+        gl.uniform1i(program.u_hasHSL, hasHSL ? 1 : 0);
 
         // Tone Curve LUT textures
         // Use length check instead of instanceof for robustness
@@ -525,34 +794,46 @@ export class WebGL2Backend extends GPUBackend {
 
         // Exposure clipping warning uniforms
         if (clippingOpts && clippingOpts.show) {
-            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 1);
-            gl.uniform1i(gl.getUniformLocation(program, 'u_clipShadows'), clippingOpts.shadows ? 1 : 0);
-            gl.uniform1i(gl.getUniformLocation(program, 'u_clipHighlights'), clippingOpts.highlights ? 1 : 0);
+            gl.uniform1i(program.u_showClipping, 1);
+            gl.uniform1i(program.u_clipShadows, clippingOpts.shadows ? 1 : 0);
+            gl.uniform1i(program.u_clipHighlights, clippingOpts.highlights ? 1 : 0);
         } else {
-            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 0);
+            gl.uniform1i(program.u_showClipping, 0);
         }
 
-        // Create/update LUT textures if needed
+        // Create/update LUT textures only when curve data actually changes
         if (hasRgbCurve) {
-            this._curveLutTexRgb = this._updateLutTexture(this._curveLutTexRgb, uniforms.curveLutRgb);
+            if (this._lastLutDataRgb !== uniforms.curveLutRgb) {
+                this._curveLutTexRgb = this._updateLutTexture(this._curveLutTexRgb, uniforms.curveLutRgb);
+                this._lastLutDataRgb = uniforms.curveLutRgb;
+            }
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexRgb);
             gl.uniform1i(program.u_curveLutTexRgb, 1);
         }
         if (hasRedCurve) {
-            this._curveLutTexRed = this._updateLutTexture(this._curveLutTexRed, uniforms.curveLutRed);
+            if (this._lastLutDataRed !== uniforms.curveLutRed) {
+                this._curveLutTexRed = this._updateLutTexture(this._curveLutTexRed, uniforms.curveLutRed);
+                this._lastLutDataRed = uniforms.curveLutRed;
+            }
             gl.activeTexture(gl.TEXTURE2);
             gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexRed);
             gl.uniform1i(program.u_curveLutTexRed, 2);
         }
         if (hasGreenCurve) {
-            this._curveLutTexGreen = this._updateLutTexture(this._curveLutTexGreen, uniforms.curveLutGreen);
+            if (this._lastLutDataGreen !== uniforms.curveLutGreen) {
+                this._curveLutTexGreen = this._updateLutTexture(this._curveLutTexGreen, uniforms.curveLutGreen);
+                this._lastLutDataGreen = uniforms.curveLutGreen;
+            }
             gl.activeTexture(gl.TEXTURE3);
             gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexGreen);
             gl.uniform1i(program.u_curveLutTexGreen, 3);
         }
         if (hasBlueCurve) {
-            this._curveLutTexBlue = this._updateLutTexture(this._curveLutTexBlue, uniforms.curveLutBlue);
+            if (this._lastLutDataBlue !== uniforms.curveLutBlue) {
+                this._curveLutTexBlue = this._updateLutTexture(this._curveLutTexBlue, uniforms.curveLutBlue);
+                this._lastLutDataBlue = uniforms.curveLutBlue;
+            }
             gl.activeTexture(gl.TEXTURE4);
             gl.bindTexture(gl.TEXTURE_2D, this._curveLutTexBlue);
             gl.uniform1i(program.u_curveLutTexBlue, 4);
@@ -580,9 +861,38 @@ export class WebGL2Backend extends GPUBackend {
             gl.uniform1i(program.u_lut3dTexture, 6);
         }
 
+        // Gate dithering: Only enabled when adjustments are active on final canvas/display target
+        const hasAnyAdjustment = Boolean(
+            (uniforms.exposure && uniforms.exposure !== 0) ||
+            (uniforms.contrast && uniforms.contrast !== 0) ||
+            (uniforms.highlights && uniforms.highlights !== 0) ||
+            (uniforms.shadows && uniforms.shadows !== 0) ||
+            (uniforms.whites && uniforms.whites !== 0) ||
+            (uniforms.blacks && uniforms.blacks !== 0) ||
+            (uniforms.temperature && uniforms.temperature !== 0) ||
+            (uniforms.tint && uniforms.tint !== 0) ||
+            (uniforms.vibrance && uniforms.vibrance !== 0) ||
+            (uniforms.saturation && uniforms.saturation !== 0) ||
+            (uniforms.clarity && uniforms.clarity !== 0) ||
+            (uniforms.structure && uniforms.structure !== 0) ||
+            (uniforms.dehaze && uniforms.dehaze !== 0) ||
+            (uniforms.shadowsSat && uniforms.shadowsSat !== 0) ||
+            (uniforms.midtonesSat && uniforms.midtonesSat !== 0) ||
+            (uniforms.highlightsSat && uniforms.highlightsSat !== 0) ||
+            (uniforms.shadowsLum && uniforms.shadowsLum !== 0) ||
+            (uniforms.midtonesLum && uniforms.midtonesLum !== 0) ||
+            (uniforms.highlightsLum && uniforms.highlightsLum !== 0) ||
+            (uniforms.colorBalance && uniforms.colorBalance !== 0) ||
+            (uniforms.colorBlending !== undefined && uniforms.colorBlending !== 50) ||
+            hasHSL ||
+            hasAnyCurve ||
+            hasLut3d
+        );
+        gl.uniform1i(program.u_enableDither, (hasAnyAdjustment && !target) ? 1 : 0);
+
         // Bind main texture
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, inputTexture._internal);
+        gl.bindTexture(gl.TEXTURE_2D, rawInput);
         gl.uniform1i(program.u_texture, 0);
 
         // Vertex attributes
@@ -594,10 +904,28 @@ export class WebGL2Backend extends GPUBackend {
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
-        // Render
-        gl.bindFramebuffer(gl.FRAMEBUFFER, target?._internal || null);
+        // Render (disable alpha blending during develop pass to avoid ghosting or double-composite)
+        gl.disable(gl.BLEND);
+        this._lastRenderFramebuffer = target?._internal || null;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._lastRenderFramebuffer);
         gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.enable(gl.BLEND);
+    }
+
+    /**
+     * Invalidate cached base/clarity multi-scale textures
+     */
+    invalidateCache() {
+        this._cachedBaseValid = false;
+        this._cachedBaseInput = null;
+        this._cachedBaseVersion = 0;
+        this._lastLutDataRgb = null;
+        this._lastLutDataRed = null;
+        this._lastLutDataGreen = null;
+        this._lastLutDataBlue = null;
+        this._lastWbTemp = null;
+        this._lastWbTint = null;
     }
 
     /**
@@ -702,11 +1030,11 @@ export class WebGL2Backend extends GPUBackend {
 
         // Exposure clipping warning uniforms
         if (clippingOpts && clippingOpts.show) {
-            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 1);
-            gl.uniform1i(gl.getUniformLocation(program, 'u_clipShadows'), clippingOpts.shadows ? 1 : 0);
-            gl.uniform1i(gl.getUniformLocation(program, 'u_clipHighlights'), clippingOpts.highlights ? 1 : 0);
+            gl.uniform1i(program.u_showClipping, 1);
+            gl.uniform1i(program.u_clipShadows, clippingOpts.shadows ? 1 : 0);
+            gl.uniform1i(program.u_clipHighlights, clippingOpts.highlights ? 1 : 0);
         } else {
-            gl.uniform1i(gl.getUniformLocation(program, 'u_showClipping'), 0);
+            gl.uniform1i(program.u_showClipping, 0);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
@@ -717,17 +1045,68 @@ export class WebGL2Backend extends GPUBackend {
         gl.enableVertexAttribArray(program.a_texCoord);
         gl.vertexAttribPointer(program.a_texCoord, 2, gl.FLOAT, false, 0, 0);
 
+        gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, target?._internal || null);
         gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.enable(gl.BLEND);
     }
 
     /**
-     * Read pixels
+     * Get downsampled histogram pixel data for ultra-fast (sub-millisecond) histogram calculation
+     * @param {number} maxDimension - Target long-edge dimension (default 256px)
+     * @returns {{ data: Uint8Array, count: number, width: number, height: number }|null}
      */
-    readPixels() {
+    getHistogramData(maxDimension = 256) {
         const gl = this.gl;
-        const pixels = new Uint8Array(this.width * this.height * 4);
+        if (!gl || !this.width || !this.height) return null;
+
+        const maxDim = Math.max(this.width, this.height);
+        const scale = Math.min(1.0, maxDimension / maxDim);
+        const histW = Math.max(32, Math.round(this.width * scale));
+        const histH = Math.max(32, Math.round(this.height * scale));
+
+        // Manage small histogram FBO
+        if (!this._histFbo || this._histFbo.texture.width !== histW || this._histFbo.texture.height !== histH) {
+            if (this._histFbo) this.deleteFramebuffer(this._histFbo);
+            this._histFbo = this.createFramebuffer(histW, histH, false);
+            this._histPixelBuf = new Uint8Array(histW * histH * 4);
+        }
+
+        try {
+            const srcFb = this._lastRenderFramebuffer || null;
+            gl.bindFramebuffer(gl.READ_FRAMEBUFFER, srcFb);
+            gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this._histFbo._internal);
+            gl.blitFramebuffer(
+                0, 0, this.width, this.height,
+                0, 0, histW, histH,
+                gl.COLOR_BUFFER_BIT, gl.LINEAR
+            );
+
+            // Read the tiny buffer into the pre-allocated reusable buffer
+            gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this._histFbo._internal);
+            gl.readPixels(0, 0, histW, histH, gl.RGBA, gl.UNSIGNED_BYTE, this._histPixelBuf);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, srcFb);
+
+            return { data: this._histPixelBuf, count: histW * histH, width: histW, height: histH };
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Read pixels (with optional pre-allocated buffer reuse)
+     */
+    readPixels(targetBuffer = null) {
+        const gl = this.gl;
+        const totalBytes = this.width * this.height * 4;
+        if (!targetBuffer) {
+            if (!this._readPixelsBuffer || this._readPixelsBuffer.length !== totalBytes) {
+                this._readPixelsBuffer = new Uint8Array(totalBytes);
+            }
+        }
+        const pixels = targetBuffer || this._readPixelsBuffer;
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
         gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
         return pixels;
     }
@@ -748,10 +1127,29 @@ export class WebGL2Backend extends GPUBackend {
     }
 
     /**
+     * Set canvas and viewport dimensions
+     */
+    setSize(width, height) {
+        if (this.width !== width || this.height !== height) {
+            this.invalidateCache();
+            if (this._histFbo) {
+                this.deleteFramebuffer(this._histFbo);
+                this._histFbo = null;
+            }
+            this._histPixelBuf = null;
+            this._readPixelsBuffer = null;
+        }
+        super.setSize(width, height);
+    }
+
+    /**
      * Delete texture
      */
     deleteTexture(texture) {
         if (texture?._internal) {
+            if (this._cachedBaseInput === texture._internal) {
+                this.invalidateCache();
+            }
             this.gl.deleteTexture(texture._internal);
         }
     }
@@ -776,6 +1174,20 @@ export class WebGL2Backend extends GPUBackend {
             if (this.positionBuffer) gl.deleteBuffer(this.positionBuffer);
             if (this.texCoordBuffer) gl.deleteBuffer(this.texCoordBuffer);
             if (this.texCoordBufferFBO) gl.deleteBuffer(this.texCoordBufferFBO);
+            this.deleteFramebuffer(this.blurFbo1);
+            this.deleteFramebuffer(this.blurFbo2);
+            this.deleteFramebuffer(this.baseFbo1);
+            this.deleteFramebuffer(this.baseFbo2);
+            this.deleteFramebuffer(this.clarityFbo1);
+            this.deleteFramebuffer(this.clarityFbo2);
+            this.blurFbo1 = null;
+            this.blurFbo2 = null;
+            this.baseFbo1 = null;
+            this.baseFbo2 = null;
+            this.clarityFbo1 = null;
+            this.clarityFbo2 = null;
+            this._cachedBaseInput = null;
+            this._cachedBaseValid = false;
         }
         this.programs.clear();
         this.isReady = false;

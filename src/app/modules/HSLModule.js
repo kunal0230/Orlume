@@ -166,28 +166,33 @@ export class HSLModule {
                 valueDisplay.textContent = value > 0 ? `+${value}` : value;
             }
 
-            // Update GPU parameter
-            this.gpu.setParam(paramName, value);
+            // Update GPU parameter (RAF coalesced)
+            this.gpu.setParam(paramName, value, false);
 
             // Update local state
             this.state[paramName] = value;
 
             // Sync with editor state (Law 3)
             this.editorUI.state?.setAdjustment(paramName, value);
+
+            // Throttled histogram update
+            this.editorUI.requestHistogramUpdate?.(false);
         });
 
         // Double-click to reset
         slider.addEventListener('dblclick', () => {
             slider.value = 0;
             if (valueDisplay) valueDisplay.textContent = '0';
-            this.gpu.setParam(paramName, 0);
+            this.gpu.setParam(paramName, 0, true);
             this.state[paramName] = 0;
             this.editorUI.state?.setAdjustment(paramName, 0);
+            this.editorUI.requestHistogramUpdate?.(true);
             this.editorUI._pushHistoryDebounced?.();
         });
 
         // Push to history when slider is released
         slider.addEventListener('change', () => {
+            this.editorUI.requestHistogramUpdate?.(true);
             this.editorUI._pushHistoryDebounced?.();
         });
     }

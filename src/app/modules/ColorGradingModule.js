@@ -21,9 +21,18 @@ export class ColorGradingModule {
         container.innerHTML = '';
 
         // Create 3 wheels
-        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l), () => this.editorUI._pushHistoryDebounced());
-        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l), () => this.editorUI._pushHistoryDebounced());
-        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l), () => this.editorUI._pushHistoryDebounced());
+        this.wheels.shadows = new ColorGradingWheel(container, 'Shadows', (h, s, l) => this.updateGrade('shadows', h, s, l), () => {
+            this.editorUI.requestHistogramUpdate?.(true);
+            this.editorUI._pushHistoryDebounced();
+        });
+        this.wheels.midtones = new ColorGradingWheel(container, 'Midtones', (h, s, l) => this.updateGrade('midtones', h, s, l), () => {
+            this.editorUI.requestHistogramUpdate?.(true);
+            this.editorUI._pushHistoryDebounced();
+        });
+        this.wheels.highlights = new ColorGradingWheel(container, 'Highlights', (h, s, l) => this.updateGrade('highlights', h, s, l), () => {
+            this.editorUI.requestHistogramUpdate?.(true);
+            this.editorUI._pushHistoryDebounced();
+        });
 
         // Global Controls (Blending & Balance)
         this._createGlobalControls(container);
@@ -42,21 +51,24 @@ export class ColorGradingModule {
     }
 
     updateGrade(zone, h, s, l) {
-        // H5 FIX: Batch param updates — set directly on params, render once
+        // H5 FIX: Batch param updates — set directly on params, render via RAF coalescing
         this.gpu.params[`${zone}Hue`] = h;
         this.gpu.params[`${zone}Sat`] = s;
         this.gpu.params[`${zone}Lum`] = l;
-        this.gpu.render();
+        this.gpu.requestRender();
 
         // Update State (doesn't trigger render)
         this.state.setAdjustment(`${zone}Hue`, h);
         this.state.setAdjustment(`${zone}Sat`, s);
         this.state.setAdjustment(`${zone}Lum`, l);
+
+        this.editorUI.requestHistogramUpdate?.(false);
     }
 
     updateGlobal(param, value) {
-        this.gpu.setParam(param, value);
+        this.gpu.setParam(param, value, false);
         this.state.setAdjustment(param, value);
+        this.editorUI.requestHistogramUpdate?.(false);
     }
 
     updateUIFromState() {

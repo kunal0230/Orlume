@@ -34,7 +34,10 @@ export class ToneCurveModule {
             width: 268,  // Panel width - padding
             height: 200,
             onChange: (luts) => this._onCurveChanged(luts),
-            onInteractionEnd: () => this.editorUI._pushHistoryDebounced()
+            onInteractionEnd: () => {
+                this.editorUI.requestHistogramUpdate?.(true);
+                this.editorUI._pushHistoryDebounced();
+            }
         });
 
         // Initialize section toggle
@@ -77,11 +80,11 @@ export class ToneCurveModule {
             this.gpu.params.curveLutBlue = null;
         }
 
-        // Trigger render
-        this.gpu.render();
+        // Trigger RAF-coalesced render
+        this.gpu.requestRender();
 
-        // Update histogram
-        requestAnimationFrame(() => this.editorUI.renderHistogram?.());
+        // Throttled histogram update
+        this.editorUI.requestHistogramUpdate?.(false);
     }
 
     /**

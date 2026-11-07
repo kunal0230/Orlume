@@ -1011,6 +1011,9 @@ export class RelightingProModule {
 
                 // Switch back to develop mode
                 this.ui.setMode('develop');
+
+                // Visual toast confirmation
+                this.ui?.showToast?.('Relighting applied');
             };
             img.src = dataUrl;
             console.log('✓ v8 Relighting applied');

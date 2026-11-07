@@ -42,6 +42,17 @@ export class EditorUI {
             'density', 'exposure', 'contrast', 'highlights', 'shadows', 'clarity', 'temperature', 'tint', 'saturation'
         ];
 
+        // Smooth histogram throttling and GPU render telemetry
+        this._histThrottleTimer = null;
+        this._histPending = false;
+        if (this.gpu) {
+            this.gpu.onRender = (elapsed) => {
+                if (this.elements.perfIndicator) {
+                    this.elements.perfIndicator.textContent = `${elapsed.toFixed(1)}ms`;
+                }
+            };
+        }
+
         // Initialize undo/redo history manager
         this.history = new HistoryManager(50);
         this._historyDebounceTimer = null;
@@ -519,25 +530,25 @@ export class EditorUI {
                 valueDisplay.textContent = name === 'exposure' ? (value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)) : Math.round(value);
                 this.state.setAdjustment(name, value);
 
-                const start = performance.now();
-                this.gpu.setParam(name, value);
-                const elapsed = performance.now() - start;
-                this.elements.perfIndicator.textContent = `${elapsed.toFixed(1)}ms`;
+                // RAF-coalesced GPU parameter update (silky-smooth 60/120fps preview)
+                this.gpu.setParam(name, value, false);
 
-                requestAnimationFrame(() => this.renderHistogram());
+                // Throttled histogram update during dragging (never blocks slider interaction)
+                this.requestHistogramUpdate(false);
             });
 
-            // Push to history when slider is released
+            // Push to history & execute immediate histogram refresh when slider is released
             slider.addEventListener('change', () => {
+                this.requestHistogramUpdate(true);
                 this._pushHistoryDebounced();
             });
 
             slider.addEventListener('dblclick', () => {
                 slider.value = 0;
                 valueDisplay.textContent = name === 'exposure' ? '0.00' : '0';
-                this.gpu.setParam(name, 0);
+                this.gpu.setParam(name, 0, true);
                 this.state.setAdjustment(name, 0);
-                requestAnimationFrame(() => this.renderHistogram());
+                this.requestHistogramUpdate(true);
                 this._pushHistoryDebounced();
             });
         });
@@ -562,11 +573,12 @@ export class EditorUI {
                     valueDisplay.textContent = Math.round(value);
                 }
                 this.masks.setActiveAdjustment(name, value);
-                this.renderWithMask(false);
+                this.renderWithMask(false, false);
             });
 
             // Push to history when mask slider is released
             slider.addEventListener('change', () => {
+                this.renderWithMask(false, true);
                 this._pushHistoryDebounced();
             });
 
@@ -581,7 +593,7 @@ export class EditorUI {
                     valueDisplay.textContent = '0';
                 }
                 this.masks.setActiveAdjustment(name, defaultVal);
-                this.renderWithMask(false);
+                this.renderWithMask(false, true);
                 this._pushHistoryDebounced();
             });
         });
@@ -594,7 +606,7 @@ export class EditorUI {
                 const enabled = lumToggle.checked ? 1 : 0;
                 if (lumControls) lumControls.style.display = enabled ? 'block' : 'none';
                 this.masks.setActiveAdjustment('useLumRange', enabled);
-                this.renderWithMask(false);
+                this.renderWithMask(false, true);
                 this._pushHistoryDebounced();
             });
         }
@@ -614,10 +626,11 @@ export class EditorUI {
                 const val = parseFloat(slider.value);
                 if (valDisplay) valDisplay.textContent = `${Math.round(val)}%`;
                 this.masks.setActiveAdjustment(key, val);
-                this.renderWithMask(false);
+                this.renderWithMask(false, false);
             });
 
             slider.addEventListener('change', () => {
+                this.renderWithMask(false, true);
                 this._pushHistoryDebounced();
             });
 
@@ -625,7 +638,7 @@ export class EditorUI {
                 slider.value = def;
                 if (valDisplay) valDisplay.textContent = `${def}%`;
                 this.masks.setActiveAdjustment(key, def);
-                this.renderWithMask(false);
+                this.renderWithMask(false, true);
                 this._pushHistoryDebounced();
             });
         });
@@ -857,8 +870,10 @@ export class EditorUI {
                 this.updateBrushCursorPosition(e);
 
                 const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
-                const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const rawX = (e.clientX - rect.left) * (this.gpu.width / rect.width);
+                const rawY = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const x = Math.max(0, Math.min(this.gpu.width, rawX));
+                const y = Math.max(0, Math.min(this.gpu.height, rawY));
                 const tool = this.state.currentTool;
 
                 if (this.state.isPainting) {
@@ -1078,8 +1093,10 @@ export class EditorUI {
                 }
 
                 const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) * (this.gpu.width / rect.width);
-                const y = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const rawX = (e.clientX - rect.left) * (this.gpu.width / rect.width);
+                const rawY = (e.clientY - rect.top) * (this.gpu.height / rect.height);
+                const x = Math.max(0, Math.min(this.gpu.width, rawX));
+                const y = Math.max(0, Math.min(this.gpu.height, rawY));
                 const scale = rect.width > 0 ? (this.gpu.width / rect.width) : 1;
                 const hitThreshold = 18 * scale;
 
@@ -1796,10 +1813,15 @@ export class EditorUI {
     /**
      * Render with mask overlay
      * @param {boolean} showOverlay - Whether to show red mask overlay during painting
+     * @param {boolean} immediate - Whether to render immediately or schedule via RAF
      */
-    renderWithMask(showOverlay = false) {
+    renderWithMask(showOverlay = false, immediate = false) {
         if (!this.gpu?.backend?.isReady) return;
-        this.gpu.render(null, showOverlay);
+        if (immediate) {
+            this.gpu.render(null, showOverlay);
+        } else {
+            this.gpu.requestRender(null, showOverlay);
+        }
     }
 
     /**
@@ -1810,36 +1832,95 @@ export class EditorUI {
     }
 
     /**
-     * Render histogram
+     * Throttled histogram update request
+     * Coalesces updates during rapid slider dragging so the main thread is never blocked
+     * @param {boolean} immediate - If true, cancels pending timer and executes immediately
+     */
+    requestHistogramUpdate(immediate = false) {
+        if (!this.gpu?.inputTexture || !this.histogramCtx) return;
+
+        if (immediate) {
+            if (this._histThrottleTimer) {
+                clearTimeout(this._histThrottleTimer);
+                this._histThrottleTimer = null;
+            }
+            this._histPending = false;
+            this.renderHistogram();
+            return;
+        }
+
+        if (this._histThrottleTimer) {
+            this._histPending = true;
+            return;
+        }
+
+        this._histPending = false;
+        this._histThrottleTimer = setTimeout(() => {
+            this._histThrottleTimer = null;
+            this.renderHistogram();
+            if (this._histPending) {
+                this.requestHistogramUpdate(false);
+            }
+        }, 80);
+    }
+
+    /**
+     * Render histogram (ultra-fast sub-millisecond execution via downsampled GPU read)
      */
     renderHistogram() {
         if (!this.gpu.inputTexture || !this.histogramCtx) return;
 
         const canvas = this.elements.histogramCanvas;
         const ctx = this.histogramCtx;
-        const w = canvas.width = canvas.offsetWidth * 2;
-        const h = canvas.height = 160;
 
-        const imageData = this.gpu.toImageData();
-        const data = imageData.data;
+        // Avoid setting canvas dimensions on every frame if unchanged (prevents context reset & reflow)
+        const targetW = (canvas.offsetWidth || 256) * 2;
+        if (canvas.width !== targetW) canvas.width = targetW;
+        if (canvas.height !== 160) canvas.height = 160;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Ultra-fast sub-millisecond GPU-accelerated histogram data
+        const histData = this.gpu.getHistogramData ? this.gpu.getHistogramData() : null;
+        let data, step = 1, sampleCount = 0;
+
+        if (histData && histData.data) {
+            data = histData.data;
+            step = 1;
+        } else {
+            // Fallback: fast strided sample across full canvas pixels without row flipping
+            const fullData = this.gpu.backend?.readPixels ? this.gpu.backend.readPixels() : this.gpu.toImageData()?.data;
+            if (!fullData) return;
+            data = fullData;
+            const totalPixels = data.length / 4;
+            step = Math.max(1, Math.floor(totalPixels / 65536));
+        }
 
         const r = new Uint32Array(256);
         const g = new Uint32Array(256);
         const b = new Uint32Array(256);
         const lum = new Uint32Array(256);
 
-        for (let i = 0; i < data.length; i += 4) {
-            r[data[i]]++;
-            g[data[i + 1]]++;
-            b[data[i + 2]]++;
-            const L = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        const byteStep = step * 4;
+        for (let i = 0; i < data.length; i += byteStep) {
+            const red = data[i];
+            const grn = data[i + 1];
+            const blu = data[i + 2];
+            r[red]++;
+            g[grn]++;
+            b[blu]++;
+            const L = Math.round(0.299 * red + 0.587 * grn + 0.114 * blu);
             lum[L]++;
+            sampleCount++;
         }
+
+        if (sampleCount === 0) return;
 
         let maxVal = 0;
         for (let i = 5; i < 250; i++) {
             maxVal = Math.max(maxVal, r[i], g[i], b[i], lum[i]);
         }
+        if (maxVal === 0) maxVal = 1;
 
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, w, h);
@@ -1887,9 +1968,8 @@ export class EditorUI {
         }
 
         // Update clipping indicators (Lightroom style)
-        const totalPixels = data.length / 4;
-        const hasShadowClipping = lum[0] > (totalPixels * 0.0003);
-        const hasHighlightClipping = lum[255] > (totalPixels * 0.0003);
+        const hasShadowClipping = lum[0] > (sampleCount * 0.0003);
+        const hasHighlightClipping = lum[255] > (sampleCount * 0.0003);
 
         const btnShadows = document.getElementById('btn-clip-shadows');
         const btnHighlights = document.getElementById('btn-clip-highlights');
@@ -2372,6 +2452,66 @@ export class EditorUI {
      */
     _restoreAdjustments(snapshot) {
         this.historyModule.restoreAdjustments(snapshot);
+    }
+
+    /**
+     * Display a floating feedback toast notification
+     * @param {string} message - Notification text
+     * @param {'success'|'info'|'warning'|'error'} type - Notification style
+     * @param {number} duration - Display time in ms
+     */
+    showToast(message, type = 'success', duration = 2200) {
+        let container = document.getElementById('editor-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'editor-toast-container';
+            container.className = 'editor-toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `editor-toast toast-${type}`;
+
+        const iconMap = {
+            success: '✓',
+            info: 'ℹ',
+            warning: '⚠',
+            error: '✕'
+        };
+
+        const icon = document.createElement('span');
+        icon.className = 'editor-toast-icon';
+        icon.textContent = iconMap[type] || '✓';
+
+        const text = document.createElement('span');
+        text.className = 'editor-toast-text';
+        text.textContent = message;
+
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // Auto dismiss
+        const dismiss = () => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.remove();
+                if (container.children.length === 0) {
+                    container.remove();
+                }
+            }, 250);
+        };
+
+        const timer = setTimeout(dismiss, duration);
+        toast.addEventListener('click', () => {
+            clearTimeout(timer);
+            dismiss();
+        });
     }
 }
 

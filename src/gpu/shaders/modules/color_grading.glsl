@@ -1,83 +1,81 @@
-
 // Color Grading Module
-// Implements 3-Way Color Grading with Luminance Locking and Gaussian Weights
-
-// Helper: Set Luminance of color to target (Luma Lock)
-// Preserves the perceived brightness of the original pixel after tinting
-vec3 setLuminance(vec3 color, float targetLuma) {
-    float currentLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    vec3 diff = color - currentLuma;
-    return targetLuma + diff;
-}
+// Professional 3-Way Color Grading in Perceptual OKLab Color Space
+// Modulates scene chromaticity and lightness with tone-partitioned weights and deep black pinning.
 
 vec3 applyColorGrading(
-    vec3 color,
-    vec2 u_shadows,   // Hue (0..1), Sat (0..1)
-    vec2 u_midtones,
-    vec2 u_highlights,
-    float u_balance,  // -1 to 1
-    float u_blending, // 0 to 1
+    vec3 linearColor,
+    vec2 u_shadows,          // x = Hue (0..1), y = Sat (0..1)
+    vec2 u_midtones,         // x = Hue (0..1), y = Sat (0..1)
+    vec2 u_highlights,       // x = Hue (0..1), y = Sat (0..1)
+    vec2 u_shadowsChromaDir, // Precomputed normalized OKLab (a, b) direction
+    vec2 u_midtonesChromaDir,
+    vec2 u_highlightsChromaDir,
+    float u_balance,         // -1.0 to +1.0
+    float u_blending,        // 0.0 to 1.0
     float u_shadowsLum,
     float u_midtonesLum,
     float u_highlightsLum
 ) {
-    // 0. Calculate original luminance
-    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    // 1. Convert Linear RGB to Perceptual OKLab
+    vec3 lab = linearRGBtoOKLab(max(linearColor, vec3(0.0)));
+    float L = lab.x;
     
-    // 1. Calculate Zone Weights with Smooth Falloff
-    // Balance [-1, 1] shifts the midpoint
-    float mid = 0.5 + u_balance * 0.25; 
+    // 2. Calculate Zone Boundaries and Weights
+    // Balance [-1, 1] shifts the tonal midpoint
+    float mid = clamp(0.5 + u_balance * 0.25, 0.15, 0.85);
     
-    // Blending [0, 1] controls the width / overlap
+    // Blending [0, 1] controls transition smoothness / overlap
     float blend = 0.2 + u_blending * 0.3;
     
-    // Shadows: Low pass filter. 1.0 at 0, falling off toward mid + blend * 0.5.
-    float shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, luma);
+    // Shadows: Low pass falloff toward mid + blend * 0.5
+    float shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, L);
     
-    // Highlights: High pass filter. 0.0 below mid - blend * 0.5, rising to 1.0 at 1.0.
-    float highlightWeight = smoothstep(mid - blend * 0.5, 1.0, luma);
+    // Highlights: High pass rise from mid - blend * 0.5 to 1.0
+    float highlightWeight = smoothstep(mid - blend * 0.5, 1.0, L);
     
     // Midtones: Gaussian bell curve centered at mid
-    float midDist = (luma - mid) / max(0.15, blend);
+    float midDist = (L - mid) / max(0.12, blend);
     float midtoneWeight = exp(-midDist * midDist * 2.0);
     
-    // 2. Prepare Tints
-    // hslToRgb expects hue in degrees (0-360)
-    vec3 shadowTint = hslToRgb(vec3(u_shadows.x * 360.0, 1.0, 0.5));
-    vec3 midtoneTint = hslToRgb(vec3(u_midtones.x * 360.0, 1.0, 0.5));
-    vec3 highlightTint = hslToRgb(vec3(u_highlights.x * 360.0, 1.0, 0.5));
+    // Normalize zone weights so they sum to <= 1.0 (prevents over-saturating midtones with 3 tints)
+    float totalW = shadowWeight + midtoneWeight + highlightWeight;
+    if (totalW > 1.0) {
+        shadowWeight /= totalW;
+        midtoneWeight /= totalW;
+        highlightWeight /= totalW;
+    }
     
-    // 3. Apply Tinting
-    vec3 tintVector = vec3(0.0);
+    // 3. True Photographic Tonal Tapering
+    // Deep Black Pinning: Anchors code values 0-25 (L < 0.26 in OKLab) to prevent milky shadow haze
+    float shadowTaper = smoothstep(0.04, 0.26, L);
     
-    // Shadow tint
+    // Specular Highlight Roll-off: Sun reflections and pure specular glints remain uncolored
+    float highlightTaper = 1.0 - smoothstep(0.85, 1.0, L) * 0.85;
+    
+    // 4. Modulate Chromaticity Vector (a, b)
+    // Professional color wheel intensity: up to ~0.09 OKLab chroma units at peak (matches Lightroom/Photoshop)
+    const float MAX_CHROMA_SCALE = 0.35;
+    vec2 deltaChroma = vec2(0.0);
+    
     if (u_shadows.y > 0.0) {
-        tintVector += (shadowTint - 0.5) * 2.0 * shadowWeight * u_shadows.y;
+        deltaChroma += u_shadowsChromaDir * (u_shadows.y * MAX_CHROMA_SCALE * shadowWeight * shadowTaper);
     }
-    
-    // Midtone tint
     if (u_midtones.y > 0.0) {
-        tintVector += (midtoneTint - 0.5) * 2.0 * midtoneWeight * u_midtones.y;
+        deltaChroma += u_midtonesChromaDir * (u_midtones.y * (MAX_CHROMA_SCALE * 0.70) * midtoneWeight);
     }
-    
-    // Highlight tint
     if (u_highlights.y > 0.0) {
-        tintVector += (highlightTint - 0.5) * 2.0 * highlightWeight * u_highlights.y;
+        deltaChroma += u_highlightsChromaDir * (u_highlights.y * MAX_CHROMA_SCALE * highlightWeight * highlightTaper);
     }
     
-    // Apply tint vector efficiently
-    vec3 graded = color + tintVector * 0.5;
+    lab.yz += deltaChroma;
     
-    // 4. LUMINANCE LOCK
-    // Crucially restore original luminance to prevent exposure shifts from tinting
-    graded = setLuminance(graded, luma);
+    // 5. Apply Per-Zone Luminance Adjustments (Modulating Perceptual Lightness L)
+    float lumShift = (u_shadowsLum * shadowWeight * shadowTaper +
+                      u_midtonesLum * midtoneWeight +
+                      u_highlightsLum * highlightWeight * highlightTaper) * 0.25;
+    lab.x = clamp(L + lumShift, 0.0, 1.0);
     
-    // 5. Apply Per-Zone Luminance Adjustments
-    // Now that tint luminance is locked, deliberate luminance shifts take effect
-    float lumShift = u_shadowsLum * shadowWeight * 0.3
-                   + u_midtonesLum * midtoneWeight * 0.3
-                   + u_highlightsLum * highlightWeight * 0.3;
-    graded += lumShift;
-    
+    // 6. Reconstruct Linear RGB
+    vec3 graded = OKLabToLinearRGB(lab);
     return max(graded, vec3(0.0));
 }

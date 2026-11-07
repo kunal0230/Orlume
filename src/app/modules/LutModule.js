@@ -109,13 +109,15 @@ export class LutModule {
 
                 if (this.gpu) {
                     this.gpu.params.lut3dIntensity = intensity;
-                    this.gpu.render();
+                    this.gpu.requestRender();
                 }
 
                 this.state?.setAdjustment('lutIntensity', intensity);
+                this.editorUI.requestHistogramUpdate?.(false);
             });
 
             this.sliderIntensity.addEventListener('change', () => {
+                this.editorUI.requestHistogramUpdate?.(true);
                 this.editorUI._pushHistoryDebounced?.();
             });
         }

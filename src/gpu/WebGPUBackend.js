@@ -248,7 +248,8 @@ export class WebGPUBackend extends GPUBackend {
                 showClipping: f32,
                 clipShadows: f32,
                 clipHighlights: f32,
-                _padClipping: f32,
+                _padClipping0: f32,
+                _padClipping1: f32,
                 // 3D LUT Uniforms (aligned to 16 bytes)
                 hasLut3d: f32,
                 lut3dIntensity: f32,
@@ -276,6 +277,7 @@ export class WebGPUBackend extends GPUBackend {
 
             // Color center hues for HSL (in degrees)
             const COLOR_HUES = array<f32, 8>(0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
+            const COLOR_WIDTHS = array<f32, 8>(35.0, 35.0, 50.0, 60.0, 55.0, 45.0, 45.0, 40.0);
 
             // sRGB to Linear
             fn sRGBtoLinear(c: f32) -> f32 {
@@ -372,7 +374,8 @@ export class WebGPUBackend extends GPUBackend {
                 let centerHue = COLOR_HUES[colorIndex];
                 var dist = abs(hue - centerHue);
                 if (dist > 180.0) { dist = 360.0 - dist; }
-                return smoothstep(30.0, 0.0, dist);
+                let width = COLOR_WIDTHS[colorIndex];
+                return smoothstep(width, 0.0, dist);
             }
 
             // Get HSL hue value for a color index (0-7)
@@ -409,17 +412,21 @@ export class WebGPUBackend extends GPUBackend {
                 return u.hslLum1.w;
             }
 
-            // Apply HSL adjustments
-            fn applyHSLAdjustments(hsl: vec3f) -> vec3f {
+            // Apply HSL adjustments preserving angular falloff, near-neutral and shadow noise protection
+            fn applyHSLAdjustments(hsl: vec3f, maxLinearChan: f32) -> vec3f {
                 var hue = hsl.x;
                 let sat = hsl.y;
                 var lum = hsl.z;
                 
-                if (sat < 0.05) { return hsl; }
+                // Smooth fade for near-neutral and near-black pixels to prevent noise amplification
+                let satFade = smoothstep(0.01, 0.06, sat);
+                let blackFade = smoothstep(0.015, 0.08, maxLinearChan);
+                let totalFade = satFade * blackFade;
+                if (totalFade <= 0.0) { return hsl; }
                 
                 var totalHueShift: f32 = 0.0;
-                var satMultiplier: f32 = 1.0;
-                var lumShift: f32 = 0.0;
+                var totalSatShift: f32 = 0.0;
+                var totalLumShift: f32 = 0.0;
                 var totalWeight: f32 = 0.0;
                 
                 for (var i: i32 = 0; i < 8; i = i + 1) {
@@ -427,21 +434,25 @@ export class WebGPUBackend extends GPUBackend {
                     if (weight > 0.001) {
                         totalWeight = totalWeight + weight;
                         totalHueShift = totalHueShift + getHslHue(i) * 0.6 * weight;
-                        satMultiplier = satMultiplier + (getHslSat(i) / 100.0) * weight;
-                        lumShift = lumShift + (getHslLum(i) / 100.0) * 0.5 * weight;
+                        totalSatShift = totalSatShift + (getHslSat(i) / 100.0) * weight;
+                        totalLumShift = totalLumShift + (getHslLum(i) / 100.0) * 0.4 * weight;
                     }
                 }
                 
                 if (totalWeight > 0.001) {
-                    totalHueShift = totalHueShift / totalWeight;
-                    var newHue = hue + totalHueShift;
+                    let normFactor = max(1.0, totalWeight);
+                    let avgHueShift = (totalHueShift / normFactor) * totalFade;
+                    let avgSatShift = (totalSatShift / normFactor) * totalFade;
+                    let avgLumShift = (totalLumShift / normFactor) * totalFade;
+                    
+                    var newHue = hue + avgHueShift;
                     if (newHue < 0.0) { newHue = newHue + 360.0; }
                     if (newHue >= 360.0) { newHue = newHue - 360.0; }
                     
                     return vec3f(
                         newHue,
-                        clamp(sat * satMultiplier, 0.0, 1.0),
-                        clamp(lum + lumShift, 0.0, 1.0)
+                        clamp(sat * max(0.0, 1.0 + avgSatShift), 0.0, 1.0),
+                        clamp(lum + avgLumShift, 0.0, 1.0)
                     );
                 }
                 
@@ -501,6 +512,16 @@ export class WebGPUBackend extends GPUBackend {
                 );
             }
 
+            fn gamutCompressWGSL(c: vec3f) -> vec3f {
+                let Y = max(0.0, luminance(c));
+                let mx = max(c.r, max(c.g, c.b));
+                let mn = min(c.r, min(c.g, c.b));
+                var k: f32 = 1.0;
+                if (mx > 1.0 && mx > Y) { k = min(k, (1.0 - Y) / (mx - Y)); }
+                if (mn < 0.0 && Y > mn) { k = min(k, Y / (Y - mn)); }
+                return Y + (c - Y) * max(0.0, k);
+            }
+
             fn sampleCurve(tex: texture_2d<f32>, x: f32) -> f32 {
                 let pos = clamp(x, 0.0, 1.0) * 255.0;
                 let index = u32(floor(pos));
@@ -539,12 +560,6 @@ export class WebGPUBackend extends GPUBackend {
                 );
             }
 
-            fn setGradingLuminanceWGSL(color: vec3f, targetLuma: f32) -> vec3f {
-                let currentLuma = dot(color, vec3f(0.2126, 0.7152, 0.0722));
-                let diff = color - currentLuma;
-                return targetLuma + diff;
-            }
-
             fn applyColorGradingWGSL(
                 color: vec3f,
                 shadows: vec2f,
@@ -556,38 +571,67 @@ export class WebGPUBackend extends GPUBackend {
                 midtonesLum: f32,
                 highlightsLum: f32
             ) -> vec3f {
-                let luma = dot(color, vec3f(0.2126, 0.7152, 0.0722));
-                let mid = 0.5 + balance * 0.25;
+                var lab = linearRGBtoOKLab(max(color, vec3f(0.0)));
+                let L = lab.x;
+
+                let mid = clamp(0.5 + balance * 0.25, 0.15, 0.85);
                 let blend = 0.2 + blending * 0.3;
 
-                let shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, luma);
-                let highlightWeight = smoothstep(mid - blend * 0.5, 1.0, luma);
-                let midDist = (luma - mid) / max(0.15, blend);
+                let shadowWeight = 1.0 - smoothstep(0.0, mid + blend * 0.5, L);
+                let highlightWeight = smoothstep(mid - blend * 0.5, 1.0, L);
+                let midDist = (L - mid) / max(0.12, blend);
                 let midtoneWeight = exp(-midDist * midDist * 2.0);
 
-                let shadowTint = hslToRgbNormWGSL(shadows.x, 1.0, 0.5);
-                let midtoneTint = hslToRgbNormWGSL(midtones.x, 1.0, 0.5);
-                let highlightTint = hslToRgbNormWGSL(highlights.x, 1.0, 0.5);
+                let totalW = shadowWeight + midtoneWeight + highlightWeight;
+                var sw = shadowWeight;
+                var mw = midtoneWeight;
+                var hw = highlightWeight;
+                if (totalW > 1.0) {
+                    sw = sw / totalW;
+                    mw = mw / totalW;
+                    hw = hw / totalW;
+                }
 
-                var tintVector = vec3f(0.0);
+                let shadowTaper = smoothstep(0.04, 0.26, L);
+                let highlightTaper = 1.0 - smoothstep(0.85, 1.0, L) * 0.85;
+
+                let maxChromaScale: f32 = 0.35;
+                var deltaChroma = vec2f(0.0);
+
                 if (shadows.y > 0.0) {
-                    tintVector = tintVector + (shadowTint - 0.5) * 2.0 * shadowWeight * shadows.y;
+                    let ang = shadows.x * 6.283185307;
+                    let chromaDir = vec2f(cos(ang), sin(ang));
+                    deltaChroma += chromaDir * (shadows.y * maxChromaScale * sw * shadowTaper);
                 }
+
                 if (midtones.y > 0.0) {
-                    tintVector = tintVector + (midtoneTint - 0.5) * 2.0 * midtoneWeight * midtones.y;
+                    let ang = midtones.x * 6.283185307;
+                    let chromaDir = vec2f(cos(ang), sin(ang));
+                    deltaChroma += chromaDir * (midtones.y * (maxChromaScale * 0.70) * mw);
                 }
+
                 if (highlights.y > 0.0) {
-                    tintVector = tintVector + (highlightTint - 0.5) * 2.0 * highlightWeight * highlights.y;
+                    let ang = highlights.x * 6.283185307;
+                    let chromaDir = vec2f(cos(ang), sin(ang));
+                    deltaChroma += chromaDir * (highlights.y * maxChromaScale * hw * highlightTaper);
                 }
 
-                var graded = color + tintVector * 0.5;
-                graded = setGradingLuminanceWGSL(graded, luma);
+                lab.y += deltaChroma.x;
+                lab.z += deltaChroma.y;
 
-                let lumShift = shadowsLum * shadowWeight * 0.3
-                             + midtonesLum * midtoneWeight * 0.3
-                             + highlightsLum * highlightWeight * 0.3;
-                graded = graded + lumShift;
+                let curChroma = length(lab.yz);
+                if (curChroma > 0.38) {
+                    let scale = 0.38 / curChroma;
+                    lab.y *= scale;
+                    lab.z *= scale;
+                }
 
+                let lumShift = (shadowsLum * sw * shadowTaper +
+                                midtonesLum * mw +
+                                highlightsLum * hw * highlightTaper) * 0.25;
+                lab.x = clamp(L + lumShift, 0.0, 1.0);
+
+                let graded = OKLabToLinearRGB(lab);
                 return max(graded, vec3f(0.0));
             }
 
@@ -596,21 +640,6 @@ export class WebGPUBackend extends GPUBackend {
                 let pixel = textureSample(tex, texSampler, texCoord);
                 var srgb = pixel.rgb;
                 
-                // === HSL PER-CHANNEL ADJUSTMENTS ===
-                var hasHSL = false;
-                for (var i: i32 = 0; i < 8; i = i + 1) {
-                    if (getHslHue(i) != 0.0 || getHslSat(i) != 0.0 || getHslLum(i) != 0.0) {
-                        hasHSL = true;
-                        break;
-                    }
-                }
-                
-                if (hasHSL) {
-                    var hsl = rgbToHsl(srgb);
-                    hsl = applyHSLAdjustments(hsl);
-                    srgb = hslToRgb(hsl);
-                }
-                
                 // Convert to linear
                 var linear = vec3f(
                     sRGBtoLinear(srgb.r),
@@ -618,116 +647,152 @@ export class WebGPUBackend extends GPUBackend {
                     sRGBtoLinear(srgb.b)
                 );
                 
-                var L = luminance(linear);
-                var midW = midtoneWeight(L);
-                var shadowW = shadowWeight(L);
-                var highlightW = highlightWeight(L);
-                
-                // === EXPOSURE ===
+                // === WHITE BALANCE (Chromatic Adaptation) ===
+                if (u.temperature != 0.0 || u.tint != 0.0) {
+                    linear.r *= 1.0 + u.temperature * 0.25 + u.tint * 0.08;
+                    linear.g *= 1.0 - u.tint * 0.15;
+                    linear.b *= 1.0 - u.temperature * 0.25 + u.tint * 0.08;
+                    linear = max(linear, vec3f(0.0));
+                }
+
+                // === EXPOSURE (Photometric Gain) ===
                 if (u.exposure != 0.0) {
                     let gain = pow(2.0, u.exposure);
-                    let effectiveGain = 1.0 + (gain - 1.0) * (0.5 + midW * 0.5);
-                    linear *= effectiveGain;
-                    
-                    if (u.exposure > 0.0) {
-                        let newL = luminance(linear);
-                        if (newL > 0.7) {
-                            let protectedL = softShoulder(newL, 0.7);
-                            linear *= protectedL / max(newL, 0.001);
-                        }
-                    }
+                    linear *= gain;
                 }
                 
-                L = luminance(linear);
-                midW = midtoneWeight(L);
-                shadowW = shadowWeight(L);
-                highlightW = highlightWeight(L);
-                
-                // === CONTRAST ===
-                if (u.contrast != 0.0) {
-                    var k: f32;
-                    if (u.contrast > 0.0) {
-                        k = pow(abs(u.contrast), 0.7) * 3.5;
-                    } else {
-                        k = -pow(abs(u.contrast), 0.7) * 0.6;
-                    }
-                    
-                    let effectiveK = k * (0.3 + midW * 0.7);
-                    let delta = L - 0.18;
-                    var newL: f32;
-                    
-                    if (u.contrast > 0.0) {
-                        let compressed = delta / (1.0 + abs(delta) * abs(effectiveK));
-                        newL = 0.18 + compressed * (1.0 + abs(effectiveK) * 0.5);
-                        
-                        if (shadowW > 0.3) {
-                            newL = L + (newL - L) * (1.0 - shadowW * 0.5);
-                        }
-                        if (highlightW > 0.3) {
-                            newL = L + (newL - L) * (1.0 - highlightW * 0.4);
-                        }
-                    } else {
-                        newL = L + (0.18 - L) * abs(effectiveK);
-                    }
-                    
-                    linear *= max(newL, 0.0) / max(L, 0.001);
-                }
-                
-                // === HIGHLIGHTS / SHADOWS ===
-                L = luminance(linear);
+                // === HIGHLIGHTS & SHADOWS (Ratio-Preserving Tone Mapping) ===
+                var luma = luminance(linear);
                 if (u.highlights != 0.0) {
-                    let hw = highlightWeight(L);
-                    let adjustment = 1.0 + u.highlights * hw * 0.5;
-                    linear *= adjustment;
+                    var targetH = luma;
+                    if (u.highlights < 0.0) {
+                        let strength = -u.highlights * 1.8;
+                        let threshold: f32 = 0.35;
+                        let overshoot = max(0.0, luma - threshold);
+                        let compressed = threshold + overshoot / (1.0 + strength * overshoot);
+                        targetH = mix(luma, compressed, smoothstep(threshold, 1.0, luma));
+                    } else {
+                        let strength = u.highlights * 0.4;
+                        targetH = luma + strength * smoothstep(0.4, 1.0, luma) * (1.0 - smoothstep(1.2, 2.0, luma) * 0.5);
+                    }
+                    linear *= (targetH / max(0.0001, luma));
                 }
                 
-                L = luminance(linear);
+                luma = luminance(linear);
                 if (u.shadows != 0.0) {
-                    let sw = shadowWeight(L);
-                    let adjustment = 1.0 + u.shadows * sw * 0.5;
-                    linear *= adjustment;
+                    let mask = 1.0 - smoothstep(0.0, 0.45, luma);
+                    var shadowMult: f32;
+                    if (u.shadows > 0.0) {
+                        shadowMult = 1.0 + u.shadows * 0.85 * mask;
+                    } else {
+                        shadowMult = 1.0 + u.shadows * 0.55 * mask;
+                    }
+                    linear *= shadowMult;
                 }
                 
-                // === WHITES ===
-                L = luminance(linear);
+                // === WHITES & BLACKS (Endpoint Toe & Shoulder Control) ===
+                luma = luminance(linear);
                 if (u.whites != 0.0) {
-                    let whiteW = smoothstep(0.85, 1.0, L);
-                    let adjustment = 1.0 + u.whites * whiteW * 0.4;
-                    linear *= adjustment;
+                    let whiteMask = smoothstep(0.6, 1.0, luma);
+                    var whiteMult: f32;
+                    if (u.whites > 0.0) {
+                        whiteMult = 1.0 + u.whites * 0.25 * whiteMask;
+                    } else {
+                        whiteMult = 1.0 + u.whites * 0.20 * whiteMask;
+                    }
+                    linear *= whiteMult;
                 }
                 
-                // === BLACKS ===
-                L = luminance(linear);
                 if (u.blacks != 0.0) {
-                    let blackW = smoothstep(0.15, 0.0, L);
-                    let adjustment = 1.0 + u.blacks * blackW * 0.4;
-                    linear *= adjustment;
+                    let blackMask = 1.0 - smoothstep(0.0, 0.22, luma);
+                    if (u.blacks > 0.0) {
+                        linear += vec3f(u.blacks * 0.04 * blackMask * blackMask);
+                    } else {
+                        linear *= (1.0 + u.blacks * 0.50 * blackMask);
+                    }
+                    linear = max(vec3f(0.0), linear);
+                }
+
+                // === CONTRAST (Ratio-Preserving Filmic S-Curve with Hermite Quintic) ===
+                if (u.contrast != 0.0) {
+                    let lumaC = luminance(linear);
+                    let pLuma = pow(max(0.0001, lumaC), 1.0 / 2.2);
+                    var sLuma: f32;
+                    if (u.contrast >= 0.0) {
+                        let cExp = exp(u.contrast * 0.85);
+                        let x = clamp(pLuma, 0.0001, 0.9999);
+                        let xc = pow(x, cExp);
+                        let xinc = pow(1.0 - x, cExp);
+                        sLuma = xc / (xc + xinc);
+                    } else {
+                        let s = exp(u.contrast * 0.85);
+                        let t = pLuma - 0.5;
+                        let t2 = t * t;
+                        sLuma = clamp(0.5 + t * (s + (1.0 - s) * t2 * (8.0 - 16.0 * t2)), 0.0, 1.0);
+                    }
+                    let outLuma = pow(sLuma, 2.2);
+                    if (u.contrast >= 0.0) {
+                        linear *= (outLuma / max(0.0001, lumaC));
+                    } else {
+                        linear += vec3f(outLuma - lumaC);
+                    }
+                }
+
+                // === HSL PER-CHANNEL ADJUSTMENTS (Evaluated post-contrast) ===
+                var hasHSL = false;
+                for (var i: i32 = 0; i < 8; i = i + 1) {
+                    if (getHslHue(i) != 0.0 || getHslSat(i) != 0.0 || getHslLum(i) != 0.0) {
+                        hasHSL = true;
+                        break;
+                    }
+                }
+                if (hasHSL) {
+                    let maxChan = max(linear.r, max(linear.g, linear.b));
+                    let hdrScale = max(1.0, maxChan);
+                    let normLinear = linear / hdrScale;
+                    var gammaRgb = vec3f(
+                        linearToSRGB(clamp(normLinear.r, 0.0, 1.0)),
+                        linearToSRGB(clamp(normLinear.g, 0.0, 1.0)),
+                        linearToSRGB(clamp(normLinear.b, 0.0, 1.0))
+                    );
+                    var hsl = rgbToHsl(gammaRgb);
+                    let adjHsl = applyHSLAdjustments(hsl, maxChan);
+                    if (adjHsl.x != hsl.x || adjHsl.y != hsl.y || adjHsl.z != hsl.z) {
+                        let adjGamma = hslToRgb(adjHsl);
+                        let adjLinear = vec3f(sRGBtoLinear(adjGamma.r), sRGBtoLinear(adjGamma.g), sRGBtoLinear(adjGamma.b));
+                        linear = adjLinear * hdrScale;
+                    }
                 }
                 
-                // === WHITE BALANCE ===
-                if (u.temperature != 0.0 || u.tint != 0.0) {
-                    linear.r *= 1.0 + u.temperature * 0.25;
-                    linear.b *= 1.0 - u.temperature * 0.25;
-                    linear.g *= 1.0 - u.tint * 0.15;
-                    linear.r *= 1.0 + u.tint * 0.08;
-                }
-                
-                // === VIBRANCE / SATURATION ===
+                // === VIBRANCE / SATURATION (Smart Skin Protection in OKLab) ===
                 if (u.vibrance != 0.0 || u.saturation != 0.0) {
                     var lab = linearRGBtoOKLab(linear);
-                    let chroma = length(lab.yz);
+                    let sat = length(lab.yz);
                     
                     if (u.vibrance != 0.0) {
-                        let boost = 1.0 + u.vibrance * (1.0 - min(1.0, chroma / 0.2)) * 0.5;
-                        lab = vec3f(lab.x, lab.y * boost, lab.z * boost);
+                        let hue = atan2(lab.z, lab.y);
+                        let hueDist = abs(hue - 0.84);
+                        let skinWeight = exp(-pow(hueDist * 1.8, 2.0));
+                        let curSatMask = 1.0 - smoothstep(0.04, 0.28, sat);
+                        let protection = 0.55 * skinWeight;
+                        let mask = curSatMask * (1.0 - protection);
+                        let vibGain = max(0.0, 1.0 + u.vibrance * 1.2 * mask);
+                        lab.y *= vibGain;
+                        lab.z *= vibGain;
                     }
                     
                     if (u.saturation != 0.0) {
-                        lab = vec3f(lab.x, lab.y * (1.0 + u.saturation), lab.z * (1.0 + u.saturation));
+                        var satGain: f32;
+                        if (u.saturation >= 0.0) {
+                            satGain = 1.0 + u.saturation * 0.75;
+                        } else {
+                            satGain = max(0.0, 1.0 + u.saturation);
+                        }
+                        lab.y *= satGain;
+                        lab.z *= satGain;
                     }
                     
-                    linear = OKLabToLinearRGB(lab);
-                    linear = max(linear, vec3f(0.0));
+                    linear = max(OKLabToLinearRGB(lab), vec3f(0.0));
                 }
                 
                 // === COLOR GRADING (3-Way) ===
@@ -751,6 +816,9 @@ export class WebGPUBackend extends GPUBackend {
                         hLum
                     );
                 }
+
+                // Gamut compression before sRGB conversion
+                linear = gamutCompressWGSL(linear);
 
                 // Convert back to sRGB
                 var finalSrgb = vec3f(
@@ -1114,7 +1182,8 @@ export class WebGPUBackend extends GPUBackend {
             (clippingOpts && clippingOpts.show) ? 1.0 : 0.0,
             (clippingOpts && clippingOpts.shadows) ? 1.0 : 0.0,
             (clippingOpts && clippingOpts.highlights) ? 1.0 : 0.0,
-            0.0, // _padClipping
+            0.0, // _padClipping0
+            0.0, // _padClipping1
             // 3D LUT (4 floats)
             (uniforms.lut3d && uniforms.lut3d.data && uniforms.lut3d.size > 0) ? 1.0 : 0.0,
             (uniforms.lut3dIntensity !== undefined ? uniforms.lut3dIntensity : 100) / 100,

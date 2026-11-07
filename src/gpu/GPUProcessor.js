@@ -105,6 +105,11 @@ export class GPUProcessor {
         this.clippingWarnings = false;
         this.clipShadows = true;
         this.clipHighlights = true;
+
+        // RAF render coalescing & performance tracking
+        this._rafPending = false;
+        this.lastRenderTime = 0;
+        this.onRender = null;
     }
 
     /**
@@ -203,6 +208,7 @@ export class GPUProcessor {
 
         // Set canvas and backend size
         this.backend.setSize(this.width, this.height);
+        this.backend.invalidateCache?.();
 
         // === SAFE HANDOFF PATTERN ===
 
@@ -232,12 +238,36 @@ export class GPUProcessor {
 
     /**
      * Update adjustment parameter
+     * @param {string} name - Parameter name
+     * @param {number} value - Parameter value
+     * @param {boolean} immediate - If true, renders immediately instead of scheduling via RAF
      */
-    setParam(name, value) {
+    setParam(name, value, immediate = false) {
         if (name in this.params) {
             this.params[name] = value;
-            this.render();
+            if (immediate) {
+                this.render();
+            } else {
+                this.requestRender();
+            }
         }
+    }
+
+    /**
+     * Request an animation frame render with coalescing
+     * Guarantees at most 1 GPU draw per display refresh frame during rapid slider/mouse moves
+     */
+    requestRender(targetFBO = null, showOverlay = false) {
+        if (targetFBO) {
+            this.render(targetFBO, showOverlay);
+            return;
+        }
+        if (this._rafPending) return;
+        this._rafPending = true;
+        requestAnimationFrame(() => {
+            this._rafPending = false;
+            this.render(null, showOverlay);
+        });
     }
 
     /**
@@ -300,7 +330,7 @@ export class GPUProcessor {
             if (this._processedFBO) {
                 this.backend.deleteFramebuffer?.(this._processedFBO);
             }
-            this._processedFBO = this.backend.createFramebuffer(this.width, this.height);
+            this._processedFBO = this.backend.createFramebuffer(this.width, this.height, true);
         }
 
         // Render to texture
@@ -334,6 +364,8 @@ export class GPUProcessor {
             highlights: Boolean(this.clipHighlights)
         } : null;
 
+        const startTime = performance.now();
+
         if (hasMasks || (wantsOverlay && this.maskSystem?.getActiveLayer?.())) {
             const baseTexture = this.renderToTexture();
             if (baseTexture) {
@@ -350,11 +382,26 @@ export class GPUProcessor {
                 if (wantsOverlay && typeof this.maskSystem?.renderMaskOverlay === 'function') {
                     this.maskSystem.renderMaskOverlay();
                 }
+                this.lastRenderTime = performance.now() - startTime;
+                this.onRender?.(this.lastRenderTime);
                 return;
             }
         }
 
         this.backend.renderDevelop(this.inputTexture, this.params, targetFBO, clippingOpts);
+        this.lastRenderTime = performance.now() - startTime;
+        this.onRender?.(this.lastRenderTime);
+    }
+
+    /**
+     * Get downsampled histogram pixel data from GPU backend (sub-millisecond)
+     */
+    getHistogramData(maxDimension = 256) {
+        if (!this.inputTexture || !this.backend?.isReady) return null;
+        if (typeof this.backend.getHistogramData === 'function') {
+            return this.backend.getHistogramData(maxDimension);
+        }
+        return null;
     }
 
     /**

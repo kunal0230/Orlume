@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
-import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, readdirSync, createReadStream } from 'fs';
 
 /**
  * Plugin to copy ONNX Runtime WASM files from @huggingface/transformers
@@ -45,6 +45,22 @@ const pageRoutesPlugin = () => ({
   name: 'page-routes',
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
+      const url = req.url.split('?')[0]; // Remove query string
+
+      // Serve ONNX Runtime WASM/MJS assets directly to prevent Vite dev server
+      // from intercepting dynamic imports of files in public/assets
+      if (url.startsWith('/assets/ort-wasm')) {
+        const filePath = resolve(__dirname, 'public', url.slice(1));
+        if (existsSync(filePath)) {
+          const ext = filePath.endsWith('.wasm') ? 'application/wasm' : 'text/javascript';
+          res.setHeader('Content-Type', ext);
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+          res.setHeader('Cache-Control', 'no-cache');
+          return createReadStream(filePath).pipe(res);
+        }
+      }
+
       const pageRoutes = {
         '/test': '/test/index.html',
         '/docs': '/pages/docs.html',
@@ -59,7 +75,6 @@ const pageRoutesPlugin = () => ({
         '/terms': '/pages/terms.html'
       };
 
-      const url = req.url.split('?')[0]; // Remove query string
       if (pageRoutes[url]) {
         req.url = pageRoutes[url];
       }

@@ -256,7 +256,7 @@ export class MaskSystem {
                 
                 // Luminance range qualification (Lightroom style)
                 if (u_useLumRange > 0.5) {
-                    float baseLum = dot(base.rgb, vec3(0.299, 0.587, 0.114));
+                    float baseLum = dot(base.rgb, vec3(0.2126, 0.7152, 0.0722));
                     float feather = max(0.005, u_lumFeather);
                     float lowWeight = smoothstep(u_lumMin - feather, u_lumMin, baseLum);
                     float highWeight = 1.0 - smoothstep(u_lumMax, u_lumMax + feather, baseLum);
@@ -268,41 +268,55 @@ export class MaskSystem {
                     return;
                 }
                 
-                // Linear exposure conversion (calibrated to match global develop)
+                // Linear photometric conversion
                 vec3 lin = pow(max(base.rgb, vec3(0.0)), vec3(2.2));
+                
+                // White balance (Temperature & Tint) via chromatic adaptation
+                if (u_temperature != 0.0 || u_tint != 0.0) {
+                    lin.r *= 1.0 + u_temperature * 0.25 + u_tint * 0.08;
+                    lin.g *= 1.0 - u_tint * 0.15;
+                    lin.b *= 1.0 - u_temperature * 0.25 + u_tint * 0.08;
+                    lin = max(vec3(0.0), lin);
+                }
+                
+                // Exposure
                 if (u_exposure != 0.0) {
                     lin *= pow(2.0, u_exposure);
                 }
+                
+                // Highlights & Shadows (ratio-preserving luminance modulation)
+                float luma = dot(lin, vec3(0.2126, 0.7152, 0.0722));
+                if (u_highlights != 0.0) {
+                    float hw = smoothstep(0.4, 1.0, luma);
+                    lin *= (1.0 + u_highlights * hw * 0.5);
+                }
+                if (u_shadows != 0.0) {
+                    float sw = 1.0 - smoothstep(0.0, 0.45, luma);
+                    lin *= (1.0 + u_shadows * sw * 0.5);
+                }
+                
+                // Perceptual space for contrast, clarity, saturation
                 vec3 color = pow(max(lin, vec3(0.0)), vec3(1.0 / 2.2));
                 
-                // Contrast
-                color = (color - 0.5) * (1.0 + u_contrast) + 0.5;
-                
-                // Luminance for tonal weighting
-                float lum = dot(color, vec3(0.299, 0.587, 0.114));
-                
-                // Shadows lift / drop
-                float shadowWeight = 1.0 - smoothstep(0.0, 0.35, lum);
-                color += u_shadows * shadowWeight * 0.3;
-                
-                // Highlights recovery / boost
-                float highlightWeight = smoothstep(0.65, 1.0, lum);
-                color += u_highlights * highlightWeight * 0.3;
-                
-                // White balance (Temperature & Tint)
-                color.r += u_temperature * 0.1;
-                color.b -= u_temperature * 0.1;
-                color.g -= u_tint * 0.08;
-                color.r += u_tint * 0.04;
-                color.b += u_tint * 0.04;
+                // Contrast (ratio-preserving)
+                if (u_contrast != 0.0) {
+                    float lumC = dot(color, vec3(0.2126, 0.7152, 0.0722));
+                    float newLumC = clamp((lumC - 0.5) * (1.0 + u_contrast * 0.8) + 0.5, 0.0, 1.0);
+                    color *= (newLumC / max(0.0001, lumC));
+                }
                 
                 // Clarity (Midtone contrast)
-                float midtoneWeight = 1.0 - abs(lum - 0.5) * 2.0;
-                color += (color - vec3(lum)) * u_clarity * midtoneWeight * 0.6;
+                if (u_clarity != 0.0) {
+                    float lumMid = dot(color, vec3(0.2126, 0.7152, 0.0722));
+                    float midtoneWeight = 1.0 - abs(lumMid - 0.5) * 2.0;
+                    color += (color - vec3(lumMid)) * u_clarity * max(0.0, midtoneWeight) * 0.5;
+                }
                 
                 // Saturation
-                float gray = dot(color, vec3(0.299, 0.587, 0.114));
-                color = mix(vec3(gray), color, 1.0 + u_saturation);
+                if (u_saturation != 0.0) {
+                    float gray = dot(color, vec3(0.2126, 0.7152, 0.0722));
+                    color = mix(vec3(gray), color, max(0.0, 1.0 + u_saturation));
+                }
                 
                 // Clamp
                 color = clamp(color, 0.0, 1.0);
@@ -647,6 +661,16 @@ export class MaskSystem {
         const height = this.gpu.height;
         if (width <= 0 || height <= 0) return;
 
+        // If coordinates are normalized [0, 1] while image is > 10px, convert to image pixel coordinates
+        if (x >= 0 && x <= 1.0 && y >= 0 && y <= 1.0 && width > 10 && height > 10) {
+            x = x * width;
+            y = y * height;
+        }
+
+        // Clamp coordinates within image bounds
+        x = Math.max(0, Math.min(width, x));
+        y = Math.max(0, Math.min(height, y));
+
         // FBO coords: y=0 at bottom, y=1 at top -> Flip Y
         const centerX = x / width;
         const centerY = 1.0 - (y / height);
@@ -702,6 +726,24 @@ export class MaskSystem {
         if (this.activeLayerIndex < 0 || this.activeLayerIndex >= this.layers.length) return;
         const layer = this.layers[this.activeLayerIndex];
         if (!layer || layer.type !== 'brush') return;
+
+        const width = this.gpu.width;
+        const height = this.gpu.height;
+        if (width <= 0 || height <= 0) return;
+
+        if (x1 >= 0 && x1 <= 1.0 && y1 >= 0 && y1 <= 1.0 && width > 10 && height > 10) {
+            x1 = x1 * width;
+            y1 = y1 * height;
+        }
+        if (x2 >= 0 && x2 <= 1.0 && y2 >= 0 && y2 <= 1.0 && width > 10 && height > 10) {
+            x2 = x2 * width;
+            y2 = y2 * height;
+        }
+
+        x1 = Math.max(0, Math.min(width, x1));
+        y1 = Math.max(0, Math.min(height, y1));
+        x2 = Math.max(0, Math.min(width, x2));
+        y2 = Math.max(0, Math.min(height, y2));
 
         if (record) {
             if (!layer.strokes) layer.strokes = [];
@@ -1189,6 +1231,8 @@ export class MaskSystem {
         let writeFbo = this._pingPongFboA;
         let useA = true;
 
+        gl.disable(gl.BLEND);
+
         for (const layer of this.layers) {
             if (!layer.visible) continue;
 
@@ -1250,6 +1294,7 @@ export class MaskSystem {
             useA = !useA;
         }
 
+        gl.enable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, width, height);
 

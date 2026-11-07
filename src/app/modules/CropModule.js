@@ -476,6 +476,9 @@ export class CropModule {
                 this.cropTool?.deactivate();
                 this.activate();
             }
+
+            // Visual toast confirmation
+            this.editor.showToast?.('Crop applied');
         };
         croppedImage.src = outputCanvas.toDataURL('image/png');
     }

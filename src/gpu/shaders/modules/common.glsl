@@ -1,12 +1,17 @@
 
 // Color center hues (in degrees out of 360)
+// Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta
 const float COLOR_HUES[8] = float[8](0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 280.0, 320.0);
+// Calibrated channel support widths to guarantee smooth overlap without dead zones
+const float COLOR_WIDTHS[8] = float[8](35.0, 35.0, 50.0, 60.0, 55.0, 45.0, 45.0, 40.0);
 
 float sRGBtoLinear(float c) {
+    c = max(0.0, c);
     return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4);
 }
 
 float linearToSRGB(float c) {
+    c = max(0.0, c);
     return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
 }
 
@@ -14,18 +19,19 @@ float luminance(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// RGB to HSL conversion
+// RGB to HSL conversion (NaN & division-by-zero safe)
 vec3 rgbToHsl(vec3 rgb) {
+    rgb = clamp(rgb, 0.0, 1.0);
     float maxC = max(rgb.r, max(rgb.g, rgb.b));
     float minC = min(rgb.r, min(rgb.g, rgb.b));
     float l = (maxC + minC) * 0.5;
     
-    if (maxC == minC) {
+    float d = maxC - minC;
+    if (d < 1e-5 || maxC < 1e-5) {
         return vec3(0.0, 0.0, l); // Achromatic
     }
     
-    float d = maxC - minC;
-    float s = l > 0.5 ? d / (2.0 - maxC - minC) : d / (maxC + minC);
+    float s = l > 0.5 ? d / max(1e-5, 2.0 - maxC - minC) : d / max(1e-5, maxC + minC);
     
     float h;
     if (maxC == rgb.r) {
@@ -37,7 +43,7 @@ vec3 rgbToHsl(vec3 rgb) {
     }
     h /= 6.0;
     
-    return vec3(h * 360.0, s, l); // H in degrees, S and L in 0-1
+    return vec3(mod(h * 360.0 + 360.0, 360.0), clamp(s, 0.0, 1.0), clamp(l, 0.0, 1.0));
 }
 
 // Helper function for HSL to RGB (must be outside main function in GLSL)
@@ -78,8 +84,8 @@ float getColorWeight(float hue, int colorIndex) {
     // Handle wraparound (e.g., red at 0° and 360°)
     if (dist > 180.0) dist = 360.0 - dist;
     
-    // Smooth falloff - each color affects ~45° range
-    float width = 30.0;
+    // Smooth cosine-like Hermite falloff using calibrated channel width
+    float width = COLOR_WIDTHS[colorIndex];
     return smoothstep(width, 0.0, dist);
 }
 

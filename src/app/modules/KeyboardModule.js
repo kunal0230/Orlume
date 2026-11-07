@@ -58,12 +58,13 @@ export class KeyboardModule {
             if (!e.metaKey && !e.ctrlKey) return;
         }
 
-        // Space - Before view
+        // Space - Before view (only when not actively panning)
         if (e.code === 'Space' && !this.state.showingBefore && this.state.hasImage) {
+            if (this.editor.zoomPanModule?.zoom?.isPanning) return;
             e.preventDefault();
             this.state.showingBefore = true;
             this.elements.beforeIndicator?.classList.add('visible');
-            this.gpu.renderOriginal(this.state.originalImage);
+            this.gpu.renderOriginal();
         }
 
         // Tool shortcuts

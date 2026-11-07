@@ -44,12 +44,17 @@ export class CloneModule {
         this.cloneCanvas = document.createElement('canvas');
         this.cloneCanvas.style.cssText = `
             position: absolute;
-            top: 0;
-            left: 0;
             pointer-events: none;
             display: none;
         `;
         this.elements.canvas.parentElement.appendChild(this.cloneCanvas);
+
+        // Window resize listener to keep overlay synced with main canvas
+        window.addEventListener('resize', () => {
+            if (this.cloneCanvas && this.cloneCanvas.style.display !== 'none') {
+                this._syncOverlayPosition();
+            }
+        });
 
         // Create clone tool instance
         this.cloneTool = new CloneTool(this.cloneCanvas);
@@ -123,6 +128,19 @@ export class CloneModule {
     }
 
     /**
+     * Keep overlay canvas in exact alignment and size with main GPU canvas
+     */
+    _syncOverlayPosition() {
+        const canvas = this.elements.canvas;
+        if (!canvas || !this.cloneCanvas) return;
+        this.cloneCanvas.style.position = 'absolute';
+        this.cloneCanvas.style.left = `${canvas.offsetLeft}px`;
+        this.cloneCanvas.style.top = `${canvas.offsetTop}px`;
+        this.cloneCanvas.style.width = `${canvas.offsetWidth}px`;
+        this.cloneCanvas.style.height = `${canvas.offsetHeight}px`;
+    }
+
+    /**
      * Activate clone tool
      */
     activate() {
@@ -132,10 +150,8 @@ export class CloneModule {
         this.cloneCanvas.style.display = 'block';
         this.cloneCanvas.style.pointerEvents = 'auto';
 
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.cloneCanvas.style.width = rect.width + 'px';
-        this.cloneCanvas.style.height = rect.height + 'px';
+        // Position overlay canvas directly over the main canvas
+        this._syncOverlayPosition();
 
         // Set the image to clone - prefer clean originalImage so develop adjustments are not doubled
         const sourceCanvas = document.createElement('canvas');
@@ -198,8 +214,10 @@ export class CloneModule {
             const rect = this.cloneCanvas.getBoundingClientRect();
             const scaleX = this.cloneTool.imageWidth / rect.width;
             const scaleY = this.cloneTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const x = Math.max(0, Math.min(this.cloneTool.imageWidth, rawX));
+            const y = Math.max(0, Math.min(this.cloneTool.imageHeight, rawY));
 
             if (this.altPressed) {
                 // Set source point
@@ -239,8 +257,10 @@ export class CloneModule {
                 const rect = this.cloneCanvas.getBoundingClientRect();
                 const scaleX = this.cloneTool.imageWidth / rect.width;
                 const scaleY = this.cloneTool.imageHeight / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
+                const rawX = (e.clientX - rect.left) * scaleX;
+                const rawY = (e.clientY - rect.top) * scaleY;
+                const x = Math.max(0, Math.min(this.cloneTool.imageWidth, rawX));
+                const y = Math.max(0, Math.min(this.cloneTool.imageHeight, rawY));
                 this.cloneTool.onMouseMove(x, y);
                 this._renderPreview();
             }
@@ -420,6 +440,9 @@ export class CloneModule {
             if (this.editor._detectAndShowTransparency) {
                 this.editor._detectAndShowTransparency(img);
             }
+
+            // Visual toast confirmation
+            this.editor.showToast?.('Clone stamp applied');
 
 
             // Reset clone tool for next use but stay in clone mode

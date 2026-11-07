@@ -276,7 +276,7 @@ export const maskedAdjustmentShader = /* wgsl */`
         
         // Luminance Range Qualification (Lightroom Style)
         if (u.useLumRange > 0.5) {
-            let baseLum = dot(base.rgb, vec3f(0.299, 0.587, 0.114));
+            let baseLum = dot(base.rgb, vec3f(0.2126, 0.7152, 0.0722));
             let feather = max(0.005, u.lumFeather);
             let lowWeight = smoothstep(u.lumMin - feather, u.lumMin, baseLum);
             let highWeight = 1.0 - smoothstep(u.lumMax, u.lumMax + feather, baseLum);
@@ -287,41 +287,55 @@ export const maskedAdjustmentShader = /* wgsl */`
             return base;
         }
         
-        // Linear exposure conversion (calibrated to match global develop)
+        // Linear photometric conversion
         var lin = pow(max(base.rgb, vec3f(0.0)), vec3f(2.2));
+        
+        // White balance (Temperature & Tint) via chromatic adaptation
+        if (u.temperature != 0.0 || u.tint != 0.0) {
+            lin.r *= 1.0 + u.temperature * 0.25 + u.tint * 0.08;
+            lin.g *= 1.0 - u.tint * 0.15;
+            lin.b *= 1.0 - u.temperature * 0.25 + u.tint * 0.08;
+            lin = max(vec3f(0.0), lin);
+        }
+        
+        // Exposure
         if (u.exposure != 0.0) {
             lin *= pow(2.0, u.exposure);
         }
+        
+        // Highlights & Shadows (ratio-preserving luminance modulation)
+        let luma = dot(lin, vec3f(0.2126, 0.7152, 0.0722));
+        if (u.highlights != 0.0) {
+            let hw = smoothstep(0.4, 1.0, luma);
+            lin *= (1.0 + u.highlights * hw * 0.5);
+        }
+        if (u.shadows != 0.0) {
+            let sw = 1.0 - smoothstep(0.0, 0.45, luma);
+            lin *= (1.0 + u.shadows * sw * 0.5);
+        }
+        
+        // Perceptual space for contrast, clarity, saturation
         var color = pow(max(lin, vec3f(0.0)), vec3f(1.0 / 2.2));
         
-        // Contrast
-        color = (color - 0.5) * (1.0 + u.contrast) + 0.5;
-        
-        // Luminance for tonal weighting
-        let lum = dot(color, vec3f(0.299, 0.587, 0.114));
-        
-        // Shadows lift / drop
-        let shadowWeight = 1.0 - smoothstep(0.0, 0.35, lum);
-        color += u.shadows * shadowWeight * 0.3;
-        
-        // Highlights recovery / boost
-        let highlightWeight = smoothstep(0.65, 1.0, lum);
-        color += u.highlights * highlightWeight * 0.3;
-        
-        // White balance (Temperature & Tint)
-        color.r += u.temperature * 0.1;
-        color.b -= u.temperature * 0.1;
-        color.g -= u.tint * 0.08;
-        color.r += u.tint * 0.04;
-        color.b += u.tint * 0.04;
+        // Contrast (ratio-preserving)
+        if (u.contrast != 0.0) {
+            let lumC = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+            let newLumC = clamp((lumC - 0.5) * (1.0 + u.contrast * 0.8) + 0.5, 0.0, 1.0);
+            color *= (newLumC / max(0.0001, lumC));
+        }
         
         // Clarity (Midtone contrast)
-        let midtoneWeight = 1.0 - abs(lum - 0.5) * 2.0;
-        color += (color - vec3f(lum)) * u.clarity * midtoneWeight * 0.6;
+        if (u.clarity != 0.0) {
+            let lumMid = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+            let midtoneWeight = 1.0 - abs(lumMid - 0.5) * 2.0;
+            color += (color - vec3f(lumMid)) * u.clarity * max(0.0, midtoneWeight) * 0.5;
+        }
         
         // Saturation
-        let gray = dot(color, vec3f(0.299, 0.587, 0.114));
-        color = mix(vec3f(gray), color, 1.0 + u.saturation);
+        if (u.saturation != 0.0) {
+            let gray = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+            color = mix(vec3f(gray), color, max(0.0, 1.0 + u.saturation));
+        }
         
         // Clamp
         color = clamp(color, vec3f(0.0), vec3f(1.0));

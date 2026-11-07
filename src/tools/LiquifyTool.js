@@ -412,6 +412,44 @@ export class LiquifyTool {
     }
 
     /**
+     * Deform a specific image (e.g. originalImage) through the current mesh deformation
+     * @param {HTMLImageElement|HTMLCanvasElement} imageOrCanvas - Image to warp
+     * @returns {HTMLCanvasElement} - Offscreen canvas containing the warped image
+     */
+    getResultWithImage(imageOrCanvas) {
+        const gl = this.gl;
+        if (!gl || !imageOrCanvas) return this.getResultCanvas();
+
+        // Create temporary texture from the target image
+        const tempTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tempTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageOrCanvas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        // Swap texture and render
+        const originalTexture = this.texture;
+        this.texture = tempTexture;
+        this.render();
+
+        // Copy rendered result from WebGL canvas to an offscreen canvas
+        const resultCanvas = document.createElement('canvas');
+        resultCanvas.width = this.imageWidth;
+        resultCanvas.height = this.imageHeight;
+        const ctx = resultCanvas.getContext('2d');
+        ctx.drawImage(this.canvas, 0, 0);
+
+        // Cleanup temp texture and restore original texture & render
+        gl.deleteTexture(tempTexture);
+        this.texture = originalTexture;
+        this.render();
+
+        return resultCanvas;
+    }
+
+    /**
      * Export result to a new canvas (for applying to main editor)
      */
     exportToCanvas(targetCanvas) {

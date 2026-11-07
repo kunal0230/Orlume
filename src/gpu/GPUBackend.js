@@ -45,6 +45,11 @@ export class GPUBackend {
     }
 
     /**
+     * Invalidate internal caches (e.g. multi-scale base textures)
+     */
+    invalidateCache() {}
+
+    /**
      * Check if this backend is supported in current environment
      * @returns {Promise<boolean>}
      */
@@ -137,6 +142,14 @@ export class GPUBackend {
      */
     toImageData() {
         throw new Error('GPUBackend.toImageData() must be implemented by subclass');
+    }
+
+    /**
+     * Get downsampled histogram pixel data
+     * @returns {{ data: Uint8Array, count: number }|null}
+     */
+    getHistogramData() {
+        return null;
     }
 
     /**

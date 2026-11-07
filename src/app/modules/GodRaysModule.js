@@ -708,6 +708,9 @@ export class GodRaysModule {
 
             // Switch back to develop mode
             this.ui.setMode('develop');
+
+            // Visual toast confirmation
+            this.ui.showToast?.('God rays applied');
         };
         img.src = dataUrl;
 

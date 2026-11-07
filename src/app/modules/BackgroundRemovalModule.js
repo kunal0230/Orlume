@@ -839,7 +839,8 @@ export class BackgroundRemovalModule {
             // Switch back to develop mode
             this.editor.setMode('develop');
 
-
+            // Visual toast confirmation
+            this.editor.showToast?.('Background removed');
         } catch (error) {
             console.error('Failed to apply background removal:', error);
             alert(`Failed to apply: ${error.message}`);

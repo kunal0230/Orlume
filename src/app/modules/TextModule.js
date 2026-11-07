@@ -409,6 +409,7 @@ export class TextModule {
 
         this.textManager.render();
         this._updateTextLayerList();
+        this.editor?.showToast?.('Text updated');
     }
 
     /**
@@ -437,6 +438,7 @@ export class TextModule {
                 if (this.textManager) {
                     this.textManager.addLayer();
                     this._updateTextLayerList();
+                    this.editor?.showToast?.('Text layer added');
                 }
             });
         }

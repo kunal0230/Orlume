@@ -469,13 +469,15 @@ export class PresetsModule {
 
                 if (this.gpu) {
                     this.gpu.params.lut3dIntensity = this.profileIntensity;
-                    this.gpu.render();
+                    this.gpu.requestRender();
                 }
 
                 this.state?.setAdjustment('lutIntensity', this.profileIntensity);
+                this.editorUI.requestHistogramUpdate?.(false);
             });
 
             profileSlider.addEventListener('change', () => {
+                this.editorUI.requestHistogramUpdate?.(true);
                 this.editorUI._pushHistoryDebounced?.();
             });
         }
@@ -493,9 +495,11 @@ export class PresetsModule {
                 if (this.activePresetId) {
                     this._applyPreset(this.activePresetId, false);
                 }
+                this.editorUI.requestHistogramUpdate?.(false);
             });
 
             presetSlider.addEventListener('change', () => {
+                this.editorUI.requestHistogramUpdate?.(true);
                 this.editorUI._pushHistoryDebounced?.();
             });
         }

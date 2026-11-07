@@ -44,12 +44,17 @@ export class HealingModule {
         this.healingCanvas = document.createElement('canvas');
         this.healingCanvas.style.cssText = `
             position: absolute;
-            top: 0;
-            left: 0;
             pointer-events: none;
             display: none;
         `;
         this.elements.canvas.parentElement.appendChild(this.healingCanvas);
+
+        // Window resize listener to keep overlay synced with main canvas
+        window.addEventListener('resize', () => {
+            if (this.healingCanvas && this.healingCanvas.style.display !== 'none') {
+                this._syncOverlayPosition();
+            }
+        });
 
         // Create healing tool instance
         this.healingTool = new HealingTool(this.healingCanvas);
@@ -141,6 +146,19 @@ export class HealingModule {
     }
 
     /**
+     * Keep overlay canvas in exact alignment and size with main GPU canvas
+     */
+    _syncOverlayPosition() {
+        const canvas = this.elements.canvas;
+        if (!canvas || !this.healingCanvas) return;
+        this.healingCanvas.style.position = 'absolute';
+        this.healingCanvas.style.left = `${canvas.offsetLeft}px`;
+        this.healingCanvas.style.top = `${canvas.offsetTop}px`;
+        this.healingCanvas.style.width = `${canvas.offsetWidth}px`;
+        this.healingCanvas.style.height = `${canvas.offsetHeight}px`;
+    }
+
+    /**
      * Activate healing tool
      */
     activate() {
@@ -150,10 +168,8 @@ export class HealingModule {
         this.healingCanvas.style.display = 'block';
         this.healingCanvas.style.pointerEvents = 'auto';
 
-        // Position canvas over the main canvas
-        const rect = this.elements.canvas.getBoundingClientRect();
-        this.healingCanvas.style.width = rect.width + 'px';
-        this.healingCanvas.style.height = rect.height + 'px';
+        // Position overlay canvas directly over the main canvas
+        this._syncOverlayPosition();
         this.healingCanvas.width = this.gpu.width;
         this.healingCanvas.height = this.gpu.height;
 
@@ -196,8 +212,10 @@ export class HealingModule {
             const rect = this.healingCanvas.getBoundingClientRect();
             const scaleX = this.healingTool.imageWidth / rect.width;
             const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const x = Math.max(0, Math.min(this.healingTool.imageWidth, rawX));
+            const y = Math.max(0, Math.min(this.healingTool.imageHeight, rawY));
             this.healingTool.onMouseDown(x, y);
             this._renderPreview();
         };
@@ -218,8 +236,10 @@ export class HealingModule {
             const rect = this.healingCanvas.getBoundingClientRect();
             const scaleX = this.healingTool.imageWidth / rect.width;
             const scaleY = this.healingTool.imageHeight / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+            const x = Math.max(0, Math.min(this.healingTool.imageWidth, rawX));
+            const y = Math.max(0, Math.min(this.healingTool.imageHeight, rawY));
             this.healingTool.onMouseMove(x, y);
 
             if (this.healingTool.isDrawing) {
@@ -435,6 +455,9 @@ export class HealingModule {
             if (this.editor._detectAndShowTransparency) {
                 this.editor._detectAndShowTransparency(this.state.originalImage);
             }
+
+            // Visual toast confirmation
+            this.editor.showToast?.('Healing applied');
 
             // Hide the healing overlay canvas so GPU canvas is visible
             if (this.healingCanvas) {

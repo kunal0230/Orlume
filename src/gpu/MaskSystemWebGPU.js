@@ -526,6 +526,15 @@ export class MaskSystemWebGPU {
         const height = this.backend.height;
         if (width <= 0 || height <= 0) return;
 
+        // If coordinates are normalized [0, 1] while image is > 10px, convert to image pixel coordinates
+        if (x >= 0 && x <= 1.0 && y >= 0 && y <= 1.0 && width > 10 && height > 10) {
+            x = x * width;
+            y = y * height;
+        }
+
+        x = Math.max(0, Math.min(width, x));
+        y = Math.max(0, Math.min(height, y));
+
         // WebGPU texCoords have y=0 at top -> NO Y-FLIP
         const centerX = x / width;
         const centerY = y / height;
@@ -586,6 +595,24 @@ export class MaskSystemWebGPU {
 
         const layer = this.layers[this.activeLayerIndex];
         if (!layer || layer.type !== 'brush') return;
+
+        const width = this.backend.width;
+        const height = this.backend.height;
+        if (width <= 0 || height <= 0) return;
+
+        if (x1 >= 0 && x1 <= 1.0 && y1 >= 0 && y1 <= 1.0 && width > 10 && height > 10) {
+            x1 = x1 * width;
+            y1 = y1 * height;
+        }
+        if (x2 >= 0 && x2 <= 1.0 && y2 >= 0 && y2 <= 1.0 && width > 10 && height > 10) {
+            x2 = x2 * width;
+            y2 = y2 * height;
+        }
+
+        x1 = Math.max(0, Math.min(width, x1));
+        y1 = Math.max(0, Math.min(height, y1));
+        x2 = Math.max(0, Math.min(width, x2));
+        y2 = Math.max(0, Math.min(height, y2));
 
         if (record) {
             if (!layer.strokes) layer.strokes = [];

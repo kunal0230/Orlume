@@ -14,6 +14,7 @@ export class ZoomPanModule {
         this.state = editor.state;
 
         // Zoom and Pan state
+        this.isSpaceDown = false;
         this.zoom = {
             level: 1,
             min: 0.1,
@@ -149,12 +150,15 @@ export class ZoomPanModule {
 
         let startX = 0, startY = 0;
         let startPanX = 0, startPanY = 0;
-        let isSpaceDown = false;
 
         // Track Space key state
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !e.target.matches('input, textarea, [contenteditable]')) {
-                isSpaceDown = true;
+            const isInput = e.target?.matches?.('input, textarea, [contenteditable]') ||
+                            e.target?.tagName === 'INPUT' ||
+                            e.target?.tagName === 'TEXTAREA' ||
+                            e.target?.isContentEditable;
+            if (e.code === 'Space' && !isInput) {
+                this.isSpaceDown = true;
                 if (!this.zoom.isPanning) {
                     canvasArea.style.cursor = 'grab';
                 }
@@ -163,7 +167,7 @@ export class ZoomPanModule {
 
         document.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
-                isSpaceDown = false;
+                this.isSpaceDown = false;
                 if (!this.zoom.isPanning) {
                     canvasArea.style.cursor = '';
                 }
@@ -173,9 +177,17 @@ export class ZoomPanModule {
         // Mouse down - start panning if Space is held
         canvasArea.addEventListener('mousedown', (e) => {
             // Check if Space is being held
-            if (e.buttons === 1 && isSpaceDown) {
+            if (e.buttons === 1 && this.isSpaceDown) {
                 e.preventDefault();
                 this.zoom.isPanning = true;
+
+                // When starting to pan, restore edited view if before-view was active
+                if (this.state.showingBefore) {
+                    this.state.showingBefore = false;
+                    this.editor.elements?.beforeIndicator?.classList.remove('visible');
+                    this.editor.gpu?.render();
+                }
+
                 startX = e.clientX;
                 startY = e.clientY;
                 startPanX = this.zoom.panX;
@@ -187,6 +199,11 @@ export class ZoomPanModule {
         // Mouse move - pan if dragging
         document.addEventListener('mousemove', (e) => {
             if (this.zoom.isPanning) {
+                if (this.state.showingBefore) {
+                    this.state.showingBefore = false;
+                    this.editor.elements?.beforeIndicator?.classList.remove('visible');
+                    this.editor.gpu?.render();
+                }
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
                 this.zoom.panX = startPanX + dx;
@@ -201,7 +218,7 @@ export class ZoomPanModule {
                 this.zoom.isPanning = false;
                 const canvasArea = document.querySelector('.canvas-area');
                 if (canvasArea) {
-                    canvasArea.style.cursor = isSpaceDown ? 'grab' : '';
+                    canvasArea.style.cursor = this.isSpaceDown ? 'grab' : '';
                 }
             }
         });
