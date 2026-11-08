@@ -262,6 +262,15 @@ export class GodRaysModule {
         const x = Math.max(-0.25, Math.min(1.25, (e.clientX - rect.left) / rect.width));
         const y = Math.max(-0.25, Math.min(1.25, (e.clientY - rect.top) / rect.height));
 
+        this.setSunPosition(x, y);
+    }
+
+    /**
+     * Programmatically or interactively set sun position
+     * @param {number} x - Normalized X coordinate (0-1, can be slightly outside canvas)
+     * @param {number} y - Normalized Y coordinate (0-1, can be slightly outside canvas)
+     */
+    setSunPosition(x, y) {
         this.sunPosition = { x, y };
 
         if (this.effect) {
@@ -322,12 +331,7 @@ export class GodRaysModule {
             const rect = canvas.getBoundingClientRect();
             const x = Math.max(-0.35, Math.min(1.35, (e.clientX - rect.left) / rect.width));
             const y = Math.max(-0.35, Math.min(1.35, (e.clientY - rect.top) / rect.height));
-            this.sunPosition = { x, y };
-            if (this.effect) {
-                this.effect.setSunPosition(x, y);
-                this._renderPreview();
-            }
-            this._updateSunIndicator();
+            this.setSunPosition(x, y);
         };
 
         const onPointerUp = () => {
@@ -676,15 +680,15 @@ export class GodRaysModule {
         // Reset sliders
         const defaults = {
             'godrays-intensity': 75,
-            'godrays-decay': 95,
-            'godrays-density': 60,
-            'godrays-samples': 48,
-            'godrays-lum': 50,
-            'godrays-depth': 65,
-            'godrays-radius': 14,
-            'godrays-exposure': 22,
-            'godrays-noise': 40,
-            'godrays-bloom': 35
+            'godrays-decay': 96,
+            'godrays-density': 65,
+            'godrays-samples': 64,
+            'godrays-lum': 60,
+            'godrays-depth': 70,
+            'godrays-radius': 16,
+            'godrays-exposure': 18,
+            'godrays-noise': 55,
+            'godrays-bloom': 40
         };
 
         Object.entries(defaults).forEach(([id, value]) => {

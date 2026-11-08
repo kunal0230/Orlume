@@ -69,29 +69,33 @@ export const ADVANCED_GODRAYS_SHADER = `
             return 0.0;
         }
         
+        // 1. Sun disc emitter at light position
+        float distToSun = length(uv - u_sunPosition);
+        float sunCore = 1.0 - smoothstep(0.0, u_sunRadius * 0.45, distToSun);
+        float sunCorona = 1.0 - smoothstep(u_sunRadius * 0.1, u_sunRadius * 2.2, distToSun);
+        float sunEmitter = pow(sunCore, 2.0) * 1.6 + pow(sunCorona, 1.6) * 0.75;
+
+        // 2. Scene highlight contribution near the light
         vec4 col = texture2D(u_image, uv);
-        
-        // Rec.709 perceived luminance
         float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
         
-        // Highlights above luminance threshold emit light
-        float brightPass = smoothstep(u_lumThreshold - 0.15, u_lumThreshold + 0.15, luma);
-        
-        // If AI Depth map is present:
-        // Depth Anything: near objects are bright (> threshold), far sky is dark (< threshold).
-        // Foreground objects block the light; far sky/background allows rays through.
+        float proximityToSun = 1.0 - smoothstep(0.0, 0.65, distToSun);
+        float brightPass = smoothstep(u_lumThreshold, 1.0, luma) * proximityToSun * 0.6;
+
+        float emission = max(sunEmitter, brightPass);
+
+        // 3. Occlusion by foreground objects
         if (u_hasDepth == 1) {
             float d = texture2D(u_depth, uv).r;
-            float occluderMask = 1.0 - smoothstep(u_depthThreshold - 0.12, u_depthThreshold + 0.12, d);
-            brightPass *= occluderMask;
+            float occluder = smoothstep(u_depthThreshold - 0.1, u_depthThreshold + 0.1, d);
+            emission *= (1.0 - occluder);
+        } else {
+            // Natural 2D silhouette occlusion: dark elements (branches, ridges) block rays
+            float blocker = 1.0 - smoothstep(u_lumThreshold * 0.3, u_lumThreshold * 0.9, luma);
+            emission *= (1.0 - blocker * 0.85);
         }
-        
-        // Direct sun disc emitter at light position
-        float distToSun = length(uv - u_sunPosition);
-        float sunDisc = 1.0 - smoothstep(0.0, u_sunRadius, distToSun);
-        sunDisc = pow(sunDisc, 2.0);
-        
-        return max(brightPass, sunDisc * 1.5);
+
+        return emission;
     }
     
     void main() {
@@ -111,16 +115,17 @@ export const ADVANCED_GODRAYS_SHADER = `
         
         // Ray angle for volumetric beam streakiness (cathedral sunbeam shafts)
         float rayAngle = atan(deltaUV.y, deltaUV.x);
-        float streakNoise = 0.72 + 0.28 * (
-            sin(rayAngle * 28.0) * 0.5 + 
-            sin(rayAngle * 56.0 + 1.2) * 0.3 + 
-            sin(rayAngle * 112.0 + 2.5) * 0.2
+        float streakNoise = 0.68 + 0.32 * (
+            sin(rayAngle * 30.0) * 0.5 + 
+            sin(rayAngle * 60.0 + 1.2) * 0.3 + 
+            sin(rayAngle * 120.0 + 2.5) * 0.2
         );
         float beamModulation = mix(1.0, streakNoise, u_noise);
         
         // Accumulate volumetric illumination along the ray
         vec3 rayAccum = vec3(0.0);
-        float weight = u_weight;
+        float sampleWeight = (1.0 / float(u_samples)) * 1.8;
+        float currentWeight = sampleWeight;
         
         for (int i = 0; i < 96; i++) {
             if (i >= u_samples) break;
@@ -128,16 +133,18 @@ export const ADVANCED_GODRAYS_SHADER = `
             coord += stepUV;
             
             float emission = getLightEmission(coord);
-            rayAccum += emission * weight;
-            weight *= u_decay;
+            rayAccum += emission * currentWeight;
+            currentWeight *= u_decay;
         }
         
-        // Apply beam modulation and exposure
-        rayAccum *= beamModulation * u_exposure;
+        // Natural reach based on density
+        float falloffRate = mix(2.2, 0.8, clamp(u_density, 0.0, 1.0));
+        float radialFalloff = 1.0 / (1.0 + distToSun * falloffRate);
+        rayAccum *= beamModulation * radialFalloff * u_exposure;
         
         // Sun core bloom halo around the light source
-        float sunGlow = 1.0 - smoothstep(0.0, u_sunRadius * 2.5, distToSun);
-        sunGlow = pow(sunGlow, 2.0) * u_bloom;
+        float sunGlow = 1.0 - smoothstep(0.0, u_sunRadius * 2.0, distToSun);
+        sunGlow = pow(sunGlow, 2.5) * u_bloom;
         
         // Combine rays with sun core glow and apply chosen ray color & intensity
         vec3 totalRays = (rayAccum + sunGlow) * u_rayColor * u_intensity;

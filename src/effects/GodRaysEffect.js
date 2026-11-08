@@ -28,20 +28,20 @@ export class GodRaysEffect {
         // Parameters (defaults)
         this.params = {
             sunPosition: { x: 0.5, y: 0.2 },  // Normalized 0-1
-            intensity: 0.8,
+            intensity: 0.75,
             decay: 0.96,
-            density: 0.6,
+            density: 0.65,
             weight: 0.5,
-            lumThreshold: 0.5,
-            depthThreshold: 0.6,
-            rayColor: { r: 1.0, g: 0.96, b: 0.88 },  // Warm sunlight
-            samples: 80,
-            sunRadius: 0.12,
-            exposure: 3.0,
+            lumThreshold: 0.6,
+            depthThreshold: 0.7,
+            rayColor: { r: 1.0, g: 0.90, b: 0.72 },  // Warm sunlight
+            samples: 64,
+            sunRadius: 0.16,
+            exposure: 1.8,
             softness: 0.5,
             // Advanced parameters
             chromatic: 0.15,    // Chromatic aberration
-            noise: 0.25,        // Noise variation
+            noise: 0.55,        // Beam streakiness variation
             bloom: 0.4,         // Bloom intensity
             scatter: 0.3,       // Atmospheric scatter
             toneMap: 0.6,       // Tone mapping strength
