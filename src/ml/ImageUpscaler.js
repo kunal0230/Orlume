@@ -136,6 +136,12 @@ export class ImageUpscaler {
             const outWidth = dims.width;
             const outHeight = dims.height;
 
+            // Direct high-fidelity multi-scale clarity & detail enhancement for "Enhance" mode
+            if (this.processingMode === 'enhance') {
+                progressCallback(15, 'Enhancing image clarity & micro-detail...');
+                return await this._enhanceImage(source, outWidth, outHeight, progressCallback);
+            }
+
             if (this.useAI) {
                 // If remote server explicitly enabled, try server first
                 if (this.useRemoteServer) {
@@ -370,8 +376,8 @@ export class ImageUpscaler {
             }
 
             // Target dimensions
-            const targetWidth = this.processingMode === 'enhance' ? srcWidth : outWidth;
-            const targetHeight = this.processingMode === 'enhance' ? srcHeight : outHeight;
+            const targetWidth = outWidth;
+            const targetHeight = outHeight;
 
             let canvas = rawCanvas;
             if (rawCanvas.width !== targetWidth || rawCanvas.height !== targetHeight) {
@@ -385,16 +391,10 @@ export class ImageUpscaler {
                 canvas = finalCanvas;
             }
 
-            if (this.sharpenEdges) {
-                // Only run per-pixel CPU unsharp mask on small-to-medium images (<= 2MP)
-                // Real-ESRGAN already sharpens high-frequency edges natively.
-                if (targetWidth * targetHeight <= 2000000) {
-                    progressCallback(95, 'Refining edge sharpness...');
-                    const ctx = canvas.getContext('2d');
-                    await this._enhanceDetails(ctx, targetWidth, targetHeight);
-                } else {
-                    console.log(`[ImageUpscaler] Output size ${targetWidth}×${targetHeight} exceeds 2MP; preserving neural sharpness without CPU loop.`);
-                }
+            // Apply multi-scale edge and clarity refinement for "both" mode or when sharpenEdges is enabled
+            if (this.sharpenEdges || this.processingMode === 'both') {
+                progressCallback(95, 'Refining edge sharpness & micro-detail...');
+                canvas = await this._enhanceImage(canvas, targetWidth, targetHeight, progressCallback);
             }
 
             progressCallback(100, 'Super-resolution complete!');
@@ -412,6 +412,10 @@ export class ImageUpscaler {
     async _processClassic(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback) {
         progressCallback(20, 'Processing...');
 
+        if (this.processingMode === 'enhance') {
+            return await this._enhanceImage(source, outWidth, outHeight, progressCallback);
+        }
+
         const canvas = document.createElement('canvas');
         canvas.width = outWidth;
         canvas.height = outHeight;
@@ -420,9 +424,9 @@ export class ImageUpscaler {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, 0, 0, srcWidth, srcHeight, 0, 0, outWidth, outHeight);
 
-        if (this.sharpenEdges && outWidth * outHeight <= 2000000) {
-            progressCallback(60, 'Sharpening...');
-            await this._enhanceDetails(ctx, outWidth, outHeight);
+        if (this.sharpenEdges || this.processingMode === 'both') {
+            progressCallback(80, 'Sharpening & enhancing clarity...');
+            return await this._enhanceImage(canvas, outWidth, outHeight, progressCallback);
         }
 
         progressCallback(100, 'Complete!');
@@ -430,39 +434,204 @@ export class ImageUpscaler {
     }
 
     /**
-     * Detail enhancement (unsharp mask)
+     * Detail enhancement (backward-compatible adapter)
      */
     async _enhanceDetails(ctx, width, height) {
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const original = new Uint8ClampedArray(data);
+        const enhanced = await this._enhanceImage(ctx.canvas, width, height);
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(enhanced, 0, 0);
+    }
 
-        const amount = 0.3;
-        const threshold = 8;
+    /**
+     * High-performance Multi-Scale Clarity & Detail Enhancement
+     * Uses WebGL2 multi-scale frequency separation with adaptive tone protection
+     * Falls back to high-quality 2D canvas convolution when WebGL is unavailable
+     */
+    async _enhanceImage(source, width, height, progressCallback = () => {}) {
+        progressCallback(20, 'Initializing GPU clarity engine...');
 
-        for (let i = 0; i < data.length; i += 4) {
+        try {
+            const glCanvas = document.createElement('canvas');
+            glCanvas.width = width;
+            glCanvas.height = height;
+            const gl = glCanvas.getContext('webgl2', { preserveDrawingBuffer: true, alpha: false, antialias: false });
+            if (!gl) throw new Error('WebGL2 not available');
+
+            const vsSource = `#version 300 es
+            in vec2 a_pos;
+            out vec2 v_uv;
+            void main() {
+                v_uv = (a_pos + 1.0) * 0.5;
+                gl_Position = vec4(a_pos, 0.0, 1.0);
+            }`;
+
+            const fsSource = `#version 300 es
+            precision highp float;
+            in vec2 v_uv;
+            out vec4 fragColor;
+            uniform sampler2D u_image;
+            uniform vec2 u_texel;
+            uniform float u_sharpness;
+            uniform float u_clarity;
+
+            const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+            void main() {
+                vec4 center = texture(u_image, v_uv);
+                float cLuma = dot(center.rgb, LUMA);
+
+                // 1. Fine-scale 8-neighborhood for razor-sharp edges & micro-texture
+                vec3 n1 = texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb;
+                vec3 s1 = texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb;
+                vec3 e1 = texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb;
+                vec3 w1 = texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb;
+                vec3 ne1 = texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb;
+                vec3 nw1 = texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb;
+                vec3 se1 = texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb;
+                vec3 sw1 = texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb;
+
+                vec3 avgFine = (n1 + s1 + e1 + w1) * 0.15 + (ne1 + nw1 + se1 + sw1) * 0.10;
+                vec3 fineDetail = center.rgb - avgFine;
+
+                // 2. Mid-scale neighborhood for punchy Clarity & Local Contrast
+                vec2 r2 = u_texel * 3.5;
+                vec3 n2 = texture(u_image, v_uv + vec2(0.0, r2.y)).rgb;
+                vec3 s2 = texture(u_image, v_uv - vec2(0.0, r2.y)).rgb;
+                vec3 e2 = texture(u_image, v_uv + vec2(r2.x, 0.0)).rgb;
+                vec3 w2 = texture(u_image, v_uv - vec2(r2.x, 0.0)).rgb;
+                vec3 avgMid = (n2 + s2 + e2 + w2) * 0.25;
+                vec3 midDetail = center.rgb - avgMid;
+
+                // 3. Wide-scale neighborhood for Dehaze & Tonal Depth
+                vec2 r3 = u_texel * 8.0;
+                vec3 n3 = texture(u_image, v_uv + vec2(0.0, r3.y)).rgb;
+                vec3 s3 = texture(u_image, v_uv - vec2(0.0, r3.y)).rgb;
+                vec3 e3 = texture(u_image, v_uv + vec2(r3.x, 0.0)).rgb;
+                vec3 w3 = texture(u_image, v_uv - vec2(r3.x, 0.0)).rgb;
+                vec3 avgWide = (n3 + s3 + e3 + w3) * 0.25;
+                vec3 wideDetail = center.rgb - avgWide;
+
+                // Non-linear halo suppression (soft limiter prevents hard white/black outlines)
+                vec3 boostFine = u_sharpness * (fineDetail / (1.0 + 3.0 * abs(fineDetail)));
+                vec3 boostMid  = u_clarity   * (midDetail  / (1.0 + 2.0 * abs(midDetail)));
+                vec3 boostWide = 0.25        * (wideDetail / (1.0 + 1.5 * abs(wideDetail)));
+
+                // Midtone weighting: protect deep shadows (< 0.05) and peak highlights (> 0.95)
+                float toneMask = smoothstep(0.02, 0.12, cLuma) * (1.0 - smoothstep(0.88, 0.98, cLuma));
+                toneMask = mix(0.4, 1.0, toneMask);
+
+                vec3 enhanced = center.rgb + (boostFine + boostMid + boostWide) * toneMask;
+
+                // Subtle micro-contrast saturation vibrance boost on textured areas
+                float detailMag = length(boostFine) + length(boostMid);
+                float satBoost = 1.0 + clamp(detailMag * 0.4, 0.0, 0.15);
+                enhanced = mix(vec3(dot(enhanced, LUMA)), enhanced, satBoost);
+
+                fragColor = vec4(clamp(enhanced, 0.0, 1.0), center.a);
+            }`;
+
+            const compileShader = (type, src) => {
+                const s = gl.createShader(type);
+                gl.shaderSource(s, src);
+                gl.compileShader(s);
+                if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+                    throw new Error(gl.getShaderInfoLog(s));
+                }
+                return s;
+            };
+
+            const prog = gl.createProgram();
+            gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSource));
+            gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSource));
+            gl.linkProgram(prog);
+            gl.useProgram(prog);
+
+            const vao = gl.createVertexArray();
+            gl.bindVertexArray(vao);
+            const buf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+            const aPos = gl.getAttribLocation(prog, 'a_pos');
+            gl.enableVertexAttribArray(aPos);
+            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+            progressCallback(50, 'Enhancing textures & edge contrast...');
+
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            gl.uniform2f(gl.getUniformLocation(prog, 'u_texel'), 1.0 / width, 1.0 / height);
+            gl.uniform1f(gl.getUniformLocation(prog, 'u_sharpness'), 1.25);
+            gl.uniform1f(gl.getUniformLocation(prog, 'u_clarity'), 0.75);
+
+            gl.viewport(0, 0, width, height);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            progressCallback(85, 'Finalizing enhanced output...');
+
+            const outCanvas = document.createElement('canvas');
+            outCanvas.width = width;
+            outCanvas.height = height;
+            const outCtx = outCanvas.getContext('2d');
+            outCtx.drawImage(glCanvas, 0, 0);
+
+            // Cleanup WebGL resources
+            gl.deleteTexture(tex);
+            gl.deleteBuffer(buf);
+            gl.deleteProgram(prog);
+
+            progressCallback(100, 'Enhancement complete!');
+            return outCanvas;
+
+        } catch (err) {
+            console.warn('[ImageUpscaler] WebGL2 enhancement unavailable, using 2D canvas fallback:', err);
+            return this._fallbackCanvas2D(source, width, height, progressCallback);
+        }
+    }
+
+    /**
+     * Fallback 2D canvas multi-scale unsharp masking
+     */
+    _fallbackCanvas2D(source, width, height, progressCallback = () => {}) {
+        progressCallback(40, 'Refining details with CPU fallback...');
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(source, 0, 0, width, height);
+
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const d = imgData.data;
+        const orig = new Uint8ClampedArray(d);
+
+        const amount = 0.9;
+        for (let i = 0; i < d.length; i += 4) {
             const x = (i / 4) % width;
             const y = Math.floor((i / 4) / width);
-
             if (x <= 1 || x >= width - 2 || y <= 1 || y >= height - 2) continue;
 
             for (let c = 0; c < 3; c++) {
                 const idx = i + c;
-                const current = original[idx];
-                const top = original[idx - width * 4];
-                const bottom = original[idx + width * 4];
-                const left = original[idx - 4];
-                const right = original[idx + 4];
-                const avgNeighbor = (top + bottom + left + right) / 4;
-                const diff = current - avgNeighbor;
-
-                if (Math.abs(diff) > threshold) {
-                    data[idx] = Math.min(255, Math.max(0, Math.round(current + diff * amount)));
+                const cur = orig[idx];
+                const n = orig[idx - width * 4];
+                const s = orig[idx + width * 4];
+                const w = orig[idx - 4];
+                const e = orig[idx + 4];
+                const avg = (n + s + w + e) * 0.25;
+                const diff = cur - avg;
+                if (Math.abs(diff) > 2) {
+                    d[idx] = Math.min(255, Math.max(0, Math.round(cur + diff * amount)));
                 }
             }
         }
-
-        ctx.putImageData(imageData, 0, 0);
+        ctx.putImageData(imgData, 0, 0);
+        return canvas;
     }
 
     /**

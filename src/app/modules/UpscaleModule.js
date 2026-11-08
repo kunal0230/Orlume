@@ -143,6 +143,37 @@ export class UpscaleModule {
                 outputDims.textContent = `${out.width} × ${out.height}`;
             }
         }
+
+        // Dynamically update apply button text to reflect active mode
+        const btnApply = document.getElementById('btn-upscale-apply');
+        if (btnApply) {
+            const mode = this.upscaler.processingMode;
+            if (mode === 'enhance') {
+                btnApply.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="21" y1="3" x2="14" y2="10" />
+                    </svg>
+                    Enhance Clarity & Details`;
+            } else if (mode === 'upscale') {
+                btnApply.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="21" y1="3" x2="14" y2="10" />
+                    </svg>
+                    Upscale (${this.scaleFactor}x)`;
+            } else {
+                btnApply.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="21" y1="3" x2="14" y2="10" />
+                    </svg>
+                    Enhance & Upscale (${this.scaleFactor}x)`;
+            }
+        }
     }
 
     /**
@@ -242,7 +273,14 @@ export class UpscaleModule {
                         }
 
                         // Visual toast confirmation
-                        this.editor.showToast?.('✓ AI Super-resolution applied! Click Before/After (\\) to compare');
+                        const mode = this.upscaler.processingMode;
+                        if (mode === 'enhance') {
+                            this.editor.showToast?.('✓ AI Clarity & Detail Enhancement applied! Click Before/After (\\) to compare');
+                        } else if (mode === 'upscale') {
+                            this.editor.showToast?.(`✓ AI Super-resolution (${this.scaleFactor}x) applied! Click Before/After (\\) to compare`);
+                        } else {
+                            this.editor.showToast?.(`✓ AI Enhancement & Super-resolution (${this.scaleFactor}x) applied! Click Before/After (\\) to compare`);
+                        }
                         resolve();
                     };
                     img.onerror = (err) => {
