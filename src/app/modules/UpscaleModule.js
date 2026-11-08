@@ -31,6 +31,8 @@ export class UpscaleModule {
     init() {
         // Create upscaler instance
         this.upscaler = new ImageUpscaler();
+        const maxTextureSize = this.gpu?.backend?.maxTextureSize || 4096;
+        this.upscaler.setMaxDimension(Math.min(maxTextureSize, 4096));
         this.scaleFactor = 2;
 
         // Mode selector buttons (Enhance / Upscale / Both)
@@ -127,11 +129,20 @@ export class UpscaleModule {
 
         const width = this.gpu.width;
         const height = this.gpu.height;
-        const outputWidth = Math.round(width * this.scaleFactor);
-        const outputHeight = Math.round(height * this.scaleFactor);
+        const maxDim = this.gpu?.backend?.maxTextureSize || 4096;
+        const maxAllowed = Math.min(maxDim, 4096);
+        this.upscaler.setMaxDimension(maxAllowed);
+
+        const out = this.upscaler.getOutputDimensions(width, height, maxAllowed);
 
         if (currentDims) currentDims.textContent = `${width} × ${height}`;
-        if (outputDims) outputDims.textContent = `${outputWidth} × ${outputHeight}`;
+        if (outputDims) {
+            if (out.clamped) {
+                outputDims.innerHTML = `${out.width} × ${out.height} <span class="upscale-clamped-badge" title="Clamped to GPU limit of ${maxAllowed}px">GPU Clamped</span>`;
+            } else {
+                outputDims.textContent = `${out.width} × ${out.height}`;
+            }
+        }
     }
 
     /**
@@ -162,26 +173,14 @@ export class UpscaleModule {
             const snapshot = this.editor._captureFullState();
             this.history.pushState(snapshot);
 
-            // Prepare source canvas (prefer clean originalImage so adjustments are not doubled)
-            let sourceToUpscale;
-            if (this.state.originalImage) {
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.state.originalImage.naturalWidth || this.state.originalImage.width;
-                tempCanvas.height = this.state.originalImage.naturalHeight || this.state.originalImage.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(this.state.originalImage, 0, 0);
-                sourceToUpscale = tempCanvas;
-            } else {
-                const imageData = this.gpu.toImageData();
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.gpu.width;
-                tempCanvas.height = this.gpu.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                if (imageData) tempCtx.putImageData(imageData, 0, 0);
-                sourceToUpscale = tempCanvas;
-            }
+            // Synchronize hardware max texture limit (safely capped to 4096 for optimal in-browser super-resolution)
+            const maxDim = this.gpu?.backend?.maxTextureSize || 4096;
+            this.upscaler.setMaxDimension(Math.min(maxDim, 4096));
 
-            // Upscale the image using backend-agnostic canvas source (works on WebGPU and WebGL2)
+            // Prefer clean originalImage so adjustments are not doubled
+            const sourceToUpscale = this.state.originalImage || this.gpu.canvas;
+
+            // Upscale the image using memory-efficient tensor/blob pipeline
             const upscaledCanvas = await this.upscaler.upscale(
                 sourceToUpscale,
                 (percent, message) => {
@@ -191,42 +190,60 @@ export class UpscaleModule {
                 }
             );
 
-            // Create image from canvas
-            const img = new Image();
-            img.onload = () => {
-                // Update state
-                this.state.setImage(img);
-                this.state.originalImage = img;
+            // Convert canvas to image via Blob URL to prevent V8 Base64 string memory blowup
+            await new Promise((resolve, reject) => {
+                upscaledCanvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Failed to create image blob from upscaled canvas'));
+                        return;
+                    }
+                    const blobUrl = URL.createObjectURL(blob);
+                    const img = new Image();
+                    img.onload = () => {
+                        URL.revokeObjectURL(blobUrl);
 
-                // Reload GPU processor with upscaled image
-                this.gpu.loadImage(img);
+                        // Update state
+                        this.state.setImage(img);
+                        this.state.originalImage = img;
 
-                // Adapt masks to new upscaled dimensions
-                if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
-                    this.masks.onImageDimensionsChanged();
-                }
-                this.editor.updateLayersList?.();
-                this.editor.syncLayerUI?.();
+                        // Reload GPU processor with upscaled image
+                        this.gpu.loadImage(img);
 
-                // Update UI
-                this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
-                setTimeout(() => this.editor.renderHistogram(), 100);
+                        // Adapt masks to new upscaled dimensions
+                        if (this.masks && typeof this.masks.onImageDimensionsChanged === 'function') {
+                            this.masks.onImageDimensionsChanged();
+                        }
+                        this.editor.updateLayersList?.();
+                        this.editor.syncLayerUI?.();
 
-                // Hide progress
-                if (progressSection) progressSection.style.display = 'none';
-                if (btnApply) {
-                    btnApply.disabled = false;
-                    btnApply.style.opacity = '1';
-                }
-                if (progressBar) progressBar.style.width = '0%';
+                        // Update UI
+                        if (this.elements.perfIndicator) {
+                            this.elements.perfIndicator.textContent = `${img.width}×${img.height}`;
+                        }
+                        setTimeout(() => this.editor.renderHistogram(), 100);
 
-                // Update dimensions display
-                this.updateDimensions();
+                        // Hide progress
+                        if (progressSection) progressSection.style.display = 'none';
+                        if (btnApply) {
+                            btnApply.disabled = false;
+                            btnApply.style.opacity = '1';
+                        }
+                        if (progressBar) progressBar.style.width = '0%';
 
-                // Visual toast confirmation
-                this.editor.showToast?.('✓ AI Super-resolution applied');
-            };
-            img.src = upscaledCanvas.toDataURL('image/png');
+                        // Update dimensions display
+                        this.updateDimensions();
+
+                        // Visual toast confirmation
+                        this.editor.showToast?.('✓ AI Super-resolution applied');
+                        resolve();
+                    };
+                    img.onerror = (err) => {
+                        URL.revokeObjectURL(blobUrl);
+                        reject(err || new Error('Failed to load upscaled image'));
+                    };
+                    img.src = blobUrl;
+                }, 'image/png');
+            });
 
         } catch (error) {
             console.error('Upscale failed:', error);

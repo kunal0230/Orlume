@@ -79,6 +79,8 @@ export class WebGPUBackend extends GPUBackend {
                 requiredLimits: {}
             });
 
+            this.maxTextureSize = this.device.limits?.maxTextureDimension2D || 8192;
+
             // Configure canvas context
             this.context = this.canvas.getContext('webgpu');
             this.format = navigator.gpu.getPreferredCanvasFormat();

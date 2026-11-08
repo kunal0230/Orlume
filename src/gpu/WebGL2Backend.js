@@ -170,6 +170,9 @@ export class WebGL2Backend extends GPUBackend {
 
         const gl = this.gl;
 
+        // Hardware texture limit
+        this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+
         // Enable extensions and floating point buffer capabilities
         const extColorFloat = gl.getExtension('EXT_color_buffer_float');
         gl.getExtension('OES_texture_float_linear');

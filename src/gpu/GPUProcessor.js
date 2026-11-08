@@ -191,6 +191,13 @@ export class GPUProcessor {
     }
 
     /**
+     * Maximum texture dimension supported by the active GPU backend
+     */
+    get maxTextureSize() {
+        return this.backend?.maxTextureSize || 8192;
+    }
+
+    /**
      * Load image into GPU texture using Safe Handoff pattern
      * 
      * Uses "Create, Swap, then Destroy" to ensure inputTexture always
@@ -203,8 +210,31 @@ export class GPUProcessor {
             return;
         }
 
-        this.width = imageElement.naturalWidth || imageElement.width;
-        this.height = imageElement.naturalHeight || imageElement.height;
+        let source = imageElement;
+        let width = imageElement.naturalWidth || imageElement.width;
+        let height = imageElement.naturalHeight || imageElement.height;
+
+        const maxTextureSize = this.maxTextureSize;
+        if (width > maxTextureSize || height > maxTextureSize) {
+            const scale = Math.min(maxTextureSize / width, maxTextureSize / height);
+            const clampedWidth = Math.max(1, Math.floor(width * scale));
+            const clampedHeight = Math.max(1, Math.floor(height * scale));
+            console.warn(`[GPUProcessor] Image dimensions ${width}×${height} exceed GPU hardware limit ${maxTextureSize}px. Rescaling to ${clampedWidth}×${clampedHeight}.`);
+
+            const clampCanvas = document.createElement('canvas');
+            clampCanvas.width = clampedWidth;
+            clampCanvas.height = clampedHeight;
+            const ctx = clampCanvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(imageElement, 0, 0, clampedWidth, clampedHeight);
+            source = clampCanvas;
+            width = clampedWidth;
+            height = clampedHeight;
+        }
+
+        this.width = width;
+        this.height = height;
 
         // Set canvas and backend size
         this.backend.setSize(this.width, this.height);
@@ -213,7 +243,7 @@ export class GPUProcessor {
         // === SAFE HANDOFF PATTERN ===
 
         // Step 1: Create NEW texture first (don't touch inputTexture yet)
-        const newTexture = this.backend.createTextureFromSource(imageElement);
+        const newTexture = this.backend.createTextureFromSource(source);
 
         // Step 2: Store reference to OLD texture
         const oldTexture = this.inputTexture;

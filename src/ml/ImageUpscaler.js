@@ -23,11 +23,18 @@ export class ImageUpscaler {
         this.modelType = 'slim'; // 'slim' (fast, local) or 'thick' (ultra quality)
         this.useRemoteServer = false; // By default use fast client-side WebGL
         this.serverUrl = 'http://localhost:8000';
+        this.maxDimension = 4096; // Safe default matching hardware MAX_TEXTURE_SIZE
     }
 
     // Setters
     setScaleFactor(factor) {
         this.scaleFactor = Math.min(4, Math.max(1, factor));
+    }
+
+    setMaxDimension(maxDim) {
+        if (typeof maxDim === 'number' && maxDim > 0) {
+            this.maxDimension = maxDim;
+        }
     }
 
     setUseAI(enabled) {
@@ -58,14 +65,42 @@ export class ImageUpscaler {
         this.serverUrl = url.replace(/\/$/, ''); // Remove trailing slash
     }
 
-    getOutputDimensions(width, height) {
+    getOutputDimensions(width, height, maxDimension = this.maxDimension) {
+        const max = maxDimension || 4096;
+
         if (this.processingMode === 'enhance') {
-            // Enhance only - same size
-            return { width, height };
+            // Enhance only - same size, clamped to maxDimension if already exceeding
+            if (width > max || height > max) {
+                const ratio = Math.min(max / width, max / height);
+                return {
+                    width: Math.round(width * ratio),
+                    height: Math.round(height * ratio),
+                    clamped: true,
+                    originalTargetWidth: width,
+                    originalTargetHeight: height
+                };
+            }
+            return { width, height, clamped: false };
         }
+
+        const rawTargetWidth = Math.round(width * this.scaleFactor);
+        const rawTargetHeight = Math.round(height * this.scaleFactor);
+
+        if (rawTargetWidth > max || rawTargetHeight > max) {
+            const ratio = Math.min(max / rawTargetWidth, max / rawTargetHeight);
+            return {
+                width: Math.round(rawTargetWidth * ratio),
+                height: Math.round(rawTargetHeight * ratio),
+                clamped: true,
+                originalTargetWidth: rawTargetWidth,
+                originalTargetHeight: rawTargetHeight
+            };
+        }
+
         return {
-            width: Math.round(width * this.scaleFactor),
-            height: Math.round(height * this.scaleFactor)
+            width: rawTargetWidth,
+            height: rawTargetHeight,
+            clamped: false
         };
     }
 
@@ -97,7 +132,9 @@ export class ImageUpscaler {
         try {
             const srcWidth = source.width || source.naturalWidth;
             const srcHeight = source.height || source.naturalHeight;
-            const { width: outWidth, height: outHeight } = this.getOutputDimensions(srcWidth, srcHeight);
+            const dims = this.getOutputDimensions(srcWidth, srcHeight, this.maxDimension);
+            const outWidth = dims.width;
+            const outHeight = dims.height;
 
             if (this.useAI) {
                 // If remote server explicitly enabled, try server first
@@ -125,13 +162,24 @@ export class ImageUpscaler {
     async _processWithServer(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback) {
         progressCallback(5, 'Connecting to AI server...');
 
+        // For large images, clamp input to max 2500px before base64 encoding to prevent huge payload
+        let sWidth = srcWidth;
+        let sHeight = srcHeight;
+        if (srcWidth > 2500 || srcHeight > 2500) {
+            const r = Math.min(2500 / srcWidth, 2500 / srcHeight);
+            sWidth = Math.max(1, Math.floor(srcWidth * r));
+            sHeight = Math.max(1, Math.floor(srcHeight * r));
+        }
+
         // Convert source to base64
         const canvas = document.createElement('canvas');
-        canvas.width = srcWidth;
-        canvas.height = srcHeight;
+        canvas.width = sWidth;
+        canvas.height = sHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(source, 0, 0);
-        const base64 = canvas.toDataURL('image/png');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(source, 0, 0, sWidth, sHeight);
+        const base64 = canvas.toDataURL('image/jpeg', 0.95);
 
         progressCallback(15, 'Sending to AI server...');
 
@@ -181,8 +229,8 @@ export class ImageUpscaler {
             const outputCtx = outputCanvas.getContext('2d');
             outputCtx.drawImage(img, 0, 0);
 
-            // Apply additional sharpening if enabled
-            if (this.sharpenEdges) {
+            // Apply additional sharpening if enabled and image size is within CPU limits
+            if (this.sharpenEdges && outputCanvas.width * outputCanvas.height <= 2000000) {
                 progressCallback(95, 'Sharpening...');
                 await this._enhanceDetails(outputCtx, outputCanvas.width, outputCanvas.height);
             }
@@ -251,46 +299,94 @@ export class ImageUpscaler {
             this.upscaler = new Upscaler({ model });
             await this.upscaler.ready;
 
-            progressCallback(40, 'Processing neural patches...');
+            // Constrain source dimensions so neural output does not exceed this.maxDimension
+            const maxAllowedInputW = Math.floor(this.maxDimension / clampedScale);
+            const maxAllowedInputH = Math.floor(this.maxDimension / clampedScale);
 
-            // Patch sizing: 64px for very large images to prevent GPU memory pressure, 128px for regular images
-            const patchSize = (srcWidth > 1200 || srcHeight > 1200) ? 64 : 128;
+            let sourceToProcess = source;
+            let currentSrcW = srcWidth;
+            let currentSrcH = srcHeight;
+
+            if (srcWidth > maxAllowedInputW || srcHeight > maxAllowedInputH) {
+                const ratio = Math.min(maxAllowedInputW / srcWidth, maxAllowedInputH / srcHeight);
+                currentSrcW = Math.max(1, Math.floor(srcWidth * ratio));
+                currentSrcH = Math.max(1, Math.floor(srcHeight * ratio));
+
+                progressCallback(30, `Optimizing large input (${srcWidth}×${srcHeight} → ${currentSrcW}×${currentSrcH})...`);
+
+                const preCanvas = document.createElement('canvas');
+                preCanvas.width = currentSrcW;
+                preCanvas.height = currentSrcH;
+                const preCtx = preCanvas.getContext('2d');
+                preCtx.imageSmoothingEnabled = true;
+                preCtx.imageSmoothingQuality = 'high';
+                preCtx.drawImage(source, 0, 0, currentSrcW, currentSrcH);
+                sourceToProcess = preCanvas;
+            }
+
+            progressCallback(35, 'Processing neural super-resolution patches...');
+
+            // Patch sizing: 128px offers optimal balance of speed, GPU memory, and boundary seam minimization.
+            // awaitNextFrame: true yields execution to requestAnimationFrame between patches, keeping the UI
+            // responsive and preventing browser watchdog hangs on multi-megapixel images.
+            const patchSize = 128;
             const padding = 6;
 
-            const enhancedDataUrl = await this.upscaler.upscale(source, {
-                output: 'base64',
+            const upscaledTensor = await this.upscaler.upscale(sourceToProcess, {
+                output: 'tensor',
                 patchSize,
                 padding,
+                awaitNextFrame: true,
                 progress: (progress) => {
-                    const pct = Math.round(40 + progress * 48);
-                    progressCallback(pct, `Upscaling image... ${Math.round(progress * 100)}%`);
+                    const pct = Math.round(35 + progress * 50);
+                    progressCallback(pct, `Upscaling image patches... ${Math.round(progress * 100)}%`);
                 }
             });
 
-            progressCallback(90, 'Finalizing enhanced image...');
+            progressCallback(88, 'Finalizing enhanced resolution...');
 
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = enhancedDataUrl;
-            });
+            const tensorH = upscaledTensor.shape[0];
+            const tensorW = upscaledTensor.shape[1];
 
-            // Scale to target size
+            const rawCanvas = document.createElement('canvas');
+            rawCanvas.width = tensorW;
+            rawCanvas.height = tensorH;
+
+            const tf = await import('@tensorflow/tfjs');
+            const tensorToDraw = upscaledTensor.shape.length === 4 ? upscaledTensor.squeeze([0]) : upscaledTensor;
+            await tf.browser.toPixels(tensorToDraw, rawCanvas);
+
+            upscaledTensor.dispose();
+            if (tensorToDraw !== upscaledTensor) {
+                tensorToDraw.dispose();
+            }
+
+            // Target dimensions
             const targetWidth = this.processingMode === 'enhance' ? srcWidth : outWidth;
             const targetHeight = this.processingMode === 'enhance' ? srcHeight : outHeight;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            let canvas = rawCanvas;
+            if (rawCanvas.width !== targetWidth || rawCanvas.height !== targetHeight) {
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = targetWidth;
+                finalCanvas.height = targetHeight;
+                const finalCtx = finalCanvas.getContext('2d');
+                finalCtx.imageSmoothingEnabled = true;
+                finalCtx.imageSmoothingQuality = 'high';
+                finalCtx.drawImage(rawCanvas, 0, 0, targetWidth, targetHeight);
+                canvas = finalCanvas;
+            }
 
             if (this.sharpenEdges) {
-                progressCallback(95, 'Refining edge sharpness...');
-                await this._enhanceDetails(ctx, targetWidth, targetHeight);
+                // Only run per-pixel CPU unsharp mask on small-to-medium images (<= 2MP)
+                // Real-ESRGAN already sharpens high-frequency edges natively.
+                if (targetWidth * targetHeight <= 2000000) {
+                    progressCallback(95, 'Refining edge sharpness...');
+                    const ctx = canvas.getContext('2d');
+                    await this._enhanceDetails(ctx, targetWidth, targetHeight);
+                } else {
+                    console.log(`[ImageUpscaler] Output size ${targetWidth}×${targetHeight} exceeds 2MP; preserving neural sharpness without CPU loop.`);
+                }
             }
 
             progressCallback(100, 'Super-resolution complete!');
@@ -316,7 +412,7 @@ export class ImageUpscaler {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, 0, 0, srcWidth, srcHeight, 0, 0, outWidth, outHeight);
 
-        if (this.sharpenEdges) {
+        if (this.sharpenEdges && outWidth * outHeight <= 2000000) {
             progressCallback(60, 'Sharpening...');
             await this._enhanceDetails(ctx, outWidth, outHeight);
         }
