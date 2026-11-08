@@ -39,9 +39,16 @@ export class GodRaysModule {
         this._initSliders();
         this._initButtons();
         this._initColorPickers();
-        // Canvas click listener is now managed in activate()/deactivate() via _boundOnCanvasClick (M6 fix)
         this._createSunIndicator();
         this._createProgressBar();
+
+        // Keep preview and sun gizmo aligned during window resize
+        window.addEventListener('resize', () => {
+            if (this.isActive) {
+                this._renderPreview();
+                this._updateSunIndicator();
+            }
+        });
     }
 
     /**
@@ -252,8 +259,8 @@ export class GodRaysModule {
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const x = Math.max(-0.25, Math.min(1.25, (e.clientX - rect.left) / rect.width));
+        const y = Math.max(-0.25, Math.min(1.25, (e.clientY - rect.top) / rect.height));
 
         this.sunPosition = { x, y };
 
@@ -266,25 +273,73 @@ export class GodRaysModule {
     }
 
     /**
-     * Create sun position indicator element
+     * Create interactive sun position gizmo element
      */
     _createSunIndicator() {
-        const canvasArea = document.querySelector('.canvas-area');
-        if (!canvasArea) return;
+        const container = document.querySelector('.canvas-container');
+        if (!container) return;
+
+        if (this.sunIndicator && this.sunIndicator.parentNode) {
+            this.sunIndicator.parentNode.removeChild(this.sunIndicator);
+            this.sunIndicator = null;
+        }
 
         this.sunIndicator = document.createElement('div');
         this.sunIndicator.id = 'sun-indicator';
-        this.sunIndicator.innerHTML = '☀️';
-        this.sunIndicator.style.cssText = `
-            position: absolute;
-            font-size: 32px;
-            pointer-events: none;
-            display: none;
-            transform: translate(-50%, -50%);
-            text-shadow: 0 0 20px rgba(255, 200, 0, 0.8);
-            z-index: 100;
+        this.sunIndicator.className = 'godrays-sun-gizmo';
+        this.sunIndicator.title = 'Drag to position sun / light source';
+        this.sunIndicator.innerHTML = `
+            <div class="sun-gizmo-core"></div>
+            <div class="sun-gizmo-ring"></div>
+            <div class="sun-gizmo-label">Sun</div>
         `;
-        canvasArea.appendChild(this.sunIndicator);
+        container.appendChild(this.sunIndicator);
+
+        this._initSunDrag();
+    }
+
+    /**
+     * Interactive drag handling for the sun gizmo
+     */
+    _initSunDrag() {
+        if (!this.sunIndicator || this._hasDragInitialized) return;
+        this._hasDragInitialized = true;
+
+        let isDragging = false;
+
+        const onPointerDown = (e) => {
+            if (!this.isActive) return;
+            isDragging = true;
+            this.sunIndicator.classList.add('dragging');
+            e.stopPropagation();
+            e.preventDefault();
+        };
+
+        const onPointerMove = (e) => {
+            if (!isDragging || !this.isActive) return;
+            const canvas = document.getElementById('gpu-canvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.max(-0.35, Math.min(1.35, (e.clientX - rect.left) / rect.width));
+            const y = Math.max(-0.35, Math.min(1.35, (e.clientY - rect.top) / rect.height));
+            this.sunPosition = { x, y };
+            if (this.effect) {
+                this.effect.setSunPosition(x, y);
+                this._renderPreview();
+            }
+            this._updateSunIndicator();
+        };
+
+        const onPointerUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                if (this.sunIndicator) this.sunIndicator.classList.remove('dragging');
+            }
+        };
+
+        this.sunIndicator.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
     }
 
     /**
@@ -294,16 +349,12 @@ export class GodRaysModule {
         const canvas = document.getElementById('gpu-canvas');
         if (!canvas || !this.sunIndicator) return;
 
-        const rect = canvas.getBoundingClientRect();
-        const containerRect = document.querySelector('.canvas-area').getBoundingClientRect();
+        // Position accurately relative to main canvas inside .canvas-container
+        const left = canvas.offsetLeft + (this.sunPosition.x * canvas.clientWidth);
+        const top = canvas.offsetTop + (this.sunPosition.y * canvas.clientHeight);
 
-        const x = rect.left - containerRect.left + (this.sunPosition.x * rect.width);
-        const y = rect.top - containerRect.top + (this.sunPosition.y * rect.height);
-
-        this.sunIndicator.style.left = `${x}px`;
-        this.sunIndicator.style.top = `${y}px`;
-
-        // Only show if active
+        this.sunIndicator.style.left = `${left}px`;
+        this.sunIndicator.style.top = `${top}px`;
         this.sunIndicator.style.display = this.isActive ? 'block' : 'none';
     }
 
@@ -371,7 +422,8 @@ export class GodRaysModule {
         // Check if depth is available
         this._checkDepthStatus();
 
-        // Show sun indicator
+        // Create or ensure sun gizmo exists
+        this._createSunIndicator();
         this._updateSunIndicator();
 
         // M6 FIX: Add click listener only when active
@@ -379,6 +431,9 @@ export class GodRaysModule {
             this._boundOnCanvasClick = this._onCanvasClick.bind(this);
         }
         document.getElementById('gpu-canvas')?.addEventListener('click', this._boundOnCanvasClick);
+
+        // Immediately render volumetric light rays so they appear instantly!
+        this._renderPreview();
     }
 
     /**
@@ -566,31 +621,33 @@ export class GodRaysModule {
         const resultCanvas = this.effect.render();
         if (!resultCanvas) return;
 
+        const mainCanvas = this.ui.elements.canvas || document.getElementById('gpu-canvas');
+        if (!mainCanvas) return;
+
+        const container = document.querySelector('.canvas-container');
+        if (!container) return;
+
         // Create or get overlay canvas for preview
         let previewCanvas = document.getElementById('godrays-preview-canvas');
         if (!previewCanvas) {
             previewCanvas = document.createElement('canvas');
             previewCanvas.id = 'godrays-preview-canvas';
-            previewCanvas.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 50;
-            `;
-            // Insert into canvas container
-            const container = document.querySelector('.canvas-container');
-            if (container) {
-                container.appendChild(previewCanvas);
-            }
+            previewCanvas.className = 'godrays-preview-canvas';
+            container.appendChild(previewCanvas);
         }
 
-        // Match canvas size
-        const mainCanvas = this.ui.elements.canvas;
+        // Match exact main canvas position, dimensions, and border radius inside container
         previewCanvas.width = mainCanvas.width;
         previewCanvas.height = mainCanvas.height;
+        previewCanvas.style.position = 'absolute';
+        previewCanvas.style.top = `${mainCanvas.offsetTop}px`;
+        previewCanvas.style.left = `${mainCanvas.offsetLeft}px`;
+        previewCanvas.style.width = `${mainCanvas.clientWidth}px`;
+        previewCanvas.style.height = `${mainCanvas.clientHeight}px`;
+        previewCanvas.style.borderRadius = window.getComputedStyle(mainCanvas).borderRadius;
+        previewCanvas.style.pointerEvents = 'none';
+        previewCanvas.style.zIndex = '50';
+        previewCanvas.style.display = 'block';
 
         // Draw result to preview canvas
         const ctx = previewCanvas.getContext('2d');
@@ -598,6 +655,8 @@ export class GodRaysModule {
             ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
             ctx.drawImage(resultCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
         }
+
+        this._updateSunIndicator();
     }
 
     /**
@@ -616,12 +675,16 @@ export class GodRaysModule {
     _resetToDefaults() {
         // Reset sliders
         const defaults = {
-            'godrays-intensity': 60,
+            'godrays-intensity': 75,
             'godrays-decay': 95,
-            'godrays-density': 50,
+            'godrays-density': 60,
             'godrays-samples': 48,
-            'godrays-lum': 60,
-            'godrays-depth': 70
+            'godrays-lum': 50,
+            'godrays-depth': 65,
+            'godrays-radius': 14,
+            'godrays-exposure': 22,
+            'godrays-noise': 40,
+            'godrays-bloom': 35
         };
 
         Object.entries(defaults).forEach(([id, value]) => {
@@ -631,22 +694,26 @@ export class GodRaysModule {
             if (valueDisplay) valueDisplay.textContent = value;
         });
 
-        // Reset sun position
-        this.sunPosition = { x: 0.5, y: 0.2 };
+        // Reset sun position to top center (0.5, 0.15)
+        this.sunPosition = { x: 0.5, y: 0.15 };
 
-        // Reset color
+        // Reset color to warm golden sunlight
         const colorPicker = document.getElementById('godrays-color-picker');
         if (colorPicker) colorPicker.value = '#FFF5E0';
 
         // Reset effect parameters
         if (this.effect) {
-            this.effect.setIntensity(0.6);
+            this.effect.setIntensity(0.75);
             this.effect.setDecay(0.95);
-            this.effect.setDensity(0.5);
+            this.effect.setDensity(0.60);
             this.effect.setSamples(48);
-            this.effect.setLumThreshold(0.6);
-            this.effect.setDepthThreshold(0.7);
-            this.effect.setSunPosition(0.5, 0.2);
+            this.effect.setLumThreshold(0.50);
+            this.effect.setDepthThreshold(0.65);
+            this.effect.setSunRadius(0.14);
+            this.effect.setExposure(2.2);
+            this.effect.setNoise(0.40);
+            this.effect.setBloom(0.35);
+            this.effect.setSunPosition(0.5, 0.15);
             this.effect.setRayColor('#FFF5E0');
         }
 
@@ -669,50 +736,54 @@ export class GodRaysModule {
         const snapshot = this.ui._captureFullState();
         this.ui.history.pushState(snapshot);
 
-        // H2 FIX: Convert result to proper HTMLImageElement (not raw ImageData)
-        // gpu.loadImage() and state.setImage() expect HTMLImageElement
+        // Convert result to proper HTMLImageElement via Blob URL to avoid large string allocation
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = resultCanvas.width;
         tempCanvas.height = resultCanvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.drawImage(resultCanvas, 0, 0);
-        const dataUrl = tempCanvas.toDataURL('image/png');
 
-        const img = new Image();
-        img.onload = () => {
-            // Apply to GPU processor
-            if (this.ui.gpu) {
-                this.ui.gpu.loadImage(img);
-                this.ui.gpu.render();
-            }
+        tempCanvas.toBlob((blob) => {
+            if (!blob) return;
+            const blobUrl = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(blobUrl);
 
-            // Update original image reference
-            if (this.ui.state) {
-                this.ui.state.setImage(img);
-                this.ui.state.originalImage = img;
-            }
+                // Apply to GPU processor
+                if (this.ui.gpu) {
+                    this.ui.gpu.loadImage(img);
+                    this.ui.gpu.render();
+                }
 
-            // Update histogram
-            setTimeout(() => this.ui.renderHistogram?.(), 100);
+                // Update original image reference
+                if (this.ui.state) {
+                    this.ui.state.setImage(img);
+                    this.ui.state.originalImage = img;
+                }
 
-            // Hide preview canvas and sun indicator immediately
-            this._hidePreviewCanvas();
-            this._hideSunIndicator();
+                // Update histogram
+                setTimeout(() => this.ui.renderHistogram?.(), 100);
 
-            // Dispose effect
-            if (this.effect) {
-                this.effect.dispose();
-                this.effect = null;
-            }
-            this.isActive = false;
+                // Hide preview canvas and sun indicator immediately
+                this._hidePreviewCanvas();
+                this._hideSunIndicator();
 
-            // Switch back to develop mode
-            this.ui.setMode('develop');
+                // Dispose effect
+                if (this.effect) {
+                    this.effect.dispose();
+                    this.effect = null;
+                }
+                this.isActive = false;
 
-            // Visual toast confirmation
-            this.ui.showToast?.('God rays applied');
-        };
-        img.src = dataUrl;
+                // Switch back to develop mode
+                this.ui.setMode('develop');
+
+                // Visual toast confirmation
+                this.ui.showToast?.('✓ Volumetric God Rays applied');
+            };
+            img.src = blobUrl;
+        }, 'image/png');
 
         // Hide preview immediately for visual feedback
         this._hidePreviewCanvas();

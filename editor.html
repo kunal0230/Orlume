@@ -1708,44 +1708,51 @@
                 <!-- God Rays Panel -->
                 <div class="panel-section" id="panel-godrays">
                     <div class="section">
-                        <div class="section-header">Volumetric Lighting</div>
+                        <div class="section-header">Volumetric God Rays</div>
                         <p
                             style="font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
-                            Add realistic god rays / sun beams to your image. Click on the image to position the light
-                            source.
+                            Add radiant volumetric sunbeams and atmospheric light shafts. Click on the canvas or drag the <strong>Sun</strong> handle directly to position the light source.
                         </p>
 
                         <!-- Depth Estimation Button -->
                         <button class="btn btn-primary" id="btn-godrays-depth"
-                            style="width: 100%; margin-bottom: 16px;">
+                            style="width: 100%; margin-bottom: 12px;">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
                                 stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                                 <path
                                     d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                             </svg>
-                            Analyze Image
+                            Analyze Depth (AI Occlusion)
                         </button>
 
                         <p id="godrays-depth-status"
                             style="font-size: 10px; color: var(--text-secondary); margin-bottom: 16px; text-align: center;">
-                            Click "Analyze Image" first for best results
+                            Rays active • Click "Analyze Depth" to cast rays behind subjects
                         </p>
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Ray Settings</div>
+                        <div class="section-header">Ray Controls</div>
 
                         <div class="control-group">
                             <div class="control-label">
                                 <span>Intensity</span>
-                                <span id="val-godrays-intensity">60</span>
+                                <span id="val-godrays-intensity">75</span>
                             </div>
-                            <input type="range" id="slider-godrays-intensity" min="0" max="100" step="1" value="60">
+                            <input type="range" id="slider-godrays-intensity" min="0" max="100" step="1" value="75">
                         </div>
 
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Decay</span>
+                                <span>Ray Length (Reach)</span>
+                                <span id="val-godrays-density">60</span>
+                            </div>
+                            <input type="range" id="slider-godrays-density" min="10" max="100" step="1" value="60">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Decay (Falloff)</span>
                                 <span id="val-godrays-decay">95</span>
                             </div>
                             <input type="range" id="slider-godrays-decay" min="80" max="99" step="1" value="95">
@@ -1753,15 +1760,7 @@
 
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Density</span>
-                                <span id="val-godrays-density">50</span>
-                            </div>
-                            <input type="range" id="slider-godrays-density" min="10" max="100" step="1" value="50">
-                        </div>
-
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Samples</span>
+                                <span>Quality (Samples)</span>
                                 <span id="val-godrays-samples">48</span>
                             </div>
                             <input type="range" id="slider-godrays-samples" min="16" max="64" step="4" value="48">
@@ -1769,126 +1768,93 @@
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Light Detection</div>
+                        <div class="section-header">Light Detection & Occlusion</div>
 
                         <div class="control-group">
                             <div class="control-label">
                                 <span>Brightness Threshold</span>
-                                <span id="val-godrays-lum">60</span>
+                                <span id="val-godrays-lum">50</span>
                             </div>
-                            <input type="range" id="slider-godrays-lum" min="0" max="100" step="1" value="60">
+                            <input type="range" id="slider-godrays-lum" min="0" max="100" step="1" value="50">
                         </div>
 
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Depth Threshold</span>
-                                <span id="val-godrays-depth">70</span>
+                                <span>Depth Occlusion</span>
+                                <span id="val-godrays-depth">65</span>
                             </div>
-                            <input type="range" id="slider-godrays-depth" min="0" max="100" step="1" value="70">
+                            <input type="range" id="slider-godrays-depth" min="0" max="100" step="1" value="65">
                         </div>
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Sun & Glow</div>
+                        <div class="section-header">Sun Core & Bloom</div>
                         <div class="control-group">
                             <div class="control-label">
                                 <span>Sun Radius</span>
-                                <span id="val-godrays-radius">15</span>
+                                <span id="val-godrays-radius">14</span>
                             </div>
-                            <input type="range" id="slider-godrays-radius" min="1" max="50" step="1" value="15">
+                            <input type="range" id="slider-godrays-radius" min="1" max="50" step="1" value="14">
                         </div>
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Exposure</span>
-                                <span id="val-godrays-exposure">25</span>
+                                <span>Sun Core Bloom</span>
+                                <span id="val-godrays-bloom">35</span>
                             </div>
-                            <input type="range" id="slider-godrays-exposure" min="5" max="50" step="1" value="25">
+                            <input type="range" id="slider-godrays-bloom" min="0" max="100" step="1" value="35">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Beam Exposure</span>
+                                <span id="val-godrays-exposure">22</span>
+                            </div>
+                            <input type="range" id="slider-godrays-exposure" min="5" max="50" step="1" value="22">
                         </div>
                     </div>
 
                     <div class="section">
-                        <div class="section-header">Ray Color</div>
-                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <div class="section-header">Ray Color & Atmosphere</div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
                             <button class="color-preset-btn active" data-color="#FFF5E0"
                                 style="background: #FFF5E0; width: 28px; height: 28px; border-radius: 4px; border: 2px solid var(--accent);"
                                 title="Warm Sunlight"></button>
                             <button class="color-preset-btn" data-color="#FFFFFF"
                                 style="background: #FFFFFF; width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);"
-                                title="White"></button>
+                                title="Pure White"></button>
                             <button class="color-preset-btn" data-color="#FFE4B5"
                                 style="background: #FFE4B5; width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);"
-                                title="Golden"></button>
+                                title="Golden Hour"></button>
                             <button class="color-preset-btn" data-color="#FFB347"
                                 style="background: #FFB347; width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);"
-                                title="Orange"></button>
+                                title="Sunset Amber"></button>
+                            <button class="color-preset-btn" data-color="#D0F0FF"
+                                style="background: #D0F0FF; width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);"
+                                title="Morning Mist Cyan"></button>
                             <input type="color" id="godrays-color-picker" value="#FFF5E0"
-                                style="width: 28px; height: 28px; border: none; cursor: pointer;">
+                                style="width: 28px; height: 28px; border: none; cursor: pointer; border-radius: 4px;">
                         </div>
-                    </div>
 
-                    <div class="section">
-                        <div class="section-header">Advanced Effects</div>
                         <div class="control-group">
                             <div class="control-label">
-                                <span>Chromatic</span>
-                                <span id="val-godrays-chromatic">15</span>
+                                <span>Shaft Streakiness (Beams)</span>
+                                <span id="val-godrays-noise">40</span>
                             </div>
-                            <input type="range" id="slider-godrays-chromatic" min="0" max="100" step="1" value="15">
+                            <input type="range" id="slider-godrays-noise" min="0" max="100" step="1" value="40">
                         </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Noise</span>
-                                <span id="val-godrays-noise">25</span>
-                            </div>
-                            <input type="range" id="slider-godrays-noise" min="0" max="100" step="1" value="25">
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Bloom</span>
-                                <span id="val-godrays-bloom">40</span>
-                            </div>
-                            <input type="range" id="slider-godrays-bloom" min="0" max="100" step="1" value="40">
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Scatter</span>
-                                <span id="val-godrays-scatter">30</span>
-                            </div>
-                            <input type="range" id="slider-godrays-scatter" min="0" max="100" step="1" value="30">
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Tone Map</span>
-                                <span id="val-godrays-tonemap">60</span>
-                            </div>
-                            <input type="range" id="slider-godrays-tonemap" min="0" max="100" step="1" value="60">
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">🌳 Shadows</div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow Intensity</span>
-                                <span id="val-godrays-shadowintensity">60</span>
-                            </div>
-                            <input type="range" id="slider-godrays-shadowintensity" min="0" max="100" step="1"
-                                value="60">
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow Softness</span>
-                                <span id="val-godrays-shadowsoftness">40</span>
-                            </div>
-                            <input type="range" id="slider-godrays-shadowsoftness" min="0" max="100" step="1"
-                                value="40">
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Shadow Length</span>
-                                <span id="val-godrays-shadowlength">50</span>
-                            </div>
-                            <input type="range" id="slider-godrays-shadowlength" min="10" max="100" step="1" value="50">
+                        <!-- Hidden inputs for code compatibility -->
+                        <div style="display: none;">
+                            <input type="range" id="slider-godrays-chromatic" value="0">
+                            <span id="val-godrays-chromatic">0</span>
+                            <input type="range" id="slider-godrays-scatter" value="0">
+                            <span id="val-godrays-scatter">0</span>
+                            <input type="range" id="slider-godrays-tonemap" value="0">
+                            <span id="val-godrays-tonemap">0</span>
+                            <input type="range" id="slider-godrays-shadowintensity" value="0">
+                            <span id="val-godrays-shadowintensity">0</span>
+                            <input type="range" id="slider-godrays-shadowsoftness" value="0">
+                            <span id="val-godrays-shadowsoftness">0</span>
+                            <input type="range" id="slider-godrays-shadowlength" value="0">
+                            <span id="val-godrays-shadowlength">0</span>
                         </div>
                     </div>
 

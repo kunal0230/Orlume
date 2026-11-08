@@ -168,6 +168,7 @@ export class GodRaysEffect {
         this.uniforms = {
             u_image: gl.getUniformLocation(this.program, 'u_image'),
             u_depth: gl.getUniformLocation(this.program, 'u_depth'),
+            u_hasDepth: gl.getUniformLocation(this.program, 'u_hasDepth'),
             u_sunPosition: gl.getUniformLocation(this.program, 'u_sunPosition'),
             u_intensity: gl.getUniformLocation(this.program, 'u_intensity'),
             u_decay: gl.getUniformLocation(this.program, 'u_decay'),
@@ -428,6 +429,9 @@ export class GodRaysEffect {
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, depthTex);
         gl.uniform1i(this.uniforms.u_depth, 1);
+        if (this.uniforms.u_hasDepth) {
+            gl.uniform1i(this.uniforms.u_hasDepth, isDepthTex ? 1 : 0);
+        }
 
         // Set uniforms
         // Note: Don't flip Y here - texture coords already corrected for canvas orientation
