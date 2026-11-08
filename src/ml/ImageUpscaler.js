@@ -472,6 +472,7 @@ export class ImageUpscaler {
             uniform sampler2D u_image;
             uniform vec2 u_texel;
 
+            // Rec.709 perceptual luminance weights
             const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
             // Detect human skin tones to protect portraits from harshness
@@ -486,72 +487,43 @@ export class ImageUpscaler {
                 vec3 center = center4.rgb;
                 float cLuma = dot(center, LUMA);
 
-                // 1. 9-tap Edge-Preserving Cross & Diagonal Samples
-                vec3 n  = texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb;
-                vec3 s  = texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb;
-                vec3 e  = texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb;
-                vec3 w  = texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb;
-                vec3 ne = texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb;
-                vec3 nw = texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb;
-                vec3 se = texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb;
-                vec3 sw = texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb;
+                if (cLuma <= 1e-5) {
+                    fragColor = center4;
+                    return;
+                }
 
-                // 2. Compute local edge gradient magnitude (Sobel / central differences)
-                float gx = dot(ne + 2.0 * e + se - (nw + 2.0 * w + sw), LUMA);
-                float gy = dot(ne + 2.0 * n + nw - (se + 2.0 * s + sw), LUMA);
+                // 8-neighborhood sample luminances
+                float nL  = dot(texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb, LUMA);
+                float sL  = dot(texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb, LUMA);
+                float eL  = dot(texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb, LUMA);
+                float wL  = dot(texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb, LUMA);
+                float neL = dot(texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb, LUMA);
+                float nwL = dot(texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb, LUMA);
+                float seL = dot(texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb, LUMA);
+                float swL = dot(texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb, LUMA);
+
+                // Local edge gradient magnitude (Sobel on luminance)
+                float gx = (neL + 2.0 * eL + seL) - (nwL + 2.0 * wL + swL);
+                float gy = (neL + 2.0 * nL + nwL) - (seL + 2.0 * sL + swL);
                 float edgeMag = sqrt(gx * gx + gy * gy);
 
-                // 3. Bilateral Edge-Preserving Denoising for smooth regions
-                // When edgeMag is low (< 0.06), pixels get gentle bilateral noise cleanup
-                float spatialWeight = 0.125;
-                float bilateralSum = 1.0;
-                vec3 bilateralAcc = center;
+                // 8-neighbor weighted average
+                float avgL = (nL + sL + eL + wL) * 0.15 + (neL + nwL + seL + swL) * 0.10;
+                float diffL = cLuma - avgL;
 
-                #define ACC_BILATERAL(sampleColor) { \
-                    float dL = abs(dot(sampleColor, LUMA) - cLuma); \
-                    float rW = exp(-dL * dL / 0.008) * spatialWeight; \
-                    bilateralAcc += sampleColor * rW; \
-                    bilateralSum += rW; \
-                }
-
-                ACC_BILATERAL(n);
-                ACC_BILATERAL(s);
-                ACC_BILATERAL(e);
-                ACC_BILATERAL(w);
-                ACC_BILATERAL(ne);
-                ACC_BILATERAL(nw);
-                ACC_BILATERAL(se);
-                ACC_BILATERAL(sw);
-
-                vec3 denoised = bilateralAcc / bilateralSum;
-
-                // 4. Subtle, Natural Edge Polish (ONLY on real edges, NEVER on noise or flat sky/skin)
-                float edgeGate = smoothstep(0.04, 0.20, edgeMag);
+                // Edge gating: only real edges get gentle unsharp detail, flat areas untouched
+                float edgeGate = smoothstep(0.03, 0.18, edgeMag);
                 float skinProt = getSkinWeight(center);
-                edgeGate *= (1.0 - skinProt * 0.75); // Damps sharpening on skin by 75% for creamy, flattering portraits
+                edgeGate *= (1.0 - skinProt * 0.8);
 
-                // Unsharp high-frequency detail relative to bilateral base
-                vec3 highFreq = center - denoised;
-                // Gentle, natural edge sharpening (0.35, not harsh 1.25)
-                vec3 edgePolish = highFreq * (0.35 * edgeGate);
+                // Soft-limited luminance delta (prevents harshness or halos)
+                float deltaL = (diffL / (1.0 + 4.0 * abs(diffL))) * (0.35 * edgeGate);
 
-                // Blend base between clean denoised and original
-                vec3 baseClean = mix(denoised, center, clamp(edgeMag * 4.0, 0.0, 1.0));
-                vec3 sharpResult = baseClean + edgePolish;
+                float enhancedLuma = clamp(cLuma + deltaL, 0.0, 1.0);
 
-                // 5. Filmic Tonal Polish (Subtle dynamic range & shadow recovery)
-                vec3 tonePolished;
-                for (int c = 0; c < 3; c++) {
-                    float v = sharpResult[c];
-                    float shadowLift = 0.035 * exp(-v * 5.0);
-                    float highlightSoft = 1.0 - exp(-v * 1.05) / (1.0 - exp(-1.05));
-                    tonePolished[c] = mix(v + shadowLift, highlightSoft, 0.2);
-                }
-
-                // 6. Natural Color Richness (Subtle saturation polish on muted midtones)
-                float toneLuma = dot(tonePolished, LUMA);
-                float midtoneWeight = smoothstep(0.05, 0.35, toneLuma) * (1.0 - smoothstep(0.70, 0.95, toneLuma));
-                vec3 finalRgb = mix(vec3(toneLuma), tonePolished, 1.0 + 0.05 * midtoneWeight);
+                // Scale RGB by luminance ratio: 100% preservation of Hue and Saturation
+                // Zero color shift, zero tint shift, zero global exposure shift!
+                vec3 finalRgb = center * (enhancedLuma / cLuma);
 
                 fragColor = vec4(clamp(finalRgb, 0.0, 1.0), center4.a);
             }`;
@@ -620,7 +592,7 @@ export class ImageUpscaler {
     }
 
     /**
-     * Fallback 2D canvas natural photographic polish
+     * Fallback 2D canvas natural photographic polish (100% color & exposure preservation)
      */
     _fallbackCanvas2D(source, width, height, progressCallback = () => {}) {
         progressCallback(40, 'Refining details with CPU fallback...');
@@ -634,24 +606,27 @@ export class ImageUpscaler {
         const d = imgData.data;
         const orig = new Uint8ClampedArray(d);
 
-        const amount = 0.35;
+        const amount = 0.25;
         for (let i = 0; i < d.length; i += 4) {
             const x = (i / 4) % width;
             const y = Math.floor((i / 4) / width);
             if (x <= 1 || x >= width - 2 || y <= 1 || y >= height - 2) continue;
 
-            for (let c = 0; c < 3; c++) {
-                const idx = i + c;
-                const cur = orig[idx];
-                const n = orig[idx - width * 4];
-                const s = orig[idx + width * 4];
-                const w = orig[idx - 4];
-                const e = orig[idx + 4];
-                const avg = (n + s + w + e) * 0.25;
-                const diff = cur - avg;
-                if (Math.abs(diff) > 4 && Math.abs(diff) < 40) {
-                    d[idx] = Math.min(255, Math.max(0, Math.round(cur + diff * amount)));
-                }
+            const curL = 0.2126 * orig[i] + 0.7152 * orig[i + 1] + 0.0722 * orig[i + 2];
+            if (curL <= 5.0) continue;
+
+            const nL = 0.2126 * orig[i - width * 4] + 0.7152 * orig[i - width * 4 + 1] + 0.0722 * orig[i - width * 4 + 2];
+            const sL = 0.2126 * orig[i + width * 4] + 0.7152 * orig[i + width * 4 + 1] + 0.0722 * orig[i + width * 4 + 2];
+            const wL = 0.2126 * orig[i - 4] + 0.7152 * orig[i - 4 + 1] + 0.0722 * orig[i - 4 + 2];
+            const eL = 0.2126 * orig[i + 4] + 0.7152 * orig[i + 4 + 1] + 0.0722 * orig[i + 4 + 2];
+
+            const diff = curL - (nL + sL + wL + eL) * 0.25;
+            if (Math.abs(diff) > 4 && Math.abs(diff) < 30) {
+                const newL = Math.max(0, Math.min(255, curL + diff * amount));
+                const ratio = newL / curL;
+                d[i] = Math.min(255, Math.max(0, Math.round(orig[i] * ratio)));
+                d[i + 1] = Math.min(255, Math.max(0, Math.round(orig[i + 1] * ratio)));
+                d[i + 2] = Math.min(255, Math.max(0, Math.round(orig[i + 2] * ratio)));
             }
         }
         ctx.putImageData(imgData, 0, 0);
