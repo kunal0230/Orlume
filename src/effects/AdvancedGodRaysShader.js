@@ -1,13 +1,13 @@
 /**
- * AdvancedGodRaysShader.js - Professional Volumetric Crepuscular Rays
+ * AdvancedGodRaysShader.js - Physics & Geometry-Driven Volumetric Crepuscular God Rays
  * 
- * Implements GPU-accelerated volumetric lighting:
- * - Radial crepuscular ray marching with exponential attenuation
- * - Light emission mask from sun disc core + highlight luminance
- * - Depth-aware occlusion (foreground blockers cast realistic beam silhouettes)
- * - Atmospheric scattering & angular streak beam modulation
- * - Dithered sub-pixel jitter to prevent ray stepping rings
- * - Non-destructive photographic optical screen blend (100% color & tone preservation)
+ * Features:
+ * - Henyey-Greenstein Mie atmospheric scattering phase function (authentic forward-scattering bloom)
+ * - Image geometry silhouette detection (light shafts emerge organically from scene edges & contours)
+ * - Depth-aware 3D occlusion & high-contrast 2D geometric shadow extinction
+ * - Sub-pixel dither jitter eliminating stepping rings
+ * - Wavelength extinction (Rayleigh / Mie atmospheric chromatic penetration)
+ * - Non-destructive photographic optical screen blend
  */
 
 // Shared vertex shader for full-screen quad
@@ -23,7 +23,7 @@ export const VERTEX_SHADER = `
 `;
 
 // ============================================
-// VOLUMETRIC GOD RAYS FRAGMENT SHADER
+// GEOMETRY & PHYSICS VOLUMETRIC GOD RAYS SHADER
 // ============================================
 export const ADVANCED_GODRAYS_SHADER = `
     precision highp float;
@@ -50,7 +50,7 @@ export const ADVANCED_GODRAYS_SHADER = `
     // Color and style
     uniform vec3 u_rayColor;
     uniform float u_exposure;
-    uniform float u_noise;       // Beam streakiness / atmospheric variation
+    uniform float u_noise;       // Image geometry edge influence / shaft contrast
     uniform float u_bloom;       // Sun core bloom intensity
     
     // Resolution for noise dither
@@ -63,39 +63,35 @@ export const ADVANCED_GODRAYS_SHADER = `
         return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
     }
     
-    // Extract volumetric light emission at UV
-    float getLightEmission(vec2 uv) {
-        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+    // Henyey-Greenstein Mie Atmospheric Scattering Phase Function
+    // Models physical forward-scattering through aerosols, humidity, and atmospheric dust
+    float henyeyGreenstein(float cosTheta, float g) {
+        float g2 = g * g;
+        return (1.0 - g2) / (4.0 * 3.14159265 * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
+    }
+    
+    // Evaluate geometric occlusion at coord
+    // Returns 1.0 for transparent / illuminated sky, 0.0 for opaque silhouette blockers
+    float evaluateOcclusion(vec2 coord) {
+        if (coord.x < 0.0 || coord.x > 1.0 || coord.y < 0.0 || coord.y > 1.0) {
             return 0.0;
         }
         
-        // 1. Sun disc emitter at light position
-        float distToSun = length(uv - u_sunPosition);
-        float sunCore = 1.0 - smoothstep(0.0, u_sunRadius * 0.45, distToSun);
-        float sunCorona = 1.0 - smoothstep(u_sunRadius * 0.1, u_sunRadius * 2.2, distToSun);
-        float sunEmitter = pow(sunCore, 2.0) * 1.6 + pow(sunCorona, 1.6) * 0.75;
-
-        // 2. Scene highlight contribution near the light
-        vec4 col = texture2D(u_image, uv);
-        float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
-        
-        float proximityToSun = 1.0 - smoothstep(0.0, 0.65, distToSun);
-        float brightPass = smoothstep(u_lumThreshold, 1.0, luma) * proximityToSun * 0.6;
-
-        float emission = max(sunEmitter, brightPass);
-
-        // 3. Occlusion by foreground objects
+        // 1. AI Depth Occlusion (when depth map is active)
         if (u_hasDepth == 1) {
-            float d = texture2D(u_depth, uv).r;
-            float occluder = smoothstep(u_depthThreshold - 0.1, u_depthThreshold + 0.1, d);
-            emission *= (1.0 - occluder);
+            float depth = texture2D(u_depth, coord).r;
+            // Foreground subjects (depth > threshold) physically occlude background rays
+            float occluder = smoothstep(u_depthThreshold - 0.08, u_depthThreshold + 0.08, depth);
+            return (1.0 - occluder);
         } else {
-            // Natural 2D silhouette occlusion: dark elements (branches, ridges) block rays
-            float blocker = 1.0 - smoothstep(u_lumThreshold * 0.3, u_lumThreshold * 0.9, luma);
-            emission *= (1.0 - blocker * 0.85);
+            // 2. Image Geometry Occlusion:
+            // High-contrast silhouettes (cliffs, foliage, tree branches, window frames)
+            // have lower luminance than the sky and act as physical blockers
+            vec4 col = texture2D(u_image, coord);
+            float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
+            float transmittance = smoothstep(u_lumThreshold * 0.35, u_lumThreshold * 1.05, luma);
+            return transmittance;
         }
-
-        return emission;
     }
     
     void main() {
@@ -105,6 +101,7 @@ export const ADVANCED_GODRAYS_SHADER = `
         // Vector from current pixel towards the sun
         vec2 deltaUV = (u_sunPosition - v_uv);
         float distToSun = length(deltaUV);
+        vec2 rayDir = (distToSun > 0.0001) ? normalize(deltaUV) : vec2(0.0, 1.0);
         
         // Step size along the ray
         vec2 stepUV = deltaUV * (u_density / float(u_samples));
@@ -113,47 +110,65 @@ export const ADVANCED_GODRAYS_SHADER = `
         float jitter = hash(v_uv * u_resolution) - 0.5;
         vec2 coord = v_uv + stepUV * jitter;
         
-        // Ray angle for volumetric beam streakiness (cathedral sunbeam shafts)
-        float rayAngle = atan(deltaUV.y, deltaUV.x);
-        float streakNoise = 0.68 + 0.32 * (
-            sin(rayAngle * 30.0) * 0.5 + 
-            sin(rayAngle * 60.0 + 1.2) * 0.3 + 
-            sin(rayAngle * 120.0 + 2.5) * 0.2
-        );
-        float beamModulation = mix(1.0, streakNoise, u_noise);
+        // 1. Physical Mie Atmospheric Scattering Phase Function
+        // Forward scattering intensifies when looking in the direction of the light source
+        float cosTheta = clamp(1.0 - distToSun * 0.85, -1.0, 1.0);
+        float miePhase = henyeyGreenstein(cosTheta, 0.72) * 12.5;
         
-        // Accumulate volumetric illumination along the ray
-        vec3 rayAccum = vec3(0.0);
-        float sampleWeight = (1.0 / float(u_samples)) * 1.8;
-        float currentWeight = sampleWeight;
+        // 2. Image Geometry Silhouette Modulation
+        // Sample perpendicular image gradient to detect natural silhouette edges (branches, ridges)
+        vec2 perp = vec2(-rayDir.y, rayDir.x) * (2.5 / u_resolution);
+        float lumaLeft = dot(texture2D(u_image, v_uv + perp).rgb, vec3(0.2126, 0.7152, 0.0722));
+        float lumaRight = dot(texture2D(u_image, v_uv - perp).rgb, vec3(0.2126, 0.7152, 0.0722));
+        float edgeContrast = abs(lumaLeft - lumaRight);
+        
+        // Light shafts naturally conform to the geometry of scene blockers
+        float geometryShaftMod = 1.0 + edgeContrast * 3.2 * u_noise;
+        
+        // 3. Volumetric In-Scattering Accumulation
+        float rayTransmittance = 1.0;
+        vec3 inScatter = vec3(0.0);
+        float stepWeight = (1.0 / float(u_samples)) * 1.8;
+        float currentWeight = stepWeight;
         
         for (int i = 0; i < 96; i++) {
             if (i >= u_samples) break;
             
             coord += stepUV;
+            float visibility = evaluateOcclusion(coord);
             
-            float emission = getLightEmission(coord);
-            rayAccum += emission * currentWeight;
+            // Optical extinction along the ray
+            rayTransmittance *= mix(1.0, visibility, 0.20);
+            
+            // Accumulate in-scattered light
+            inScatter += visibility * currentWeight * rayTransmittance;
             currentWeight *= u_decay;
         }
         
-        // Natural reach based on density
-        float falloffRate = mix(2.2, 0.8, clamp(u_density, 0.0, 1.0));
-        float radialFalloff = 1.0 / (1.0 + distToSun * falloffRate);
-        rayAccum *= beamModulation * radialFalloff * u_exposure;
+        // 4. Natural Atmospheric Radial Density Falloff
+        float falloffRate = mix(2.0, 0.75, clamp(u_density, 0.0, 1.0));
+        float atmosphericFalloff = 1.0 / (1.0 + distToSun * falloffRate);
         
-        // Sun core bloom halo around the light source
-        float sunGlow = 1.0 - smoothstep(0.0, u_sunRadius * 2.0, distToSun);
-        sunGlow = pow(sunGlow, 2.5) * u_bloom;
+        // Combine volumetric in-scattering with Mie phase and scene geometry
+        vec3 totalRayLight = inScatter * miePhase * geometryShaftMod * atmosphericFalloff * u_exposure;
         
-        // Combine rays with sun core glow and apply chosen ray color & intensity
-        vec3 totalRays = (rayAccum + sunGlow) * u_rayColor * u_intensity;
+        // 5. Sun Core Bloom Halo
+        float sunGlow = pow(1.0 - smoothstep(0.0, u_sunRadius * 2.2, distToSun), 2.5) * u_bloom;
+        totalRayLight += vec3(sunGlow);
         
-        // Non-destructive optical screen blend:
-        // Illuminates atmosphere naturally without crushing dark shadows or burning base tones
-        vec3 result = 1.0 - (1.0 - original) * (1.0 - clamp(totalRays, 0.0, 1.0));
+        // 6. Atmospheric Wavelength Extinction
+        // Warmer wavelengths penetrate deeper through atmospheric dust/haze
+        vec3 atmosphereColor = u_rayColor;
+        atmosphereColor.r = pow(atmosphereColor.r, 0.95);
+        atmosphereColor.b = pow(atmosphereColor.b, 1.15);
         
-        // Gentle edge fadeout so rays don't cut off abruptly at screen boundaries
+        vec3 finalRays = totalRayLight * atmosphereColor * u_intensity;
+        
+        // 7. Non-Destructive Photographic Optical Screen Blend
+        // Preserves 100% of underlying details, shadows, and natural color science
+        vec3 result = 1.0 - (1.0 - original) * (1.0 - clamp(finalRays, 0.0, 1.0));
+        
+        // Gentle edge fadeout so rays don't abruptly clip at screen boundaries
         vec2 edgeDist = min(v_uv, 1.0 - v_uv);
         float edgeFade = smoothstep(0.0, 0.02, min(edgeDist.x, edgeDist.y));
         result = mix(original, result, edgeFade);

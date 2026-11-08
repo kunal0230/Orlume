@@ -41,6 +41,8 @@ export class GodRaysModule {
         this._activePointerId = null;
         this._dragInitialized = false;
         this._resizeObserver = null;
+        this.showPin = true;
+        this._fadeTimer = null;
     }
 
     /**
@@ -177,6 +179,29 @@ export class GodRaysModule {
      * Initialize buttons
      */
     _initButtons() {
+        // Auto-detect light source button
+        const autoDetectBtn = document.getElementById('btn-godrays-autodetect');
+        if (autoDetectBtn) {
+            autoDetectBtn.addEventListener('click', () => {
+                this.autoDetectLightSource();
+            });
+        }
+
+        // Toggle show/hide light position reticle
+        const pinToggle = document.getElementById('toggle-godrays-pin');
+        if (pinToggle) {
+            pinToggle.addEventListener('change', () => {
+                this.showPin = pinToggle.checked;
+                if (this.sunIndicator) {
+                    if (this.showPin) {
+                        this.sunIndicator.classList.remove('hidden-pin');
+                    } else {
+                        this.sunIndicator.classList.add('hidden-pin');
+                    }
+                }
+            });
+        }
+
         const depthBtn = document.getElementById('btn-godrays-depth');
         if (depthBtn) {
             depthBtn.addEventListener('click', async () => {
@@ -256,16 +281,20 @@ export class GodRaysModule {
             indicator = document.createElement('div');
             indicator.id = 'sun-indicator';
             indicator.className = 'godrays-sun-gizmo';
-            indicator.title = 'Drag to reposition sun / light source';
+            indicator.title = 'Light Position Reticle (drag or click anywhere on image)';
             indicator.innerHTML = `
                 <div class="sun-gizmo-core"></div>
                 <div class="sun-gizmo-ring"></div>
-                <div class="sun-gizmo-label">Sun</div>
             `;
             container.appendChild(indicator);
         }
         this.sunIndicator = indicator;
         this.sunIndicator.style.display = 'none';
+        if (!this.showPin) {
+            this.sunIndicator.classList.add('hidden-pin');
+        } else {
+            this.sunIndicator.classList.remove('hidden-pin');
+        }
     }
 
     /**
@@ -300,6 +329,17 @@ export class GodRaysModule {
             this._updateSunIndicator();
         };
 
+        const wakeUpReticle = () => {
+            if (!this.isActive || !this.sunIndicator || !this.showPin) return;
+            this.sunIndicator.classList.add('active-hover');
+            clearTimeout(this._fadeTimer);
+            this._fadeTimer = setTimeout(() => {
+                if (this.sunIndicator && !this._isDragging) {
+                    this.sunIndicator.classList.remove('active-hover');
+                }
+            }, 1400);
+        };
+
         const onPointerDown = (e) => {
             if (!this.isActive) return;
             // Don't intercept right click or Space key panning (ZoomPanModule)
@@ -310,6 +350,7 @@ export class GodRaysModule {
 
             if (this.sunIndicator) {
                 this.sunIndicator.classList.add('dragging');
+                this.sunIndicator.classList.add('active-hover');
             }
 
             // Move sun immediately to cursor on click
@@ -326,7 +367,9 @@ export class GodRaysModule {
         };
 
         const onPointerMove = (e) => {
-            if (!this._isDragging || !this.isActive) return;
+            if (!this.isActive) return;
+            wakeUpReticle();
+            if (!this._isDragging) return;
             updatePositionFromCoords(e.clientX, e.clientY, true);
             e.stopPropagation();
             e.preventDefault();
@@ -345,6 +388,8 @@ export class GodRaysModule {
                 } catch (_) {}
                 this._activePointerId = null;
 
+                wakeUpReticle();
+
                 // Render full configured quality on release
                 this._renderPreview();
             }
@@ -353,10 +398,63 @@ export class GodRaysModule {
         this._boundPointerDown = onPointerDown;
         this._boundPointerMove = onPointerMove;
         this._boundPointerUp = onPointerUp;
+        this._wakeUpReticle = wakeUpReticle;
 
         window.addEventListener('pointermove', this._boundPointerMove, { passive: false });
         window.addEventListener('pointerup', this._boundPointerUp, { passive: false });
         window.addEventListener('pointercancel', this._boundPointerUp, { passive: false });
+    }
+
+    /**
+     * Mathematically analyze image highlights & sky geometry to auto-detect the natural light source
+     */
+    autoDetectLightSource() {
+        if (!this.ui.state.hasImage) return;
+
+        // Use downscaled canvas for fast 1ms centroid analysis
+        const canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 90;
+        const ctx = canvas.getContext('2d');
+        if (this.ui.state.originalImage) {
+            ctx.drawImage(this.ui.state.originalImage, 0, 0, 120, 90);
+        } else {
+            ctx.drawImage(this.ui.elements.canvas, 0, 0, 120, 90);
+        }
+        const data = ctx.getImageData(0, 0, 120, 90).data;
+
+        let sumWeight = 0;
+        let sumX = 0;
+        let sumY = 0;
+
+        // Search the upper 70% of the image (typical sky / lighting zone)
+        const maxY = Math.floor(90 * 0.70);
+        for (let y = 0; y < maxY; y++) {
+            for (let x = 0; x < 120; x++) {
+                const idx = (y * 120 + x) * 4;
+                const r = data[idx] / 255;
+                const g = data[idx + 1] / 255;
+                const b = data[idx + 2] / 255;
+                const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+                // Fourth-power weighting isolates dominant specular light cluster / aperture
+                const weight = Math.pow(Math.max(0, luma - 0.45), 4.0);
+                if (weight > 0.0001) {
+                    sumWeight += weight;
+                    sumX += (x / 120) * weight;
+                    sumY += (y / 90) * weight;
+                }
+            }
+        }
+
+        if (sumWeight > 0.001) {
+            const targetX = Math.max(0.05, Math.min(0.95, sumX / sumWeight));
+            const targetY = Math.max(0.05, Math.min(0.85, sumY / sumWeight));
+            this.setSunPosition(targetX, targetY);
+            this.ui.showToast?.('✨ Natural light source auto-detected');
+        } else {
+            this.setSunPosition(0.5, 0.18);
+        }
     }
 
     /**
@@ -530,6 +628,10 @@ export class GodRaysModule {
             canvas.removeEventListener('pointerdown', this._boundPointerDown);
             canvas.addEventListener('pointerdown', this._boundPointerDown);
         }
+        if (canvas && this._wakeUpReticle) {
+            canvas.removeEventListener('pointerenter', this._wakeUpReticle);
+            canvas.addEventListener('pointerenter', this._wakeUpReticle);
+        }
 
         // 7. Render initial preview frame immediately
         this._renderPreview();
@@ -549,13 +651,20 @@ export class GodRaysModule {
         this._hideSunIndicator();
         this._hidePreviewCanvas();
 
-        // Clean up canvas pointerdown listener
+        // Clean up canvas pointerdown & enter listeners
         const canvas = document.getElementById('gpu-canvas');
         if (canvas && this._boundPointerDown) {
             canvas.removeEventListener('pointerdown', this._boundPointerDown);
         }
+        if (canvas && this._wakeUpReticle) {
+            canvas.removeEventListener('pointerenter', this._wakeUpReticle);
+        }
         if (this.sunIndicator && this._boundPointerDown) {
             this.sunIndicator.removeEventListener('pointerdown', this._boundPointerDown);
+        }
+        if (this._fadeTimer) {
+            clearTimeout(this._fadeTimer);
+            this._fadeTimer = null;
         }
 
         // Cancel pending RAF

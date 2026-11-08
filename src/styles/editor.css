@@ -130,7 +130,7 @@ body {
     display: block;
 }
 
-/* God Rays Volumetric Lighting Overlay & Sun Gizmo */
+/* God Rays Volumetric Lighting Overlay & Minimalist Camera Reticle */
 .godrays-preview-canvas {
     pointer-events: none;
     z-index: 50;
@@ -139,13 +139,15 @@ body {
 
 .godrays-sun-gizmo {
     position: absolute;
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     transform: translate(-50%, -50%);
     cursor: grab;
     z-index: 100;
     user-select: none;
     touch-action: none;
+    opacity: 0.35;
+    transition: opacity 0.35s ease, transform 0.15s ease;
 }
 
 .godrays-sun-gizmo * {
@@ -153,58 +155,67 @@ body {
 }
 
 .godrays-sun-gizmo:hover,
+.godrays-sun-gizmo.active-hover,
 .godrays-sun-gizmo.dragging {
+    opacity: 1;
     cursor: grabbing;
 }
 
+.godrays-sun-gizmo.hidden-pin {
+    display: none !important;
+}
+
+/* Minimalist camera viewfinder light center */
 .sun-gizmo-core {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 20px;
-    height: 20px;
+    width: 6px;
+    height: 6px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: radial-gradient(circle, #ffffff 20%, #ffd54f 65%, rgba(255, 193, 7, 0.2) 100%);
-    box-shadow: 0 0 16px rgba(255, 215, 0, 0.95), 0 0 32px rgba(255, 160, 0, 0.7);
-    border: 1.5px solid #ffffff;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    background: #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 215, 0, 0.8);
 }
 
-.godrays-sun-gizmo:hover .sun-gizmo-core,
-.godrays-sun-gizmo.dragging .sun-gizmo-core {
-    transform: translate(-50%, -50%) scale(1.2);
-    box-shadow: 0 0 24px rgba(255, 215, 0, 1), 0 0 44px rgba(255, 160, 0, 0.9);
-}
-
+/* Fine hairline target ring with crosshair ticks */
 .sun-gizmo-ring {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 42px;
-    height: 42px;
+    width: 26px;
+    height: 26px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1.5px dashed rgba(255, 235, 59, 0.85);
-    animation: sunGizmoSpin 16s linear infinite;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4), inset 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
-.sun-gizmo-label {
+.sun-gizmo-ring::before,
+.sun-gizmo-ring::after {
+    content: '';
     position: absolute;
-    top: 44px;
+    background: rgba(255, 255, 255, 0.85);
+}
+
+/* Horizontal crosshair ticks */
+.sun-gizmo-ring::before {
+    top: 50%;
+    left: -4px;
+    right: -4px;
+    height: 1px;
+    transform: translateY(-50%);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Vertical crosshair ticks */
+.sun-gizmo-ring::after {
     left: 50%;
+    top: -4px;
+    bottom: -4px;
+    width: 1px;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.92);
-    color: #ffd54f;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    padding: 1px 7px;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 215, 0, 0.4);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    white-space: nowrap;
-    pointer-events: none;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Canvas cursor when in God Rays mode */
