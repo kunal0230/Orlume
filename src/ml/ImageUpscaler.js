@@ -471,63 +471,89 @@ export class ImageUpscaler {
             out vec4 fragColor;
             uniform sampler2D u_image;
             uniform vec2 u_texel;
-            uniform float u_sharpness;
-            uniform float u_clarity;
 
             const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
+            // Detect human skin tones to protect portraits from harshness
+            float getSkinWeight(vec3 rgb) {
+                float r = rgb.r, g = rgb.g, b = rgb.b;
+                bool isSkin = (r > 0.35 && g > 0.20 && b > 0.15 && r > g && g > b && (r - g) > 0.05);
+                return isSkin ? 0.8 : 0.0;
+            }
+
             void main() {
-                vec4 center = texture(u_image, v_uv);
-                float cLuma = dot(center.rgb, LUMA);
+                vec4 center4 = texture(u_image, v_uv);
+                vec3 center = center4.rgb;
+                float cLuma = dot(center, LUMA);
 
-                // 1. Fine-scale 8-neighborhood for razor-sharp edges & micro-texture
-                vec3 n1 = texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb;
-                vec3 s1 = texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb;
-                vec3 e1 = texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb;
-                vec3 w1 = texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb;
-                vec3 ne1 = texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb;
-                vec3 nw1 = texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb;
-                vec3 se1 = texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb;
-                vec3 sw1 = texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb;
+                // 1. 9-tap Edge-Preserving Cross & Diagonal Samples
+                vec3 n  = texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb;
+                vec3 s  = texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb;
+                vec3 e  = texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb;
+                vec3 w  = texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb;
+                vec3 ne = texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb;
+                vec3 nw = texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb;
+                vec3 se = texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb;
+                vec3 sw = texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb;
 
-                vec3 avgFine = (n1 + s1 + e1 + w1) * 0.15 + (ne1 + nw1 + se1 + sw1) * 0.10;
-                vec3 fineDetail = center.rgb - avgFine;
+                // 2. Compute local edge gradient magnitude (Sobel / central differences)
+                float gx = dot(ne + 2.0 * e + se - (nw + 2.0 * w + sw), LUMA);
+                float gy = dot(ne + 2.0 * n + nw - (se + 2.0 * s + sw), LUMA);
+                float edgeMag = sqrt(gx * gx + gy * gy);
 
-                // 2. Mid-scale neighborhood for punchy Clarity & Local Contrast
-                vec2 r2 = u_texel * 3.5;
-                vec3 n2 = texture(u_image, v_uv + vec2(0.0, r2.y)).rgb;
-                vec3 s2 = texture(u_image, v_uv - vec2(0.0, r2.y)).rgb;
-                vec3 e2 = texture(u_image, v_uv + vec2(r2.x, 0.0)).rgb;
-                vec3 w2 = texture(u_image, v_uv - vec2(r2.x, 0.0)).rgb;
-                vec3 avgMid = (n2 + s2 + e2 + w2) * 0.25;
-                vec3 midDetail = center.rgb - avgMid;
+                // 3. Bilateral Edge-Preserving Denoising for smooth regions
+                // When edgeMag is low (< 0.06), pixels get gentle bilateral noise cleanup
+                float spatialWeight = 0.125;
+                float bilateralSum = 1.0;
+                vec3 bilateralAcc = center;
 
-                // 3. Wide-scale neighborhood for Dehaze & Tonal Depth
-                vec2 r3 = u_texel * 8.0;
-                vec3 n3 = texture(u_image, v_uv + vec2(0.0, r3.y)).rgb;
-                vec3 s3 = texture(u_image, v_uv - vec2(0.0, r3.y)).rgb;
-                vec3 e3 = texture(u_image, v_uv + vec2(r3.x, 0.0)).rgb;
-                vec3 w3 = texture(u_image, v_uv - vec2(r3.x, 0.0)).rgb;
-                vec3 avgWide = (n3 + s3 + e3 + w3) * 0.25;
-                vec3 wideDetail = center.rgb - avgWide;
+                #define ACC_BILATERAL(sampleColor) { \
+                    float dL = abs(dot(sampleColor, LUMA) - cLuma); \
+                    float rW = exp(-dL * dL / 0.008) * spatialWeight; \
+                    bilateralAcc += sampleColor * rW; \
+                    bilateralSum += rW; \
+                }
 
-                // Non-linear halo suppression (soft limiter prevents hard white/black outlines)
-                vec3 boostFine = u_sharpness * (fineDetail / (1.0 + 3.0 * abs(fineDetail)));
-                vec3 boostMid  = u_clarity   * (midDetail  / (1.0 + 2.0 * abs(midDetail)));
-                vec3 boostWide = 0.25        * (wideDetail / (1.0 + 1.5 * abs(wideDetail)));
+                ACC_BILATERAL(n);
+                ACC_BILATERAL(s);
+                ACC_BILATERAL(e);
+                ACC_BILATERAL(w);
+                ACC_BILATERAL(ne);
+                ACC_BILATERAL(nw);
+                ACC_BILATERAL(se);
+                ACC_BILATERAL(sw);
 
-                // Midtone weighting: protect deep shadows (< 0.05) and peak highlights (> 0.95)
-                float toneMask = smoothstep(0.02, 0.12, cLuma) * (1.0 - smoothstep(0.88, 0.98, cLuma));
-                toneMask = mix(0.4, 1.0, toneMask);
+                vec3 denoised = bilateralAcc / bilateralSum;
 
-                vec3 enhanced = center.rgb + (boostFine + boostMid + boostWide) * toneMask;
+                // 4. Subtle, Natural Edge Polish (ONLY on real edges, NEVER on noise or flat sky/skin)
+                float edgeGate = smoothstep(0.04, 0.20, edgeMag);
+                float skinProt = getSkinWeight(center);
+                edgeGate *= (1.0 - skinProt * 0.75); // Damps sharpening on skin by 75% for creamy, flattering portraits
 
-                // Subtle micro-contrast saturation vibrance boost on textured areas
-                float detailMag = length(boostFine) + length(boostMid);
-                float satBoost = 1.0 + clamp(detailMag * 0.4, 0.0, 0.15);
-                enhanced = mix(vec3(dot(enhanced, LUMA)), enhanced, satBoost);
+                // Unsharp high-frequency detail relative to bilateral base
+                vec3 highFreq = center - denoised;
+                // Gentle, natural edge sharpening (0.35, not harsh 1.25)
+                vec3 edgePolish = highFreq * (0.35 * edgeGate);
 
-                fragColor = vec4(clamp(enhanced, 0.0, 1.0), center.a);
+                // Blend base between clean denoised and original
+                vec3 baseClean = mix(denoised, center, clamp(edgeMag * 4.0, 0.0, 1.0));
+                vec3 sharpResult = baseClean + edgePolish;
+
+                // 5. Filmic Tonal Polish (Subtle dynamic range & shadow recovery)
+                vec3 tonePolished;
+                for (int c = 0; c < 3; c++) {
+                    float v = sharpResult[c];
+                    float shadowLift = 0.035 * exp(-v * 5.0);
+                    float highlightSoft = 1.0 - exp(-v * 1.05) / (1.0 - exp(-1.05));
+                    tonePolished[c] = mix(v + shadowLift, highlightSoft, 0.2);
+                }
+
+                // 6. Natural Color Richness (Subtle saturation polish on muted midtones)
+                float toneLuma = dot(tonePolished, LUMA);
+                float midtoneWeight = smoothstep(0.05, 0.35, toneLuma) * (1.0 - smoothstep(0.70, 0.95, toneLuma));
+                vec3 finalRgb = mix(vec3(toneLuma), tonePolished, 1.0 + 0.05 * midtoneWeight);
+
+                fragColor = vec4(clamp(finalRgb, 0.0, 1.0), center4.a);
             }`;
 
             const compileShader = (type, src) => {
@@ -567,8 +593,6 @@ export class ImageUpscaler {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
             gl.uniform2f(gl.getUniformLocation(prog, 'u_texel'), 1.0 / width, 1.0 / height);
-            gl.uniform1f(gl.getUniformLocation(prog, 'u_sharpness'), 1.25);
-            gl.uniform1f(gl.getUniformLocation(prog, 'u_clarity'), 0.75);
 
             gl.viewport(0, 0, width, height);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -596,7 +620,7 @@ export class ImageUpscaler {
     }
 
     /**
-     * Fallback 2D canvas multi-scale unsharp masking
+     * Fallback 2D canvas natural photographic polish
      */
     _fallbackCanvas2D(source, width, height, progressCallback = () => {}) {
         progressCallback(40, 'Refining details with CPU fallback...');
@@ -610,7 +634,7 @@ export class ImageUpscaler {
         const d = imgData.data;
         const orig = new Uint8ClampedArray(d);
 
-        const amount = 0.9;
+        const amount = 0.35;
         for (let i = 0; i < d.length; i += 4) {
             const x = (i / 4) % width;
             const y = Math.floor((i / 4) / width);
@@ -625,7 +649,7 @@ export class ImageUpscaler {
                 const e = orig[idx + 4];
                 const avg = (n + s + w + e) * 0.25;
                 const diff = cur - avg;
-                if (Math.abs(diff) > 2) {
+                if (Math.abs(diff) > 4 && Math.abs(diff) < 40) {
                     d[idx] = Math.min(255, Math.max(0, Math.round(cur + diff * amount)));
                 }
             }
