@@ -139,13 +139,17 @@ body {
 
 .godrays-sun-gizmo {
     position: absolute;
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     transform: translate(-50%, -50%);
     cursor: grab;
     z-index: 100;
     user-select: none;
     touch-action: none;
+}
+
+.godrays-sun-gizmo * {
+    pointer-events: none;
 }
 
 .godrays-sun-gizmo:hover,
@@ -157,21 +161,28 @@ body {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: radial-gradient(circle, #ffffff 15%, #ffd54f 65%, rgba(255, 193, 7, 0.2) 100%);
+    background: radial-gradient(circle, #ffffff 20%, #ffd54f 65%, rgba(255, 193, 7, 0.2) 100%);
     box-shadow: 0 0 16px rgba(255, 215, 0, 0.95), 0 0 32px rgba(255, 160, 0, 0.7);
     border: 1.5px solid #ffffff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.godrays-sun-gizmo:hover .sun-gizmo-core,
+.godrays-sun-gizmo.dragging .sun-gizmo-core {
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 1), 0 0 44px rgba(255, 160, 0, 0.9);
 }
 
 .sun-gizmo-ring {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
     border: 1.5px dashed rgba(255, 235, 59, 0.85);
@@ -180,20 +191,25 @@ body {
 
 .sun-gizmo-label {
     position: absolute;
-    top: 40px;
+    top: 44px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.88);
+    background: rgba(15, 23, 42, 0.92);
     color: #ffd54f;
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.5px;
-    padding: 1px 6px;
+    padding: 1px 7px;
     border-radius: 4px;
     border: 1px solid rgba(255, 215, 0, 0.4);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     white-space: nowrap;
     pointer-events: none;
+}
+
+/* Canvas cursor when in God Rays mode */
+.canvas-container.godrays-active #gpu-canvas {
+    cursor: crosshair;
 }
 
 @keyframes sunGizmoSpin {

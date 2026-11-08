@@ -109,6 +109,17 @@ export class GodRaysEffect {
     }
 
     /**
+     * Dynamically resize WebGL canvas and viewport
+     */
+    resize(width, height) {
+        if (!this.glCanvas) return;
+        if (this.glCanvas.width !== width || this.glCanvas.height !== height) {
+            this.glCanvas.width = width;
+            this.glCanvas.height = height;
+        }
+    }
+
+    /**
      * Compile a shader
      */
     _compileShader(type, source) {

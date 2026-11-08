@@ -1,12 +1,13 @@
 /**
- * GodRaysModule.js - God Rays / Volumetric Lighting integration for EditorUI
+ * GodRaysModule.js - Professional Volumetric Crepuscular God Rays for Orlume
  * 
- * Handles:
- * - Effect initialization
- * - Slider controls
- * - Sun position (click to place)
- * - Depth estimation with progress bar
- * - Preview rendering
+ * Features:
+ * - Ultra-lightweight 60 FPS interactive preview with decoupled resolution
+ * - Smooth pointer drag on Sun Gizmo AND direct canvas drag
+ * - Dynamic sample throttling during drag for zero-lag response
+ * - Full-resolution final bake on Apply with instant Undo/Redo support
+ * - AI Depth-aware occlusion & 2D silhouette occlusion
+ * - Non-destructive optical screen blending
  */
 
 import { GodRaysEffect } from '../../effects/GodRaysEffect.js';
@@ -17,19 +18,29 @@ export class GodRaysModule {
         this.ui = ui;
         this.effect = null;
         this.isActive = false;
-        this.sunPosition = { x: 0.5, y: 0.2 };
+        this.sunPosition = { x: 0.5, y: 0.18 };
         this.hasDepth = false;
         this.depthMap = null;
 
-        // Own depth estimator instance
+        // Depth estimator instance
         this.depthEstimator = null;
 
-        // Sun indicator element
+        // DOM elements
         this.sunIndicator = null;
+        this.previewCanvas = null;
 
-        // Debounce for slider updates (performance)
-        this.renderTimeout = null;
-        this.pendingRender = false;
+        // Preview & full resolution tracking
+        this.previewWidth = 0;
+        this.previewHeight = 0;
+        this.fullWidth = 0;
+        this.fullHeight = 0;
+
+        // Animation & throttling flags
+        this._rafId = null;
+        this._isDragging = false;
+        this._activePointerId = null;
+        this._dragInitialized = false;
+        this._resizeObserver = null;
     }
 
     /**
@@ -41,11 +52,12 @@ export class GodRaysModule {
         this._initColorPickers();
         this._createSunIndicator();
         this._createProgressBar();
+        this._initDragHandling();
 
         // Keep preview and sun gizmo aligned during window resize
         window.addEventListener('resize', () => {
             if (this.isActive) {
-                this._renderPreview();
+                this._syncPreviewCanvasGeometry();
                 this._updateSunIndicator();
             }
         });
@@ -58,7 +70,6 @@ export class GodRaysModule {
         const statusEl = document.getElementById('godrays-depth-status');
         if (!statusEl) return;
 
-        // Create progress container after status
         const progressContainer = document.createElement('div');
         progressContainer.id = 'godrays-progress-container';
         progressContainer.style.cssText = `
@@ -97,46 +108,26 @@ export class GodRaysModule {
     }
 
     /**
-     * Debounced render - batches slider updates for performance
-     */
-    _debouncedRender() {
-        // Clear any pending render
-        if (this.renderTimeout) {
-            clearTimeout(this.renderTimeout);
-        }
-
-        // Schedule render after short delay
-        this.renderTimeout = setTimeout(() => {
-            if (this.effect && this.isActive) {
-                this._renderPreview();
-            }
-            this.renderTimeout = null;
-        }, 30);  // 30ms debounce
-    }
-
-    /**
      * Initialize slider controls
      */
     _initSliders() {
         const sliders = [
-            { id: 'godrays-intensity', param: 'intensity', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-decay', param: 'decay', min: 80, max: 99, divisor: 100 },
-            { id: 'godrays-density', param: 'density', min: 10, max: 100, divisor: 100 },
-            { id: 'godrays-samples', param: 'samples', min: 16, max: 128, divisor: 1 },
-            { id: 'godrays-lum', param: 'lumThreshold', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-depth', param: 'depthThreshold', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-radius', param: 'sunRadius', min: 1, max: 50, divisor: 100 },
-            { id: 'godrays-exposure', param: 'exposure', min: 5, max: 50, divisor: 10 },
-            // Advanced sliders
-            { id: 'godrays-chromatic', param: 'chromatic', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-noise', param: 'noise', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-bloom', param: 'bloom', min: 0, max: 100, divisor: 50 },  // Max 2.0
-            { id: 'godrays-scatter', param: 'scatter', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-tonemap', param: 'toneMap', min: 0, max: 100, divisor: 100 },
-            // Shadow sliders
-            { id: 'godrays-shadowintensity', param: 'shadowIntensity', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-shadowsoftness', param: 'shadowSoftness', min: 0, max: 100, divisor: 100 },
-            { id: 'godrays-shadowlength', param: 'shadowLength', min: 10, max: 100, divisor: 100 }
+            { id: 'godrays-intensity', param: 'intensity', divisor: 100 },
+            { id: 'godrays-decay', param: 'decay', divisor: 100 },
+            { id: 'godrays-density', param: 'density', divisor: 100 },
+            { id: 'godrays-samples', param: 'samples', divisor: 1 },
+            { id: 'godrays-lum', param: 'lumThreshold', divisor: 100 },
+            { id: 'godrays-depth', param: 'depthThreshold', divisor: 100 },
+            { id: 'godrays-radius', param: 'sunRadius', divisor: 100 },
+            { id: 'godrays-exposure', param: 'exposure', divisor: 10 },
+            { id: 'godrays-chromatic', param: 'chromatic', divisor: 100 },
+            { id: 'godrays-noise', param: 'noise', divisor: 100 },
+            { id: 'godrays-bloom', param: 'bloom', divisor: 50 },
+            { id: 'godrays-scatter', param: 'scatter', divisor: 100 },
+            { id: 'godrays-tonemap', param: 'toneMap', divisor: 100 },
+            { id: 'godrays-shadowintensity', param: 'shadowIntensity', divisor: 100 },
+            { id: 'godrays-shadowsoftness', param: 'shadowSoftness', divisor: 100 },
+            { id: 'godrays-shadowlength', param: 'shadowLength', divisor: 100 }
         ];
 
         sliders.forEach(({ id, param, divisor }) => {
@@ -146,10 +137,10 @@ export class GodRaysModule {
             if (!slider) return;
 
             slider.addEventListener('input', () => {
-                const value = parseInt(slider.value);
+                const value = parseInt(slider.value, 10);
                 if (valueDisplay) valueDisplay.textContent = value;
 
-                if (this.effect) {
+                if (this.effect && this.isActive) {
                     const paramValue = value / divisor;
                     switch (param) {
                         case 'intensity': this.effect.setIntensity(paramValue); break;
@@ -169,8 +160,14 @@ export class GodRaysModule {
                         case 'shadowSoftness': this.effect.setShadowSoftness(paramValue); break;
                         case 'shadowLength': this.effect.setShadowLength(paramValue); break;
                     }
-                    // Use debounced render for performance
-                    this._debouncedRender();
+                    this._scheduleFastPreview();
+                }
+            });
+
+            // On slider release, trigger clean high-quality render
+            slider.addEventListener('change', () => {
+                if (this.effect && this.isActive) {
+                    this._renderPreview();
                 }
             });
         });
@@ -180,7 +177,6 @@ export class GodRaysModule {
      * Initialize buttons
      */
     _initButtons() {
-        // Estimate Depth button
         const depthBtn = document.getElementById('btn-godrays-depth');
         if (depthBtn) {
             depthBtn.addEventListener('click', async () => {
@@ -188,7 +184,6 @@ export class GodRaysModule {
             });
         }
 
-        // Reset button
         const resetBtn = document.getElementById('btn-godrays-reset');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
@@ -196,7 +191,6 @@ export class GodRaysModule {
             });
         }
 
-        // Apply button
         const applyBtn = document.getElementById('btn-godrays-apply');
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
@@ -209,23 +203,20 @@ export class GodRaysModule {
      * Initialize color pickers and presets
      */
     _initColorPickers() {
-        // Color preset buttons
+        // Preset buttons
         document.querySelectorAll('#panel-godrays .color-preset-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const color = btn.dataset.color;
 
-                // Update active state
                 document.querySelectorAll('#panel-godrays .color-preset-btn').forEach(b => {
                     b.style.border = '1px solid var(--border)';
                 });
                 btn.style.border = '2px solid var(--accent)';
 
-                // Update color picker
                 const picker = document.getElementById('godrays-color-picker');
                 if (picker) picker.value = color;
 
-                // Apply to effect
-                if (this.effect) {
+                if (this.effect && this.isActive) {
                     this.effect.setRayColor(color);
                     this._renderPreview();
                 }
@@ -236,49 +227,21 @@ export class GodRaysModule {
         const colorPicker = document.getElementById('godrays-color-picker');
         if (colorPicker) {
             colorPicker.addEventListener('input', () => {
-                // Clear preset selection
                 document.querySelectorAll('#panel-godrays .color-preset-btn').forEach(b => {
                     b.style.border = '1px solid var(--border)';
                 });
 
-                if (this.effect) {
+                if (this.effect && this.isActive) {
                     this.effect.setRayColor(colorPicker.value);
+                    this._scheduleFastPreview();
+                }
+            });
+            colorPicker.addEventListener('change', () => {
+                if (this.effect && this.isActive) {
                     this._renderPreview();
                 }
             });
         }
-    }
-
-    /**
-     * Handle canvas click to place sun
-     */
-    _onCanvasClick(e) {
-        if (!this.isActive) return;
-        
-        const canvas = document.getElementById('gpu-canvas');
-        if (!canvas) return;
-
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.max(-0.25, Math.min(1.25, (e.clientX - rect.left) / rect.width));
-        const y = Math.max(-0.25, Math.min(1.25, (e.clientY - rect.top) / rect.height));
-
-        this.setSunPosition(x, y);
-    }
-
-    /**
-     * Programmatically or interactively set sun position
-     * @param {number} x - Normalized X coordinate (0-1, can be slightly outside canvas)
-     * @param {number} y - Normalized Y coordinate (0-1, can be slightly outside canvas)
-     */
-    setSunPosition(x, y) {
-        this.sunPosition = { x, y };
-
-        if (this.effect) {
-            this.effect.setSunPosition(x, y);
-            this._renderPreview();
-        }
-
-        this._updateSunIndicator();
     }
 
     /**
@@ -288,74 +251,144 @@ export class GodRaysModule {
         const container = document.querySelector('.canvas-container');
         if (!container) return;
 
-        if (this.sunIndicator && this.sunIndicator.parentNode) {
-            this.sunIndicator.parentNode.removeChild(this.sunIndicator);
-            this.sunIndicator = null;
+        let indicator = document.getElementById('sun-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sun-indicator';
+            indicator.className = 'godrays-sun-gizmo';
+            indicator.title = 'Drag to reposition sun / light source';
+            indicator.innerHTML = `
+                <div class="sun-gizmo-core"></div>
+                <div class="sun-gizmo-ring"></div>
+                <div class="sun-gizmo-label">Sun</div>
+            `;
+            container.appendChild(indicator);
         }
-
-        this.sunIndicator = document.createElement('div');
-        this.sunIndicator.id = 'sun-indicator';
-        this.sunIndicator.className = 'godrays-sun-gizmo';
-        this.sunIndicator.title = 'Drag to position sun / light source';
-        this.sunIndicator.innerHTML = `
-            <div class="sun-gizmo-core"></div>
-            <div class="sun-gizmo-ring"></div>
-            <div class="sun-gizmo-label">Sun</div>
-        `;
-        container.appendChild(this.sunIndicator);
-
-        this._initSunDrag();
+        this.sunIndicator = indicator;
+        this.sunIndicator.style.display = 'none';
     }
 
     /**
-     * Interactive drag handling for the sun gizmo
+     * Bulletproof drag and click handling for both Sun Gizmo AND Canvas
      */
-    _initSunDrag() {
-        if (!this.sunIndicator || this._hasDragInitialized) return;
-        this._hasDragInitialized = true;
+    _initDragHandling() {
+        if (this._dragInitialized) return;
+        this._dragInitialized = true;
 
-        let isDragging = false;
+        const updatePositionFromCoords = (clientX, clientY, isFast = true) => {
+            const canvas = document.getElementById('gpu-canvas');
+            if (!canvas) return;
+
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return;
+
+            // Allow positioning slightly outside canvas (-0.25 to 1.25) for dramatic rim/sunset angles
+            const x = Math.max(-0.25, Math.min(1.25, (clientX - rect.left) / rect.width));
+            const y = Math.max(-0.25, Math.min(1.25, (clientY - rect.top) / rect.height));
+
+            this.sunPosition = { x, y };
+
+            if (this.effect && this.isActive) {
+                this.effect.setSunPosition(x, y);
+                if (isFast) {
+                    this._scheduleFastPreview();
+                } else {
+                    this._renderPreview();
+                }
+            }
+
+            this._updateSunIndicator();
+        };
 
         const onPointerDown = (e) => {
             if (!this.isActive) return;
-            isDragging = true;
-            this.sunIndicator.classList.add('dragging');
+            // Don't intercept right click or Space key panning (ZoomPanModule)
+            if (e.button !== 0 || e.spaceKey || this.ui?.isPanning) return;
+
+            this._isDragging = true;
+            this._activePointerId = e.pointerId;
+
+            if (this.sunIndicator) {
+                this.sunIndicator.classList.add('dragging');
+            }
+
+            // Move sun immediately to cursor on click
+            updatePositionFromCoords(e.clientX, e.clientY, true);
+
+            try {
+                if (e.target && e.target.setPointerCapture) {
+                    e.target.setPointerCapture(e.pointerId);
+                }
+            } catch (_) {}
+
             e.stopPropagation();
             e.preventDefault();
         };
 
         const onPointerMove = (e) => {
-            if (!isDragging || !this.isActive) return;
-            const canvas = document.getElementById('gpu-canvas');
-            if (!canvas) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.max(-0.35, Math.min(1.35, (e.clientX - rect.left) / rect.width));
-            const y = Math.max(-0.35, Math.min(1.35, (e.clientY - rect.top) / rect.height));
-            this.setSunPosition(x, y);
+            if (!this._isDragging || !this.isActive) return;
+            updatePositionFromCoords(e.clientX, e.clientY, true);
+            e.stopPropagation();
+            e.preventDefault();
         };
 
-        const onPointerUp = () => {
-            if (isDragging) {
-                isDragging = false;
-                if (this.sunIndicator) this.sunIndicator.classList.remove('dragging');
+        const onPointerUp = (e) => {
+            if (this._isDragging) {
+                this._isDragging = false;
+                if (this.sunIndicator) {
+                    this.sunIndicator.classList.remove('dragging');
+                }
+                try {
+                    if (e.target && e.target.releasePointerCapture && this._activePointerId !== null) {
+                        e.target.releasePointerCapture(this._activePointerId);
+                    }
+                } catch (_) {}
+                this._activePointerId = null;
+
+                // Render full configured quality on release
+                this._renderPreview();
             }
         };
 
-        this.sunIndicator.addEventListener('pointerdown', onPointerDown);
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
+        this._boundPointerDown = onPointerDown;
+        this._boundPointerMove = onPointerMove;
+        this._boundPointerUp = onPointerUp;
+
+        window.addEventListener('pointermove', this._boundPointerMove, { passive: false });
+        window.addEventListener('pointerup', this._boundPointerUp, { passive: false });
+        window.addEventListener('pointercancel', this._boundPointerUp, { passive: false });
     }
 
     /**
-     * Update sun indicator position
+     * Programmatically or interactively set sun position
+     */
+    setSunPosition(x, y) {
+        this.sunPosition = { x, y };
+
+        if (this.effect && this.isActive) {
+            this.effect.setSunPosition(x, y);
+            this._renderPreview();
+        }
+
+        this._updateSunIndicator();
+    }
+
+    /**
+     * Update sun indicator position with sub-pixel precision relative to canvas
      */
     _updateSunIndicator() {
         const canvas = document.getElementById('gpu-canvas');
-        if (!canvas || !this.sunIndicator) return;
+        const container = document.querySelector('.canvas-container');
+        if (!canvas || !this.sunIndicator || !container) return;
 
-        // Position accurately relative to main canvas inside .canvas-container
-        const left = canvas.offsetLeft + (this.sunPosition.x * canvas.clientWidth);
-        const top = canvas.offsetTop + (this.sunPosition.y * canvas.clientHeight);
+        const canvasRect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        const sunScreenX = canvasRect.left + (this.sunPosition.x * canvasRect.width);
+        const sunScreenY = canvasRect.top + (this.sunPosition.y * canvasRect.height);
+
+        const left = sunScreenX - containerRect.left;
+        const top = sunScreenY - containerRect.top;
 
         this.sunIndicator.style.left = `${left}px`;
         this.sunIndicator.style.top = `${top}px`;
@@ -368,7 +401,39 @@ export class GodRaysModule {
     _hideSunIndicator() {
         if (this.sunIndicator) {
             this.sunIndicator.style.display = 'none';
+            this.sunIndicator.classList.remove('dragging');
         }
+    }
+
+    /**
+     * Synchronize preview canvas position, dimensions and border radius to main canvas
+     */
+    _syncPreviewCanvasGeometry() {
+        const mainCanvas = this.ui.elements.canvas || document.getElementById('gpu-canvas');
+        const container = document.querySelector('.canvas-container');
+        if (!mainCanvas || !container) return;
+
+        let previewCanvas = document.getElementById('godrays-preview-canvas');
+        if (!previewCanvas) {
+            previewCanvas = document.createElement('canvas');
+            previewCanvas.id = 'godrays-preview-canvas';
+            previewCanvas.className = 'godrays-preview-canvas';
+            container.appendChild(previewCanvas);
+        }
+        this.previewCanvas = previewCanvas;
+
+        const mainRect = mainCanvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        previewCanvas.style.position = 'absolute';
+        previewCanvas.style.left = `${mainRect.left - containerRect.left}px`;
+        previewCanvas.style.top = `${mainRect.top - containerRect.top}px`;
+        previewCanvas.style.width = `${mainRect.width}px`;
+        previewCanvas.style.height = `${mainRect.height}px`;
+        previewCanvas.style.borderRadius = window.getComputedStyle(mainCanvas).borderRadius;
+        previewCanvas.style.pointerEvents = 'none';
+        previewCanvas.style.zIndex = '50';
+        previewCanvas.style.display = this.isActive ? 'block' : 'none';
     }
 
     /**
@@ -377,45 +442,70 @@ export class GodRaysModule {
     activate() {
         this.isActive = true;
 
-        // Check if we have an image
         if (!this.ui.state.hasImage || !this.ui.gpu) {
             console.warn('☀️ God Rays: No image loaded');
             return;
         }
 
-        // Always create fresh effect on activation to ensure clean state
+        // Add active class to container for crosshair cursor
+        const container = document.querySelector('.canvas-container');
+        if (container) {
+            container.classList.add('godrays-active');
+        }
+
+        // Clean up any existing effect
         if (this.effect) {
             this.effect.dispose();
             this.effect = null;
         }
 
+        // 1. Determine optimal decoupled preview resolution (capped to 1280px for buttery 60 FPS)
+        const maxPreviewDim = 1280;
+        const fullW = this.ui.gpu.width;
+        const fullH = this.ui.gpu.height;
+        let previewW = fullW;
+        let previewH = fullH;
+
+        if (previewW > maxPreviewDim || previewH > maxPreviewDim) {
+            if (previewW > previewH) {
+                previewH = Math.round((previewH * maxPreviewDim) / previewW);
+                previewW = maxPreviewDim;
+            } else {
+                previewW = Math.round((previewW * maxPreviewDim) / previewH);
+                previewH = maxPreviewDim;
+            }
+        }
+
+        this.previewWidth = previewW;
+        this.previewHeight = previewH;
+        this.fullWidth = fullW;
+        this.fullHeight = fullH;
+
+        // 2. Initialize preview WebGL effect
         this.effect = new GodRaysEffect(
             this.ui.elements.canvas,
             this.ui.elements.canvas.getContext('2d')
         );
 
-        if (!this.effect.init(this.ui.gpu.width, this.ui.gpu.height)) {
+        if (!this.effect.init(previewW, previewH)) {
             console.error('Failed to initialize God Rays effect');
             return;
         }
 
-        // Upload current base image (prefer clean originalImage so adjustments are not doubled)
-        let imageData = null;
+        // 3. Prepare preview base image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = previewW;
+        tempCanvas.height = previewH;
+        const tempCtx = tempCanvas.getContext('2d');
         if (this.ui.state.originalImage) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.ui.gpu.width;
-            tempCanvas.height = this.ui.gpu.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(this.ui.state.originalImage, 0, 0, this.ui.gpu.width, this.ui.gpu.height);
-            imageData = tempCtx.getImageData(0, 0, this.ui.gpu.width, this.ui.gpu.height);
+            tempCtx.drawImage(this.ui.state.originalImage, 0, 0, previewW, previewH);
         } else {
-            imageData = this.ui.gpu.toImageData();
+            tempCtx.drawImage(this.ui.elements.canvas, 0, 0, previewW, previewH);
         }
-        if (imageData) {
-            this.effect.uploadImage(imageData);
-        }
+        const previewImageData = tempCtx.getImageData(0, 0, previewW, previewH);
+        this.effect.uploadImage(previewImageData);
 
-        // If we have depth from previous session, upload it
+        // 4. Upload depth map if available
         if (this.depthMap) {
             const depthCanvas = this.depthMap.canvas;
             const depthCtx = depthCanvas.getContext('2d');
@@ -423,20 +513,25 @@ export class GodRaysModule {
             this.effect.uploadDepth(depthImageData);
         }
 
-        // Check if depth is available
         this._checkDepthStatus();
 
-        // Create or ensure sun gizmo exists
+        // 5. Ensure sun indicator and preview canvas exist and are positioned
         this._createSunIndicator();
+        this._syncPreviewCanvasGeometry();
         this._updateSunIndicator();
 
-        // M6 FIX: Add click listener only when active
-        if (!this._boundOnCanvasClick) {
-            this._boundOnCanvasClick = this._onCanvasClick.bind(this);
+        // 6. Bind pointer down directly to sun indicator AND canvas for effortless dragging
+        if (this.sunIndicator && this._boundPointerDown) {
+            this.sunIndicator.removeEventListener('pointerdown', this._boundPointerDown);
+            this.sunIndicator.addEventListener('pointerdown', this._boundPointerDown);
         }
-        document.getElementById('gpu-canvas')?.addEventListener('click', this._boundOnCanvasClick);
+        const canvas = document.getElementById('gpu-canvas');
+        if (canvas && this._boundPointerDown) {
+            canvas.removeEventListener('pointerdown', this._boundPointerDown);
+            canvas.addEventListener('pointerdown', this._boundPointerDown);
+        }
 
-        // Immediately render volumetric light rays so they appear instantly!
+        // 7. Render initial preview frame immediately
         this._renderPreview();
     }
 
@@ -445,44 +540,57 @@ export class GodRaysModule {
      */
     deactivate() {
         this.isActive = false;
+
+        const container = document.querySelector('.canvas-container');
+        if (container) {
+            container.classList.remove('godrays-active');
+        }
+
         this._hideSunIndicator();
         this._hidePreviewCanvas();
 
-        // M6 FIX: Remove click listener when inactive
-        if (this._boundOnCanvasClick) {
-            document.getElementById('gpu-canvas')?.removeEventListener('click', this._boundOnCanvasClick);
+        // Clean up canvas pointerdown listener
+        const canvas = document.getElementById('gpu-canvas');
+        if (canvas && this._boundPointerDown) {
+            canvas.removeEventListener('pointerdown', this._boundPointerDown);
+        }
+        if (this.sunIndicator && this._boundPointerDown) {
+            this.sunIndicator.removeEventListener('pointerdown', this._boundPointerDown);
         }
 
-        // Dispose effect to free WebGL resources
+        // Cancel pending RAF
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+
+        // Dispose WebGL resources
         if (this.effect) {
             this.effect.dispose();
             this.effect = null;
         }
 
-        // Restore the original canvas view by re-rendering
+        // Restore base canvas view
         if (this.ui.gpu) {
             this.ui.gpu.render();
         }
     }
 
     /**
-     * Check and update depth status
+     * Check and update depth status text
      */
     _checkDepthStatus() {
         const statusEl = document.getElementById('godrays-depth-status');
+        if (!statusEl) return;
 
         if (this.depthMap) {
             this.hasDepth = true;
-            if (statusEl) {
-                statusEl.textContent = '✅ Depth map available';
-                statusEl.style.color = 'var(--accent)';
-            }
+            statusEl.textContent = '✅ Depth analyzed • Rays cast behind subjects';
+            statusEl.style.color = 'var(--accent)';
         } else {
             this.hasDepth = false;
-            if (statusEl) {
-                statusEl.textContent = '⚡ Click "Estimate Depth" first for best results';
-                statusEl.style.color = 'var(--text-secondary)';
-            }
+            statusEl.textContent = 'Rays active • Click "Analyze Depth" to cast behind objects';
+            statusEl.style.color = 'var(--text-secondary)';
         }
     }
 
@@ -493,7 +601,6 @@ export class GodRaysModule {
         const depthBtn = document.getElementById('btn-godrays-depth');
         const statusEl = document.getElementById('godrays-depth-status');
 
-        // Check if we have an image
         if (!this.ui.state.hasImage || !this.ui.gpu) {
             if (statusEl) {
                 statusEl.textContent = '❌ Please load an image first';
@@ -502,25 +609,22 @@ export class GodRaysModule {
             return;
         }
 
-        // Update button state
         if (depthBtn) {
             depthBtn.disabled = true;
             depthBtn.innerHTML = `
                 <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px;"></span>
-                Estimating...
+                Analyzing Depth...
             `;
         }
         if (statusEl) {
-            statusEl.textContent = '🔄 Loading AI model...';
+            statusEl.textContent = '🔄 Loading AI Depth model...';
             statusEl.style.color = 'var(--text-secondary)';
         }
 
         this._updateProgress(0, 'Loading AI model...');
 
         try {
-            // Create depth estimator if not exists
             if (!this.depthEstimator) {
-                // Create a simple app adapter for depth estimator
                 const appAdapter = {
                     updateProgress: (percent, text) => {
                         this._updateProgress(percent, text);
@@ -529,45 +633,30 @@ export class GodRaysModule {
                 this.depthEstimator = new DepthEstimator(appAdapter);
             }
 
-            // Get current base image as ImageData
-            let imageData = null;
-            if (this.ui.state.originalImage) {
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.ui.gpu.width;
-                tempCanvas.height = this.ui.gpu.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(this.ui.state.originalImage, 0, 0, this.ui.gpu.width, this.ui.gpu.height);
-                imageData = tempCtx.getImageData(0, 0, this.ui.gpu.width, this.ui.gpu.height);
-            } else {
-                imageData = this.ui.gpu.toImageData();
-            }
-            if (!imageData) {
-                throw new Error('Could not get image data');
-            }
-
-            // Create a data URL from the image for the depth estimator
+            // Get source image
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = imageData.width;
-            tempCanvas.height = imageData.height;
+            tempCanvas.width = this.previewWidth || this.ui.gpu.width;
+            tempCanvas.height = this.previewHeight || this.ui.gpu.height;
             const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.putImageData(imageData, 0, 0);
+            if (this.ui.state.originalImage) {
+                tempCtx.drawImage(this.ui.state.originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
+            } else {
+                tempCtx.drawImage(this.ui.elements.canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            }
             const dataURL = tempCanvas.toDataURL('image/jpeg', 0.9);
 
-            // Create image object for depth estimation
             const image = {
                 dataURL,
-                width: imageData.width,
-                height: imageData.height
+                width: tempCanvas.width,
+                height: tempCanvas.height
             };
 
-            // Run depth estimation
             if (statusEl) {
                 statusEl.textContent = '🔄 Running AI depth estimation...';
             }
 
             this.depthMap = await this.depthEstimator.estimate(image);
 
-            // Upload depth to effect
             if (this.effect && this.depthMap) {
                 const depthCanvas = this.depthMap.canvas;
                 const depthCtx = depthCanvas.getContext('2d');
@@ -578,11 +667,10 @@ export class GodRaysModule {
             this._updateProgress(100, '✅ Complete!');
 
             if (statusEl) {
-                statusEl.textContent = '✅ Depth estimation complete!';
+                statusEl.textContent = '✅ Depth analyzed • Rays cast behind subjects';
                 statusEl.style.color = 'var(--accent)';
             }
 
-            // Hide progress after delay
             setTimeout(() => {
                 this._hideProgress();
                 this._checkDepthStatus();
@@ -598,26 +686,43 @@ export class GodRaysModule {
                 statusEl.textContent = '❌ Depth estimation failed: ' + error.message;
                 statusEl.style.color = '#ff6b6b';
             }
-
-            setTimeout(() => {
-                this._hideProgress();
-            }, 3000);
         } finally {
             if (depthBtn) {
                 depthBtn.disabled = false;
                 depthBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                        stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                     </svg>
-                    ${this.depthMap ? 'Re-estimate Depth' : 'Estimate Depth'}
+                    Analyze Depth (AI Occlusion)
                 `;
             }
         }
     }
 
     /**
-     * Render preview
+     * Schedule high-framerate preview update during dragging or slider changes
+     */
+    _scheduleFastPreview() {
+        if (this._rafId) return;
+
+        this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            if (this.isActive && this.effect) {
+                // Throttled to 32 samples during drag for buttery smooth 60fps interaction
+                const origSamples = this.effect.params.samples;
+                if (this._isDragging && origSamples > 32) {
+                    this.effect.setSamples(32);
+                    this._renderPreview();
+                    this.effect.setSamples(origSamples);
+                } else {
+                    this._renderPreview();
+                }
+            }
+        });
+    }
+
+    /**
+     * Render the preview overlay
      */
     _renderPreview() {
         if (!this.effect || !this.isActive) return;
@@ -625,39 +730,19 @@ export class GodRaysModule {
         const resultCanvas = this.effect.render();
         if (!resultCanvas) return;
 
-        const mainCanvas = this.ui.elements.canvas || document.getElementById('gpu-canvas');
-        if (!mainCanvas) return;
+        this._syncPreviewCanvasGeometry();
+        if (!this.previewCanvas) return;
 
-        const container = document.querySelector('.canvas-container');
-        if (!container) return;
-
-        // Create or get overlay canvas for preview
-        let previewCanvas = document.getElementById('godrays-preview-canvas');
-        if (!previewCanvas) {
-            previewCanvas = document.createElement('canvas');
-            previewCanvas.id = 'godrays-preview-canvas';
-            previewCanvas.className = 'godrays-preview-canvas';
-            container.appendChild(previewCanvas);
+        // Ensure internal backing buffer matches preview resolution
+        if (this.previewCanvas.width !== this.previewWidth || this.previewCanvas.height !== this.previewHeight) {
+            this.previewCanvas.width = this.previewWidth;
+            this.previewCanvas.height = this.previewHeight;
         }
 
-        // Match exact main canvas position, dimensions, and border radius inside container
-        previewCanvas.width = mainCanvas.width;
-        previewCanvas.height = mainCanvas.height;
-        previewCanvas.style.position = 'absolute';
-        previewCanvas.style.top = `${mainCanvas.offsetTop}px`;
-        previewCanvas.style.left = `${mainCanvas.offsetLeft}px`;
-        previewCanvas.style.width = `${mainCanvas.clientWidth}px`;
-        previewCanvas.style.height = `${mainCanvas.clientHeight}px`;
-        previewCanvas.style.borderRadius = window.getComputedStyle(mainCanvas).borderRadius;
-        previewCanvas.style.pointerEvents = 'none';
-        previewCanvas.style.zIndex = '50';
-        previewCanvas.style.display = 'block';
-
-        // Draw result to preview canvas
-        const ctx = previewCanvas.getContext('2d');
+        const ctx = this.previewCanvas.getContext('2d');
         if (ctx) {
-            ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-            ctx.drawImage(resultCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+            ctx.clearRect(0, 0, this.previewWidth, this.previewHeight);
+            ctx.drawImage(resultCanvas, 0, 0, this.previewWidth, this.previewHeight);
         }
 
         this._updateSunIndicator();
@@ -671,13 +756,13 @@ export class GodRaysModule {
         if (previewCanvas && previewCanvas.parentNode) {
             previewCanvas.parentNode.removeChild(previewCanvas);
         }
+        this.previewCanvas = null;
     }
 
     /**
-     * Reset to default values
+     * Reset controls to default preset
      */
     _resetToDefaults() {
-        // Reset sliders
         const defaults = {
             'godrays-intensity': 75,
             'godrays-decay': 96,
@@ -698,26 +783,23 @@ export class GodRaysModule {
             if (valueDisplay) valueDisplay.textContent = value;
         });
 
-        // Reset sun position to top center (0.5, 0.15)
-        this.sunPosition = { x: 0.5, y: 0.15 };
+        this.sunPosition = { x: 0.5, y: 0.18 };
 
-        // Reset color to warm golden sunlight
         const colorPicker = document.getElementById('godrays-color-picker');
         if (colorPicker) colorPicker.value = '#FFF5E0';
 
-        // Reset effect parameters
         if (this.effect) {
             this.effect.setIntensity(0.75);
-            this.effect.setDecay(0.95);
-            this.effect.setDensity(0.60);
-            this.effect.setSamples(48);
-            this.effect.setLumThreshold(0.50);
-            this.effect.setDepthThreshold(0.65);
-            this.effect.setSunRadius(0.14);
-            this.effect.setExposure(2.2);
-            this.effect.setNoise(0.40);
-            this.effect.setBloom(0.35);
-            this.effect.setSunPosition(0.5, 0.15);
+            this.effect.setDecay(0.96);
+            this.effect.setDensity(0.65);
+            this.effect.setSamples(64);
+            this.effect.setLumThreshold(0.60);
+            this.effect.setDepthThreshold(0.70);
+            this.effect.setSunRadius(0.16);
+            this.effect.setExposure(1.8);
+            this.effect.setNoise(0.55);
+            this.effect.setBloom(0.40);
+            this.effect.setSunPosition(0.5, 0.18);
             this.effect.setRayColor('#FFF5E0');
         }
 
@@ -726,87 +808,105 @@ export class GodRaysModule {
     }
 
     /**
-     * Apply effect to image
+     * Apply effect at FULL 100% resolution with clean Undo/Redo integration
      */
     _applyEffect() {
         if (!this.effect) return;
 
-        // Get final result
-        const resultCanvas = this.effect.render();
-        if (!resultCanvas) return;
-
-        // H1 FIX: Capture state BEFORE the destructive operation for proper undo
+        // 1. Capture history snapshot BEFORE destructive bake
         clearTimeout(this.ui._historyDebounceTimer);
         const snapshot = this.ui._captureFullState();
         this.ui.history.pushState(snapshot);
 
-        // Convert result to proper HTMLImageElement via Blob URL to avoid large string allocation
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = resultCanvas.width;
-        tempCanvas.height = resultCanvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(resultCanvas, 0, 0);
+        // 2. Perform full-resolution final render
+        const fullW = this.fullWidth || this.ui.gpu.width;
+        const fullH = this.fullHeight || this.ui.gpu.height;
 
-        tempCanvas.toBlob((blob) => {
+        const bakeEffect = new GodRaysEffect(
+            this.ui.elements.canvas,
+            this.ui.elements.canvas.getContext('2d')
+        );
+
+        if (!bakeEffect.init(fullW, fullH)) {
+            console.error('Failed to initialize full resolution God Rays bake effect');
+            return;
+        }
+
+        // Copy exact tuned parameters to bake effect
+        Object.assign(bakeEffect.params, JSON.parse(JSON.stringify(this.effect.params)));
+
+        // Upload full-resolution base image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = fullW;
+        tempCanvas.height = fullH;
+        const tempCtx = tempCanvas.getContext('2d');
+        if (this.ui.state.originalImage) {
+            tempCtx.drawImage(this.ui.state.originalImage, 0, 0, fullW, fullH);
+        } else {
+            tempCtx.drawImage(this.ui.elements.canvas, 0, 0, fullW, fullH);
+        }
+        const fullImageData = tempCtx.getImageData(0, 0, fullW, fullH);
+        bakeEffect.uploadImage(fullImageData);
+
+        // Upload depth map if available
+        if (this.depthMap) {
+            const depthCanvas = this.depthMap.canvas;
+            const depthCtx = depthCanvas.getContext('2d');
+            const depthImageData = depthCtx.getImageData(0, 0, depthCanvas.width, depthCanvas.height);
+            bakeEffect.uploadDepth(depthImageData);
+        }
+
+        const resultCanvas = bakeEffect.render();
+        bakeEffect.dispose();
+
+        if (!resultCanvas) {
+            console.error('God Rays bake failed to produce output canvas');
+            return;
+        }
+
+        // Convert result to Image via Blob URL for high memory efficiency
+        resultCanvas.toBlob((blob) => {
             if (!blob) return;
             const blobUrl = URL.createObjectURL(blob);
             const img = new Image();
             img.onload = () => {
                 URL.revokeObjectURL(blobUrl);
 
-                // Apply to GPU processor
+                // Update GPU processor and state with final baked image
                 if (this.ui.gpu) {
                     this.ui.gpu.loadImage(img);
                     this.ui.gpu.render();
                 }
 
-                // Update original image reference
                 if (this.ui.state) {
                     this.ui.state.setImage(img);
                     this.ui.state.originalImage = img;
                 }
 
-                // Update histogram
                 setTimeout(() => this.ui.renderHistogram?.(), 100);
 
-                // Hide preview canvas and sun indicator immediately
-                this._hidePreviewCanvas();
-                this._hideSunIndicator();
-
-                // Dispose effect
-                if (this.effect) {
-                    this.effect.dispose();
-                    this.effect = null;
-                }
-                this.isActive = false;
+                // Clean up preview and deactivate
+                this.deactivate();
 
                 // Switch back to develop mode
                 this.ui.setMode('develop');
-
-                // Visual toast confirmation
                 this.ui.showToast?.('✓ Volumetric God Rays applied');
             };
             img.src = blobUrl;
         }, 'image/png');
-
-        // Hide preview immediately for visual feedback
-        this._hidePreviewCanvas();
-        this._hideSunIndicator();
     }
 
     /**
      * Dispose resources
      */
     dispose() {
-        if (this.effect) {
-            this.effect.dispose();
-            this.effect = null;
-        }
-
+        this.deactivate();
         if (this.sunIndicator && this.sunIndicator.parentNode) {
             this.sunIndicator.parentNode.removeChild(this.sunIndicator);
+            this.sunIndicator = null;
         }
     }
+
     /**
      * Get current state for history
      */
@@ -842,29 +942,20 @@ export class GodRaysModule {
     setState(state) {
         if (!state) return;
 
-        // Restore active state logic FIRST
-        // This ensures the effect exists if we need to set params on it
         const wasActive = this.isActive;
         const shouldBeActive = !!state.isActive;
 
         if (shouldBeActive && !wasActive) {
-            // Safety Check: Only activate if we are actually in godrays mode
-            // This prevents inconsistent history states (e.g. currentTool='develop' but godRays.isActive=true)
-            // from verifying opening the tool.
             if (this.ui.state.currentTool === 'godrays') {
                 this.activate();
-            } else {
-                console.warn('⚠️ God Rays active in state but current tool is not godrays. Suppressing activation.');
             }
         } else if (!shouldBeActive && wasActive) {
             this.deactivate();
         }
 
-        // Restore params (Update UI + Internal Effect)
         if (state.params) {
             Object.entries(state.params).forEach(([id, value]) => {
                 if (value !== undefined) {
-                    // 1. Update UI Slider (Silent, no event)
                     const sliderKey = id === 'sunRadius' ? 'radius' : id.toLowerCase();
                     const slider = document.getElementById(`slider-godrays-${sliderKey}`);
                     const valueDisplay = document.getElementById(`val-godrays-${sliderKey}`);
@@ -873,7 +964,6 @@ export class GodRaysModule {
                         if (valueDisplay) valueDisplay.textContent = value;
                     }
 
-                    // 2. Update Internal Effect (Directly)
                     if (this.isActive && this.effect) {
                         const mapping = {
                             'intensity': { func: 'setIntensity', divisor: 100 },
@@ -882,7 +972,7 @@ export class GodRaysModule {
                             'samples': { func: 'setSamples', divisor: 1 },
                             'lum': { func: 'setLumThreshold', divisor: 100 },
                             'depth': { func: 'setDepthThreshold', divisor: 100 },
-                            'sunRadius': { func: 'setSunRadius', divisor: 100 }, // Note: param name mismatch in slider init vs here helper
+                            'sunRadius': { func: 'setSunRadius', divisor: 100 },
                             'radius': { func: 'setSunRadius', divisor: 100 },
                             'exposure': { func: 'setExposure', divisor: 10 },
                             'chromatic': { func: 'setChromatic', divisor: 100 },
@@ -895,10 +985,7 @@ export class GodRaysModule {
                             'shadowlength': { func: 'setShadowLength', divisor: 100 }
                         };
 
-                        // Map state param key to function
-                        // Note: state.params keys match the slider IDs suffix (e.g. 'intensity', 'decay')
                         const map = mapping[id] || mapping[id.toLowerCase()];
-
                         if (map && typeof this.effect[map.func] === 'function') {
                             this.effect[map.func](value / map.divisor);
                         }
@@ -907,7 +994,6 @@ export class GodRaysModule {
             });
         }
 
-        // Restore Sun Position
         if (state.sunPosition) {
             this.sunPosition = { ...state.sunPosition };
             if (this.isActive && this.effect) {
@@ -916,7 +1002,6 @@ export class GodRaysModule {
             this._updateSunIndicator();
         }
 
-        // Restore Color
         if (state.color) {
             const picker = document.getElementById('godrays-color-picker');
             if (picker) picker.value = state.color;
