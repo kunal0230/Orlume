@@ -18,8 +18,8 @@ export class ImageUpscaler {
         this.scaleFactor = 2;
         this.useAI = true;
         this.enhanceFace = false;
-        this.sharpenEdges = true;
-        this.processingMode = 'both'; // 'enhance', 'upscale', or 'both'
+        this.sharpenEdges = false;
+        this.processingMode = 'upscale';
         this.modelType = 'slim'; // 'slim' (fast, local) or 'thick' (ultra quality)
         this.useRemoteServer = false; // By default use fast client-side WebGL
         this.serverUrl = 'http://localhost:8000';
@@ -58,7 +58,7 @@ export class ImageUpscaler {
     }
 
     setProcessingMode(mode) {
-        this.processingMode = mode; // 'enhance', 'upscale', 'both'
+        this.processingMode = mode;
     }
 
     setServerUrl(url) {
@@ -67,22 +67,6 @@ export class ImageUpscaler {
 
     getOutputDimensions(width, height, maxDimension = this.maxDimension) {
         const max = maxDimension || 4096;
-
-        if (this.processingMode === 'enhance') {
-            // Enhance only - same size, clamped to maxDimension if already exceeding
-            if (width > max || height > max) {
-                const ratio = Math.min(max / width, max / height);
-                return {
-                    width: Math.round(width * ratio),
-                    height: Math.round(height * ratio),
-                    clamped: true,
-                    originalTargetWidth: width,
-                    originalTargetHeight: height
-                };
-            }
-            return { width, height, clamped: false };
-        }
-
         const rawTargetWidth = Math.round(width * this.scaleFactor);
         const rawTargetHeight = Math.round(height * this.scaleFactor);
 
@@ -136,12 +120,6 @@ export class ImageUpscaler {
             const outWidth = dims.width;
             const outHeight = dims.height;
 
-            // Direct high-fidelity multi-scale clarity & detail enhancement for "Enhance" mode
-            if (this.processingMode === 'enhance') {
-                progressCallback(15, 'Enhancing image clarity & micro-detail...');
-                return await this._enhanceImage(source, outWidth, outHeight, progressCallback);
-            }
-
             if (this.useAI) {
                 // If remote server explicitly enabled, try server first
                 if (this.useRemoteServer) {
@@ -190,22 +168,14 @@ export class ImageUpscaler {
         progressCallback(15, 'Sending to AI server...');
 
         try {
-            // Determine which endpoint to call
-            let endpoint = '/process'; // Default: combined
-            if (this.processingMode === 'enhance') {
-                endpoint = this.enhanceFace ? '/enhance-face' : '/enhance';
-            } else if (this.processingMode === 'upscale') {
-                endpoint = '/upscale';
-            }
-
-            const response = await fetch(`${this.serverUrl}${endpoint}`, {
+            const response = await fetch(`${this.serverUrl}/upscale`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     image: base64,
-                    scale: this.processingMode === 'enhance' ? 1 : this.scaleFactor,
+                    scale: this.scaleFactor,
                     enhance_face: this.enhanceFace
                 })
             });
@@ -215,7 +185,7 @@ export class ImageUpscaler {
                 throw new Error(error.detail || 'Server error');
             }
 
-            progressCallback(80, 'Receiving enhanced image...');
+            progressCallback(80, 'Receiving upscaled image...');
 
             const result = await response.json();
 
@@ -234,12 +204,6 @@ export class ImageUpscaler {
             outputCanvas.height = img.height;
             const outputCtx = outputCanvas.getContext('2d');
             outputCtx.drawImage(img, 0, 0);
-
-            // Apply additional sharpening if enabled and image size is within CPU limits
-            if (this.sharpenEdges && outputCanvas.width * outputCanvas.height <= 2000000) {
-                progressCallback(95, 'Sharpening...');
-                await this._enhanceDetails(outputCtx, outputCanvas.width, outputCanvas.height);
-            }
 
             progressCallback(100, 'Complete!');
             return outputCanvas;
@@ -260,7 +224,7 @@ export class ImageUpscaler {
         try {
             const { default: Upscaler } = await import('upscaler');
 
-            const scale = this.processingMode === 'enhance' ? 2 : this.scaleFactor;
+            const scale = this.scaleFactor;
             const clampedScale = scale <= 2 ? 2 : (scale <= 3 ? 3 : 4);
             let model;
 
@@ -349,7 +313,7 @@ export class ImageUpscaler {
                 }
             });
 
-            progressCallback(88, 'Finalizing enhanced resolution...');
+            progressCallback(88, 'Finalizing super-resolution...');
 
             const tensorH = upscaledTensor.shape[0];
             const tensorW = upscaledTensor.shape[1];
@@ -391,12 +355,6 @@ export class ImageUpscaler {
                 canvas = finalCanvas;
             }
 
-            // Apply multi-scale edge and clarity refinement for "both" mode or when sharpenEdges is enabled
-            if (this.sharpenEdges || this.processingMode === 'both') {
-                progressCallback(95, 'Refining edge sharpness & micro-detail...');
-                canvas = await this._enhanceImage(canvas, targetWidth, targetHeight, progressCallback);
-            }
-
             progressCallback(100, 'Super-resolution complete!');
             return canvas;
 
@@ -412,10 +370,6 @@ export class ImageUpscaler {
     async _processClassic(source, srcWidth, srcHeight, outWidth, outHeight, progressCallback) {
         progressCallback(20, 'Processing...');
 
-        if (this.processingMode === 'enhance') {
-            return await this._enhanceImage(source, outWidth, outHeight, progressCallback);
-        }
-
         const canvas = document.createElement('canvas');
         canvas.width = outWidth;
         canvas.height = outHeight;
@@ -424,212 +378,7 @@ export class ImageUpscaler {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, 0, 0, srcWidth, srcHeight, 0, 0, outWidth, outHeight);
 
-        if (this.sharpenEdges || this.processingMode === 'both') {
-            progressCallback(80, 'Sharpening & enhancing clarity...');
-            return await this._enhanceImage(canvas, outWidth, outHeight, progressCallback);
-        }
-
         progressCallback(100, 'Complete!');
-        return canvas;
-    }
-
-    /**
-     * Detail enhancement (backward-compatible adapter)
-     */
-    async _enhanceDetails(ctx, width, height) {
-        const enhanced = await this._enhanceImage(ctx.canvas, width, height);
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(enhanced, 0, 0);
-    }
-
-    /**
-     * High-performance Multi-Scale Clarity & Detail Enhancement
-     * Uses WebGL2 multi-scale frequency separation with adaptive tone protection
-     * Falls back to high-quality 2D canvas convolution when WebGL is unavailable
-     */
-    async _enhanceImage(source, width, height, progressCallback = () => {}) {
-        progressCallback(20, 'Initializing GPU clarity engine...');
-
-        try {
-            const glCanvas = document.createElement('canvas');
-            glCanvas.width = width;
-            glCanvas.height = height;
-            const gl = glCanvas.getContext('webgl2', { preserveDrawingBuffer: true, alpha: false, antialias: false });
-            if (!gl) throw new Error('WebGL2 not available');
-
-            const vsSource = `#version 300 es
-            in vec2 a_pos;
-            out vec2 v_uv;
-            void main() {
-                v_uv = (a_pos + 1.0) * 0.5;
-                gl_Position = vec4(a_pos, 0.0, 1.0);
-            }`;
-
-            const fsSource = `#version 300 es
-            precision highp float;
-            in vec2 v_uv;
-            out vec4 fragColor;
-            uniform sampler2D u_image;
-            uniform vec2 u_texel;
-
-            // Rec.709 perceptual luminance weights
-            const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
-
-            // Detect human skin tones to protect portraits from harshness
-            float getSkinWeight(vec3 rgb) {
-                float r = rgb.r, g = rgb.g, b = rgb.b;
-                bool isSkin = (r > 0.35 && g > 0.20 && b > 0.15 && r > g && g > b && (r - g) > 0.05);
-                return isSkin ? 0.8 : 0.0;
-            }
-
-            void main() {
-                vec4 center4 = texture(u_image, v_uv);
-                vec3 center = center4.rgb;
-                float cLuma = dot(center, LUMA);
-
-                if (cLuma <= 1e-5) {
-                    fragColor = center4;
-                    return;
-                }
-
-                // 8-neighborhood sample luminances
-                float nL  = dot(texture(u_image, v_uv + vec2(0.0, u_texel.y)).rgb, LUMA);
-                float sL  = dot(texture(u_image, v_uv - vec2(0.0, u_texel.y)).rgb, LUMA);
-                float eL  = dot(texture(u_image, v_uv + vec2(u_texel.x, 0.0)).rgb, LUMA);
-                float wL  = dot(texture(u_image, v_uv - vec2(u_texel.x, 0.0)).rgb, LUMA);
-                float neL = dot(texture(u_image, v_uv + vec2(u_texel.x, u_texel.y)).rgb, LUMA);
-                float nwL = dot(texture(u_image, v_uv + vec2(-u_texel.x, u_texel.y)).rgb, LUMA);
-                float seL = dot(texture(u_image, v_uv + vec2(u_texel.x, -u_texel.y)).rgb, LUMA);
-                float swL = dot(texture(u_image, v_uv + vec2(-u_texel.x, -u_texel.y)).rgb, LUMA);
-
-                // Local edge gradient magnitude (Sobel on luminance)
-                float gx = (neL + 2.0 * eL + seL) - (nwL + 2.0 * wL + swL);
-                float gy = (neL + 2.0 * nL + nwL) - (seL + 2.0 * sL + swL);
-                float edgeMag = sqrt(gx * gx + gy * gy);
-
-                // 8-neighbor weighted average
-                float avgL = (nL + sL + eL + wL) * 0.15 + (neL + nwL + seL + swL) * 0.10;
-                float diffL = cLuma - avgL;
-
-                // Edge gating: only real edges get gentle unsharp detail, flat areas untouched
-                float edgeGate = smoothstep(0.03, 0.18, edgeMag);
-                float skinProt = getSkinWeight(center);
-                edgeGate *= (1.0 - skinProt * 0.8);
-
-                // Soft-limited luminance delta (prevents harshness or halos)
-                float deltaL = (diffL / (1.0 + 4.0 * abs(diffL))) * (0.35 * edgeGate);
-
-                float enhancedLuma = clamp(cLuma + deltaL, 0.0, 1.0);
-
-                // Scale RGB by luminance ratio: 100% preservation of Hue and Saturation
-                // Zero color shift, zero tint shift, zero global exposure shift!
-                vec3 finalRgb = center * (enhancedLuma / cLuma);
-
-                fragColor = vec4(clamp(finalRgb, 0.0, 1.0), center4.a);
-            }`;
-
-            const compileShader = (type, src) => {
-                const s = gl.createShader(type);
-                gl.shaderSource(s, src);
-                gl.compileShader(s);
-                if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-                    throw new Error(gl.getShaderInfoLog(s));
-                }
-                return s;
-            };
-
-            const prog = gl.createProgram();
-            gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSource));
-            gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSource));
-            gl.linkProgram(prog);
-            gl.useProgram(prog);
-
-            const vao = gl.createVertexArray();
-            gl.bindVertexArray(vao);
-            const buf = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-            const aPos = gl.getAttribLocation(prog, 'a_pos');
-            gl.enableVertexAttribArray(aPos);
-            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-            progressCallback(50, 'Enhancing textures & edge contrast...');
-
-            const tex = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-            gl.uniform2f(gl.getUniformLocation(prog, 'u_texel'), 1.0 / width, 1.0 / height);
-
-            gl.viewport(0, 0, width, height);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-            progressCallback(85, 'Finalizing enhanced output...');
-
-            const outCanvas = document.createElement('canvas');
-            outCanvas.width = width;
-            outCanvas.height = height;
-            const outCtx = outCanvas.getContext('2d');
-            outCtx.drawImage(glCanvas, 0, 0);
-
-            // Cleanup WebGL resources
-            gl.deleteTexture(tex);
-            gl.deleteBuffer(buf);
-            gl.deleteProgram(prog);
-
-            progressCallback(100, 'Enhancement complete!');
-            return outCanvas;
-
-        } catch (err) {
-            console.warn('[ImageUpscaler] WebGL2 enhancement unavailable, using 2D canvas fallback:', err);
-            return this._fallbackCanvas2D(source, width, height, progressCallback);
-        }
-    }
-
-    /**
-     * Fallback 2D canvas natural photographic polish (100% color & exposure preservation)
-     */
-    _fallbackCanvas2D(source, width, height, progressCallback = () => {}) {
-        progressCallback(40, 'Refining details with CPU fallback...');
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(source, 0, 0, width, height);
-
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const d = imgData.data;
-        const orig = new Uint8ClampedArray(d);
-
-        const amount = 0.25;
-        for (let i = 0; i < d.length; i += 4) {
-            const x = (i / 4) % width;
-            const y = Math.floor((i / 4) / width);
-            if (x <= 1 || x >= width - 2 || y <= 1 || y >= height - 2) continue;
-
-            const curL = 0.2126 * orig[i] + 0.7152 * orig[i + 1] + 0.0722 * orig[i + 2];
-            if (curL <= 5.0) continue;
-
-            const nL = 0.2126 * orig[i - width * 4] + 0.7152 * orig[i - width * 4 + 1] + 0.0722 * orig[i - width * 4 + 2];
-            const sL = 0.2126 * orig[i + width * 4] + 0.7152 * orig[i + width * 4 + 1] + 0.0722 * orig[i + width * 4 + 2];
-            const wL = 0.2126 * orig[i - 4] + 0.7152 * orig[i - 4 + 1] + 0.0722 * orig[i - 4 + 2];
-            const eL = 0.2126 * orig[i + 4] + 0.7152 * orig[i + 4 + 1] + 0.0722 * orig[i + 4 + 2];
-
-            const diff = curL - (nL + sL + wL + eL) * 0.25;
-            if (Math.abs(diff) > 4 && Math.abs(diff) < 30) {
-                const newL = Math.max(0, Math.min(255, curL + diff * amount));
-                const ratio = newL / curL;
-                d[i] = Math.min(255, Math.max(0, Math.round(orig[i] * ratio)));
-                d[i + 1] = Math.min(255, Math.max(0, Math.round(orig[i + 1] * ratio)));
-                d[i + 2] = Math.min(255, Math.max(0, Math.round(orig[i + 2] * ratio)));
-            }
-        }
-        ctx.putImageData(imgData, 0, 0);
         return canvas;
     }
 

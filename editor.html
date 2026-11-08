@@ -1093,39 +1093,7 @@
                                 <span style="font-size: 9.5px; color: var(--text-secondary); display: block; margin-top: 2px;">Deep Detail</span>
                             </button>
                         </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Processing Mode</div>
-                        <div class="mode-selector"
-                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;">
-                            <button class="mode-btn" data-mode="enhance" title="Enhance only">
-                                <span style="font-size: 11px; font-weight: 500;">Enhance</span>
-                            </button>
-                            <button class="mode-btn" data-mode="upscale" title="Upscale only">
-                                <span style="font-size: 11px; font-weight: 500;">Upscale</span>
-                            </button>
-                            <button class="mode-btn active" data-mode="both" title="Enhance + Upscale">
-                                <span style="font-size: 11px; font-weight: 500;">Both</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">AI Enhancement</div>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-ai-toggle" checked>
-                            <span>Use AI Enhancement</span>
-                        </label>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-sharpen-toggle" checked>
-                            <span>Sharpen Details</span>
-                        </label>
-                        <label class="checkbox-label" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="upscale-face-toggle">
-                            <span>Face Restoration</span>
-                        </label>
-                        <!-- Hidden server URL for code compatibility -->
+                        <!-- Hidden inputs for code compatibility -->
                         <input type="hidden" id="ai-server-url" value="http://localhost:8000">
                     </div>
 
@@ -1181,7 +1149,7 @@
                                     <polyline points="15 3 21 3 21 9" />
                                     <line x1="21" y1="3" x2="14" y2="10" />
                                 </svg>
-                                Enhance & Upscale
+                                Upscale Image (2×)
                             </button>
                         </div>
                         <p style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; text-align: center;">

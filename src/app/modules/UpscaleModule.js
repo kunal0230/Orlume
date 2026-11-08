@@ -3,10 +3,9 @@
  * 
  * Handles:
  * - Upscale tool initialization and controls
- * - Scale factor selection (2x, 4x)
- * - Processing mode (enhance, upscale, both)
- * - AI server configuration
- * - Upscaling progress and application
+ * - Scale factor selection (2x, 3x, 4x)
+ * - Neural engine selection (slim / thick)
+ * - Super-resolution progress and application
  */
 
 import { ImageUpscaler } from '../../ml/ImageUpscaler.js';
@@ -35,18 +34,7 @@ export class UpscaleModule {
         this.upscaler.setMaxDimension(Math.min(maxTextureSize, 4096));
         this.scaleFactor = 2;
 
-        // Mode selector buttons (Enhance / Upscale / Both)
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const mode = btn.dataset.mode;
-                this.upscaler.setProcessingMode(mode);
-                this.updateDimensions();
-            });
-        });
-
-        // Scale factor buttons
+        // Scale factor buttons (2x, 3x, 4x)
         document.querySelectorAll('.scale-factor-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.scale-factor-btn').forEach(b => b.classList.remove('active'));
@@ -66,38 +54,6 @@ export class UpscaleModule {
                 this.upscaler.setModelType(model);
             });
         });
-
-        // Sharpen toggle
-        const sharpenToggle = document.getElementById('upscale-sharpen-toggle');
-        if (sharpenToggle) {
-            sharpenToggle.addEventListener('change', () => {
-                this.upscaler.setSharpenEdges(sharpenToggle.checked);
-            });
-        }
-
-        // AI server toggle
-        const aiToggle = document.getElementById('upscale-ai-toggle');
-        if (aiToggle) {
-            aiToggle.addEventListener('change', () => {
-                this.upscaler.setUseAI(aiToggle.checked);
-            });
-        }
-
-        // Face enhancement toggle
-        const faceToggle = document.getElementById('upscale-face-toggle');
-        if (faceToggle) {
-            faceToggle.addEventListener('change', () => {
-                this.upscaler.setEnhanceFace(faceToggle.checked);
-            });
-        }
-
-        // Server URL input
-        const serverUrlInput = document.getElementById('ai-server-url');
-        if (serverUrlInput) {
-            serverUrlInput.addEventListener('change', () => {
-                this.upscaler.setServerUrl(serverUrlInput.value);
-            });
-        }
 
         // Apply button
         const btnApply = document.getElementById('btn-upscale-apply');
@@ -144,35 +100,16 @@ export class UpscaleModule {
             }
         }
 
-        // Dynamically update apply button text to reflect active mode
+        // Update apply button text to reflect scale factor
         const btnApply = document.getElementById('btn-upscale-apply');
         if (btnApply) {
-            const mode = this.upscaler.processingMode;
-            if (mode === 'enhance') {
-                btnApply.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="21" y1="3" x2="14" y2="10" />
-                    </svg>
-                    Enhance Clarity & Details`;
-            } else if (mode === 'upscale') {
-                btnApply.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="21" y1="3" x2="14" y2="10" />
-                    </svg>
-                    Upscale (${this.scaleFactor}x)`;
-            } else {
-                btnApply.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                        stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="21" y1="3" x2="14" y2="10" />
-                    </svg>
-                    Enhance & Upscale (${this.scaleFactor}x)`;
-            }
+            btnApply.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                    stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                </svg>
+                Upscale Image (${this.scaleFactor}×)`;
         }
     }
 
@@ -273,14 +210,7 @@ export class UpscaleModule {
                         }
 
                         // Visual toast confirmation
-                        const mode = this.upscaler.processingMode;
-                        if (mode === 'enhance') {
-                            this.editor.showToast?.('✓ AI Clarity & Detail Enhancement applied! Click Before/After (\\) to compare');
-                        } else if (mode === 'upscale') {
-                            this.editor.showToast?.(`✓ AI Super-resolution (${this.scaleFactor}x) applied! Click Before/After (\\) to compare`);
-                        } else {
-                            this.editor.showToast?.(`✓ AI Enhancement & Super-resolution (${this.scaleFactor}x) applied! Click Before/After (\\) to compare`);
-                        }
+                        this.editor.showToast?.(`✓ AI Super-resolution (${this.scaleFactor}×) applied! Click Before/After (\\) to compare`);
                         resolve();
                     };
                     img.onerror = (err) => {
