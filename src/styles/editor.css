@@ -134,7 +134,7 @@ body {
 .godrays-preview-canvas {
     pointer-events: none;
     z-index: 50;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
 }
 
 .godrays-sun-gizmo {

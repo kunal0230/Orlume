@@ -73,13 +73,11 @@ export const ADVANCED_GODRAYS_SHADER = `
     // Evaluate geometric occlusion at coord
     // Returns 1.0 for transparent / illuminated sky, 0.0 for opaque silhouette blockers
     float evaluateOcclusion(vec2 coord) {
-        if (coord.x < 0.0 || coord.x > 1.0 || coord.y < 0.0 || coord.y > 1.0) {
-            return 0.0;
-        }
+        vec2 sampleCoord = clamp(coord, 0.0, 1.0);
         
         // 1. AI Depth Occlusion (when depth map is active)
         if (u_hasDepth == 1) {
-            float depth = texture2D(u_depth, coord).r;
+            float depth = texture2D(u_depth, sampleCoord).r;
             // Foreground subjects (depth > threshold) physically occlude background rays
             float occluder = smoothstep(u_depthThreshold - 0.08, u_depthThreshold + 0.08, depth);
             return (1.0 - occluder);
@@ -87,7 +85,7 @@ export const ADVANCED_GODRAYS_SHADER = `
             // 2. Image Geometry Occlusion:
             // High-contrast silhouettes (cliffs, foliage, tree branches, window frames)
             // have lower luminance than the sky and act as physical blockers
-            vec4 col = texture2D(u_image, coord);
+            vec4 col = texture2D(u_image, sampleCoord);
             float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
             float transmittance = smoothstep(u_lumThreshold * 0.35, u_lumThreshold * 1.05, luma);
             return transmittance;
@@ -118,8 +116,8 @@ export const ADVANCED_GODRAYS_SHADER = `
         // 2. Image Geometry Silhouette Modulation
         // Sample perpendicular image gradient to detect natural silhouette edges (branches, ridges)
         vec2 perp = vec2(-rayDir.y, rayDir.x) * (2.5 / u_resolution);
-        float lumaLeft = dot(texture2D(u_image, v_uv + perp).rgb, vec3(0.2126, 0.7152, 0.0722));
-        float lumaRight = dot(texture2D(u_image, v_uv - perp).rgb, vec3(0.2126, 0.7152, 0.0722));
+        float lumaLeft = dot(texture2D(u_image, clamp(v_uv + perp, 0.0, 1.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+        float lumaRight = dot(texture2D(u_image, clamp(v_uv - perp, 0.0, 1.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
         float edgeContrast = abs(lumaLeft - lumaRight);
         
         // Light shafts naturally conform to the geometry of scene blockers
@@ -167,11 +165,6 @@ export const ADVANCED_GODRAYS_SHADER = `
         // 7. Non-Destructive Photographic Optical Screen Blend
         // Preserves 100% of underlying details, shadows, and natural color science
         vec3 result = 1.0 - (1.0 - original) * (1.0 - clamp(finalRays, 0.0, 1.0));
-        
-        // Gentle edge fadeout so rays don't abruptly clip at screen boundaries
-        vec2 edgeDist = min(v_uv, 1.0 - v_uv);
-        float edgeFade = smoothstep(0.0, 0.02, min(edgeDist.x, edgeDist.y));
-        result = mix(original, result, edgeFade);
         
         gl_FragColor = vec4(clamp(result, 0.0, 1.0), baseColor.a);
     }
