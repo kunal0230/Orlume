@@ -55,24 +55,26 @@ export class ComparisonModule {
         originalCanvas.style.display = 'none';
         canvasContainer.appendChild(originalCanvas);
 
-        // Slider drag handling
+        // Slider drag handling - allow dragging anywhere on the slider line or handle
         const handle = slider.querySelector('.comparison-handle');
-
-        handle?.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this._isDragging = true;
-        });
-
-        // Touch support for slider dragging
-        handle?.addEventListener('touchstart', (e) => {
+        const startDrag = (e) => {
             if (e.cancelable) e.preventDefault();
             this._isDragging = true;
-        }, { passive: false });
+        };
+
+        handle?.addEventListener('mousedown', startDrag);
+        slider.addEventListener('mousedown', startDrag);
+
+        // Touch support for slider dragging
+        handle?.addEventListener('touchstart', startDrag, { passive: false });
+        slider.addEventListener('touchstart', startDrag, { passive: false });
 
         document.addEventListener('mousemove', (e) => {
             if (!this._isDragging || !this.comparison.active) return;
 
-            const rect = canvasContainer.getBoundingClientRect();
+            const targetCanvas = this.elements.canvas || canvasContainer;
+            const rect = targetCanvas.getBoundingClientRect();
+            if (rect.width <= 0) return;
             const x = e.clientX - rect.left;
             this.comparison.position = Math.max(0, Math.min(100, (x / rect.width) * 100));
             this._updateSlider();
@@ -81,7 +83,9 @@ export class ComparisonModule {
         document.addEventListener('touchmove', (e) => {
             if (!this._isDragging || !this.comparison.active || !e.touches?.length) return;
 
-            const rect = canvasContainer.getBoundingClientRect();
+            const targetCanvas = this.elements.canvas || canvasContainer;
+            const rect = targetCanvas.getBoundingClientRect();
+            if (rect.width <= 0) return;
             const x = e.touches[0].clientX - rect.left;
             this.comparison.position = Math.max(0, Math.min(100, (x / rect.width) * 100));
             this._updateSlider();
@@ -103,9 +107,15 @@ export class ComparisonModule {
         if (beforeAfterBtn) {
             beforeAfterBtn.addEventListener('click', () => {
                 this.toggle();
-                beforeAfterBtn.classList.toggle('active', this.comparison.active);
             });
         }
+
+        // Keep overlay and slider dimensions synced on window resize
+        window.addEventListener('resize', () => {
+            if (this.comparison.active) {
+                this._updateSlider();
+            }
+        });
 
         // Sync with editor's comparison state
         this.editor.comparison = this.comparison;
@@ -119,23 +129,28 @@ export class ComparisonModule {
 
         const slider = document.getElementById('comparison-slider');
         const originalCanvas = document.getElementById('original-canvas');
+        const mainCanvas = this.elements.canvas;
 
         if (show && this.state.hasImage) {
-            // Copy original image to overlay canvas
-            if (originalCanvas) {
+            // Copy original / pre-upscale baseline image to overlay canvas
+            if (originalCanvas && mainCanvas) {
                 const ctx = originalCanvas.getContext('2d');
-                const mainCanvas = this.elements.canvas;
                 originalCanvas.width = mainCanvas.width;
                 originalCanvas.height = mainCanvas.height;
+                originalCanvas.style.width = `${mainCanvas.clientWidth}px`;
+                originalCanvas.style.height = `${mainCanvas.clientHeight}px`;
+                originalCanvas.style.borderRadius = getComputedStyle(mainCanvas).borderRadius;
 
-                // Draw original image
-                if (this.state.originalImage) {
-                    ctx.drawImage(this.state.originalImage, 0, 0, originalCanvas.width, originalCanvas.height);
+                // Pick the untouched original image or pre-upscale image as the "Before" comparison baseline
+                const beforeSource = this.state.preUpscaleImage || this.state.initialImage || this.state.originalImage;
+                if (beforeSource) {
+                    ctx.drawImage(beforeSource, 0, 0, originalCanvas.width, originalCanvas.height);
                 }
                 originalCanvas.style.display = 'block';
             }
 
-            if (slider) {
+            if (slider && mainCanvas) {
+                slider.style.height = `${mainCanvas.clientHeight}px`;
                 slider.style.display = 'flex';
             }
             this._updateSlider();
@@ -161,8 +176,15 @@ export class ComparisonModule {
     _updateSlider() {
         const slider = document.getElementById('comparison-slider');
         const originalCanvas = document.getElementById('original-canvas');
+        const mainCanvas = this.elements.canvas;
 
         if (!slider || !originalCanvas) return;
+
+        if (mainCanvas && mainCanvas.clientWidth > 0) {
+            originalCanvas.style.width = `${mainCanvas.clientWidth}px`;
+            originalCanvas.style.height = `${mainCanvas.clientHeight}px`;
+            slider.style.height = `${mainCanvas.clientHeight}px`;
+        }
 
         const position = this.comparison.position;
 

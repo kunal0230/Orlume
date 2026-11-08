@@ -107,7 +107,7 @@ export class EditorApp {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
-                this.state.setImage(img);
+                this.state.setImage(img, true);
                 this.gpu.loadImage(img);
 
                 // Notify mask system of dimension change so it can update textures

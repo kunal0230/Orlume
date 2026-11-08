@@ -354,8 +354,16 @@ export class ImageUpscaler {
 
             const tf = await import('@tensorflow/tfjs');
             const tensorToDraw = upscaledTensor.shape.length === 4 ? upscaledTensor.squeeze([0]) : upscaledTensor;
-            await tf.browser.toPixels(tensorToDraw, rawCanvas);
 
+            // TensorFlow.js toPixels expects int32 for [0, 255] or float32 for [0, 1].
+            // ESRGAN outputs float32 values in [0, 255] which may slightly exceed 1.0 or 255.
+            const intTensor = tf.tidy(() => {
+                return tensorToDraw.clipByValue(0, 255).cast('int32');
+            });
+
+            await tf.browser.toPixels(intTensor, rawCanvas);
+
+            intTensor.dispose();
             upscaledTensor.dispose();
             if (tensorToDraw !== upscaledTensor) {
                 tensorToDraw.dispose();

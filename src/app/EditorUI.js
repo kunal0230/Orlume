@@ -1948,7 +1948,7 @@ export class EditorUI {
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                this.state.setImage(img);
+                this.state.setImage(img, true);
                 this.gpu.loadImage(img);
 
                 // Reset masks on new file load to prevent dimensions/state mismatch

@@ -11,6 +11,8 @@ export class EditorState {
 
         // Image state
         this.originalImage = null;
+        this.initialImage = null;       // Untouched photo as loaded from file
+        this.preUpscaleImage = null;   // Photo immediately before AI super-resolution/enhancement
         this.hasImage = false;
 
         // Brush settings (synced with MaskSystem)
@@ -115,8 +117,15 @@ export class EditorState {
 
     /**
      * Set original image
+     * @param {HTMLImageElement|HTMLCanvasElement} image
+     * @param {boolean} isNewFile - Whether this is a freshly loaded file from disk/URL
      */
-    setImage(image) {
+    setImage(image, isNewFile = false) {
+        const dimensionsChanged = this.initialImage && (image.width !== this.initialImage.width || image.height !== this.initialImage.height);
+        if (isNewFile || !this.initialImage || (dimensionsChanged && !this.preUpscaleImage)) {
+            this.initialImage = image;
+            this.preUpscaleImage = null;
+        }
         this.originalImage = image;
         this.hasImage = !!image;
         this.imageId = Date.now().toString(36) + Math.random().toString(36).substr(2); // Unique ID for this image version

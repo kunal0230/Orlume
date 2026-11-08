@@ -202,6 +202,9 @@ export class UpscaleModule {
                     img.onload = () => {
                         URL.revokeObjectURL(blobUrl);
 
+                        // Store previous image so Before/After comparison reveals the super-resolution detail
+                        this.state.preUpscaleImage = this.state.originalImage;
+
                         // Update state
                         this.state.setImage(img);
                         this.state.originalImage = img;
@@ -233,8 +236,13 @@ export class UpscaleModule {
                         // Update dimensions display
                         this.updateDimensions();
 
+                        // If Before/After comparison slider is currently active, refresh its overlay canvas
+                        if (this.editor.comparisonModule?.comparison?.active) {
+                            this.editor.comparisonModule.toggle(true);
+                        }
+
                         // Visual toast confirmation
-                        this.editor.showToast?.('✓ AI Super-resolution applied');
+                        this.editor.showToast?.('✓ AI Super-resolution applied! Click Before/After (\\) to compare');
                         resolve();
                     };
                     img.onerror = (err) => {

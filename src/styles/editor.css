@@ -105,6 +105,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: fit-content;
+    height: fit-content;
 }
 
 /* Transparency checkerboard pattern - indicates transparent areas */
@@ -125,6 +127,7 @@ body {
     object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    display: block;
 }
 
 /* Main canvas placeholder - hidden but used for dimension reference */
@@ -1400,11 +1403,15 @@ kbd {
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
+    width: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
     z-index: 100;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .comparison-line {
@@ -1414,6 +1421,7 @@ kbd {
     width: 2px;
     background: white;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
 }
 
 .comparison-handle {
@@ -1455,6 +1463,7 @@ kbd {
     letter-spacing: 0.5px;
     color: white;
     white-space: nowrap;
+    pointer-events: none;
 }
 
 .comparison-label-before {
@@ -1474,6 +1483,8 @@ kbd {
     height: 100%;
     pointer-events: none;
     z-index: 10;
+    border-radius: 4px;
+    object-fit: contain;
 }
 
 /* Pan cursor states */
