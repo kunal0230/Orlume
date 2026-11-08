@@ -360,7 +360,9 @@ export class GodRaysModule {
                 if (e.target && e.target.setPointerCapture) {
                     e.target.setPointerCapture(e.pointerId);
                 }
-            } catch (_) {}
+            } catch {
+                // Ignore pointer capture exceptions on unsupported devices
+            }
 
             e.stopPropagation();
             e.preventDefault();
@@ -385,7 +387,9 @@ export class GodRaysModule {
                     if (e.target && e.target.releasePointerCapture && this._activePointerId !== null) {
                         e.target.releasePointerCapture(this._activePointerId);
                     }
-                } catch (_) {}
+                } catch {
+                    // Ignore pointer capture release exceptions
+                }
                 this._activePointerId = null;
 
                 wakeUpReticle();

@@ -1209,7 +1209,7 @@ export class EditorUI {
                     if (['brush', 'radial', 'gradient'].includes(tool) || this.isWBPicking) {
                         if (e.cancelable) e.preventDefault();
                         const touch = e.touches[0];
-                        canvas.dispatchEvent(new MouseEvent('mousedown', {
+                        canvas.dispatchEvent(new window.MouseEvent('mousedown', {
                             button: 0,
                             buttons: 1,
                             clientX: touch.clientX,
@@ -1224,7 +1224,7 @@ export class EditorUI {
                 if (e.touches.length === 1 && (this.state.isPainting || this.isWBPicking)) {
                     if (e.cancelable) e.preventDefault();
                     const touch = e.touches[0];
-                    canvasArea.dispatchEvent(new MouseEvent('mousemove', {
+                    canvasArea.dispatchEvent(new window.MouseEvent('mousemove', {
                         button: 0,
                         buttons: 1,
                         clientX: touch.clientX,
@@ -1726,7 +1726,7 @@ export class EditorUI {
         const dismissBtn = document.getElementById('mobile-experimental-dismiss');
         if (experimentalBanner) {
             try {
-                if (sessionStorage.getItem('orlume_mobile_notice_dismissed') === '1') {
+                if (window.sessionStorage?.getItem('orlume_mobile_notice_dismissed') === '1') {
                     experimentalBanner.classList.add('dismissed');
                 }
             } catch {
@@ -1735,7 +1735,7 @@ export class EditorUI {
             dismissBtn?.addEventListener('click', () => {
                 experimentalBanner.classList.add('dismissed');
                 try {
-                    sessionStorage.setItem('orlume_mobile_notice_dismissed', '1');
+                    window.sessionStorage?.setItem('orlume_mobile_notice_dismissed', '1');
                 } catch {
                     // Ignore storage restrictions
                 }

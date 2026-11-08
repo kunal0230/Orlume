@@ -139,7 +139,7 @@ export class ComparisonModule {
                 originalCanvas.height = mainCanvas.height;
                 originalCanvas.style.width = `${mainCanvas.clientWidth}px`;
                 originalCanvas.style.height = `${mainCanvas.clientHeight}px`;
-                originalCanvas.style.borderRadius = getComputedStyle(mainCanvas).borderRadius;
+                originalCanvas.style.borderRadius = window.getComputedStyle(mainCanvas).borderRadius;
 
                 // Pick the untouched original image or pre-upscale image as the "Before" comparison baseline
                 const beforeSource = this.state.preUpscaleImage || this.state.initialImage || this.state.originalImage;
